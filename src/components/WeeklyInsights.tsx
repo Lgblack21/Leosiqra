@@ -46,7 +46,7 @@ export function WeeklyInsights({ target, className }: { target: 'web' | 'app'; c
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={16} className="text-indigo-600 dark:text-indigo-400" />
         <h2 className="text-sm font-black text-slate-900 dark:text-white">Insight Mingguan</h2>
-        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">7 hari terakhir</span>
+        <span className="fs-10 font-bold text-slate-400 dark:text-slate-500">7 hari terakhir</span>
       </div>
       <div className={cn('grid gap-2', target === 'web' && 'md:grid-cols-3')}>
         {items.map((item) => {

@@ -301,7 +301,7 @@ export function InvestmentDetailSheet({ inv, accounts, onClose }: Props) {
               </button>
             </div>
             {confirm === 'cairkan' && (
-              <p className="text-[11px] text-center text-slate-500 px-2">
+              <p className="fs-11 text-center text-slate-500 px-2">
                 {matured
                   ? `Pokok + bunga masuk ke ${account?.name ?? 'rekening sumber'}.`
                   : `Belum jatuh tempo (${fmtDate(inv.targetDate)}) — bunga HANGUS, hanya pokok ${formatMoney(invested, currency)} yang masuk ke ${account?.name ?? 'rekening sumber'}.`}{' '}
@@ -323,7 +323,7 @@ export function InvestmentDetailSheet({ inv, accounts, onClose }: Props) {
               <Trash2 size={15} /> {confirm === 'delete' ? 'Yakin hapus?' : 'Hapus catatan'}
             </button>
             {confirm === 'delete' && (
-              <p className="text-[11px] text-center text-slate-500 px-2">
+              <p className="fs-11 text-center text-slate-500 px-2">
                 {isSaleRow
                   ? `Uang hasil jual ditarik lagi dari ${account?.name ?? 'rekening'} dan ${unit} dikembalikan ke posisi asal.`
                   : inv.transactionType === 'Penarikan'
@@ -370,9 +370,7 @@ export function InvestmentDetailSheet({ inv, accounts, onClose }: Props) {
                 )}
               </div>
             </Field>
-            {sellQty > held && (
-              <p className="text-[11px] font-bold text-rose-500 px-1">Melebihi jumlah yang dimiliki.</p>
-            )}
+            {sellQty > held && <p className="fs-11 font-bold text-rose-500 px-1">Melebihi jumlah yang dimiliki.</p>}
             <AccountPicker
               accounts={accounts}
               value={toAccount}
@@ -413,7 +411,7 @@ export function InvestmentDetailSheet({ inv, accounts, onClose }: Props) {
                 <NumberField value={currentValue} onChange={setCurrentValue} ariaLabel="Nilai sekarang" />
               </Field>
             )}
-            <p className="text-[11px] text-slate-400 px-1">
+            <p className="fs-11 text-slate-400 px-1">
               Salah jumlah, harga beli, atau rekening? Hapus catatan ini (saldo kembali otomatis) lalu catat ulang.
             </p>
           </>

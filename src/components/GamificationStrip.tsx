@@ -74,7 +74,7 @@ export const GamificationStrip = () => {
             key={badge.id}
             title={badge.description}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap shrink-0 transition-all',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border fs-10 font-black uppercase tracking-widest whitespace-nowrap shrink-0 transition-all',
               badge.unlocked
                 ? 'bg-indigo-50 border-indigo-100 text-indigo-600'
                 : 'bg-slate-50 border-slate-100 text-slate-300',

@@ -181,7 +181,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Layanan</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Layanan</label>
           <div className="grid grid-cols-2 gap-3">
             {(['topup', 'transfer'] as const).map((type) => (
               <button
@@ -201,7 +201,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
 
         <div className="flex gap-4">
           <div className="space-y-2 flex-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                 {getCurrencySymbol(formData.currency)}
@@ -229,7 +229,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                <p className="fs-9 font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
                   Terkonversi ke IDR
                 </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
@@ -237,13 +237,13 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            <span className="fs-10 font-medium text-slate-400 italic">Live Rate</span>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               {formData.type === 'topup' ? 'Rekening Sumber' : 'Dari (Asal)'}
             </label>
             <div className="relative">
@@ -273,7 +273,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               {formData.type === 'topup' ? 'Tujuan Top Up' : 'Ke (Tujuan)'}
             </label>
             <div className="relative">
@@ -299,7 +299,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
           <input
             type="date"
             value={formData.date}
@@ -309,9 +309,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-            Deskripsi / Catatan
-          </label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
           <input
             type="text"
             value={formData.note}

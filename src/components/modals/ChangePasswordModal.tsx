@@ -97,7 +97,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, hasPassword = true }: Cha
         )}
 
         {!hasPassword && (
-          <p className="text-[12px] text-slate-500 leading-relaxed bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+          <p className="fs-12 text-slate-500 leading-relaxed bg-indigo-50 border border-indigo-100 rounded-xl p-4">
             Akun ini masuk pakai Google dan belum punya password. Buat password di bawah supaya Anda juga bisa login
             pakai email &amp; password sewaktu-waktu.
           </p>
@@ -105,9 +105,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, hasPassword = true }: Cha
 
         {hasPassword && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Password Saat Ini
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Password Saat Ini</label>
             <div className="relative group">
               <Lock
                 size={18}
@@ -133,7 +131,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, hasPassword = true }: Cha
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Password Baru</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Password Baru</label>
           <div className="relative group">
             <Lock
               size={18}
@@ -158,7 +156,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, hasPassword = true }: Cha
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
             Konfirmasi Password Baru
           </label>
           <div className="relative group">

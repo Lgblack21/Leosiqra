@@ -34,7 +34,7 @@ export function DueDateField({ value, onChange }: { value: DebtDue | null; onCha
                 else onChange({ day: value && 'day' in value ? value.day : Number(today.slice(8, 10)) });
               }}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[11px] font-black transition-colors',
+                'rounded-full px-3 py-1.5 fs-11 font-black transition-colors',
                 mode === m ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400',
               )}
             >
@@ -67,7 +67,7 @@ export function DueDateField({ value, onChange }: { value: DebtDue | null; onCha
           ))}
         </select>
       )}
-      {value && <p className="text-[11px] text-slate-400 px-1">Kamu diingatkan 3 hari & 1 hari sebelumnya.</p>}
+      {value && <p className="fs-11 text-slate-400 px-1">Kamu diingatkan 3 hari & 1 hari sebelumnya.</p>}
     </div>
   );
 }

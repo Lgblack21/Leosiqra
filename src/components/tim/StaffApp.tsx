@@ -48,17 +48,16 @@ const initials = (name: string) =>
 const card = 'rounded-[22px] bg-white ring-1 ring-slate-100';
 
 function TodayList({ list, title, empty }: { list: StaffSale[]; title: string; empty?: string }) {
-  if (!list.length)
-    return empty ? <p className={cn(card, 'p-5 text-center text-[13px] text-slate-400')}>{empty}</p> : null;
+  if (!list.length) return empty ? <p className={cn(card, 'p-5 text-center fs-13 text-slate-400')}>{empty}</p> : null;
   return (
     <div className={cn(card, 'p-4')}>
-      <p className="text-[14px] font-extrabold text-slate-900">{title}</p>
+      <p className="fs-14 font-extrabold text-slate-900">{title}</p>
       <ul className="mt-2 divide-y divide-slate-100">
         {list.slice(0, 30).map((t) => (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
-            <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700">
+            <span className="flex min-w-0 items-center gap-1.5 fs-13 text-slate-700">
               {isCost(t) && (
-                <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 fs-10 font-bold text-rose-700">
                   Biaya
                 </span>
               )}
@@ -66,7 +65,7 @@ function TodayList({ list, title, empty }: { list: StaffSale[]; title: string; e
             </span>
             <span
               className={cn(
-                'shrink-0 text-[13px] font-extrabold tabular-nums',
+                'shrink-0 fs-13 font-extrabold tabular-nums',
                 isCost(t) ? 'text-rose-600' : 'text-emerald-700',
               )}
             >
@@ -103,16 +102,16 @@ function ShopChips({
             onClick={() => onChange(s.id)}
             aria-pressed={on}
             className={cn(
-              'web-keep flex shrink-0 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold transition-all',
+              'web-keep flex shrink-0 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 fs-13 font-bold transition-all',
               on ? cn(themeHeader(s), 'text-white shadow-md') : 'bg-white text-slate-600 ring-1 ring-slate-200',
             )}
           >
-            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white/90 text-[14px]">
+            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white/90 fs-14">
               <CatalogImage src={s.style.logoUrl} alt="" fallback={s.emoji || '🏪'} className="h-full w-full p-0.5" />
             </span>
             {s.name}
             {lowBy[s.id] > 0 && (
-              <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-extrabold text-slate-900">
+              <span className="rounded-full bg-amber-400 px-1.5 fs-10 font-extrabold text-slate-900">
                 {lowBy[s.id]}
               </span>
             )}
@@ -164,7 +163,7 @@ export function StaffApp() {
     );
   if (state === 'login') return <StaffLogin onDone={load} />;
   if (state === 'error' || !me)
-    return <div className="mx-auto max-w-sm p-8 text-center text-[14px] text-rose-600">{error}</div>;
+    return <div className="mx-auto max-w-sm p-8 text-center fs-14 text-rose-600">{error}</div>;
 
   const shop = me.shops.find((s) => s.id === shopId) ?? null;
   const logout = async () => {
@@ -188,19 +187,19 @@ export function StaffApp() {
       {flash && (
         <div
           role="status"
-          className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg"
+          className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center fs-13 font-semibold text-white shadow-lg"
         >
           {flash}
         </div>
       )}
 
       <header className="mb-4 flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-[15px] font-extrabold text-white shadow-sm">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 fs-15 font-extrabold text-white shadow-sm">
           {initials(me.staff.name)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[16px] font-extrabold text-slate-900">Halo, {me.staff.name} 👋</p>
-          <p className="truncate text-[12px] text-slate-500">
+          <p className="truncate fs-16 font-extrabold text-slate-900">Halo, {me.staff.name} 👋</p>
+          <p className="truncate fs-12 text-slate-500">
             {today}
             {me.owner ? ` · tim ${me.owner}` : ''}
           </p>
@@ -217,7 +216,7 @@ export function StaffApp() {
           type="button"
           onClick={logout}
           aria-label="Keluar"
-          className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"
+          className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 fs-12 font-bold text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"
         >
           <LogOut size={15} /> <span className="hidden sm:inline">Keluar</span>
         </button>
@@ -226,8 +225,8 @@ export function StaffApp() {
       {me.shops.length === 0 ? (
         <div className={cn(card, 'p-8 text-center')}>
           <Store size={28} className="mx-auto text-slate-300" />
-          <p className="mt-2 text-[15px] font-bold text-slate-900">Belum ada usaha untukmu</p>
-          <p className="mt-1 text-[13px] text-slate-500">Minta pemilik usaha memberi akses di Usahaku › Tim.</p>
+          <p className="mt-2 fs-15 font-bold text-slate-900">Belum ada usaha untukmu</p>
+          <p className="mt-1 fs-13 text-slate-500">Minta pemilik usaha memberi akses di Usahaku › Tim.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -272,7 +271,7 @@ export function StaffApp() {
                 aria-label={id === 'stok' && lowAll > 0 ? `${label}, ${lowAll} hampir habis` : label}
                 aria-current={on ? 'page' : undefined}
                 className={cn(
-                  'relative flex h-12 items-center gap-2 rounded-full px-4 text-[13px] font-bold transition-all',
+                  'relative flex h-12 items-center gap-2 rounded-full px-4 fs-13 font-bold transition-all',
                   on
                     ? 'bg-gradient-to-r from-emerald-400 to-teal-300 text-slate-950'
                     : 'text-white/70 hover:bg-white/10',
@@ -280,7 +279,7 @@ export function StaffApp() {
               >
                 <Icon size={18} /> <span className={cn(!on && 'hidden sm:inline')}>{label}</span>
                 {id === 'stok' && lowAll > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-slate-900">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900">
                     {lowAll}
                   </span>
                 )}
@@ -330,12 +329,12 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
             <Store size={20} />
           </span>
           <div>
-            <p className="text-[18px] font-extrabold text-slate-900">Masuk Tim</p>
-            <p className="text-[12px] text-slate-500">Akun kasir dari pemilik usaha</p>
+            <p className="fs-18 font-extrabold text-slate-900">Masuk Tim</p>
+            <p className="fs-12 text-slate-500">Akun kasir dari pemilik usaha</p>
           </div>
         </div>
         {error && (
-          <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600">
+          <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600">
             {error}
           </p>
         )}
@@ -363,11 +362,11 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={busy || !username.trim() || !password}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-40"
         >
           {busy && <Loader2 size={16} className="animate-spin" />} Masuk
         </button>
-        <p className="text-center text-[11px] text-slate-400">
+        <p className="text-center fs-11 text-slate-400">
           Pemilik usaha? Masuk di{' '}
           <a href="/auth/login" className="font-bold text-violet-600">
             halaman login biasa
@@ -398,7 +397,7 @@ function ChangePassword({ onDone }: { onDone: (m: string) => void }) {
   return (
     <div className="space-y-3">
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -414,7 +413,7 @@ function ChangePassword({ onDone }: { onDone: (m: string) => void }) {
         type="button"
         onClick={save}
         disabled={busy || !cur || next.length < 8}
-        className="w-full rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+        className="w-full rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-40"
       >
         Simpan
       </button>
@@ -438,10 +437,8 @@ function StaffRingkas({
   return (
     <section className="space-y-4">
       <div className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#10b981_0%,#065f46_38%,#03140f_82%)] p-5 text-white md:p-6">
-        <p className="text-[13px] font-semibold text-white/60">Penjualan hari ini · semua kasir</p>
-        <p className="mt-1 text-[32px] font-extrabold leading-none tabular-nums md:text-[38px]">
-          {formatIDR(sumOf(sales))}
-        </p>
+        <p className="fs-13 font-semibold text-white/60">Penjualan hari ini · semua kasir</p>
+        <p className="mt-1 fsh-32 font-extrabold leading-none tabular-nums md:fsh-38">{formatIDR(sumOf(sales))}</p>
         <div className="mt-4 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
           {[
             ['Transaksi', String(sales.length)],
@@ -452,10 +449,8 @@ function StaffRingkas({
               key={k}
               className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.08] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"
             >
-              <p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p>
-              <p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">
-                {v}
-              </p>
+              <p className="truncate fs-10 text-white/55 min-[380px]:fs-11">{k}</p>
+              <p className="truncate fs-14 font-extrabold tabular-nums tracking-tight min-[380px]:fs-16">{v}</p>
             </div>
           ))}
         </div>
@@ -471,8 +466,8 @@ function StaffRingkas({
             <AlertTriangle size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-extrabold text-amber-900">{low.length} stok hampir habis</span>
-            <span className="block truncate text-[12px] text-amber-800">
+            <span className="block fs-14 font-extrabold text-amber-900">{low.length} stok hampir habis</span>
+            <span className="block truncate fs-12 text-amber-800">
               {low.map((m) => `${m.name} (${fmtQty(m.stock)} ${m.unit})`).join(', ')}
             </span>
           </span>
@@ -494,7 +489,7 @@ function StaffRingkas({
                   themeHeader(s),
                 )}
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-[22px]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 fsh-22">
                   <CatalogImage
                     src={s.style.logoUrl}
                     alt={`Logo ${s.name}`}
@@ -503,10 +498,10 @@ function StaffRingkas({
                   />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] font-extrabold">{s.name}</span>
-                  <span className="block text-[12px] text-white/65">{s.products.length} produk</span>
+                  <span className="block truncate fs-16 font-extrabold">{s.name}</span>
+                  <span className="block fs-12 text-white/65">{s.products.length} produk</span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 fs-12 font-bold">
                   <Store size={13} /> Kasir
                 </span>
               </button>
@@ -517,8 +512,8 @@ function StaffRingkas({
                   ['Biaya', short(-c), c ? 'text-rose-600' : ''],
                 ].map(([k, v, cls]) => (
                   <span key={k} className="min-w-0 px-2 text-center">
-                    <span className="block truncate text-[11px] text-slate-400">{k}</span>
-                    <span className={cn('block truncate text-[15px] font-extrabold tabular-nums text-slate-900', cls)}>
+                    <span className="block truncate fs-11 text-slate-400">{k}</span>
+                    <span className={cn('block truncate fs-15 font-extrabold tabular-nums text-slate-900', cls)}>
                       {v}
                     </span>
                   </span>
@@ -528,7 +523,7 @@ function StaffRingkas({
                 <button
                   type="button"
                   onClick={() => go('stok', s.id)}
-                  className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-2.5 text-[12px] font-bold text-amber-700 hover:bg-amber-50/60"
+                  className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-2.5 fs-12 font-bold text-amber-700 hover:bg-amber-50/60"
                 >
                   <span className="flex items-center gap-1.5">
                     <Package size={14} /> {lowBy[s.id]} stok hampir habis
@@ -607,13 +602,13 @@ function StaffKasir({
     />
   );
   const actBtn =
-    'relative flex min-w-0 items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20';
+    'relative flex min-w-0 items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 py-2 fs-12 font-bold hover:bg-white/20';
 
   return (
     <div className="space-y-4">
       <section className={cn('web-keep rounded-[28px] p-4 text-white md:p-5', themeHeader(shop))}>
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-[26px]">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
             <CatalogImage
               src={shop.style.logoUrl}
               alt={`Logo ${shop.name}`}
@@ -622,11 +617,11 @@ function StaffKasir({
             />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50">
+            <p className="flex items-center gap-1.5 fs-11 font-bold uppercase tracking-wider text-white/50">
               <Store size={12} /> Kasir
             </p>
-            <h1 className="truncate text-[20px] font-extrabold leading-tight md:text-[24px]">{shop.name}</h1>
-            {shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
+            <h1 className="truncate fsh-20 font-extrabold leading-tight md:fsh-24">{shop.name}</h1>
+            {shop.style.greeting && <p className="truncate fs-12 text-white/70">{shop.style.greeting}</p>}
           </div>
           <div className="hidden shrink-0 gap-1.5 sm:flex">
             <button type="button" onClick={() => setSpending(true)} className={actBtn}>
@@ -635,9 +630,7 @@ function StaffKasir({
             <button type="button" onClick={onStock} className={actBtn}>
               <Package size={15} /> Stok
               {low > 0 && (
-                <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-extrabold text-slate-900">
-                  {low}
-                </span>
+                <span className="rounded-full bg-amber-400 px-1.5 fs-10 font-extrabold text-slate-900">{low}</span>
               )}
             </button>
           </div>
@@ -649,7 +642,7 @@ function StaffKasir({
           <button type="button" onClick={onStock} className={cn(actBtn, 'rounded-2xl py-2.5')}>
             <Package size={15} /> Stok
             {low > 0 && (
-              <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-extrabold text-slate-900">{low}</span>
+              <span className="rounded-full bg-amber-400 px-1.5 fs-10 font-extrabold text-slate-900">{low}</span>
             )}
           </button>
         </div>
@@ -663,10 +656,8 @@ function StaffKasir({
               key={k}
               className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"
             >
-              <p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p>
-              <p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">
-                {v}
-              </p>
+              <p className="truncate fs-10 text-white/55 min-[380px]:fs-11">{k}</p>
+              <p className="truncate fs-14 font-extrabold tabular-nums tracking-tight min-[380px]:fs-16">{v}</p>
             </div>
           ))}
         </div>
@@ -704,19 +695,19 @@ function StaffKasir({
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
             <ReceiptText size={18} />
             {count > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-extrabold text-emerald-700">
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 fs-11 font-extrabold text-emerald-700">
                 {count}
               </span>
             )}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] text-white/70">{count ? `${count} item di struk` : 'Struk kosong'}</span>
-            <span className="block text-[16px] font-extrabold tabular-nums">
+            <span className="block fs-11 text-white/70">{count ? `${count} item di struk` : 'Struk kosong'}</span>
+            <span className="block fs-16 font-extrabold tabular-nums">
               {count ? formatIDR(sum) : 'Ketuk produk untuk mulai'}
             </span>
           </span>
           {count > 0 && (
-            <span className="shrink-0 rounded-full bg-white px-3.5 py-2 text-[13px] font-extrabold text-emerald-700">
+            <span className="shrink-0 rounded-full bg-white px-3.5 py-2 fs-13 font-extrabold text-emerald-700">
               Bayar
             </span>
           )}
@@ -787,20 +778,20 @@ function StaffStock({
           <Package size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">Stok</p>
-          <p className="truncate text-[18px] font-extrabold">{shop.name}</p>
+          <p className="fs-11 font-bold uppercase tracking-wider text-white/55">Stok</p>
+          <p className="truncate fs-18 font-extrabold">{shop.name}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[11px] text-white/55">Bahan / barang</p>
-          <p className="text-[18px] font-extrabold tabular-nums">{mats.length}</p>
+          <p className="fs-11 text-white/55">Bahan / barang</p>
+          <p className="fs-18 font-extrabold tabular-nums">{mats.length}</p>
         </div>
       </div>
       {loadError && (
-        <p role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600">
+        <p role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600">
           {loadError}
         </p>
       )}
-      <p className="px-1 text-[12px] text-slate-500">
+      <p className="px-1 fs-12 text-slate-500">
         Catat bahan yang <b>dipakai</b>, <b>masuk</b>, atau <b>hitung fisik</b>. Beli pakai uang toko → tombol{' '}
         <b>Beli</b> di tiap bahan (pengeluaran & stok tercatat sekaligus). Semua tercatat atas namamu.
       </p>

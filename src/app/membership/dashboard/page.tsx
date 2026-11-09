@@ -53,6 +53,7 @@ import { computeHealthScore } from '@/lib/healthScore';
 import { computeNetWorth } from '@/lib/netWorth';
 import { reminderService, type Reminder } from '@/lib/services/reminderService';
 import { HeaderSlot } from '@/components/Header';
+import { LiburCard } from '@/components/libur/LiburCard';
 
 // Ringkasan (dashboard member): kartu sapaan hari ini → catatan hari ini →
 // pengeluaran bulan terpilih per kategori + budget → transaksi terbaru →
@@ -396,18 +397,18 @@ export default function MonthlyDashboard() {
     return (
       <div className="flex items-center gap-3.5 py-3">
         <span
-          className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[20px]', visual.tile)}
+          className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full fsh-20', visual.tile)}
           aria-hidden
         >
           {visual.emoji}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-slate-900">{txTitle(t)}</p>
-          <p className="truncate text-[12px] text-slate-500">{txLine(t, withDate)}</p>
+          <p className="truncate fs-15 font-semibold text-slate-900">{txTitle(t)}</p>
+          <p className="truncate fs-12 text-slate-500">{txLine(t, withDate)}</p>
         </div>
         <p
           className={cn(
-            'shrink-0 text-[15px] font-bold tabular-nums',
+            'shrink-0 fs-15 font-bold tabular-nums',
             incoming ? 'text-emerald-600' : transfer ? 'text-slate-500' : 'text-slate-900',
           )}
         >
@@ -764,8 +765,8 @@ export default function MonthlyDashboard() {
     <div className="mx-auto max-w-6xl space-y-6 pb-12 md:space-y-8">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900 md:text-[36px]">Ringkasan</h1>
-          <p className="text-[14px] text-slate-500">
+          <h1 className="fsh-28 font-extrabold tracking-tight text-slate-900 md:fsh-36">Ringkasan</h1>
+          <p className="fs-14 text-slate-500">
             {now
               ? now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
               : ' '}
@@ -774,13 +775,13 @@ export default function MonthlyDashboard() {
         <div className="flex gap-2">
           <Link
             href="/input-cepat"
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 fs-14 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <ScanLine size={16} /> <span className="hidden sm:inline">Struk</span>
           </Link>
           <Link
             href="/input-cepat"
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 fs-14 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <Mic size={16} /> <span className="hidden sm:inline">Suara</span>
           </Link>
@@ -801,7 +802,7 @@ export default function MonthlyDashboard() {
             {SEASON_INFO[season].deco.map((d, i) => (
               <span
                 key={i}
-                className="leo-season-float absolute select-none text-[22px] opacity-70"
+                className="leo-season-float absolute select-none fsh-22 opacity-70"
                 style={{ left: `${[82, 90, 96][i]}%`, top: `${[7, 17, 5][i]}%`, animationDelay: `${i * 0.9}s` }}
               >
                 {d}
@@ -811,31 +812,31 @@ export default function MonthlyDashboard() {
         )}
         <div className="relative grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,410px)] md:items-end md:gap-6">
           <div className="min-w-0">
-            <p className="text-[24px] font-extrabold leading-tight tracking-tight md:text-[28px]">
+            <p className="fsh-24 font-extrabold leading-tight tracking-tight md:fsh-28">
               {now ? greeting(now.getHours()) : 'Halo'}
               {firstName ? `, ${firstName}` : ''}.
             </p>
-            <p className="mt-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-white/70 md:mt-4">
+            <p className="mt-3 fs-12 font-semibold uppercase tracking-[0.14em] text-white/70 md:mt-4">
               Keluar hari ini
             </p>
             {statsLoading ? (
               <div className="mt-2 h-14 w-56 animate-pulse rounded-2xl bg-white/20" />
             ) : (
-              <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight tabular-nums md:text-[48px]">
+              <p className="mt-1 fsh-40 font-extrabold leading-none tracking-tight tabular-nums md:fsh-48">
                 <AnimatedNumber value={spentToday} format={formatIDR} />
               </p>
             )}
-            <p className="mt-2 text-[14px] text-white/80">
+            <p className="mt-2 fs-14 text-white/80">
               {todaysSpend.length > 0 ? `dari ${todaysSpend.length} pembayaran` : 'Belum ada pengeluaran hari ini'}
             </p>
             {!statsLoading && dailyAllowance === 0 && (
-              <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold text-white/90">
+              <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 fs-12 font-semibold text-white/90">
                 Anggaran {monthLabel} sudah habis
               </p>
             )}
             {!statsLoading && !!dailyAllowance && (
               <div className="mt-4 max-w-sm">
-                <div className="flex justify-between text-[12px] font-semibold text-white/80">
+                <div className="flex justify-between fs-12 font-semibold text-white/80">
                   <span>Jatah anggaran hari ini {short(dailyAllowance)}</span>
                   <span>
                     {budgetedToday > dailyAllowance
@@ -856,7 +857,7 @@ export default function MonthlyDashboard() {
               className="mt-4 flex w-full max-w-md items-center gap-3 rounded-full bg-white/95 py-1.5 pl-4 pr-1.5 text-slate-400 shadow-lg transition-colors hover:bg-white md:mt-5"
             >
               <Sparkles size={16} className="text-indigo-500" />
-              <span className="flex-1 truncate text-[14px]">Tanya Leo apa aja soal uangmu…</span>
+              <span className="flex-1 truncate fs-14">Tanya Leo apa aja soal uangmu…</span>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white">
                 <Send size={15} />
               </span>
@@ -878,37 +879,35 @@ export default function MonthlyDashboard() {
           onClick={() => setShowAccountsModal(true)}
           className={cn(card, 'min-w-0 p-3.5 text-left transition-shadow hover:shadow-md md:p-5')}
         >
-          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 md:text-[13px]">
+          <span className="flex items-center gap-1.5 fs-12 font-semibold text-slate-500 md:fs-13">
             <Wallet size={14} className="text-indigo-500" /> Saldo bersih
           </span>
-          <span className="mt-1.5 block truncate text-[15px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[24px]">
+          <span className="mt-1.5 block truncate fs-15 font-extrabold tracking-tight text-slate-900 tabular-nums md:fsh-24">
             {accountsLoaded ? formatIDR(totalSaldoRekening) : '…'}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] text-slate-400 md:text-[12px]">
-            {accounts.length} rekening
-          </span>
+          <span className="mt-0.5 block truncate fs-11 text-slate-400 md:fs-12">{accounts.length} rekening</span>
         </button>
         <Link
           href="/membership/transactions/daily"
           className={cn(card, 'min-w-0 p-3.5 transition-shadow hover:shadow-md md:p-5')}
         >
-          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 md:text-[13px]">
+          <span className="flex items-center gap-1.5 fs-12 font-semibold text-slate-500 md:fs-13">
             <ArrowUpRight size={14} className="text-rose-500" /> Keluar {monthLabel}
           </span>
-          <span className="mt-1.5 block truncate text-[15px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[24px]">
+          <span className="mt-1.5 block truncate fs-15 font-extrabold tracking-tight text-slate-900 tabular-nums md:fsh-24">
             {formatIDR(totalPengeluaran)}
           </span>
           {pace.prevAtLastDay > 0 ? (
             <span
               className={cn(
-                'mt-0.5 block truncate text-[11px] font-semibold md:text-[12px]',
+                'mt-0.5 block truncate fs-11 font-semibold md:fs-12',
                 paceDiff > 0 ? 'text-rose-600' : 'text-emerald-600',
               )}
             >
               {paceDiff > 0 ? '▲' : '▼'} {short(Math.abs(paceDiff))} vs {prevMonthLabel}
             </span>
           ) : (
-            <span className="mt-0.5 block truncate text-[11px] text-slate-400 md:text-[12px]">
+            <span className="mt-0.5 block truncate fs-11 text-slate-400 md:fs-12">
               {transactions.filter(isSpend).length} transaksi
             </span>
           )}
@@ -917,13 +916,13 @@ export default function MonthlyDashboard() {
           href="/membership/transactions/daily"
           className={cn(card, 'min-w-0 p-3.5 transition-shadow hover:shadow-md md:p-5')}
         >
-          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 md:text-[13px]">
+          <span className="flex items-center gap-1.5 fs-12 font-semibold text-slate-500 md:fs-13">
             <ArrowDownLeft size={14} className="text-emerald-500" /> Masuk {monthLabel}
           </span>
-          <span className="mt-1.5 block truncate text-[15px] font-extrabold tracking-tight text-emerald-600 tabular-nums md:text-[24px]">
+          <span className="mt-1.5 block truncate fs-15 font-extrabold tracking-tight text-emerald-600 tabular-nums md:fsh-24">
             {formatIDR(totalPemasukan)}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] text-slate-400 md:text-[12px]">
+          <span className="mt-0.5 block truncate fs-11 text-slate-400 md:fs-12">
             {totalPemasukan > 0
               ? `selisih ${totalPemasukan - totalPengeluaran >= 0 ? '+' : '−'}${short(Math.abs(totalPemasukan - totalPengeluaran))}`
               : 'belum ada pemasukan'}
@@ -933,10 +932,10 @@ export default function MonthlyDashboard() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3 px-1">
-          <h2 className="text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[22px]">
+          <h2 className="fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-22">
             {monthLabel} {selectedYear}
             {isCurrentMonth && now ? (
-              <span className="ml-2 text-[14px] font-semibold text-slate-400">hari ke-{now.getDate()}</span>
+              <span className="ml-2 fs-14 font-semibold text-slate-400">hari ke-{now.getDate()}</span>
             ) : null}
           </h2>
           <MonthPicker
@@ -950,8 +949,8 @@ export default function MonthlyDashboard() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className={cn(card, 'p-5 md:p-6')}>
             <div className="flex items-baseline justify-between">
-              <p className="text-[16px] font-bold text-slate-900">Ke mana uangmu</p>
-              <Link href="/membership/budget" className="text-[13px] font-bold text-indigo-600 hover:underline">
+              <p className="fs-16 font-bold text-slate-900">Ke mana uangmu</p>
+              <Link href="/membership/budget" className="fs-13 font-bold text-indigo-600 hover:underline">
                 Anggaran
               </Link>
             </div>
@@ -962,7 +961,7 @@ export default function MonthlyDashboard() {
                 ))}
               </div>
             ) : categories.length === 0 ? (
-              <p className="py-8 text-center text-[14px] text-slate-500">Belum ada pengeluaran di {monthLabel}.</p>
+              <p className="py-8 text-center fs-14 text-slate-500">Belum ada pengeluaran di {monthLabel}.</p>
             ) : (
               <ul className="mt-4 space-y-3.5">
                 {categories.slice(0, 6).map((c, i) => {
@@ -973,7 +972,7 @@ export default function MonthlyDashboard() {
                     <li key={c.category} className={cn('flex items-center gap-3', i >= 4 && 'hidden md:flex')}>
                       <span
                         className={cn(
-                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[18px]',
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl fs-18',
                           visual.tile,
                         )}
                         aria-hidden
@@ -982,10 +981,10 @@ export default function MonthlyDashboard() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-[14px] font-semibold text-slate-800">{c.category}</span>
+                          <span className="truncate fs-14 font-semibold text-slate-800">{c.category}</span>
                           <span
                             className={cn(
-                              'shrink-0 text-[14px] font-bold tabular-nums',
+                              'shrink-0 fs-14 font-bold tabular-nums',
                               over ? 'text-rose-600' : 'text-slate-900',
                             )}
                           >
@@ -1009,7 +1008,7 @@ export default function MonthlyDashboard() {
               </ul>
             )}
             {hasBudgets && (overBudget > 0 || outsideBudget > 0) && (
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 text-[13px]">
+              <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 fs-13">
                 {overBudget > 0 && (
                   <span className="rounded-full bg-rose-50 px-3 py-1 font-bold text-rose-600">
                     Lewat anggaran {short(overBudget)}
@@ -1026,8 +1025,8 @@ export default function MonthlyDashboard() {
 
           <div className={cn(card, 'p-5 md:p-6')}>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-[16px] font-bold text-slate-900">Ritme pengeluaran</p>
-              <span className="flex items-center gap-3 text-[12px] font-semibold text-slate-500">
+              <p className="fs-16 font-bold text-slate-900">Ritme pengeluaran</p>
+              <span className="flex items-center gap-3 fs-12 font-semibold text-slate-500">
                 <span className="flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full bg-indigo-500" />
                   {monthLabel}
@@ -1038,7 +1037,7 @@ export default function MonthlyDashboard() {
                 </span>
               </span>
             </div>
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 fs-13 text-slate-500">
               {pace.prevAtLastDay > 0
                 ? `Sampai tanggal ${pace.lastDay}: ${short(spentToDate)} vs ${short(pace.prevAtLastDay)} di ${prevMonthLabel}.`
                 : `Total keluar sampai tanggal ${pace.lastDay}: ${short(spentToDate)}.`}
@@ -1061,14 +1060,13 @@ export default function MonthlyDashboard() {
 
       {!statsLoading && <HealthScoreCard result={health} />}
 
+      <LiburCard />
+
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className={cn(card, 'p-5 md:p-6')}>
           <div className="flex items-baseline justify-between">
-            <p className="text-[16px] font-bold text-slate-900">Catatan terbaru</p>
-            <Link
-              href="/membership/transactions/daily"
-              className="text-[13px] font-bold text-indigo-600 hover:underline"
-            >
+            <p className="fs-16 font-bold text-slate-900">Catatan terbaru</p>
+            <Link href="/membership/transactions/daily" className="fs-13 font-bold text-indigo-600 hover:underline">
               Lihat semua
             </Link>
           </div>
@@ -1080,11 +1078,11 @@ export default function MonthlyDashboard() {
             </div>
           ) : recent.length === 0 ? (
             <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-slate-50 py-6 text-center">
-              <p className="text-[14px] text-slate-500">Belum ada transaksi. Yuk catat yang pertama.</p>
+              <p className="fs-14 text-slate-500">Belum ada transaksi. Yuk catat yang pertama.</p>
               <button
                 type="button"
                 onClick={() => openModal('harian')}
-                className="rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-bold text-white"
+                className="rounded-full bg-indigo-600 px-5 py-2.5 fs-14 font-bold text-white"
               >
                 Catat sekarang
               </button>
@@ -1093,7 +1091,7 @@ export default function MonthlyDashboard() {
             <div className="mt-2">
               {recentGroups.map((g, gi) => (
                 <div key={g.label} className={cn(gi >= 3 && 'hidden md:block')}>
-                  <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">{g.label}</p>
+                  <p className="mt-3 fs-11 font-bold uppercase tracking-[0.12em] text-slate-400">{g.label}</p>
                   <div className="divide-y divide-slate-100">
                     {g.items.map((t, i) => (
                       <TxRow key={t.id || i} t={t} />
@@ -1107,11 +1105,11 @@ export default function MonthlyDashboard() {
 
         <div className={cn(card, 'p-5 md:p-6')}>
           <div className="flex items-baseline justify-between">
-            <p className="text-[16px] font-bold text-slate-900">Segera</p>
+            <p className="fs-16 font-bold text-slate-900">Segera</p>
             <button
               type="button"
               onClick={() => openSettings('pengingat')}
-              className="text-[13px] font-bold text-indigo-600 hover:underline"
+              className="fs-13 font-bold text-indigo-600 hover:underline"
             >
               Pengingat
             </button>
@@ -1119,11 +1117,11 @@ export default function MonthlyDashboard() {
           {upcoming.length === 0 ? (
             <div className="mt-4 flex flex-col items-center gap-2 rounded-2xl bg-slate-50 px-4 py-6 text-center">
               <BellRing size={22} className="text-slate-400" />
-              <p className="text-[14px] text-slate-500">Tidak ada tagihan atau pengingat 30 hari ke depan.</p>
+              <p className="fs-14 text-slate-500">Tidak ada tagihan atau pengingat 30 hari ke depan.</p>
               <button
                 type="button"
                 onClick={() => openSettings('pengingat')}
-                className="mt-1 flex items-center gap-1 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200"
+                className="mt-1 flex items-center gap-1 rounded-full bg-white px-4 py-2 fs-13 font-bold text-slate-700 ring-1 ring-slate-200"
               >
                 <Plus size={14} /> Buat pengingat
               </button>
@@ -1147,10 +1145,10 @@ export default function MonthlyDashboard() {
                       {u.kind === 'card' ? <CreditCard size={17} /> : <BellRing size={17} />}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-semibold text-slate-900">{u.title}</span>
+                      <span className="block truncate fs-14 font-semibold text-slate-900">{u.title}</span>
                       <span
                         className={cn(
-                          'block text-[12px]',
+                          'block fs-12',
                           u.days < 0
                             ? 'font-bold text-rose-600'
                             : urgent
@@ -1162,7 +1160,7 @@ export default function MonthlyDashboard() {
                       </span>
                     </span>
                     {u.amount ? (
-                      <span className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">
+                      <span className="shrink-0 fs-14 font-bold text-slate-900 tabular-nums">
                         {formatIDR(u.amount)}
                       </span>
                     ) : null}
@@ -1193,9 +1191,7 @@ export default function MonthlyDashboard() {
 
       {/* Pintasan fitur (saldo sudah di baris atas) — di HP cukup empat teratas */}
       <section>
-        <h2 className="mb-3 px-1 text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[22px]">
-          Fitur kamu
-        </h2>
+        <h2 className="mb-3 px-1 fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-22">Fitur kamu</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {features.slice(1).map((f, fi) => {
             const inner = (
@@ -1205,11 +1201,11 @@ export default function MonthlyDashboard() {
                 >
                   <f.icon size={18} />
                 </span>
-                <p className="mt-3 truncate text-[13px] font-semibold text-slate-500">{f.label}</p>
-                <p className="truncate text-[16px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[18px]">
+                <p className="mt-3 truncate fs-13 font-semibold text-slate-500">{f.label}</p>
+                <p className="truncate fs-16 font-extrabold tracking-tight text-slate-900 tabular-nums md:fs-18">
                   {f.value}
                 </p>
-                <p className="mt-0.5 truncate text-[12px] text-slate-400">{f.caption}</p>
+                <p className="mt-0.5 truncate fs-12 text-slate-400">{f.caption}</p>
               </>
             );
             const cls = cn(

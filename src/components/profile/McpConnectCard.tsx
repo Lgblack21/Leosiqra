@@ -137,7 +137,7 @@ export function McpConnectCard() {
             <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
               Hubungkan ke AI
             </h2>
-            <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+            <p className="fs-10 font-bold text-slate-400 mt-0.5">
               Tanya &amp; catat keuangan dari Claude, ChatGPT &amp; klien MCP lain
             </p>
           </div>
@@ -148,7 +148,7 @@ export function McpConnectCard() {
               setShowForm(true);
               setNewToken(null);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-[11px] font-black shrink-0 hover:bg-indigo-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white fs-11 font-black shrink-0 hover:bg-indigo-700 transition-colors"
           >
             <Plus size={14} /> Token
           </button>
@@ -161,7 +161,7 @@ export function McpConnectCard() {
           const writers = tokens.filter((t) => t.scopes.includes('write'));
           return (
             <div
-              className={`flex items-start gap-2.5 rounded-2xl px-3.5 py-3 text-[12px] ${writers.length ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'}`}
+              className={`flex items-start gap-2.5 rounded-2xl px-3.5 py-3 fs-12 ${writers.length ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'}`}
             >
               <span
                 className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${writers.length ? 'bg-emerald-500' : 'bg-amber-500'}`}
@@ -179,23 +179,23 @@ export function McpConnectCard() {
           );
         })()}
 
-      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+      <p className="fs-11 font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
         Data yang dibaca AI dikirim ke penyedia AI pilihan Anda. Token bisa dicabut kapan saja dan otomatis dicabut saat
         password diganti/direset.
       </p>
-      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+      <p className="fs-11 font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
         <b>claude.ai / ChatGPT:</b> tambahkan custom connector dengan URL{' '}
         <code className="text-slate-700 dark:text-slate-200 break-all">{MCP_URL}</code>, lalu login Leosiqra &amp; pilih
         Izinkan — tidak perlu token. Token di bawah untuk Claude Code &amp; klien yang memakai header.
       </p>
       <Link
         href="/panduan/mcp"
-        className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline"
+        className="inline-flex items-center gap-1.5 fs-11 font-black text-indigo-600 dark:text-indigo-400 hover:underline"
       >
         <BookOpen size={13} /> Panduan langkah demi langkah
       </Link>
 
-      {error && <p className="text-[11px] font-bold text-rose-500">{error}</p>}
+      {error && <p className="fs-11 font-bold text-rose-500">{error}</p>}
 
       {showForm && (
         <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl space-y-3">
@@ -207,13 +207,13 @@ export function McpConnectCard() {
             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 shrink-0">Berlaku</span>
+            <span className="fs-11 font-bold text-slate-500 shrink-0">Berlaku</span>
             {[30, 90, 365].map((d) => (
               <button
                 key={d}
                 onClick={() => setDays(d)}
                 className={cn(
-                  'px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors whitespace-nowrap',
+                  'px-2.5 py-1.5 rounded-lg fs-11 font-black transition-colors whitespace-nowrap',
                   days === d
                     ? 'bg-indigo-600 text-white'
                     : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
@@ -225,7 +225,7 @@ export function McpConnectCard() {
           </div>
           <label
             className={cn(
-              'flex items-start gap-2 text-[11px] font-medium',
+              'flex items-start gap-2 fs-11 font-medium',
               canWrite ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400',
             )}
           >
@@ -246,14 +246,11 @@ export function McpConnectCard() {
             <button
               onClick={handleCreate}
               disabled={creating || !name.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-[11px] font-black disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white fs-11 font-black disabled:opacity-50"
             >
               {creating ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} Buat token
             </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 rounded-xl text-[11px] font-black text-slate-500"
-            >
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl fs-11 font-black text-slate-500">
               Batal
             </button>
           </div>
@@ -262,7 +259,7 @@ export function McpConnectCard() {
 
       {newToken && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl space-y-3">
-          <p className="text-[11px] font-black text-emerald-800">
+          <p className="fs-11 font-black text-emerald-800">
             Salin token sekarang — token ini hanya ditampilkan sekali.
           </p>
           {[
@@ -271,9 +268,9 @@ export function McpConnectCard() {
             { label: 'cmd', title: 'Claude Code (terminal)', value: claudeCodeCmd },
           ].map((row) => (
             <div key={row.label}>
-              <p className="text-[10px] font-bold text-emerald-700 mb-1">{row.title}</p>
+              <p className="fs-10 font-bold text-emerald-700 mb-1">{row.title}</p>
               <div className="flex items-start gap-2">
-                <code className="flex-1 min-w-0 break-all text-[11px] bg-white dark:bg-slate-900 px-2.5 py-2 rounded-lg border border-emerald-100 dark:border-emerald-500/20 text-slate-800 dark:text-slate-200">
+                <code className="flex-1 min-w-0 break-all fs-11 bg-white dark:bg-slate-900 px-2.5 py-2 rounded-lg border border-emerald-100 dark:border-emerald-500/20 text-slate-800 dark:text-slate-200">
                   {row.value}
                 </code>
                 <button
@@ -286,7 +283,7 @@ export function McpConnectCard() {
               </div>
             </div>
           ))}
-          <p className="text-[10px] font-medium text-emerald-800 leading-relaxed">
+          <p className="fs-10 font-medium text-emerald-800 leading-relaxed">
             Klien MCP lain yang mendukung header: pakai URL di atas + header{' '}
             <code>Authorization: Bearer &lt;token&gt;</code>.
           </p>
@@ -308,24 +305,24 @@ export function McpConnectCard() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-black text-slate-900 dark:text-white truncate">{t.name}</p>
                   {t.source === 'oauth' ? (
-                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full shrink-0">
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 fs-9 font-black rounded-full shrink-0">
                       Login AI
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[9px] font-black rounded-full shrink-0">
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-600 fs-9 font-black rounded-full shrink-0">
                       …{t.hint}
                     </span>
                   )}
                   <span
                     className={cn(
-                      'px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0',
+                      'px-2 py-0.5 fs-9 font-black rounded-full uppercase tracking-widest shrink-0',
                       t.scopes.includes('write') ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700',
                     )}
                   >
                     {t.scopes.includes('write') ? 'Baca + catat' : 'Baca'}
                   </span>
                 </div>
-                <p className="text-[10px] font-medium text-slate-400 mt-1">
+                <p className="fs-10 font-medium text-slate-400 mt-1">
                   {t.lastUsedAt ? `Dipakai ${formatDateTime(t.lastUsedAt)}` : 'Belum dipakai'} ·{' '}
                   {t.source === 'oauth'
                     ? `tersambung s.d. ${formatDate(t.expiresAt)} (diperpanjang otomatis saat dipakai)`
@@ -347,10 +344,10 @@ export function McpConnectCard() {
 
       {activity.length > 0 && (
         <div className="pt-2">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Aktivitas AI terakhir</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-2">Aktivitas AI terakhir</p>
           <ul className="space-y-1.5">
             {activity.slice(0, 8).map((a, i) => (
-              <li key={`${a.createdAt}-${i}`} className="flex items-center justify-between gap-3 text-[11px]">
+              <li key={`${a.createdAt}-${i}`} className="flex items-center justify-between gap-3 fs-11">
                 <span
                   className={cn('font-bold truncate', a.ok ? 'text-slate-700 dark:text-slate-300' : 'text-rose-500')}
                 >

@@ -114,10 +114,8 @@ export function AmountCalculatorButton({
               className="relative w-full rounded-t-[28px] bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-w-sm sm:rounded-[28px]"
             >
               <div className="rounded-2xl bg-slate-900 px-4 py-3 text-right text-white">
-                <p className="min-h-[20px] truncate text-[14px] text-white/60">{expr || '0'}</p>
-                <p className="truncate text-[30px] font-extrabold tabular-nums">
-                  {result === null ? '—' : fmt(result)}
-                </p>
+                <p className="min-h-[20px] truncate fs-14 text-white/60">{expr || '0'}</p>
+                <p className="truncate fsh-30 font-extrabold tabular-nums">{result === null ? '—' : fmt(result)}</p>
               </div>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {KEYS.map((k) => (
@@ -126,7 +124,7 @@ export function AmountCalculatorButton({
                     type="button"
                     onClick={() => press(k)}
                     className={cn(
-                      'h-14 rounded-2xl text-[20px] font-bold active:scale-95',
+                      'h-14 rounded-2xl fsh-20 font-bold active:scale-95',
                       OPS[k] ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-900',
                     )}
                   >
@@ -136,7 +134,7 @@ export function AmountCalculatorButton({
                 <button
                   type="button"
                   onClick={() => setExpr('')}
-                  className="h-14 rounded-2xl bg-rose-50 text-[16px] font-bold text-rose-600 active:scale-95"
+                  className="h-14 rounded-2xl bg-rose-50 fs-16 font-bold text-rose-600 active:scale-95"
                 >
                   C
                 </button>
@@ -152,7 +150,7 @@ export function AmountCalculatorButton({
                   type="button"
                   onClick={use}
                   disabled={result === null || result <= 0}
-                  className="col-span-2 h-14 rounded-2xl bg-indigo-600 text-[16px] font-bold text-white disabled:bg-slate-200 disabled:text-slate-400 active:scale-95"
+                  className="col-span-2 h-14 rounded-2xl bg-indigo-600 fs-16 font-bold text-white disabled:bg-slate-200 disabled:text-slate-400 active:scale-95"
                 >
                   Pakai
                 </button>

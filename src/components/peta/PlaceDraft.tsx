@@ -175,8 +175,7 @@ export function usePlaceDraft({
     [d, spending],
   );
 
-  const pill =
-    'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-bold ring-1 transition-colors';
+  const pill = 'inline-flex h-8 items-center gap-1.5 rounded-full px-3 fs-12.5 font-bold ring-1 transition-colors';
   const chip = !spending ? null : (
     <div className="flex flex-wrap items-center gap-1.5">
       {d.k === 'idle' || d.k === 'off' ? (
@@ -194,7 +193,7 @@ export function usePlaceDraft({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-[12px] font-semibold text-slate-400 underline-offset-2 hover:underline"
+            className="fs-12 font-semibold text-slate-400 underline-offset-2 hover:underline"
           >
             pilih di peta
           </button>
@@ -250,7 +249,7 @@ export function usePlaceDraft({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-[12px] font-semibold text-slate-400 underline-offset-2 hover:underline"
+            className="fs-12 font-semibold text-slate-400 underline-offset-2 hover:underline"
           >
             tetap tandai
           </button>
@@ -258,15 +257,15 @@ export function usePlaceDraft({
       ) : null}
       {d.k === 'error' ? (
         <>
-          <span className="text-[12px] text-slate-500">{d.msg}</span>
+          <span className="fs-12 text-slate-500">{d.msg}</span>
           <button
             type="button"
             onClick={() => void locate(false)}
-            className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400"
+            className="fs-12 font-bold text-indigo-600 dark:text-indigo-400"
           >
             Coba lagi
           </button>
-          <button type="button" onClick={() => setEditing(true)} className="text-[12px] font-semibold text-slate-400">
+          <button type="button" onClick={() => setEditing(true)} className="fs-12 font-semibold text-slate-400">
             pilih di peta
           </button>
         </>

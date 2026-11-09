@@ -240,8 +240,8 @@ export default function RekeningPage() {
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Rekening</h1>
-          <p className="text-[13px] text-slate-500">
+          <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Rekening</h1>
+          <p className="fs-13 text-slate-500">
             {cashAccounts.length} rekening{cards.length > 0 && ` · ${cards.length} kartu kredit`}
             {Object.keys(fxRates).length > 0 &&
               accounts.some((a) => a.currency && a.currency !== 'IDR') &&
@@ -253,7 +253,7 @@ export default function RekeningPage() {
             type="button"
             onClick={() => openModal('topup_transfer')}
             aria-label="Transfer antar rekening"
-            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 fs-13 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <ArrowLeftRight size={15} /> <span className="hidden sm:inline">Transfer</span>
           </button>
@@ -261,7 +261,7 @@ export default function RekeningPage() {
             type="button"
             onClick={openCreate}
             aria-label="Tambah rekening"
-            className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white hover:bg-slate-800"
+            className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 fs-13 font-bold text-white hover:bg-slate-800"
           >
             <Plus size={15} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah</span>
           </button>
@@ -283,12 +283,12 @@ export default function RekeningPage() {
           />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12px] font-semibold uppercase tracking-wide text-white/60">
+              <p className="fs-12 font-semibold uppercase tracking-wide text-white/60">
                 {cards.length > 0 ? 'Saldo bersih' : 'Total saldo'}
               </p>
               <p
                 className={cn(
-                  'mt-0.5 truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums md:text-[34px]',
+                  'mt-0.5 truncate fsh-30 font-extrabold leading-tight tracking-tight tabular-nums md:fsh-34',
                   totalSaldo < 0 && 'text-rose-300',
                 )}
                 title={formatIDR(totalSaldo)}
@@ -296,7 +296,7 @@ export default function RekeningPage() {
                 {hidden ? 'Rp ••••••' : formatIDR(totalSaldo)}
               </p>
               {cards.length > 0 && (
-                <p className="text-[13px] text-white/70 tabular-nums">
+                <p className="fs-13 text-white/70 tabular-nums">
                   Kas {hidden ? '••••' : short(cashTotal)} · tagihan kartu {hidden ? '••••' : short(cardsUsedIdr)}
                 </p>
               )}
@@ -334,7 +334,7 @@ export default function RekeningPage() {
                         key={a.id}
                         type="button"
                         onClick={() => setDetailId(a.id ?? null)}
-                        className="flex items-center gap-1.5 text-[12px] text-white/75 hover:text-white"
+                        className="flex items-center gap-1.5 fs-12 text-white/75 hover:text-white"
                       >
                         <span className="h-2 w-2 rounded-full" style={{ background: SEG[i % SEG.length] }} />
                         {a.name}
@@ -353,14 +353,14 @@ export default function RekeningPage() {
               className="relative mt-4 flex w-full items-center gap-2.5 rounded-2xl bg-white/10 px-3 py-2 text-left hover:bg-white/15"
             >
               <CreditCard size={16} className="shrink-0 text-white/70" />
-              <span className="min-w-0 flex-1 truncate text-[13px] text-white/85">
+              <span className="min-w-0 flex-1 truncate fs-13 text-white/85">
                 <span className="font-semibold text-white">{nearest.acc.name}</span> ·{' '}
                 {hidden ? '••••' : short(nearest.cycle!.amountDue)}{' '}
                 {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
               </span>
               <span
                 className={cn(
-                  'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold',
+                  'shrink-0 rounded-full px-2 py-0.5 fs-11 font-bold',
                   nearest.cycle!.overdue || nearest.cycle!.daysUntilDue <= 5
                     ? 'bg-rose-500 text-white'
                     : 'bg-white/15 text-white',
@@ -379,13 +379,13 @@ export default function RekeningPage() {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Rekeningmu</h2>
+          <h2 className="fs-17 font-bold tracking-tight text-slate-900">Rekeningmu</h2>
           {cashAccounts.length > 1 && (
             <button
               type="button"
               onClick={() => setReordering((r) => !r)}
               className={cn(
-                'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold',
+                'flex items-center gap-1.5 rounded-full px-2.5 py-1 fs-12 font-bold',
                 reordering ? 'bg-slate-900 text-white' : 'text-indigo-600 hover:bg-indigo-50',
               )}
             >
@@ -401,13 +401,13 @@ export default function RekeningPage() {
           </div>
         ) : cashAccounts.length === 0 ? (
           <div className="rounded-[20px] bg-white p-6 text-center ring-1 ring-slate-100">
-            <p className="text-[15px] font-semibold text-slate-900">Belum ada rekening</p>
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="fs-15 font-semibold text-slate-900">Belum ada rekening</p>
+            <p className="mt-1 fs-13 text-slate-500">
               Tambahkan bank, e-wallet, atau uang tunai pertamamu untuk mulai mencatat.
             </p>
             <button
               onClick={openCreate}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[13px] font-bold text-white"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 fs-13 font-bold text-white"
             >
               <Plus size={15} /> Tambah rekening
             </button>
@@ -421,7 +421,7 @@ export default function RekeningPage() {
                 <>
                   <span
                     className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[18px]',
+                      'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl fs-18',
                       v.tile,
                     )}
                   >
@@ -432,7 +432,7 @@ export default function RekeningPage() {
                       fallbackIcon={
                         <span
                           aria-hidden
-                          className={cn('flex h-full w-full items-center justify-center text-[18px]', v.tile)}
+                          className={cn('flex h-full w-full items-center justify-center fs-18', v.tile)}
                         >
                           {v.emoji}
                         </span>
@@ -441,8 +441,8 @@ export default function RekeningPage() {
                     />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-semibold text-slate-900">{acc.name}</p>
-                    <p className="flex items-center gap-1.5 truncate text-[12px] text-slate-500">
+                    <p className="truncate fs-14 font-semibold text-slate-900">{acc.name}</p>
+                    <p className="flex items-center gap-1.5 truncate fs-12 text-slate-500">
                       {share(i) > 0 && (
                         <span
                           aria-hidden
@@ -458,14 +458,14 @@ export default function RekeningPage() {
                   <div className="text-right">
                     <p
                       className={cn(
-                        'whitespace-nowrap text-[14px] font-bold tabular-nums',
+                        'whitespace-nowrap fs-14 font-bold tabular-nums',
                         bal < 0 ? 'text-rose-600' : 'text-slate-900',
                       )}
                     >
                       {money(bal, acc.currency)}
                     </p>
                     {acc.currency && acc.currency !== 'IDR' && !hidden && (
-                      <p className="text-[11px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>
+                      <p className="fs-11 text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>
                     )}
                   </div>
                 </>
@@ -517,11 +517,11 @@ export default function RekeningPage() {
       {cardInfo.length > 0 && (
         <section>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kartu kredit</h2>
+            <h2 className="fs-17 font-bold tracking-tight text-slate-900">Kartu kredit</h2>
             <button
               type="button"
               onClick={() => openHub(null)}
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-indigo-600 hover:bg-indigo-50"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 fs-12 font-bold text-indigo-600 hover:bg-indigo-50"
             >
               Kelola <ChevronRight size={14} />
             </button>
@@ -549,18 +549,13 @@ export default function RekeningPage() {
                         aria-hidden
                         className="absolute left-1 top-1 h-[7px] w-[9px] rounded-[2px] bg-amber-200/90"
                       />
-                      <span className="relative text-right font-mono text-[8px] leading-none tracking-wider text-white/90">
+                      <span className="relative text-right font-mono fs-8 leading-none tracking-wider text-white/90">
                         {acc.cardLast4 || '••••'}
                       </span>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-semibold text-slate-900">{acc.name}</p>
-                      <p
-                        className={cn(
-                          'truncate text-[12px]',
-                          urgent ? 'font-semibold text-rose-600' : 'text-slate-500',
-                        )}
-                      >
+                      <p className="truncate fs-14 font-semibold text-slate-900">{acc.name}</p>
+                      <p className={cn('truncate fs-12', urgent ? 'font-semibold text-rose-600' : 'text-slate-500')}>
                         {due
                           ? cycle.overdue
                             ? `Lewat jatuh tempo ${dueText(cycle.dueDate)}`
@@ -571,7 +566,7 @@ export default function RekeningPage() {
                       </p>
                     </div>
                     <div className="w-24 shrink-0 text-right">
-                      <p className="whitespace-nowrap text-[14px] font-bold text-slate-900 tabular-nums">
+                      <p className="whitespace-nowrap fs-14 font-bold text-slate-900 tabular-nums">
                         {hidden ? '••••' : short(due ? cycle.amountDue : usage.used)}
                       </p>
                       {usage.limit > 0 && usage.used > 0 && (
@@ -592,7 +587,7 @@ export default function RekeningPage() {
               );
             })}
           </ul>
-          <p className="mt-1.5 px-1 text-[12px] text-slate-500">
+          <p className="mt-1.5 px-1 fs-12 text-slate-500">
             Total tagihan{' '}
             <span className="font-bold text-slate-800 tabular-nums">{hidden ? '••••' : formatIDR(cardsUsedIdr)}</span>
           </p>
@@ -602,11 +597,8 @@ export default function RekeningPage() {
       {goalsWithTarget.length > 0 && (
         <section>
           <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Target</h2>
-            <Link
-              href="/membership/kekayaan#tabungan"
-              className="text-[12px] font-bold text-indigo-600 hover:underline"
-            >
+            <h2 className="fs-17 font-bold tracking-tight text-slate-900">Target</h2>
+            <Link href="/membership/kekayaan#tabungan" className="fs-12 font-bold text-indigo-600 hover:underline">
               Lihat semua
             </Link>
           </div>
@@ -637,11 +629,11 @@ export default function RekeningPage() {
                           strokeDasharray={`${(pct / 100) * 119.4} 119.4`}
                         />
                       </svg>
-                      <span className="text-[11px] font-bold tabular-nums text-slate-700">{Math.round(pct)}%</span>
+                      <span className="fs-11 font-bold tabular-nums text-slate-700">{Math.round(pct)}%</span>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-semibold text-slate-900">{g.name}</p>
-                      <p className="text-[12px] text-slate-500 tabular-nums">
+                      <p className="truncate fs-14 font-semibold text-slate-900">{g.name}</p>
+                      <p className="fs-12 text-slate-500 tabular-nums">
                         {hidden ? '••••' : `${short(g.currentTotal)} dari ${short(g.targetAmount || 0)}`}
                       </p>
                     </div>
@@ -654,7 +646,7 @@ export default function RekeningPage() {
         </section>
       )}
 
-      <p className="flex items-center justify-center gap-1.5 px-2 text-center text-[11px] text-slate-400">
+      <p className="flex items-center justify-center gap-1.5 px-2 text-center fs-11 text-slate-400">
         <ShieldCheck size={13} className="shrink-0" /> Leosiqra tidak pernah meminta akses ke bank — saldo murni dari
         catatanmu sendiri.
       </p>

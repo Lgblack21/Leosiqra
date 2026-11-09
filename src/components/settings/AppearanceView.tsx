@@ -3,6 +3,7 @@
 import { Monitor, Sun, Moon, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
+import { TEXT_SIZES, useTextSize } from '@/lib/textSize';
 
 // Pengaturan → Mode gelap. Disimpan per perangkat (localStorage, sama dengan
 // aplikasi HP). Web masih bertahap — lihat lib/webTheme.ts.
@@ -28,8 +29,10 @@ export const THEME_LABEL: Record<ThemeMode, string> = { system: 'Ikuti perangkat
 
 export function AppearanceView() {
   const { theme, setTheme } = useTheme();
+  const { size, setSize } = useTextSize();
   return (
     <div className="space-y-4">
+      <p className="px-1 fs-12 font-bold uppercase tracking-wider text-slate-400">Mode gelap</p>
       <div className="grid grid-cols-3 gap-2">
         {MODES.map((m) => {
           const on = theme === m.id;
@@ -53,15 +56,42 @@ export function AppearanceView() {
                   </span>
                 )}
               </span>
-              <span className="mt-2 flex items-center gap-1.5 px-1 text-[13px] font-semibold text-slate-900">
+              <span className="mt-2 flex items-center gap-1.5 px-1 fs-13 font-semibold text-slate-900">
                 <m.icon size={14} /> {m.label}
               </span>
             </button>
           );
         })}
       </div>
-      <p className="px-1 text-[13px] leading-snug text-slate-500">{MODES.find((m) => m.id === theme)?.desc}</p>
-      <div className="rounded-2xl bg-slate-50 p-3 text-[12px] leading-relaxed text-slate-500 ring-1 ring-slate-200">
+      <p className="px-1 fs-13 leading-snug text-slate-500">{MODES.find((m) => m.id === theme)?.desc}</p>
+      <p className="px-1 pt-2 fs-12 font-bold uppercase tracking-wider text-slate-400">Ukuran teks</p>
+      <div className="grid grid-cols-3 gap-2">
+        {TEXT_SIZES.map((t) => {
+          const on = size === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setSize(t.id)}
+              aria-pressed={on}
+              className={cn(
+                'flex h-20 flex-col items-center justify-center gap-1 rounded-[20px] ring-1 transition',
+                on ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'ring-slate-200 hover:ring-slate-300',
+              )}
+            >
+              <span
+                className="font-black leading-none text-slate-900"
+                style={{ fontSize: t.id === 'kecil' ? 15 : t.id === 'sedang' ? 19 : 23 }}
+              >
+                Aa
+              </span>
+              <span className="fs-12.5 font-semibold text-slate-700">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="px-1 fs-13 leading-snug text-slate-500">{TEXT_SIZES.find((t) => t.id === size)?.desc}</p>
+      <div className="rounded-2xl bg-slate-50 p-3 fs-12 leading-relaxed text-slate-500 ring-1 ring-slate-200">
         Mode gelap web masih bertahap: menu samping, panel Pengaturan & halaman Ringkasan sudah gelap; halaman lain
         menyusul. Aplikasi HP sudah gelap sepenuhnya. Pilihan disimpan di perangkat ini.
       </div>

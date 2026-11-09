@@ -87,7 +87,7 @@ export function InstallAnimation({
             >
               <span
                 className={cn(
-                  'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black',
+                  'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full fs-11 font-black',
                   i < step
                     ? 'bg-emerald-500 text-white'
                     : i === step
@@ -147,26 +147,26 @@ function PageContent({ app }: { app: InstallApp }) {
   if (app === 'input-cepat') {
     return (
       <div className="space-y-2 px-3 pt-3">
-        <p className="text-[11px] font-black text-slate-800">Input Cepat</p>
-        <div className="rounded-xl border-2 border-indigo-200 px-2.5 py-2 text-[10px] font-bold text-slate-400">
+        <p className="fs-11 font-black text-slate-800">Input Cepat</p>
+        <div className="rounded-xl border-2 border-indigo-200 px-2.5 py-2 fs-10 font-bold text-slate-400">
           25rb kopi gopay
         </div>
         <div className="grid grid-cols-3 gap-1">
           {['1', '2', '3', '4', '5', '6'].map((k) => (
-            <div key={k} className="rounded-lg bg-slate-100 py-1.5 text-center text-[10px] font-bold text-slate-500">
+            <div key={k} className="rounded-lg bg-slate-100 py-1.5 text-center fs-10 font-bold text-slate-500">
               {k}
             </div>
           ))}
         </div>
-        <div className="rounded-xl bg-indigo-600 py-2 text-center text-[10px] font-black text-white">Simpan</div>
+        <div className="rounded-xl bg-indigo-600 py-2 text-center fs-10 font-black text-white">Simpan</div>
       </div>
     );
   }
   return (
     <div className="space-y-2 px-3 pt-3">
-      <p className="text-[11px] font-black text-slate-800">Hai, Rina</p>
+      <p className="fs-11 font-black text-slate-800">Hai, Rina</p>
       <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 p-3 text-white">
-        <p className="text-[8px] font-bold uppercase tracking-widest opacity-80">Total saldo</p>
+        <p className="fs-8 font-bold uppercase tracking-widest opacity-80">Total saldo</p>
         <p className="text-sm font-black">Rp 12.475.000</p>
       </div>
       {[70, 45, 60].map((w, i) => (
@@ -182,7 +182,7 @@ function PageContent({ app }: { app: InstallApp }) {
 function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallApp; step: number }) {
   const info = APP_INFO[app];
   const url = (
-    <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-semibold text-slate-600">
+    <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 fs-9 font-semibold text-slate-600">
       <Lock size={9} className="shrink-0 text-slate-400" />
       <span className="truncate">leosiqra.com{info.path}</span>
       <RotateCw size={9} className="ml-auto shrink-0 text-slate-400" />
@@ -212,15 +212,15 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
               className="absolute right-2 top-9 z-20 w-40 overflow-hidden rounded-xl bg-white py-1 shadow-xl ring-1 ring-slate-200"
             >
               {['Tab baru', 'Riwayat', 'Download', 'Bagikan…'].map((t) => (
-                <p key={t} className="px-3 py-1.5 text-[10px] text-slate-600">
+                <p key={t} className="px-3 py-1.5 fs-10 text-slate-600">
                   {t}
                 </p>
               ))}
-              <p className="relative flex items-center gap-2 bg-indigo-50 px-3 py-1.5 text-[10px] font-bold text-indigo-700">
+              <p className="relative flex items-center gap-2 bg-indigo-50 px-3 py-1.5 fs-10 font-bold text-indigo-700">
                 <Download size={11} /> Instal aplikasi
                 <Tap className="left-1/2 top-1/2" />
               </p>
-              <p className="px-3 py-1.5 text-[10px] text-slate-600">Setelan</p>
+              <p className="px-3 py-1.5 fs-10 text-slate-600">Setelan</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -237,15 +237,15 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
                 animate={{ scale: 1 }}
                 className="w-full rounded-2xl bg-white p-4 shadow-xl"
               >
-                <p className="text-[11px] font-black text-slate-800">Instal aplikasi?</p>
+                <p className="fs-11 font-black text-slate-800">Instal aplikasi?</p>
                 <div className="mt-3 flex items-center gap-2">
                   <Image src={info.icon} alt="" width={30} height={30} className="rounded-lg" />
                   <div>
-                    <p className="text-[10px] font-bold text-slate-800">{info.name}</p>
-                    <p className="text-[9px] text-slate-400">leosiqra.com</p>
+                    <p className="fs-10 font-bold text-slate-800">{info.name}</p>
+                    <p className="fs-9 text-slate-400">leosiqra.com</p>
                   </div>
                 </div>
-                <div className="mt-4 flex justify-end gap-3 text-[10px] font-bold">
+                <div className="mt-4 flex justify-end gap-3 fs-10 font-bold">
                   <span className="text-slate-400">Batal</span>
                   <span className="relative text-indigo-600">
                     Instal
@@ -269,14 +269,14 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
       <div className="space-y-2 bg-slate-50 px-2.5 pb-4 pt-2">
         {url}
         <div className="flex items-center justify-around text-indigo-500">
-          <span className="text-[12px]">‹</span>
-          <span className="text-[12px] text-slate-300">›</span>
+          <span className="fs-12">‹</span>
+          <span className="fs-12 text-slate-300">›</span>
           <span className="relative">
             <Share size={14} />
             {step === 1 && <Tap className="left-1/2 top-1/2" />}
           </span>
-          <span className="text-[11px]">⌘</span>
-          <span className="text-[11px]">⧉</span>
+          <span className="fs-11">⌘</span>
+          <span className="fs-11">⧉</span>
         </div>
       </div>
       <AnimatePresence>
@@ -290,19 +290,19 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
           >
             <div className="mb-2 flex items-center gap-2 rounded-xl bg-white p-2">
               <Image src={info.icon} alt="" width={22} height={22} className="rounded-md" />
-              <p className="text-[9px] font-bold text-slate-700">leosiqra.com</p>
+              <p className="fs-9 font-bold text-slate-700">leosiqra.com</p>
             </div>
             <div className="overflow-hidden rounded-xl bg-white">
               {['Salin', 'Tambah ke Daftar Bacaan'].map((t) => (
-                <p key={t} className="border-b border-slate-100 px-3 py-1.5 text-[10px] text-slate-600">
+                <p key={t} className="border-b border-slate-100 px-3 py-1.5 fs-10 text-slate-600">
                   {t}
                 </p>
               ))}
-              <p className="relative flex items-center justify-between bg-indigo-50 px-3 py-1.5 text-[10px] font-bold text-indigo-700">
+              <p className="relative flex items-center justify-between bg-indigo-50 px-3 py-1.5 fs-10 font-bold text-indigo-700">
                 Tambahkan ke Layar Utama <PlusSquare size={11} />
                 <Tap className="left-1/2 top-1/2" />
               </p>
-              <p className="px-3 py-1.5 text-[10px] text-slate-600">Cetak</p>
+              <p className="px-3 py-1.5 fs-10 text-slate-600">Cetak</p>
             </div>
           </motion.div>
         )}
@@ -316,7 +316,7 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
             transition={{ type: 'spring', damping: 26, stiffness: 260 }}
             className="absolute inset-0 z-20 bg-slate-100 pt-8"
           >
-            <div className="flex items-center justify-between px-3 text-[10px] font-bold">
+            <div className="flex items-center justify-between px-3 fs-10 font-bold">
               <span className="text-indigo-500">Batal</span>
               <span className="text-slate-700">Tambah ke Layar Utama</span>
               <span className="relative text-indigo-600">
@@ -327,8 +327,8 @@ function BrowserScreen({ os, app, step }: { os: 'ios' | 'android'; app: InstallA
             <div className="m-3 flex items-center gap-3 rounded-xl bg-white p-3">
               <Image src={info.icon} alt="" width={38} height={38} className="rounded-xl" />
               <div>
-                <p className="text-[11px] font-bold text-slate-800">{info.name}</p>
-                <p className="text-[9px] text-slate-400">https://www.leosiqra.com{info.path}</p>
+                <p className="fs-11 font-bold text-slate-800">{info.name}</p>
+                <p className="fs-9 text-slate-400">https://www.leosiqra.com{info.path}</p>
               </div>
             </div>
           </motion.div>
@@ -368,7 +368,7 @@ function HomeScreen({ app }: { app: InstallApp }) {
           <span className="relative block h-10 w-10 overflow-hidden rounded-[11px] bg-white shadow-lg ring-2 ring-white">
             <Image src={info.icon} alt="" fill className="object-cover" sizes="40px" />
           </span>
-          <span className="max-w-[52px] truncate text-[8px] font-bold text-white drop-shadow">{info.name}</span>
+          <span className="max-w-[52px] truncate fs-8 font-bold text-white drop-shadow">{info.name}</span>
         </motion.div>
       </div>
     </div>

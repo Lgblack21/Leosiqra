@@ -100,7 +100,7 @@ export default function AppCardsPage() {
                   <p className="text-sm font-black">{card.name}</p>
                   <CreditCard size={20} className="text-white/70" />
                 </div>
-                <p className="mt-5 text-[10px] font-bold uppercase tracking-wider text-white/70">Terpakai</p>
+                <p className="mt-5 fs-10 font-bold uppercase tracking-wider text-white/70">Terpakai</p>
                 <p className="text-2xl font-black tabular-nums">{formatMoney(used, currency)}</p>
                 <div className="mt-3 h-1.5 rounded-full bg-white/25 overflow-hidden">
                   <div
@@ -111,7 +111,7 @@ export default function AppCardsPage() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="mt-2 flex justify-between text-[11px] text-white/80 tabular-nums">
+                <div className="mt-2 flex justify-between fs-11 text-white/80 tabular-nums">
                   <span>Sisa {formatMoney(remaining, currency)}</span>
                   <span>Limit {limit > 0 ? formatMoney(limit, currency) : '—'}</span>
                 </div>
@@ -128,7 +128,7 @@ export default function AppCardsPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <p className="fs-10 font-bold text-slate-400 uppercase tracking-wider">
                         Tagihan tercetak {fmtDate(cycle.statementDate)}
                       </p>
                       <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">
@@ -138,7 +138,7 @@ export default function AppCardsPage() {
                     {cycle.amountDue > 0 && (
                       <span
                         className={cn(
-                          'flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black',
+                          'flex items-center gap-1 rounded-full px-2.5 py-1 fs-10 font-black',
                           cycle.overdue
                             ? 'bg-rose-500 text-white'
                             : cycle.daysUntilDue <= 3
@@ -151,7 +151,7 @@ export default function AppCardsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-400 tabular-nums">
+                  <p className="mt-1 fs-11 text-slate-400 tabular-nums">
                     Jatuh tempo {fmtDate(cycle.dueDate)}
                     {cycle.minPayment > 0 ? ` · minimum ${formatMoney(cycle.minPayment, currency)}` : ''}
                     {` · cetak berikutnya ${fmtDate(cycle.nextStatementDate)}`}
@@ -189,7 +189,7 @@ export default function AppCardsPage() {
                           <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                             {txTitle(t)}
                           </span>
-                          <span className="block text-[11px] text-slate-400">{fmtDate(new Date(t.date))}</span>
+                          <span className="block fs-11 text-slate-400">{fmtDate(new Date(t.date))}</span>
                         </span>
                         <span
                           className={cn(

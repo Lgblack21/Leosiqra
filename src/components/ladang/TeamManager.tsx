@@ -69,7 +69,7 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
 
   if (error && !data)
     return (
-      <p role="alert" className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
+      <p role="alert" className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800">
         {error}
       </p>
     );
@@ -78,14 +78,14 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
 
   return (
     <div className="space-y-4">
-      <p className="rounded-2xl bg-slate-50 px-3.5 py-3 text-[12px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+      <p className="rounded-2xl bg-slate-50 px-3.5 py-3 fs-12 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
         Anggota tim login di <b>{loginUrl.replace(/^https?:\/\//, '')}</b> (atau halaman login biasa) dengan username &
         sandi dari kamu. Mereka hanya bisa membuka kasir usaha yang kamu pilih dan melihat penjualan hari ini —{' '}
         <b>tanpa saldo, rekening, atau keuangan lainmu</b>. Penjualan masuk ke rekening yang kamu kunci dan tercatat
         &ldquo;oleh &lt;nama&gt;&rdquo;.
       </p>
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -101,25 +101,25 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
                 <UserRound size={18} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">
+                <span className="block truncate fs-14 font-extrabold text-slate-900 dark:text-white">
                   {m.name}{' '}
                   {m.disabled && (
-                    <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                    <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 fs-10 font-bold text-slate-600">
                       nonaktif
                     </span>
                   )}
                 </span>
-                <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+                <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
                   {m.username} · Kasir · {ago(m.last_login_at)}
                 </span>
-                <span className="block truncate text-[11px] text-slate-400">
+                <span className="block truncate fs-11 text-slate-400">
                   {m.shop_ids.map(shopName).join(', ')} → {accName(m.account_id)}
                 </span>
               </span>
               <button
                 type="button"
                 onClick={() => setEditing(editing === m.id ? null : m.id)}
-                className="shrink-0 text-[12px] font-bold text-violet-600 dark:text-violet-300"
+                className="shrink-0 fs-12 font-bold text-violet-600 dark:text-violet-300"
               >
                 {editing === m.id ? 'Tutup' : 'Atur'}
               </button>
@@ -158,7 +158,7 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
           type="button"
           onClick={() => setAdding(true)}
           disabled={full || !shops.length}
-          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-violet-600 py-3 text-[13px] font-bold text-white hover:bg-violet-700 disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-violet-600 py-3 fs-13 font-bold text-white hover:bg-violet-700 disabled:opacity-40"
         >
           <Plus size={15} /> Tambah anggota tim{' '}
           <span className="font-semibold text-white/70">
@@ -167,7 +167,7 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
         </button>
       )}
       {full && (
-        <p className="text-center text-[11px] text-slate-400">
+        <p className="text-center fs-11 text-slate-400">
           Batas paket {data.plan === 'PRO' ? 'PRO' : 'FREE'}: {data.limit} akun tim.
           {data.plan !== 'PRO' ? ' PRO bisa sampai 5.' : ''}
         </p>
@@ -188,7 +188,7 @@ function ShopPicker({ shops, value, onChange }: { shops: Shop[]; value: string[]
             onClick={() => onChange(on ? value.filter((x) => x !== s.id) : [...value, s.id])}
             aria-pressed={on}
             className={cn(
-              'flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold',
+              'flex items-center gap-1 rounded-full px-3 py-1.5 fs-12 font-bold',
               on ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
             )}
           >
@@ -269,11 +269,11 @@ function MemberForm({
   if (made) {
     return (
       <div className="space-y-2 rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
-        <p className="text-[13px] font-extrabold text-emerald-900 dark:text-emerald-200">Akun tim dibuat ✓</p>
-        <pre className="whitespace-pre-wrap rounded-xl bg-white p-3 font-sans text-[12px] text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+        <p className="fs-13 font-extrabold text-emerald-900 dark:text-emerald-200">Akun tim dibuat ✓</p>
+        <pre className="whitespace-pre-wrap rounded-xl bg-white p-3 font-sans fs-12 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
           {made}
         </pre>
-        <p className="text-[11px] text-emerald-800/80 dark:text-emerald-200/70">
+        <p className="fs-11 text-emerald-800/80 dark:text-emerald-200/70">
           Sandi ini hanya tampil sekarang. Kirim ke anggotamu lewat jalur pribadi (bukan grup).
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -285,14 +285,14 @@ function MemberForm({
                 () => onToast('Tidak bisa menyalin otomatis.'),
               )
             }
-            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[12px] font-bold text-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-2.5 fs-12 font-bold text-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
             <Copy size={13} /> Salin info login
           </button>
           <button
             type="button"
             onClick={onDone}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-2.5 text-[12px] font-bold text-white"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-2.5 fs-12 font-bold text-white"
           >
             <Check size={13} /> Selesai
           </button>
@@ -302,9 +302,9 @@ function MemberForm({
   }
   return (
     <div className="space-y-3 rounded-2xl ring-1 ring-violet-200 p-3 dark:ring-violet-500/30">
-      <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Anggota tim baru</p>
+      <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Anggota tim baru</p>
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -366,7 +366,7 @@ function MemberForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full bg-slate-100 px-4 py-2.5 text-[13px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          className="rounded-full bg-slate-100 px-4 py-2.5 fs-13 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           Batal
         </button>
@@ -374,7 +374,7 @@ function MemberForm({
           type="button"
           onClick={save}
           disabled={busy}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-violet-600"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 fs-13 font-bold text-white disabled:opacity-40 dark:bg-violet-600"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Buat akun
         </button>
@@ -411,7 +411,7 @@ function MemberEdit({
       setBusy(false);
     }
   };
-  const btn = 'flex items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-bold disabled:opacity-40';
+  const btn = 'flex items-center justify-center gap-1.5 rounded-full py-2 fs-12 font-bold disabled:opacity-40';
   return (
     <div className="mt-3 space-y-3 border-t border-slate-100 pt-3 dark:border-slate-800">
       <div>
@@ -441,7 +441,7 @@ function MemberEdit({
           <input
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
-            className={cn(fieldCls, 'py-2 font-mono text-[12px]')}
+            className={cn(fieldCls, 'py-2 font-mono fs-12')}
             aria-label="Sandi baru"
           />
           <button

@@ -29,7 +29,7 @@ export function AssistantMenu() {
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                 <Icon size={20} />
               </div>
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.label}</span>
+              <span className="fs-10 font-bold text-slate-500 dark:text-slate-400">{item.label}</span>
             </button>
           );
         })}

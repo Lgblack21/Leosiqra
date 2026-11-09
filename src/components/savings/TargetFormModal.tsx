@@ -42,15 +42,15 @@ const longDate = (s: string) =>
 function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
-      <span className="px-1 text-[13px] font-medium text-slate-500">{label}</span>
+      <span className="px-1 fs-13 font-medium text-slate-500">{label}</span>
       {children}
-      {hint && <span className="block px-1 text-[12px] text-slate-500">{hint}</span>}
+      {hint && <span className="block px-1 fs-12 text-slate-500">{hint}</span>}
     </label>
   );
 }
 
 const inputCls =
-  'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100';
+  'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 fs-16 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100';
 
 type Props = {
   open: boolean;
@@ -222,7 +222,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
           >
             <ChevronLeft size={20} />
           </button>
-          <h2 className="flex-1 text-[19px] font-bold text-slate-900">{editing ? 'Ubah target' : 'Target baru'}</h2>
+          <h2 className="flex-1 fs-19 font-bold text-slate-900">{editing ? 'Ubah target' : 'Target baru'}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -244,7 +244,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 onClick={() => setPicking((v) => !v)}
                 aria-expanded={picking}
                 aria-label="Ganti ikon & warna"
-                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[22px] text-[34px] shadow-lg transition-transform active:scale-95"
+                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[22px] fsh-34 shadow-lg transition-transform active:scale-95"
                 style={{ background: color, boxShadow: `0 10px 24px -10px ${color}` }}
               >
                 <span aria-hidden>{icon}</span>
@@ -253,8 +253,8 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 </span>
               </button>
               <div className="min-w-0">
-                <p className="truncate text-[17px] font-bold text-slate-900">{name.trim() || 'Nama targetmu'}</p>
-                <p className="text-[13px] text-slate-600">
+                <p className="truncate fs-17 font-bold text-slate-900">{name.trim() || 'Nama targetmu'}</p>
+                <p className="fs-13 text-slate-600">
                   {target > 0 ? formatIDR(target) : 'Rp —'}
                   {date ? ` · ${longDate(date)}` : ''}
                 </p>
@@ -290,7 +290,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                     </div>
                     {TARGET_ICONS.map((g) => (
                       <div key={g.group}>
-                        <p className="mb-1.5 text-[12px] font-medium text-slate-500">{g.group}</p>
+                        <p className="mb-1.5 fs-12 font-medium text-slate-500">{g.group}</p>
                         <div className="grid grid-cols-10 gap-1">
                           {g.items.map((e) => (
                             <button
@@ -299,7 +299,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                               onClick={() => setIcon(e)}
                               aria-label={`Ikon ${e}`}
                               className={cn(
-                                'flex aspect-square items-center justify-center rounded-xl text-[22px] transition hover:bg-slate-100',
+                                'flex aspect-square items-center justify-center rounded-xl fsh-22 transition hover:bg-slate-100',
                                 icon === e && 'bg-slate-100 ring-2 ring-slate-300',
                               )}
                             >
@@ -312,7 +312,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                     <button
                       type="button"
                       onClick={() => setPicking(false)}
-                      className="w-full rounded-full bg-slate-900 py-2.5 text-[14px] font-semibold text-white"
+                      className="w-full rounded-full bg-slate-900 py-2.5 fs-14 font-semibold text-white"
                     >
                       Pakai ini
                     </button>
@@ -332,7 +332,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
               </Field>
               <Field label="Jumlah target">
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 fs-16 text-slate-400">
                     Rp
                   </span>
                   <NumberInput
@@ -385,8 +385,8 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 <Repeat size={18} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-slate-900">Setoran otomatis</span>
-                <span className="block text-[12px] text-slate-500">Leosiqra menyetor sendiri tiap periode</span>
+                <span className="block fs-15 font-semibold text-slate-900">Setoran otomatis</span>
+                <span className="block fs-12 text-slate-500">Leosiqra menyetor sendiri tiap periode</span>
               </span>
               <span
                 className={cn(
@@ -407,7 +407,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 <div className="col-span-2">
                   <Field label="Nominal per setoran">
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 fs-16 text-slate-400">
                         Rp
                       </span>
                       <NumberInput
@@ -464,12 +464,10 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                   <Wallet size={18} />
                 </span>
                 <span>
-                  <span className="block text-[15px] font-semibold text-slate-900">
+                  <span className="block fs-15 font-semibold text-slate-900">
                     Dana awal <span className="font-normal text-slate-400">· opsional</span>
                   </span>
-                  <span className="block text-[12px] text-slate-500">
-                    Langsung dipindah dari rekening ke target ini
-                  </span>
+                  <span className="block fs-12 text-slate-500">Langsung dipindah dari rekening ke target ini</span>
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -502,7 +500,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
             </section>
           )}
 
-          {error && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[14px] text-rose-700">{error}</p>}
+          {error && <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-14 text-rose-700">{error}</p>}
         </div>
 
         <div className="border-t border-slate-200/70 bg-white px-5 py-4">
@@ -510,7 +508,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
             type="button"
             onClick={() => void submit()}
             disabled={Boolean(problem) || saving}
-            className="w-full rounded-full py-3.5 text-[16px] font-bold text-white transition disabled:bg-slate-200 disabled:text-slate-500"
+            className="w-full rounded-full py-3.5 fs-16 font-bold text-white transition disabled:bg-slate-200 disabled:text-slate-500"
             style={problem || saving ? undefined : { background: `linear-gradient(135deg, ${color}, #4f46e5)` }}
           >
             {saving ? 'Menyimpan…' : problem || (editing ? 'Simpan perubahan' : 'Simpan target')}

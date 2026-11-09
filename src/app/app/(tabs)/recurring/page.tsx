@@ -8,6 +8,7 @@ import { recurringService, RecurringTransaction } from '@/lib/services/recurring
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { auth } from '@/lib/cf-client';
+import { LiburHint } from '@/components/libur/LiburHint';
 import { cn, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
 import { lightTap } from '@/lib/haptics';
 import { FadeIn } from '@/components/app/FadeIn';
@@ -146,11 +147,11 @@ export default function AppRecurringPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Keluar / bulan</p>
+          <p className="fs-10 font-bold uppercase tracking-wider text-slate-400">Keluar / bulan</p>
           <p className="mt-1 text-base font-black text-rose-500 tabular-nums truncate">{formatIDR(outMonthly)}</p>
         </div>
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Masuk / bulan</p>
+          <p className="fs-10 font-bold uppercase tracking-wider text-slate-400">Masuk / bulan</p>
           <p className="mt-1 text-base font-black text-emerald-600 tabular-nums truncate">{formatIDR(inMonthly)}</p>
         </div>
       </div>
@@ -193,10 +194,10 @@ export default function AppRecurringPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-black text-slate-900 dark:text-white truncate">{r.name}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-400 truncate">
+                      <p className="mt-0.5 fs-11 text-slate-400 truncate">
                         <span
                           className={cn(
-                            'inline-block rounded px-1.5 py-0.5 text-[9px] font-black uppercase mr-1.5',
+                            'inline-block rounded px-1.5 py-0.5 fs-9 font-black uppercase mr-1.5',
                             TYPE_STYLE[r.type] ?? 'bg-slate-100 text-slate-500',
                           )}
                         >
@@ -209,14 +210,15 @@ export default function AppRecurringPage() {
                       <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
                         {formatMoney(r.amount, acc?.currency || 'IDR')}
                       </p>
-                      <p className="text-[10px] text-slate-400">{r.interval}</p>
+                      <p className="fs-10 text-slate-400">{r.interval}</p>
                     </div>
                   </div>
                 </button>
+                {!paused && !stuck ? <LiburHint date={new Date(r.nextDate)} className="mt-3" /> : null}
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <p
                     className={cn(
-                      'text-[11px] font-bold',
+                      'fs-11 font-bold',
                       stuck ? 'text-amber-600 flex items-center gap-1' : 'text-slate-500',
                     )}
                   >
@@ -243,7 +245,7 @@ export default function AppRecurringPage() {
                       disabled={busyId === r.id}
                       aria-label={confirmId === r.id ? 'Yakin hapus jadwal' : 'Hapus jadwal'}
                       className={cn(
-                        'rounded-full text-[11px] font-black disabled:opacity-40',
+                        'rounded-full fs-11 font-black disabled:opacity-40',
                         confirmId === r.id ? 'bg-rose-500 text-white px-3 py-1.5' : 'p-2 text-slate-400',
                       )}
                     >

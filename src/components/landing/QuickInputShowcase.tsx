@@ -78,12 +78,12 @@ export function QuickInputShowcase() {
       <div className="relative rounded-[46px] border border-white/10 bg-[#0d0f14] p-2.5 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)]">
         <div className="relative overflow-hidden rounded-[38px] bg-[#f7f5f0] px-4 pb-6 pt-9 text-slate-900">
           <div aria-hidden className="absolute left-1/2 top-2.5 h-5 w-24 -translate-x-1/2 rounded-full bg-[#0d0f14]" />
-          <p className="text-[13px] font-black">Input Cepat</p>
-          <p className="text-[10px] font-bold text-slate-400">Halo, Leo</p>
+          <p className="fs-13 font-black">Input Cepat</p>
+          <p className="fs-10 font-bold text-slate-400">Halo, Leo</p>
 
           <div className="mt-4 flex items-center gap-2 rounded-2xl border border-indigo-200 bg-white px-3 py-2.5 shadow-sm">
             <Sparkles size={14} className="shrink-0 text-indigo-500" />
-            <span className="min-h-[18px] flex-1 truncate text-[12px] font-bold">
+            <span className="min-h-[18px] flex-1 truncate fs-12 font-bold">
               {typed}
               {!filled && (
                 <span className="ml-px inline-block h-3.5 w-[1.5px] translate-y-0.5 animate-pulse bg-indigo-500" />
@@ -96,7 +96,7 @@ export function QuickInputShowcase() {
           </div>
 
           <div className="mt-3 rounded-3xl bg-white p-3.5 shadow-sm">
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-[10px] font-black">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 fs-10 font-black">
               <span
                 className={`rounded-lg py-1.5 text-center transition-colors duration-500 ${filled && !income ? 'bg-rose-500 text-white' : 'text-slate-400'}`}
               >
@@ -109,7 +109,7 @@ export function QuickInputShowcase() {
               </span>
             </div>
             <div className="mt-3 text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nominal</p>
+              <p className="fs-9 font-black uppercase tracking-widest text-slate-400">Nominal</p>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={filled ? d.amount : '0'}
@@ -135,7 +135,7 @@ export function QuickInputShowcase() {
             ).map(([k, v], i) => (
               <div
                 key={k}
-                className="flex items-center justify-between rounded-2xl bg-white px-3.5 py-2.5 text-[11px] shadow-sm"
+                className="flex items-center justify-between rounded-2xl bg-white px-3.5 py-2.5 fs-11 shadow-sm"
               >
                 <span className="font-bold text-slate-400">{k}</span>
                 <AnimatePresence mode="wait">
@@ -157,7 +157,7 @@ export function QuickInputShowcase() {
           <motion.div
             animate={{ scale: filled ? [1, 1.04, 1] : 1 }}
             transition={{ delay: 0.5, duration: 0.5 }}
-            className={`mt-4 flex items-center justify-center gap-1.5 rounded-2xl py-3 text-[12px] font-black text-white transition-colors duration-500 ${filled ? (income ? 'bg-emerald-500' : 'bg-rose-500') : 'bg-slate-300'}`}
+            className={`mt-4 flex items-center justify-center gap-1.5 rounded-2xl py-3 fs-12 font-black text-white transition-colors duration-500 ${filled ? (income ? 'bg-emerald-500' : 'bg-rose-500') : 'bg-slate-300'}`}
           >
             <Check size={14} /> Simpan {filled ? d.type : ''}
           </motion.div>

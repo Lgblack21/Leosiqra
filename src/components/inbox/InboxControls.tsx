@@ -110,8 +110,8 @@ function SourceRow({
     <div className="flex items-center gap-3">
       <Icon size={20} className={cn('shrink-0', iconCls)} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold text-slate-900 dark:text-white">{title}</span>
-        <span className="block text-[13px] text-slate-500 dark:text-slate-400">{sub}</span>
+        <span className="block truncate fs-15 font-semibold text-slate-900 dark:text-white">{title}</span>
+        <span className="block fs-13 text-slate-500 dark:text-slate-400">{sub}</span>
       </span>
       <button
         type="button"
@@ -156,11 +156,11 @@ export function InboxControls({
 
   if (inbox.error)
     return (
-      <p className="rounded-[22px] bg-slate-50 p-4 text-[14px] text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+      <p className="rounded-[22px] bg-slate-50 p-4 fs-14 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
         {inbox.error}
       </p>
     );
-  if (!data) return <p className="py-4 text-center text-[14px] text-slate-400">Memuat…</p>;
+  if (!data) return <p className="py-4 text-center fs-14 text-slate-400">Memuat…</p>;
 
   // Gmail tampil kalau pernah dipakai (atau di layar Gmail); Slack kalau channel sudah dipilih.
   const showGmail = only === 'gmail' || data.gmail.enabled || Boolean(data.gmail.lastCheckAt);
@@ -171,12 +171,12 @@ export function InboxControls({
     return (
       <div className="flex items-center gap-3 rounded-[22px] bg-slate-50 p-4 dark:bg-slate-900">
         <Inbox size={20} className="shrink-0 text-slate-400" />
-        <span className="min-w-0 flex-1 text-[14px] text-slate-600 dark:text-slate-300">
+        <span className="min-w-0 flex-1 fs-14 text-slate-600 dark:text-slate-300">
           Belum ada sumber. Hubungkan Gmail atau Slack supaya usulan transaksi masuk ke sini.
         </span>
         <a
           href="/membership/aplikasi"
-          className="shrink-0 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white dark:bg-white dark:text-slate-900"
+          className="shrink-0 rounded-full bg-slate-900 px-4 py-2 fs-13 font-bold text-white dark:bg-white dark:text-slate-900"
         >
           Hubungkan
         </a>
@@ -254,7 +254,7 @@ export function InboxControls({
         />
       )}
       {result.length > 0 && (
-        <div className="space-y-1 rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+        <div className="space-y-1 rounded-2xl bg-white px-4 py-2.5 fs-13 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
           {result.map((line) => (
             <p key={line}>{line}</p>
           ))}
@@ -265,7 +265,7 @@ export function InboxControls({
           type="button"
           onClick={() => void check()}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}{' '}
           {only === 'gmail' ? 'Periksa email sekarang' : 'Periksa sekarang'}
@@ -273,7 +273,7 @@ export function InboxControls({
         {showLink && (
           <a
             href={kotakMasukHref}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 fs-14 font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
           >
             Buka Kotak Masuk{data.items.length ? ` (${data.items.length})` : ''} <ChevronRight size={15} />
           </a>

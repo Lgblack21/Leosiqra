@@ -296,7 +296,7 @@ export default function PanduanPage() {
       <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[24px] md:rounded-[32px] p-8 md:p-12 text-white relative overflow-hidden shadow-xl shadow-emerald-600/20">
         <div className="absolute -right-10 -top-10 w-56 h-56 bg-white/10 rounded-full blur-3xl" />
         <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 fs-10 font-black uppercase tracking-widest">
             <Compass size={14} /> Panduan Leosiqra
           </div>
           <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-tight">Apa itu Leosiqra?</h1>
@@ -331,16 +331,14 @@ export default function PanduanPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900 tracking-tight">{section.title}</h2>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                    {section.subtitle}
-                  </p>
+                  <p className="fs-11 font-bold text-slate-400 uppercase tracking-widest mt-0.5">{section.subtitle}</p>
                 </div>
               </div>
               <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {section.items.map((item) => (
                   <div key={item.name} className="bg-slate-50/60 border border-slate-100 rounded-2xl p-5">
                     <h3 className="text-sm font-black text-slate-900 mb-1.5">{item.name}</h3>
-                    <p className="text-[12px] font-medium text-slate-500 leading-relaxed">{item.desc}</p>
+                    <p className="fs-12 font-medium text-slate-500 leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>

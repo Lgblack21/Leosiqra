@@ -56,7 +56,7 @@ export const YearPicker = ({ value, onChange, className }: YearPickerProps) => {
                     onChange(y);
                     setIsOpen(false);
                   }}
-                  className={`py-3 px-2 rounded-xl text-[11px] font-black transition-all ${
+                  className={`py-3 px-2 rounded-xl fs-11 font-black transition-all ${
                     value === y
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105'
                       : 'bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'

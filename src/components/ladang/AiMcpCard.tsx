@@ -43,8 +43,8 @@ export function AiMcpCard({
     window.setTimeout(() => openSettings('app-mcp'), 150);
   };
   const step =
-    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[11px] font-extrabold text-white';
-  const btn = 'flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[12px] font-bold';
+    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-600 fs-11 font-extrabold text-white';
+  const btn = 'flex items-center justify-center gap-1.5 rounded-full py-2.5 fs-12 font-bold';
 
   return (
     <div
@@ -53,11 +53,11 @@ export function AiMcpCard({
         className,
       )}
     >
-      <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900 dark:text-white">
+      <p className="flex items-center gap-1.5 fs-14 font-extrabold text-slate-900 dark:text-white">
         <Bot size={16} className="text-violet-600" /> {title}
       </p>
-      <p className="mt-1 text-[12px] text-slate-600 dark:text-slate-300">{desc}</p>
-      <ol className="mt-3 space-y-2.5 text-[12px] text-slate-700 dark:text-slate-200">
+      <p className="mt-1 fs-12 text-slate-600 dark:text-slate-300">{desc}</p>
+      <ol className="mt-3 space-y-2.5 fs-12 text-slate-700 dark:text-slate-200">
         {mcp.state === 'write' ? (
           <li className="flex items-center gap-2 rounded-xl bg-emerald-50 px-2.5 py-2 dark:bg-emerald-500/10">
             <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
@@ -136,7 +136,7 @@ export function AiMcpCard({
           <span className={step}>2</span>
           <span className="min-w-0 flex-1">
             Salin perintah ini, tempel di AI-mu:
-            <span className="mt-1.5 block max-h-28 select-all overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/80 p-2.5 text-[11px] leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:bg-slate-900/60 dark:text-slate-300">
+            <span className="mt-1.5 block max-h-28 select-all overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/80 p-2.5 fs-11 leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:bg-slate-900/60 dark:text-slate-300">
               {prompt}
             </span>
           </span>
@@ -177,7 +177,7 @@ export function AiMcpCard({
           <ExternalLink size={13} /> Buka ChatGPT
         </a>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+      <p className="mt-2 fs-11 text-slate-500 dark:text-slate-400">
         Gratis — tidak memakai kuota AI Leosiqra. Saat menghubungkan, centang izin mengubah.
       </p>
     </div>

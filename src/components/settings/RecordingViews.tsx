@@ -38,8 +38,8 @@ function OptionCards<T extends string>({
               <o.icon size={22} />
             </span>
             <span className="min-w-0 flex-1 pr-6">
-              <span className="block text-[15px] font-bold text-slate-900">{o.title}</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-slate-500">{o.desc}</span>
+              <span className="block fs-15 font-bold text-slate-900">{o.title}</span>
+              <span className="mt-0.5 block fs-13 leading-snug text-slate-500">{o.desc}</span>
             </span>
             {on && (
               <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white">
@@ -88,12 +88,12 @@ export function CaraCatatView() {
   };
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] text-slate-600">
+      <p className="px-1 fs-14 text-slate-600">
         Pilih yang paling sering kamu pakai. Tombol <b>+</b> akan langsung membukanya — cara lain tetap bisa dipakai
         kapan saja.
       </p>
       <OptionCards options={MODES} value={inputMode} onPick={pick} />
-      <p className="px-1 text-[12px] text-slate-500">
+      <p className="px-1 fs-12 text-slate-500">
         Suara & foto butuh izin mikrofon/kamera di browser. Hasilnya selalu bisa dicek sebelum disimpan.
       </p>
     </div>
@@ -132,8 +132,8 @@ export function KeyboardNominalView() {
     <div className="space-y-4">
       <OptionCards options={KEYPADS} value={amountKeypad} onPick={pick} />
       <div className="rounded-[22px] bg-slate-50 p-4">
-        <p className="text-[13px] font-semibold text-slate-700">Berlaku di</p>
-        <p className="mt-1 text-[13px] text-slate-500">Form Tambah transaksi dan Input Cepat.</p>
+        <p className="fs-13 font-semibold text-slate-700">Berlaku di</p>
+        <p className="mt-1 fs-13 text-slate-500">Form Tambah transaksi dan Input Cepat.</p>
       </div>
     </div>
   );

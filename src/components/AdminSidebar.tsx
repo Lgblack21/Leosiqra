@@ -125,7 +125,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-lg text-white tracking-tight leading-none mb-1">Leosiqra</span>
-                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.1em] leading-none">
+                <span className="fs-8 font-black text-indigo-400 uppercase tracking-[0.1em] leading-none">
                   ADMIN PANEL
                 </span>
               </div>
@@ -147,7 +147,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
               <div key={group.label} className="space-y-1">
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] hover:text-slate-300 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2 fs-10 font-black text-slate-500 uppercase tracking-[0.15em] hover:text-slate-300 transition-colors"
                 >
                   {group.label}
                   {isOpenGroup ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -176,7 +176,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
                             isItemActive(item) ? 'text-indigo-400' : 'group-hover:text-white',
                           )}
                         />
-                        <span className="text-[13px]">{item.label}</span>
+                        <span className="fs-13">{item.label}</span>
                         {isItemActive(item) && <div className="absolute left-0 w-1 h-4 bg-indigo-400 rounded-r-full" />}
                       </Link>
                     ))}
@@ -194,15 +194,15 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
                 {profile ? getInitials(profile.name) : '??'}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-black text-white truncate pr-2">{profile?.name || 'Loading...'}</span>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Administrator</span>
+                <span className="fs-13 font-black text-white truncate pr-2">{profile?.name || 'Loading...'}</span>
+                <span className="fs-10 font-bold text-indigo-400 uppercase tracking-widest">Administrator</span>
               </div>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2.5 w-full text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all font-bold text-[13px]"
+            className="flex items-center gap-3 px-4 py-2.5 w-full text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all font-bold fs-13"
           >
             <LogOut size={16} />
             <span>Logout</span>

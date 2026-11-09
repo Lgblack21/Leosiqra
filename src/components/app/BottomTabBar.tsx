@@ -57,7 +57,7 @@ function Tab({ tab, pathname }: { tab: TabItem; pathname: string }) {
       onClick={lightTap}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors',
+        'relative flex flex-col items-center gap-1 py-2.5 fs-10 font-bold transition-colors',
         active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500',
       )}
     >

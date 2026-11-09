@@ -158,7 +158,7 @@ export function TwoFactorModal({
               <h2 className="text-2xl font-serif font-black text-slate-900 tracking-tight">
                 {mode === 'setup' ? 'Setup Google 2FA' : 'Verifikasi 2FA'}
               </h2>
-              <p className="text-slate-400 font-medium text-[13px]">
+              <p className="text-slate-400 font-medium fs-13">
                 {mode === 'setup'
                   ? 'Scan QR lalu masukkan 6 digit kode aktif.'
                   : 'Masukkan 6 digit kode dari aplikasi Authenticator Anda.'}
@@ -187,14 +187,14 @@ export function TwoFactorModal({
               ))}
             </div>
 
-            {error && <p className="text-red-500 text-[11px] font-bold uppercase tracking-wider">{error}</p>}
+            {error && <p className="text-red-500 fs-11 font-bold uppercase tracking-wider">{error}</p>}
           </div>
 
           <div className="p-8 space-y-6">
             {mode === 'setup' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="p-6 rounded-[32px] bg-indigo-50/30 border border-indigo-50/50 flex flex-col items-center space-y-6">
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] self-start">
+                  <p className="fs-10 font-black text-indigo-600 uppercase tracking-[0.2em] self-start">
                     Barcode Authenticator
                   </p>
 
@@ -206,18 +206,18 @@ export function TwoFactorModal({
                     )}
                   </div>
 
-                  <p className="text-[11px] font-bold text-slate-400 text-center max-w-[200px]">
+                  <p className="fs-11 font-bold text-slate-400 text-center max-w-[200px]">
                     Scan barcode ini di Google Authenticator/Authy.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                    <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
                       Secret Manual
                     </label>
                     <div className="flex items-center gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl group focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                      <span className="flex-1 text-[13px] font-black text-slate-900 tracking-wider truncate">
+                      <span className="flex-1 fs-13 font-black text-slate-900 tracking-wider truncate">
                         {internalSecret}
                       </span>
                       <button
@@ -230,13 +230,11 @@ export function TwoFactorModal({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                    <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
                       URI Authenticator
                     </label>
                     <div className="flex items-center gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl group focus-within:bg-white focus-within:border-indigo-500 transition-all">
-                      <span className="flex-1 text-[13px] font-black text-slate-900 tracking-wider truncate">
-                        {uri}
-                      </span>
+                      <span className="flex-1 fs-13 font-black text-slate-900 tracking-wider truncate">{uri}</span>
                       <button
                         onClick={() => copyToClipboard(uri, 'uri')}
                         className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm"
@@ -249,19 +247,19 @@ export function TwoFactorModal({
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => copyToClipboard(internalSecret, 'secret')}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-[11px] font-black text-slate-900 hover:bg-white hover:border-indigo-200 transition-all"
+                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-100 fs-11 font-black text-slate-900 hover:bg-white hover:border-indigo-200 transition-all"
                     >
                       Salin Secret
                     </button>
                     <button
                       onClick={() => copyToClipboard(uri, 'uri')}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-[11px] font-black text-slate-900 hover:bg-white hover:border-indigo-200 transition-all"
+                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 border border-slate-100 fs-11 font-black text-slate-900 hover:bg-white hover:border-indigo-200 transition-all"
                     >
                       Salin URI
                     </button>
                     <a
                       href={uri}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-indigo-600 text-white text-[11px] font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 text-center"
+                      className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-indigo-600 text-white fs-11 font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 text-center"
                     >
                       Buka Authenticator
                     </a>
@@ -274,7 +272,7 @@ export function TwoFactorModal({
               <div className="w-5 h-5 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
                 <Info size={12} />
               </div>
-              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+              <p className="fs-10 text-slate-400 font-medium leading-relaxed">
                 {mode === 'setup'
                   ? 'Pastikan Anda telah menyimpan secret di atas secara aman sebelum melanjutkan. Kode 2FA akan dibutuhkan setiap kali Anda login.'
                   : 'Jika Anda kehilangan akses ke aplikasi Authenticator, hubungi admin untuk melakukan reset 2FA manual.'}

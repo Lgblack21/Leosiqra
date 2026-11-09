@@ -179,9 +179,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Nama Deposito
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nama Deposito</label>
             <input
               type="text"
               value={formData.name}
@@ -191,9 +189,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Bank / Institusi
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Bank / Institusi</label>
             <input
               type="text"
               value={formData.platform}
@@ -206,7 +202,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                 {getCurrencySymbol(formData.currency)}
@@ -233,7 +229,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                <p className="fs-9 font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
                   Terkonversi ke IDR
                 </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
@@ -241,13 +237,13 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            <span className="fs-10 font-medium text-slate-400 italic">Live Rate</span>
           </div>
         )}
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Durasi</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Durasi</label>
             <div className="relative">
               <input
                 type="text"
@@ -258,7 +254,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga %</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Bunga %</label>
             <input
               type="number"
               step="0.01"
@@ -269,7 +265,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pajak %</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Pajak %</label>
             <input
               type="number"
               step="0.01"
@@ -283,9 +279,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Tanggal Penempatan
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Penempatan</label>
             <input
               type="date"
               value={formData.dateInvested}
@@ -294,7 +288,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">
               Tanggal Jatuh Tempo
             </label>
             <input
@@ -307,9 +301,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Rekening / Sumber
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Sumber</label>
             <div className="relative">
               <select
                 value={formData.accountId}
@@ -339,9 +331,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           <div className="space-y-2">
             {editData ? (
               <>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                  Tipe Transaksi
-                </label>
+                <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
                 <div className="relative">
                   <select
                     value={formData.transactionType}
@@ -360,7 +350,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
               </>
             ) : (
               <>
-                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest pl-1">
+                <label className="fs-10 font-black text-emerald-600 uppercase tracking-widest pl-1">
                   Perlakuan Saat Jatuh Tempo
                 </label>
                 <div className="relative">
@@ -387,7 +377,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
         {editData && formData.transactionType === 'Penempatan' && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-emerald-600 uppercase tracking-widest pl-1">
               Perlakuan Saat Jatuh Tempo
             </label>
             <div className="relative">

@@ -11,7 +11,7 @@ export function TagChip({ name, color, className }: { name: string; color?: stri
   return (
     <span
       className={cn(
-        'inline-flex max-w-[160px] items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1',
+        'inline-flex max-w-[160px] items-center gap-1 rounded-full px-2 py-0.5 fs-11 font-semibold ring-1',
         st.chip,
         className,
       )}
@@ -84,7 +84,7 @@ export function TagPicker({
             onClick={() => toggle(n)}
             aria-pressed={on}
             className={cn(
-              'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition',
+              'inline-flex items-center gap-1 rounded-full px-2.5 py-1 fs-12 font-semibold ring-1 transition',
               on ? st.chip : 'bg-white text-slate-500 ring-slate-200 hover:text-slate-700',
             )}
           >
@@ -111,7 +111,7 @@ export function TagPicker({
               }
             }}
             placeholder="tag baru"
-            className="w-24 bg-transparent text-[12px] outline-none"
+            className="w-24 bg-transparent fs-12 outline-none"
           />
           <button
             type="button"
@@ -126,7 +126,7 @@ export function TagPicker({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-[12px] font-medium text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 fs-12 font-medium text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
         >
           <Plus size={12} /> Tag
         </button>

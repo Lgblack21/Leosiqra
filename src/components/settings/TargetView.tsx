@@ -56,7 +56,7 @@ function Ring({ pct, done, color }: { pct: number; done: boolean; color: string 
           strokeDasharray={`${(Math.min(100, pct) / 100) * c} ${c}`}
         />
       </svg>
-      <span className={cn('text-[13px] font-extrabold tabular-nums', done ? 'text-emerald-600' : 'text-slate-800')}>
+      <span className={cn('fs-13 font-extrabold tabular-nums', done ? 'text-emerald-600' : 'text-slate-800')}>
         {done ? '🎉' : `${Math.round(pct)}%`}
       </span>
     </span>
@@ -126,24 +126,21 @@ export function TargetView() {
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-10 -right-6 text-[110px] leading-none opacity-15"
-        >
+        <span aria-hidden className="pointer-events-none absolute -bottom-10 -right-6 fsh-110 leading-none opacity-15">
           🎯
         </span>
         <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] text-white/80">Terkumpul untuk target</p>
-            <p className="mt-0.5 text-[26px] font-extrabold tabular-nums">{formatIDR(saved)}</p>
-            <p className="text-[12px] text-white/75">
+            <p className="fs-13 text-white/80">Terkumpul untuk target</p>
+            <p className="mt-0.5 fsh-26 font-extrabold tabular-nums">{formatIDR(saved)}</p>
+            <p className="fs-12 text-white/75">
               {goals?.length ?? 0} target{aim > 0 ? ` · tujuan ${formatIDR(aim)}` : ''}
             </p>
           </div>
           <button
             type="button"
             onClick={() => openNew()}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-[13px] font-bold backdrop-blur hover:bg-white/30"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 fs-13 font-bold backdrop-blur hover:bg-white/30"
           >
             <Plus size={15} strokeWidth={2.6} /> Target
           </button>
@@ -151,13 +148,13 @@ export function TargetView() {
       </div>
 
       {goals === null ? (
-        <p className="py-8 text-center text-[14px] text-slate-400">Memuat…</p>
+        <p className="py-8 text-center fs-14 text-slate-400">Memuat…</p>
       ) : goals.length === 0 ? (
         <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
-          <p className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+          <p className="flex items-center gap-2 fs-15 font-semibold text-slate-900">
             <Sparkles size={16} className="text-indigo-500" /> Mulai dari salah satu ini
           </p>
-          <p className="text-[13px] text-slate-500">
+          <p className="fs-13 text-slate-500">
             Leosiqra menyetor otomatis tiap periode dan menghitung kapan targetmu tercapai.
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -168,11 +165,11 @@ export function TargetView() {
                 onClick={() => openNew(sg)}
                 className="flex flex-col items-start gap-1 rounded-2xl bg-white p-3 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-indigo-200"
               >
-                <span className="text-[24px]" aria-hidden>
+                <span className="fsh-24" aria-hidden>
                   {sg.icon}
                 </span>
-                <span className="text-[14px] font-semibold text-slate-900">{sg.name}</span>
-                <span className="text-[12px] text-slate-500">± {formatIDR(sg.targetAmount)}</span>
+                <span className="fs-14 font-semibold text-slate-900">{sg.name}</span>
+                <span className="fs-12 text-slate-500">± {formatIDR(sg.targetAmount)}</span>
               </button>
             ))}
           </div>
@@ -192,23 +189,23 @@ export function TargetView() {
                   {g.targetAmount ? (
                     <Ring pct={pct} done={done} color={targetColor(g)} />
                   ) : (
-                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-[26px]">
+                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 fsh-26">
                       🐷
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span aria-hidden className="text-[16px]">
+                      <span aria-hidden className="fs-16">
                         {targetIcon(g)}
                       </span>
-                      <p className="truncate text-[16px] font-bold text-slate-900">{g.name}</p>
+                      <p className="truncate fs-16 font-bold text-slate-900">{g.name}</p>
                       {g.status === 'PAUSED' && (
-                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 fs-11 font-semibold text-amber-700">
                           Dijeda
                         </span>
                       )}
                     </div>
-                    <p className="text-[14px] tabular-nums text-slate-700">
+                    <p className="fs-14 tabular-nums text-slate-700">
                       {formatIDR(g.currentTotal)}
                       {g.targetAmount ? (
                         <span className="text-slate-400"> / {formatIDR(g.targetAmount)}</span>
@@ -216,7 +213,7 @@ export function TargetView() {
                         ' terkumpul'
                       )}
                     </p>
-                    <p className="mt-0.5 text-[12px] text-slate-500">
+                    <p className="mt-0.5 fs-12 text-slate-500">
                       {done
                         ? 'Target tercapai — hebat!'
                         : g.targetDate
@@ -232,7 +229,7 @@ export function TargetView() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[12px] text-slate-500">
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 fs-12 text-slate-500">
                     <CalendarClock size={14} className="shrink-0" />
                     <span className="truncate">
                       {g.monthlyAmount > 0
@@ -276,7 +273,7 @@ export function TargetView() {
         </ul>
       )}
 
-      <p className="px-1 text-[12px] leading-relaxed text-slate-500">
+      <p className="px-1 fs-12 leading-relaxed text-slate-500">
         Setor ke target dari halaman Tabungan, atau nyalakan setoran otomatis. Menjeda/menghapus target tidak mengubah
         saldo yang sudah tersimpan.
       </p>

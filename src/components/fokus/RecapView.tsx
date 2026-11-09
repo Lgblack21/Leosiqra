@@ -29,14 +29,14 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
     return (
       <section className={cn(card, 'flex flex-col items-center px-6 py-10 text-center')}>
         <LeoMascot mood="idle" size={130} />
-        <p className="mt-2 text-[17px] font-bold text-slate-900 dark:text-white">Belum ada sesi fokus</p>
-        <p className="mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="mt-2 fs-17 font-bold text-slate-900 dark:text-white">Belum ada sesi fokus</p>
+        <p className="mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
           Mulai satu sesi — Leo yang mencatat berapa lama kamu fokus, beruntun berapa hari, dan buat apa saja.
         </p>
         <button
           type="button"
           onClick={onStart}
-          className="mt-5 rounded-full bg-slate-900 px-6 py-3 text-[14px] font-bold text-white dark:bg-white dark:text-slate-900"
+          className="mt-5 rounded-full bg-slate-900 px-6 py-3 fs-14 font-bold text-white dark:bg-white dark:text-slate-900"
         >
           Mulai fokus
         </button>
@@ -84,22 +84,22 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
             <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl', tone)}>
               <Icon size={16} />
             </span>
-            <p className="mt-2 text-[12px] font-semibold text-slate-500">{label}</p>
-            <p className="truncate text-[17px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[22px]">
+            <p className="mt-2 fs-12 font-semibold text-slate-500">{label}</p>
+            <p className="truncate fs-17 font-extrabold tracking-tight text-slate-900 dark:text-white md:fsh-22">
               {value}
             </p>
-            <p className="truncate text-[11px] text-slate-400 md:text-[12px]">{sub}</p>
+            <p className="truncate fs-11 text-slate-400 md:fs-12">{sub}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <section className={cn(card, 'p-4 md:p-5')}>
-          <p className="text-[15px] font-bold text-slate-900 dark:text-white">7 hari terakhir</p>
+          <p className="fs-15 font-bold text-slate-900 dark:text-white">7 hari terakhir</p>
           <div className="mt-4 flex h-40 items-end gap-2 md:gap-3">
             {sum.week.map((w) => (
               <div key={w.date} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
-                <span className="text-[10px] font-semibold tabular-nums text-slate-400">
+                <span className="fs-10 font-semibold tabular-nums text-slate-400">
                   {w.sec ? Math.round(w.sec / 60) : ''}
                 </span>
                 <div
@@ -111,7 +111,7 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
                 />
                 <span
                   className={cn(
-                    'text-[11px] font-semibold',
+                    'fs-11 font-semibold',
                     w.date === today ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-400',
                   )}
                 >
@@ -120,16 +120,16 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">Angka di atas batang = menit fokus.</p>
+          <p className="mt-2 fs-11 text-slate-400">Angka di atas batang = menit fokus.</p>
         </section>
 
         <section className={cn(card, 'p-4 md:p-5')}>
-          <p className="text-[15px] font-bold text-slate-900 dark:text-white">Buat apa saja (7 hari)</p>
+          <p className="fs-15 font-bold text-slate-900 dark:text-white">Buat apa saja (7 hari)</p>
           <div className="mt-3 space-y-2.5">
-            {sum.byKind.length === 0 && <p className="text-[13px] text-slate-400">Belum ada sesi minggu ini.</p>}
+            {sum.byKind.length === 0 && <p className="fs-13 text-slate-400">Belum ada sesi minggu ini.</p>}
             {sum.byKind.map(([k, sec]) => (
               <div key={k}>
-                <div className="flex justify-between text-[13px]">
+                <div className="flex justify-between fs-13">
                   <span className="font-semibold text-slate-700 dark:text-slate-200">
                     {KIND.get(k)?.emoji} {KIND.get(k)?.label}
                   </span>
@@ -148,9 +148,9 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
       </div>
 
       <section className={cn(card, 'p-4 md:p-5')}>
-        <p className="text-[15px] font-bold text-slate-900 dark:text-white">Riwayat</p>
+        <p className="fs-15 font-bold text-slate-900 dark:text-white">Riwayat</p>
         {err && (
-          <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">
+          <p role="alert" className="mt-2 fs-12 font-semibold text-rose-600">
             {err}
           </p>
         )}
@@ -161,16 +161,16 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
             return (
               <li key={s.id} className="flex items-center gap-3 py-2.5">
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-[17px] dark:bg-slate-800"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 fs-17 dark:bg-slate-800"
                   aria-hidden
                 >
                   {k?.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold text-slate-800 dark:text-slate-100">
+                  <span className="block truncate fs-14 font-semibold text-slate-800 dark:text-slate-100">
                     {s.label || k?.label}
                   </span>
-                  <span className="block truncate text-[12px] text-slate-400">
+                  <span className="block truncate fs-12 text-slate-400">
                     {d.toLocaleString('id-ID', {
                       weekday: 'short',
                       day: 'numeric',
@@ -183,7 +183,7 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
                 </span>
                 <span
                   className={cn(
-                    'shrink-0 text-[13px] font-bold tabular-nums',
+                    'shrink-0 fs-13 font-bold tabular-nums',
                     s.completed ? 'text-slate-900 dark:text-white' : 'text-slate-400',
                   )}
                 >
@@ -194,14 +194,14 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
                     <button
                       type="button"
                       onClick={() => setAsk(null)}
-                      className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      className="rounded-full bg-slate-100 px-2.5 py-1 fs-11 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     >
                       Batal
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(s.id)}
-                      className="rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white"
+                      className="rounded-full bg-rose-600 px-2.5 py-1 fs-11 font-bold text-white"
                     >
                       Hapus
                     </button>
@@ -221,7 +221,7 @@ export function RecapView({ sessions, onStart }: { sessions: FocusSession[]; onS
           })}
         </ul>
         {ready === false && (
-          <p className="mt-2 text-[11px] text-amber-600">
+          <p className="mt-2 fs-11 text-amber-600">
             Rekap disimpan di perangkat ini dulu — otomatis tersinkron setelah server siap.
           </p>
         )}

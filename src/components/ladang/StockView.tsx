@@ -59,7 +59,7 @@ const ownerOnly = () => {
 };
 const tabCls = (on: boolean) =>
   cn(
-    'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-bold transition-colors',
+    'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 fs-12 font-bold transition-colors',
     on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400',
   );
 
@@ -116,9 +116,7 @@ function StockTabs({
       <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
         <button type="button" onClick={() => setTab('bahan')} className={tabCls(tab === 'bahan')}>
           <Package size={14} /> Daftar
-          {low.length > 0 && (
-            <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{low.length}</span>
-          )}
+          {low.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 fs-10 text-white">{low.length}</span>}
         </button>
         <button type="button" onClick={() => setTab('resep')} className={tabCls(tab === 'resep')}>
           <FlaskConical size={14} /> Per produk
@@ -156,7 +154,7 @@ function MaterialsTab({
   return (
     <div className="space-y-2.5">
       {active.length > 0 && active.some(isLow) && (
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 fs-12 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           <AlertTriangle size={15} className="shrink-0" />{' '}
           <span>
             {active.filter(isLow).length} stok hampir habis —{' '}
@@ -197,7 +195,7 @@ function MaterialsTab({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-[13px] font-bold text-slate-500 hover:border-violet-300 hover:text-violet-600 dark:border-slate-700 dark:text-slate-400"
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 py-3 fs-13 font-bold text-slate-500 hover:border-violet-300 hover:text-violet-600 dark:border-slate-700 dark:text-slate-400"
         >
           <Plus size={15} /> Tambah bahan / barang
         </button>
@@ -207,7 +205,7 @@ function MaterialsTab({
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            className="text-[12px] font-bold text-slate-400 hover:text-slate-600"
+            className="fs-12 font-bold text-slate-400 hover:text-slate-600"
           >
             {showArchived ? 'Sembunyikan' : 'Lihat'} arsip ({archived.length})
           </button>
@@ -216,7 +214,7 @@ function MaterialsTab({
               {archived.map((m) => (
                 <li
                   key={m.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[13px] text-slate-500 dark:bg-slate-800/50"
+                  className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 fs-13 text-slate-500 dark:bg-slate-800/50"
                 >
                   <span className="truncate">
                     {m.name} · {fmtQty(m.stock)} {m.unit}
@@ -232,7 +230,7 @@ function MaterialsTab({
                         onToast(e instanceof Error ? e.message : 'Gagal.');
                       }
                     }}
-                    className="flex shrink-0 items-center gap-1 text-[12px] font-bold text-violet-600"
+                    className="flex shrink-0 items-center gap-1 fs-12 font-bold text-violet-600"
                   >
                     <ArchiveRestore size={13} /> Aktifkan
                   </button>
@@ -297,20 +295,20 @@ function MaterialCard({
       >
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[14px] font-extrabold text-slate-900 dark:text-white">{m.name}</span>
+            <span className="truncate fs-14 font-extrabold text-slate-900 dark:text-white">{m.name}</span>
             <span
               className={cn(
-                'shrink-0 text-[15px] font-extrabold tabular-nums',
+                'shrink-0 fs-15 font-extrabold tabular-nums',
                 m.stock <= 0 ? 'text-rose-600' : low ? 'text-amber-600' : 'text-slate-900 dark:text-white',
               )}
             >
-              {fmtQty(m.stock)} <span className="text-[11px] font-bold text-slate-400">{m.unit}</span>
+              {fmtQty(m.stock)} <span className="fs-11 font-bold text-slate-400">{m.unit}</span>
             </span>
           </span>
           <span className="mt-1.5 block">
             <StockBar m={m} />
           </span>
-          <span className="mt-1 flex justify-between gap-2 text-[11px] text-slate-400">
+          <span className="mt-1 flex justify-between gap-2 fs-11 text-slate-400">
             <span>{m.min_stock != null ? `Minimum ${fmtQty(m.min_stock)} ${m.unit}` : 'Tanpa batas minimum'}</span>
             {m.avg_cost != null && (
               <span className="tabular-nums">
@@ -327,7 +325,7 @@ function MaterialCard({
             <button
               type="button"
               onClick={() => onBuy(m)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-rose-50 py-2.5 fs-12 font-bold text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300"
             >
               <Wallet size={14} /> Beli {m.name} — catat pengeluaran & stok masuk
             </button>
@@ -349,7 +347,7 @@ function MaterialCard({
                   onClick={() => setMode(k)}
                   aria-pressed={mode === k}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-bold',
+                    'flex flex-col items-center gap-0.5 rounded-xl py-2 fs-11 font-bold',
                     mode === k
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -436,9 +434,9 @@ function MoveForm({
   };
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>
+      <p className="fs-11 text-slate-500 dark:text-slate-400">{hint}</p>
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -452,7 +450,7 @@ function MoveForm({
             aria-label="Jumlah"
             className={cn(qtyCls, 'pr-14')}
           />
-          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">
+          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 fs-12 font-bold text-slate-400">
             {m.unit}
           </span>
         </span>
@@ -460,7 +458,7 @@ function MoveForm({
           type="button"
           onClick={save}
           disabled={busy || !qty}
-          className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-violet-600 px-4 text-[13px] font-bold text-white disabled:opacity-40"
+          className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-violet-600 px-4 fs-13 font-bold text-white disabled:opacity-40"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan
         </button>
@@ -471,11 +469,11 @@ function MoveForm({
           onChange={(e) => setNote(e.target.value)}
           maxLength={80}
           placeholder="Catatan (opsional)"
-          className={cn(fieldCls, 'py-2.5 text-[13px]')}
+          className={cn(fieldCls, 'py-2.5 fs-13')}
         />
       )}
       {kind === 'opname' && Number.isFinite(n) && qty && (
-        <p className="text-[12px] font-semibold text-slate-600 dark:text-slate-300">
+        <p className="fs-12 font-semibold text-slate-600 dark:text-slate-300">
           Selisih:{' '}
           <span className={n - m.stock < 0 ? 'text-rose-600' : 'text-emerald-600'}>
             {n - m.stock >= 0 ? '+' : '−'}
@@ -498,7 +496,7 @@ function UnitPicker({ value, onChange }: { value: string; onChange: (v: string) 
           onClick={() => onChange(u)}
           aria-pressed={value === u}
           className={cn(
-            'rounded-full px-3 py-1.5 text-[12px] font-bold',
+            'rounded-full px-3 py-1.5 fs-12 font-bold',
             value === u
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
               : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -513,7 +511,7 @@ function UnitPicker({ value, onChange }: { value: string; onChange: (v: string) 
         placeholder="lainnya…"
         aria-label="Satuan lain"
         className={cn(
-          'w-24 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none ring-2',
+          'w-24 rounded-full px-3 py-1.5 fs-12 font-bold outline-none ring-2',
           custom && value
             ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900'
             : 'bg-slate-100 text-slate-600 ring-transparent focus:ring-violet-500 dark:bg-slate-800 dark:text-slate-300',
@@ -562,12 +560,12 @@ function AddMaterial({
   };
   return (
     <div className="space-y-3 rounded-2xl bg-violet-50/60 p-3.5 ring-1 ring-violet-100 dark:bg-violet-500/5 dark:ring-violet-500/20">
-      <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">Bahan / barang baru</p>
-      <p className="-mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+      <p className="fs-13 font-extrabold text-slate-900 dark:text-white">Bahan / barang baru</p>
+      <p className="-mt-2 fs-11 text-slate-500 dark:text-slate-400">
         Bahan baku yang diolah (tepung, kopi, kain) atau barang yang dijual apa adanya (mi instan, kaos).
       </p>
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -612,7 +610,7 @@ function AddMaterial({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full bg-white px-5 py-2.5 text-[13px] font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
+            className="rounded-full bg-white px-5 py-2.5 fs-13 font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
           >
             Batal
           </button>
@@ -621,7 +619,7 @@ function AddMaterial({
           type="button"
           onClick={save}
           disabled={busy}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 fs-13 font-bold text-white disabled:opacity-50"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Tambah
         </button>
@@ -679,7 +677,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
   return (
     <div className="space-y-2.5">
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -708,7 +706,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
               aria-label="Stok sekarang"
               className={cn(qtyCls, 'pr-12', stockChanged && 'ring-amber-400')}
             />
-            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 fs-12 font-bold text-slate-400">
               {unit}
             </span>
           </span>
@@ -726,7 +724,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
         </label>
       </div>
       {stockChanged && (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="rounded-xl bg-amber-50 px-3 py-2 fs-12 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           Stok {fmtQty(m.stock)} → {fmtQty(st)} {unit} (selisih{' '}
           <span className={st - m.stock < 0 ? 'text-rose-600' : 'text-emerald-700'}>
             {st - m.stock >= 0 ? '+' : '−'}
@@ -740,7 +738,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
           type="button"
           disabled={busy}
           onClick={() => run({ archived: true }, `${m.name} diarsipkan (riwayat tetap ada).`)}
-          className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           <Archive size={14} /> Arsipkan
         </button>
@@ -754,7 +752,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
             (mn !== null && (!Number.isFinite(mn) || mn < 0))
           }
           onClick={save}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 fs-13 font-bold text-white disabled:opacity-40"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan
         </button>
@@ -783,14 +781,14 @@ function RecipesTab({
   const groups = groupProducts(shop.products);
   if (!shop.products.length)
     return (
-      <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+      <p className="rounded-2xl bg-slate-50 p-5 text-center fs-13 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
         Isi katalog produk dulu, lalu atur bahan per produk di sini.
       </p>
     );
   if (!active.length)
     return (
       <div className="space-y-3">
-        <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+        <p className="rounded-2xl bg-slate-50 p-5 text-center fs-13 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
           Tambahkan bahan atau barang dulu di tab <b>Daftar</b> — atau pakai tombol di bawah untuk toko barang jadi.
         </p>
         {!staff && <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />}
@@ -798,13 +796,13 @@ function RecipesTab({
     );
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-slate-500 dark:text-slate-400">
+      <p className="fs-12 text-slate-500 dark:text-slate-400">
         Isi apa yang terpakai untuk <b>1 produk</b> — mis. 1 Nasi goreng = 200 gram beras + 1 telur, atau 1 Kaos L = 1
         pcs Kaos L. Setiap terjual di kasir (kamu atau tim), stoknya berkurang otomatis; modal & untung per produk
         dihitung dari harga beli rata-rata.
       </p>
       {staff ? (
-        <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+        <p className="rounded-xl bg-slate-50 px-3 py-2 fs-11 font-semibold text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
           Diatur oleh pemilik usaha — kamu bisa melihat saja.
         </p>
       ) : (
@@ -812,7 +810,7 @@ function RecipesTab({
       )}
       {groups.map((g) => (
         <div key={g.group || '_'} className="space-y-1.5">
-          {g.group && <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{g.group}</p>}
+          {g.group && <p className="px-1 fs-11 font-bold uppercase tracking-wider text-slate-400">{g.group}</p>}
           {g.items.map(({ p }) => {
             const key = lineKey(p);
             const items = recipeOf.get(key) ?? [];
@@ -834,12 +832,12 @@ function RecipesTab({
                 >
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span>
-                      <span className="shrink-0 text-[13px] font-extrabold tabular-nums text-slate-700 dark:text-slate-200">
+                      <span className="truncate fs-14 font-bold text-slate-900 dark:text-white">{p.name}</span>
+                      <span className="shrink-0 fs-13 font-extrabold tabular-nums text-slate-700 dark:text-slate-200">
                         {formatIDR(p.price)}
                       </span>
                     </span>
-                    <span className="mt-0.5 block truncate text-[12px] text-slate-500 dark:text-slate-400">
+                    <span className="mt-0.5 block truncate fs-12 text-slate-500 dark:text-slate-400">
                       {items.length ? (
                         items
                           .map((i) => `${byId.get(i.m)?.name ?? '?'} ${fmtQty(i.q)}${byId.get(i.m)?.unit ?? ''}`)
@@ -849,7 +847,7 @@ function RecipesTab({
                       )}
                     </span>
                     {items.length > 0 && cost != null && (
-                      <span className="mt-0.5 block text-[11px] font-semibold text-slate-400">
+                      <span className="mt-0.5 block fs-11 font-semibold text-slate-400">
                         Modal ≈ {formatIDR(Math.round(cost))} · untung ≈{' '}
                         <span className={p.price - cost >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
                           {formatIDR(Math.round(p.price - cost))}
@@ -932,8 +930,8 @@ function OneToOne({
   };
   return (
     <div className="rounded-2xl bg-sky-50 p-3.5 ring-1 ring-sky-100 dark:bg-sky-500/10 dark:ring-sky-500/20">
-      <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">Jual barang jadi?</p>
-      <p className="mt-0.5 text-[12px] text-slate-600 dark:text-slate-300">
+      <p className="fs-13 font-extrabold text-slate-900 dark:text-white">Jual barang jadi?</p>
+      <p className="mt-0.5 fs-12 text-slate-600 dark:text-slate-300">
         Untuk toko kelontong, baju, aksesoris, dll: tiap produk dijadikan 1 barang stok (1 terjual = stok −1).{' '}
         {todo.length} produk belum punya aturan stok
         {todo.length > room ? ` — maksimal ${Math.max(0, room)} sekaligus` : ''}.
@@ -944,7 +942,7 @@ function OneToOne({
             type="button"
             onClick={() => setAsk(false)}
             disabled={busy}
-            className="rounded-full bg-white px-4 py-2 text-[12px] font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
+            className="rounded-full bg-white px-4 py-2 fs-12 font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
           >
             Batal
           </button>
@@ -952,7 +950,7 @@ function OneToOne({
             type="button"
             onClick={run}
             disabled={busy || room <= 0}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sky-600 py-2 fs-12 font-bold text-white disabled:opacity-50"
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Ya, buat{' '}
             {Math.min(todo.length, Math.max(0, room))} barang stok
@@ -962,7 +960,7 @@ function OneToOne({
         <button
           type="button"
           onClick={() => setAsk(true)}
-          className="mt-2.5 rounded-full bg-sky-600 px-4 py-2 text-[12px] font-bold text-white"
+          className="mt-2.5 rounded-full bg-sky-600 px-4 py-2 fs-12 font-bold text-white"
         >
           Jadikan stok 1:1
         </button>
@@ -1018,7 +1016,7 @@ function RecipeEditor({
   return (
     <div className="space-y-2 border-t border-slate-100 px-3.5 pb-3.5 pt-3 dark:border-slate-800">
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -1028,7 +1026,7 @@ function RecipeEditor({
             value={r.m}
             onChange={(e) => setRows(rows.map((x, k) => (k === i ? { ...x, m: e.target.value } : x)))}
             aria-label="Bahan"
-            className={cn(fieldCls, 'min-w-0 flex-1 py-2.5 text-[13px]')}
+            className={cn(fieldCls, 'min-w-0 flex-1 py-2.5 fs-13')}
           >
             {materials.map((m) => (
               <option key={m.id} value={m.id}>
@@ -1044,9 +1042,9 @@ function RecipeEditor({
               }
               inputMode="decimal"
               aria-label="Jumlah per produk"
-              className={cn(qtyCls, 'py-2.5 pr-9 text-[13px]')}
+              className={cn(qtyCls, 'py-2.5 pr-9 fs-13')}
             />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 fs-11 font-bold text-slate-400">
               {unitOf(r.m)}
             </span>
           </span>
@@ -1069,7 +1067,7 @@ function RecipeEditor({
               { m: materials.find((m) => !rows.some((r) => r.m === m.id))?.id ?? materials[0]?.id ?? '', q: '1' },
             ])
           }
-          className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"
+          className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
         >
           <Plus size={14} /> Bahan lain
         </button>
@@ -1080,7 +1078,7 @@ function RecipeEditor({
             type="button"
             disabled={busy}
             onClick={() => save(true)}
-            className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             <Trash2 size={14} /> Hapus
           </button>
@@ -1089,7 +1087,7 @@ function RecipeEditor({
           type="button"
           disabled={busy}
           onClick={() => save()}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 fs-13 font-bold text-white disabled:opacity-50"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan
         </button>
@@ -1151,7 +1149,7 @@ function HistoryTab({
   const list = data.moves.filter((x) => !filter || x.material_id === filter);
   if (!data.moves.length)
     return (
-      <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+      <p className="rounded-2xl bg-slate-50 p-5 text-center fs-13 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
         Belum ada riwayat stok.
       </p>
     );
@@ -1161,7 +1159,7 @@ function HistoryTab({
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         aria-label="Saring bahan"
-        className={cn(fieldCls, 'py-2.5 text-[13px]')}
+        className={cn(fieldCls, 'py-2.5 fs-13')}
       >
         <option value="">Semua bahan</option>
         {data.materials.map((m) => (
@@ -1180,10 +1178,10 @@ function HistoryTab({
               className={cn('flex items-center justify-between gap-3 py-2.5', x.reverted_at && 'opacity-50')}
             >
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold text-slate-800 dark:text-slate-100">
+                <span className="block truncate fs-13 font-semibold text-slate-800 dark:text-slate-100">
                   {m?.name ?? 'Bahan'} · <span className="text-slate-500">{MOVE_LABEL[x.kind] ?? x.kind}</span>
                 </span>
-                <span className="block truncate text-[11px] text-slate-400">
+                <span className="block truncate fs-11 text-slate-400">
                   {new Date(x.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                   {x.by_name ? ` · oleh ${x.by_name}` : ''}
                   {x.note ? ` · ${x.note}` : ''}
@@ -1194,7 +1192,7 @@ function HistoryTab({
               <span className="flex shrink-0 flex-col items-end gap-1">
                 <span
                   className={cn(
-                    'text-[13px] font-extrabold tabular-nums',
+                    'fs-13 font-extrabold tabular-nums',
                     x.reverted_at ? 'text-slate-400 line-through' : out ? 'text-rose-600' : 'text-emerald-600',
                   )}
                 >
@@ -1208,7 +1206,7 @@ function HistoryTab({
                         type="button"
                         disabled={busy}
                         onClick={() => setAsk(null)}
-                        className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                        className="rounded-full bg-slate-100 px-2.5 py-1 fs-11 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                       >
                         Tidak
                       </button>
@@ -1216,7 +1214,7 @@ function HistoryTab({
                         type="button"
                         disabled={busy}
                         onClick={() => undo(x)}
-                        className="flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white"
+                        className="flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 fs-11 font-bold text-white"
                       >
                         {busy && <Loader2 size={11} className="animate-spin" />} Ya, batalkan
                       </button>
@@ -1225,7 +1223,7 @@ function HistoryTab({
                     <button
                       type="button"
                       onClick={() => setAsk(x.id)}
-                      className="text-[11px] font-bold text-slate-400 hover:text-rose-600"
+                      className="fs-11 font-bold text-slate-400 hover:text-rose-600"
                     >
                       Batalkan
                     </button>

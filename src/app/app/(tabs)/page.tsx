@@ -16,6 +16,7 @@ import { NotificationButton } from '@/components/app/home/NotificationButton';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
 import { SecurityNudge } from '@/components/SecurityNudge';
 import { InboxButton } from '@/components/InboxButton';
+import { LiburCard } from '@/components/libur/LiburCard';
 import { FadeIn, StaggerList, StaggerItem } from '@/components/app/FadeIn';
 
 export default function AppHomePage() {
@@ -101,6 +102,9 @@ export default function AppHomePage() {
         </StaggerItem>
         <StaggerItem className="empty:hidden">
           <WeeklyInsights target="app" />
+        </StaggerItem>
+        <StaggerItem>
+          <LiburCard variant="app" />
         </StaggerItem>
         <StaggerItem className="empty:hidden">
           <AppHealthScore accounts={accounts} transactions={transactions} />

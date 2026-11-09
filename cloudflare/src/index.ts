@@ -36,6 +36,15 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   OPENROUTER_API_KEY?: string;
+  /** Quran Foundation Content API (audio murattal Teduh). Rahasia — set lewat `wrangler secret put`. */
+  QF_CLIENT_ID?: string;
+  QF_CLIENT_SECRET?: string;
+  /** "prelive" = server uji Quran Foundation; kosong = produksi. */
+  QF_ENV?: string;
+  /** API Indonesia (apiindonesia.id): tanggal merah, jadwal sholat, Alkitab TB. Rahasia — `wrangler secret put`. */
+  APIINDONESIA_KEY?: string;
+  /** "1" = matikan Alkitab TB seketika (takedown tanpa deploy, ubah di dashboard Cloudflare). */
+  ALKITAB_TB_OFF?: string;
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
@@ -10730,6 +10739,68 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       return json({ ok: true });
     }
     // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
+    // Laporan usaha (BACA SAJA) untuk halaman Laporan + PDF/Excel: penjualan dengan rincian item,
+    // pembeli & kasir (dari payload_json), biaya per jenis, dan stok bahan pada rentang tanggal.
+    if (action === "report" && request.method === "GET") {
+      const q = new URL(request.url).searchParams;
+      const today = todayWIB();
+      const to = isRealDateStr(q.get("to")) && q.get("to")! <= today ? q.get("to")! : today;
+      const fromRaw = q.get("from");
+      let from = isRealDateStr(fromRaw) && fromRaw <= to ? fromRaw : `${to.slice(0, 8)}01`;
+      // Maks ±13 bulan per laporan supaya tetap ringan.
+      const minFrom = new Date(Date.parse(`${to}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10);
+      if (from < minFrom) from = minFrom;
+      const shopRow = (await selectShops(env, userId, " AND id = ?", [id]))[0] ?? {};
+      const style = parseKasirStyle(shopRow.style_json);
+      const REPORT_MAX = 5000;
+      const rows = (await env.DB.prepare(
+        `SELECT t.id, t.type, t.amount_idr AS amount, t.sub_category, substr(t.date, 1, 10) AS date, t.note, t.payload_json, t.created_at, a.name AS account_name
+           FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
+          WHERE t.user_id = ? AND t.related_type = 'shop' AND t.related_id = ? AND substr(t.date, 1, 10) BETWEEN ? AND ?
+          ORDER BY t.date ASC, t.created_at ASC LIMIT ?`
+      ).bind(userId, id, from, to, REPORT_MAX + 1).all<{ id: string; type: string; amount: number; sub_category: string | null; date: string; note: string | null; payload_json: string | null; created_at: string; account_name: string | null }>()).results ?? [];
+      const txt = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+      const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+      const sales: unknown[] = [];
+      const expenses: unknown[] = [];
+      for (const r of rows.slice(0, REPORT_MAX)) {
+        let p: Record<string, unknown> = {};
+        try { const v = r.payload_json ? JSON.parse(r.payload_json) : null; if (v && typeof v === "object") p = v as Record<string, unknown>; } catch { /* payload rusak → abaikan rincian */ }
+        const base = { id: r.id, date: r.date, amount: Math.round(num(r.amount)), account: r.account_name ?? null, staff: txt(p.staffName, 60) || null };
+        if (r.type === "pemasukan") {
+          const items = Array.isArray(p.items)
+            ? (p.items as unknown[]).slice(0, 60).flatMap((it) => {
+                const o = it as Record<string, unknown>;
+                const name = txt(o?.name, 80);
+                return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)) }] : [];
+              })
+            : [];
+          sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(p.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "" });
+        } else if (r.type === "pengeluaran") {
+          expenses.push({ ...base, kind: r.sub_category || "Lainnya", item: txt(p.item, 80) || null, note: r.note ?? "" });
+        }
+      }
+      let materials: unknown[] = [];
+      let moves: unknown[] = [];
+      try {
+        materials = (await listMaterials(env, userId, [id], false)).map((m) => ({ id: m.id, name: m.name, unit: m.unit, stock: m.stock, min_stock: m.min_stock }));
+        moves = (await env.DB.prepare(
+          `SELECT material_id, kind, qty, cost, note, by_name, date FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ? AND reverted_at IS NULL AND date BETWEEN ? AND ? ORDER BY date ASC, created_at ASC LIMIT 2000`
+        ).bind(userId, id, from, to).all()).results ?? [];
+      } catch (e) { if (!stockTableMissing(e)) throw e; }
+      return json({
+        shop: {
+          id, name: shop.name, tagline: shopRow.tagline ?? null, emoji: shopRow.emoji ?? null, contact_wa: shopRow.contact_wa ?? null,
+          area: shopRow.area ?? null, link_url: shopRow.link_url ?? null, theme: style.theme, logo_url: style.logoUrl || null, receipt_footer: style.receiptFooter || null,
+        },
+        range: { from, to },
+        sales,
+        expenses,
+        materials,
+        moves,
+        truncated: rows.length > REPORT_MAX,
+      });
+    }
     // Sambungan website: buat/ganti kunci (ditampilkan SEKALI) atau putuskan.
     if (action === "hook" && (request.method === "POST" || request.method === "DELETE")) {
       try {
@@ -13277,6 +13348,210 @@ async function handleMemberPlaces(request: Request, env: Env, url: URL) {
   }
 }
 
+// ── Teduh: audio murattal (Quran Foundation Content API) ───────────────────
+// Teks Al-Qur'an & terjemahan disajikan statis (public/teduh/quran, lihat scripts/teduh/build-quran.mjs).
+// Audio: daftar URL per ayat dari Quran Foundation (OAuth client credentials, kunci HANYA di Worker).
+// Ketentuan QF: konten hanya ditampilkan di aplikasi, cache maks 1 minggu (di sini 1 hari), tidak dijual ulang.
+// GET /api/member/teduh/reciters          → { items: [{ id, name, style }] }
+// GET /api/member/teduh/audio?surah=&reciter= → { reciter, items: [{ key, url }] }
+let qfToken: { value: string; exp: number } | null = null;
+const qfHosts = (env: Env) =>
+  env.QF_ENV === "prelive"
+    ? { auth: "https://prelive-oauth2.quran.foundation", api: "https://apis-prelive.quran.foundation" }
+    : { auth: "https://oauth2.quran.foundation", api: "https://apis.quran.foundation" };
+async function qfAccessToken(env: Env, fresh = false) {
+  if (!fresh && qfToken && qfToken.exp > Date.now() + 60_000) return qfToken.value;
+  const res = await fetch(`${qfHosts(env).auth}/oauth2/token`, {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${btoa(`${env.QF_CLIENT_ID}:${env.QF_CLIENT_SECRET}`)}`,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials&scope=content",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`QF token ${res.status}`);
+  const body = (await res.json()) as { access_token?: string; expires_in?: number };
+  if (!body.access_token) throw new Error("QF token kosong");
+  qfToken = { value: body.access_token, exp: Date.now() + (body.expires_in ?? 3600) * 1000 };
+  return qfToken.value;
+}
+async function qfGet(env: Env, path: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const token = await qfAccessToken(env, attempt > 0);
+    const res = await fetch(`${qfHosts(env).api}/content/api/v4${path}`, {
+      headers: { "x-auth-token": token, "x-client-id": env.QF_CLIENT_ID!, accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status === 401 && attempt === 0) continue; // token kedaluwarsa → minta ulang sekali
+    if (!res.ok) throw new Error(`QF ${path} ${res.status}`);
+    return (await res.json()) as Record<string, unknown>;
+  }
+  throw new Error("QF tidak bisa diakses");
+}
+const qfAudioUrl = (u: string) =>
+  /^https?:\/\//.test(u) ? u : u.startsWith("//") ? `https:${u}` : `https://verses.quran.foundation/${u.replace(/^\/+/, "")}`;
+async function handleMemberTeduh(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (request.method !== "GET") return json({ error: "Not found" }, { status: 404 });
+  if (!env.QF_CLIENT_ID || !env.QF_CLIENT_SECRET) {
+    return json({ error: "Audio murattal sedang disiapkan.", code: "audio_unconfigured" }, { status: 503 });
+  }
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cached = async (key: string, make: () => Promise<unknown>) => {
+    const req = new Request(`https://cache.leosiqra.internal/teduh/${key}`);
+    const hit = await cache.match(req);
+    if (hit) return new Response(hit.body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    const data = await make();
+    await cache.put(req, new Response(JSON.stringify(data), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400" } }));
+    return json(data);
+  };
+  try {
+    if (url.pathname === "/api/member/teduh/reciters") {
+      return await cached("reciters", async () => {
+        const body = await qfGet(env, "/resources/recitations?language=id");
+        const list = (body.recitations as { id: number; reciter_name?: string; style?: string | null; translated_name?: { name?: string } }[]) ?? [];
+        return { items: list.map((r) => ({ id: r.id, name: r.translated_name?.name || r.reciter_name || `Qari ${r.id}`, style: r.style ?? null })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/audio") {
+      const surah = Number(url.searchParams.get("surah"));
+      const reciter = Number(url.searchParams.get("reciter") || 7);
+      if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(reciter) || reciter < 1 || reciter > 100000) {
+        return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      }
+      return await cached(`audio-${reciter}-${surah}`, async () => {
+        const items: { key: string; url: string }[] = [];
+        for (let page = 1; page <= 10; page++) {
+          const body = await qfGet(env, `/recitations/${reciter}/by_chapter/${surah}?per_page=50&page=${page}`);
+          for (const f of (body.audio_files as { verse_key: string; url: string }[]) ?? []) items.push({ key: f.verse_key, url: qfAudioUrl(f.url) });
+          const next = (body.pagination as { next_page?: number | null } | undefined)?.next_page;
+          if (!next) break;
+        }
+        return { reciter, items };
+      });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    console.error("Teduh audio:", e instanceof Error ? e.message : e);
+    return json({ error: "Audio sedang tidak tersedia. Coba lagi nanti.", code: "audio_unavailable" }, { status: 502 });
+  }
+}
+
+// ── API Indonesia (apiindonesia.id) ─────────────────────────────────────────
+// Satu pintu ke API Indonesia: kunci HANYA di Worker, hasil di-cache bersama (semua user membaca cache
+// yang sama) supaya biaya per request tetap kecil. Tanpa kunci → 503 "unconfigured" dan klien memakai
+// data/perhitungan bawaannya sendiri.
+// GET /api/member/libur?tahun=YYYY                       → { items: [{ date, nama, jenis }] }      (cache 7 hari)
+// GET /api/member/teduh/sholat/kota                      → { items: [{ id, nama, provinsi }] }    (cache 30 hari)
+// GET /api/member/teduh/sholat?kota=&tahun=&bulan=       → { items: [{ date, imsak, subuh, … }] } (cache 30 hari)
+// GET /api/member/teduh/alkitab/kitab                    → { items: [{ id, abbr, nama, pasal, perjanjian }] }
+// GET /api/member/teduh/alkitab/pasal?kitab=&pasal=      → { kitab, pasal, ayat: [{ n, judul, teks }] } (cache 7 hari)
+// Alkitab TB: teks © LAI; ALKITAB_TB_OFF="1" mematikannya seketika (takedown).
+async function apiIndonesia(env: Env, path: string) {
+  const res = await fetch(`https://use.apiindonesia.id/api/v1${path}`, {
+    headers: { "x-api-key": env.APIINDONESIA_KEY!, accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`API Indonesia ${path} ${res.status}`);
+  return (await res.json()) as { data?: unknown; meta?: unknown };
+}
+async function handleApiIndonesia(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  if (request.method !== "GET") return json({ error: "Not found" }, { status: 404 });
+  const alkitab = url.pathname.startsWith("/api/member/teduh/alkitab/");
+  if (alkitab && env.ALKITAB_TB_OFF === "1") {
+    return json({ error: "Alkitab sedang tidak tersedia.", code: "alkitab_off" }, { status: 451 });
+  }
+  if (!env.APIINDONESIA_KEY) return json({ error: "Layanan data sedang disiapkan.", code: "unconfigured" }, { status: 503 });
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cached = async (key: string, ttl: number, make: () => Promise<unknown>) => {
+    const req = new Request(`https://cache.leosiqra.internal/apiid/${key}`);
+    const hit = await cache.match(req);
+    if (hit) return new Response(hit.body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    // Cache kosong = akan memanggil API berbayar → batasi per user.
+    if (env.AI_PARSE_RATE_LIMITER) {
+      const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `apiid:user:${userId}` });
+      if (!success) return json({ error: "Terlalu banyak permintaan. Coba lagi sebentar." }, { status: 429 });
+    }
+    const data = await make();
+    await cache.put(req, new Response(JSON.stringify(data), { headers: { "content-type": "application/json", "cache-control": `public, max-age=${ttl}` } }));
+    return json(data);
+  };
+  const int = (v: string | null, min: number, max: number) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= min && n <= max ? n : null;
+  };
+  try {
+    if (url.pathname === "/api/member/libur") {
+      const tahun = int(url.searchParams.get("tahun"), 2020, 2100);
+      if (!tahun) return json({ error: "Tahun tidak valid." }, { status: 400 });
+      return await cached(`libur-${tahun}`, 7 * 86400, async () => {
+        const body = await apiIndonesia(env, `/libur?tahun=${tahun}`);
+        const list = (body.data as { date: string; name: string; type: string; is_joint_leave: number; is_active: number }[]) ?? [];
+        return {
+          items: list
+            .filter((h) => h.is_active !== 0 && /^\d{4}-\d{2}-\d{2}$/.test(h.date))
+            .map((h) => ({ date: h.date, nama: cleanText(h.name, 120) ?? "Libur", jenis: h.is_joint_leave || h.type === "cuti_bersama" ? "cuti" : "libur" })),
+        };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/sholat/kota") {
+      return await cached("sholat-kota", 30 * 86400, async () => {
+        const body = await apiIndonesia(env, "/sholat/list-kota");
+        const list = (body.data as { regency_id: string; regency_name: string; province_name: string }[]) ?? [];
+        return { items: list.map((k) => ({ id: String(k.regency_id), nama: cleanText(k.regency_name, 80) ?? "", provinsi: cleanText(k.province_name, 80) ?? "" })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/sholat") {
+      const kota = (url.searchParams.get("kota") ?? "").trim();
+      const tahun = int(url.searchParams.get("tahun"), 2020, 2100);
+      const bulan = int(url.searchParams.get("bulan"), 1, 12);
+      if (!/^\d{2,6}$/.test(kota) || !tahun || !bulan) return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      return await cached(`sholat-${kota}-${tahun}-${bulan}`, 30 * 86400, async () => {
+        const body = await apiIndonesia(env, `/sholat/monthly?kabupaten_id=${kota}&tahun=${tahun}&bulan=${bulan}`);
+        const list = (body.data as Record<string, string>[]) ?? [];
+        const t = (v: unknown) => (typeof v === "string" && /^\d{2}:\d{2}$/.test(v) ? v : null);
+        return {
+          items: list.map((r) => ({
+            date: String(r.date).slice(0, 10),
+            imsak: t(r.imsyak), subuh: t(r.shubuh), terbit: t(r.terbit), dzuhur: t(r.dzuhur),
+            ashar: t(r.ashr ?? r.ashar), maghrib: t(r.maghrib), isya: t(r.isya),
+          })),
+        };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/alkitab/kitab") {
+      return await cached("alkitab-kitab", 30 * 86400, async () => {
+        const body = await apiIndonesia(env, "/alkitab/books");
+        const list = (body.data as { id: number; abbr: string; name: string; chapter_count: number; testament: string }[]) ?? [];
+        return { items: list.map((b) => ({ id: b.id, abbr: b.abbr, nama: b.name, pasal: b.chapter_count, perjanjian: b.testament === "PB" ? "PB" : "PL" })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/alkitab/pasal") {
+      const kitab = (url.searchParams.get("kitab") ?? "").trim();
+      const pasal = int(url.searchParams.get("pasal"), 1, 150);
+      if (!/^[1-3]?[A-Za-z]{1,12}$/.test(kitab) || !pasal) return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      return await cached(`alkitab-${kitab.toLowerCase()}-${pasal}`, 7 * 86400, async () => {
+        const body = await apiIndonesia(env, `/alkitab/passage/${encodeURIComponent(kitab)}/${pasal}`);
+        const d = body.data as { book: { id: number; abbr: string; name: string }; chapter: number; verses: { verse_number: number; title: string | null; text: string }[] };
+        return {
+          kitab: { id: d.book.id, abbr: d.book.abbr, nama: d.book.name },
+          pasal: d.chapter,
+          ayat: (d.verses ?? []).map((v) => ({ n: v.verse_number, judul: v.title ? cleanText(v.title, 200) : null, teks: String(v.text ?? "") })),
+        };
+      });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    console.error("API Indonesia:", e instanceof Error ? e.message : e);
+    return json({ error: "Data sedang tidak bisa dimuat. Coba lagi nanti.", code: "upstream" }, { status: 502 });
+  }
+}
+
 // ── Kanvas (migrasi 0041) ───────────────────────────────────────────────────
 // Papan rencana keuangan (template: nikah, darurat, rumah, ...). Angka "dari catatanmu" dihitung
 // di klien dari data user sendiri; yang disimpan hanya isian user (state_json, disaring ketat).
@@ -13317,6 +13592,73 @@ const sanitizeCanvasState = (raw: unknown) => {
   });
   return { v: 1, answers, done, nums, pos, notes };
 };
+// ── Pajak Center: setelan pajak per tahun (migrasi 0043). Semua field disaring; field asing dibuang.
+const TAX_DOC_KEYS = ["a1", "npwp", "efin", "harta", "utang", "rekening", "zakat", "setoran", "coretax"] as const;
+const taxMoney = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.min(1e13, Math.max(0, Math.round(v))) : 0);
+const taxMonthKey = (k: string) => /^(0[1-9]|1[0-2])$/.test(k);
+function sanitizeTaxSettings(raw: unknown) {
+  const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const months = (v: unknown) => (v && typeof v === "object" ? Object.entries(v as Record<string, unknown>).filter(([k]) => taxMonthKey(k)) : []);
+  const out: Record<string, unknown> = {
+    status: r.status === "K" ? "K" : "TK",
+    tanggungan: Math.min(3, Math.max(0, Math.floor(Number(r.tanggungan) || 0))),
+    karyawan: r.karyawan === true,
+    gajiBruto: r.gajiBruto === null || r.gajiBruto === undefined ? null : taxMoney(r.gajiBruto),
+    iuranPensiun: taxMoney(r.iuranPensiun),
+    pph21Dipotong: taxMoney(r.pph21Dipotong),
+    usahaMode: r.usahaMode === "final" || r.usahaMode === "pembukuan" ? r.usahaMode : "tidak",
+    umkmMulai: Number.isInteger(r.umkmMulai) && (r.umkmMulai as number) >= 2009 && (r.umkmMulai as number) <= 2100 ? r.umkmMulai : null,
+    omzetManual: Object.fromEntries(months(r.omzetManual).map(([k, v]) => [k, taxMoney(v)])),
+    umkmSetor: Object.fromEntries(
+      months(r.umkmSetor).map(([k, v]) => {
+        const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+        return [k, { paid: o.paid === true, ...(isRealDateStr(o.date) ? { date: o.date } : {}) }];
+      }),
+    ),
+    zakat: r.zakat === null || r.zakat === undefined ? null : taxMoney(r.zakat),
+    penghasilanLain: taxMoney(r.penghasilanLain),
+    sptLapor: r.sptLapor === true,
+    sptTanggal: isRealDateStr(r.sptTanggal) ? r.sptTanggal : null,
+    dokumen: Object.fromEntries(TAX_DOC_KEYS.map((k) => [k, (r.dokumen as Record<string, unknown> | undefined)?.[k] === true])),
+  };
+  return out;
+}
+async function handleMemberTax(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  if (url.pathname !== "/api/member/tax/settings") return json({ error: "Not found" }, { status: 404 });
+  const year = Number(url.searchParams.get("year"));
+  if (!Number.isInteger(year) || year < 2009 || year > 2100) return json({ error: "Tahun pajak tidak valid." }, { status: 400 });
+  try {
+    if (request.method === "GET") {
+      const row = await env.DB.prepare("SELECT data_json, updated_at FROM tax_settings WHERE user_id = ? AND year = ?").bind(userId, year).first<{ data_json: string; updated_at: string }>();
+      let data: unknown = null;
+      if (row) { try { data = sanitizeTaxSettings(JSON.parse(row.data_json)); } catch { data = null; } }
+      return json({ ready: true, year, settings: data, updated_at: row?.updated_at ?? null });
+    }
+    if (request.method === "PUT") {
+      const text = await request.text();
+      if (text.length > 16_000) return json({ error: "Data terlalu besar." }, { status: 413 });
+      let raw: unknown = null;
+      try { raw = JSON.parse(text); } catch { return json({ error: "Format data tidak valid." }, { status: 400 }); }
+      const clean = JSON.stringify(sanitizeTaxSettings((raw as Record<string, unknown> | null)?.settings ?? raw));
+      const now = nowIso();
+      await env.DB.prepare(
+        "INSERT INTO tax_settings (user_id, year, data_json, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, year) DO UPDATE SET data_json = excluded.data_json, updated_at = excluded.updated_at"
+      ).bind(userId, year, clean, now).run();
+      return json({ ok: true, updated_at: now });
+    }
+    return json({ error: "Method not allowed" }, { status: 405 });
+  } catch (e) {
+    if (e instanceof Error && /no such table: tax_settings/i.test(e.message)) {
+      if (request.method === "GET") return json({ ready: false, year, settings: null });
+      return json({ error: "Setelan pajak belum bisa disimpan ke akun (menunggu pembaruan database).", code: "not_ready" }, { status: 503 });
+    }
+    throw e;
+  }
+}
+
 async function handleMemberCanvas(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -16663,7 +17005,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta", "teduh"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -21369,8 +21711,23 @@ const worker = {
         return await handleMemberFocus(request, env, url.pathname);
       }
 
+      if (
+        url.pathname === "/api/member/libur" ||
+        url.pathname.startsWith("/api/member/teduh/sholat") ||
+        url.pathname.startsWith("/api/member/teduh/alkitab/")
+      ) {
+        return await handleApiIndonesia(request, env, url);
+      }
+      if (url.pathname.startsWith("/api/member/teduh/")) {
+        return await handleMemberTeduh(request, env, url);
+      }
+
       if (url.pathname === "/api/member/places" || url.pathname.startsWith("/api/member/places/")) {
         return await handleMemberPlaces(request, env, url);
+      }
+
+      if (url.pathname.startsWith("/api/member/tax/")) {
+        return await handleMemberTax(request, env, url);
       }
 
       if (url.pathname === "/api/member/canvas" || url.pathname.startsWith("/api/member/canvas/")) {

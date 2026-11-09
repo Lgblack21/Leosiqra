@@ -179,7 +179,7 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
   if (layout === 'tiles') {
     const listening = status.kind === 'listening';
     const tile =
-      'flex flex-col items-center justify-center gap-2 rounded-[22px] py-5 text-[14px] font-extrabold transition-transform active:scale-[0.97] disabled:opacity-40';
+      'flex flex-col items-center justify-center gap-2 rounded-[22px] py-5 fs-14 font-extrabold transition-transform active:scale-[0.97] disabled:opacity-40';
     return (
       <div className={cn('space-y-3', className)}>
         <input
@@ -210,13 +210,11 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
                 <Loader2 size={30} className="animate-spin" />
               </span>
             )}
-            <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">
+            <p className="fs-14 font-extrabold text-slate-900 dark:text-white">
               {listening ? 'Mendengarkan… ketuk untuk selesai' : status.kind === 'thinking' ? status.label : ''}
             </p>
             {text && (
-              <p className="max-w-full text-[13px] font-semibold text-slate-500 dark:text-slate-400">
-                &ldquo;{text}&rdquo;
-              </p>
+              <p className="max-w-full fs-13 font-semibold text-slate-500 dark:text-slate-400">&ldquo;{text}&rdquo;</p>
             )}
           </div>
         ) : typing ? (
@@ -252,7 +250,7 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
                 {chips.map((c) => (
                   <span
                     key={c}
-                    className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"
+                    className="rounded-full bg-indigo-50 px-2.5 py-1 fs-10 font-black text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"
                   >
                     {c}
                   </span>
@@ -266,7 +264,7 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
                 setTyping(false);
                 setText('');
               }}
-              className="w-full py-2 text-[12px] font-bold text-slate-400"
+              className="w-full py-2 fs-12 font-bold text-slate-400"
             >
               Kembali ke pilihan
             </button>
@@ -312,16 +310,14 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
                 Ketik
               </button>
             </div>
-            <p className="px-2 text-center text-[12px] font-medium text-slate-400 dark:text-slate-500">
+            <p className="px-2 text-center fs-12 font-medium text-slate-400 dark:text-slate-500">
               {canSpeak
                 ? 'Contoh: “makan siang 35 ribu pakai BCA”. Hasilnya dicek dulu sebelum disimpan.'
                 : 'Suara tidak didukung di perangkat ini — pakai foto struk atau ketik.'}
             </p>
           </>
         )}
-        {status.kind === 'error' && (
-          <p className="px-1 text-center text-[12px] font-bold text-rose-500">{status.msg}</p>
-        )}
+        {status.kind === 'error' && <p className="px-1 text-center fs-12 font-bold text-rose-500">{status.msg}</p>}
       </div>
     );
   }
@@ -431,17 +427,17 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layo
       </div>
 
       {status.kind === 'thinking' && (
-        <p className="flex items-center gap-1.5 px-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+        <p className="flex items-center gap-1.5 px-1 fs-11 font-bold text-indigo-600 dark:text-indigo-400">
           <Loader2 size={12} className="animate-spin" /> {status.label}
         </p>
       )}
-      {status.kind === 'error' && <p className="px-1 text-[11px] font-bold text-rose-500">{status.msg}</p>}
+      {status.kind === 'error' && <p className="px-1 fs-11 font-bold text-rose-500">{status.msg}</p>}
       {status.kind === 'idle' && chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-1">
           {chips.map((c) => (
             <span
               key={c}
-              className="rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-[10px] font-black text-indigo-600 dark:text-indigo-300"
+              className="rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 fs-10 font-black text-indigo-600 dark:text-indigo-300"
             >
               {c}
             </span>

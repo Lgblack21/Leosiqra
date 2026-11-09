@@ -84,7 +84,7 @@ export function LevelBadge() {
             setOpen(true);
           }}
           aria-label={`Level ${level}, lihat challenge`}
-          className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"
+          className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 fs-11 font-black text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"
         >
           <Star size={12} fill="currentColor" /> Lvl {level}
         </motion.button>

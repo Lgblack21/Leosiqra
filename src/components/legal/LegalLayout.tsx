@@ -84,7 +84,7 @@ export function LegalLayout({
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">{eyebrow}</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">{eyebrow}</p>
           <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">{title}</h1>
           <p className="mt-5 flex items-center gap-2 text-sm text-slate-500">
             <CalendarDays size={15} /> Terakhir diperbarui {updated}
@@ -103,7 +103,7 @@ export function LegalLayout({
               <div className="mt-1">{toc}</div>
             </details>
             <div className="hidden lg:block">
-              <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Daftar isi</p>
+              <p className="mb-3 px-3 fs-11 font-bold uppercase tracking-[0.2em] text-slate-400">Daftar isi</p>
               {toc}
             </div>
           </aside>
@@ -118,9 +118,7 @@ export function LegalLayout({
                       {s.title}
                     </h2>
                   </div>
-                  <div className="legal-body mt-4 space-y-3 text-[15px] leading-relaxed text-slate-600">
-                    {s.content}
-                  </div>
+                  <div className="legal-body mt-4 space-y-3 fs-15 leading-relaxed text-slate-600">{s.content}</div>
                 </section>
               </Reveal>
             ))}

@@ -59,7 +59,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
       {flash && (
         <div
           role="status"
-          className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="rounded-2xl bg-emerald-50 px-4 py-3 fs-13 font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           {flash}
         </div>
@@ -81,7 +81,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
           <Link
             href="/membership/dashboard"
             aria-label="Kembali ke Ringkasan"
-            className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 fs-13 font-semibold text-white shadow-sm hover:bg-slate-800"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5">
               <ArrowLeft size={16} />
@@ -89,10 +89,8 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
             <span className="hidden sm:inline">Ringkasan</span>
           </Link>
           <div className="min-w-0 text-center">
-            <h1 className="truncate text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[24px]">
-              {current.title}
-            </h1>
-            <p className="truncate text-[12px] text-slate-500">{current.sub}</p>
+            <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24">{current.title}</h1>
+            <p className="truncate fs-12 text-slate-500">{current.sub}</p>
           </div>
           <LeoGuide topic="ladang" />
         </header>
@@ -112,7 +110,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
                   aria-current={active ? 'page' : undefined}
                   aria-label={t.label}
                   className={cn(
-                    'relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold transition-all',
+                    'relative flex h-12 items-center justify-center gap-2 rounded-full fs-13 font-bold transition-all',
                     active
                       ? 'bg-gradient-to-r from-emerald-400 to-teal-300 px-4 text-slate-950'
                       : 'w-12 text-white/70 hover:bg-white/10',
@@ -142,7 +140,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
               aria-selected={tab === t.id}
               onClick={() => go(t.id)}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-bold transition-colors',
+                'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 fs-13 font-bold transition-colors',
                 tab === t.id
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400',
@@ -287,7 +285,7 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -300,11 +298,11 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
           strokeWidth={1}
           className="pointer-events-none absolute -bottom-6 -right-4 text-emerald-300/10"
         />
-        <p className="text-[13px] font-semibold text-white/60">Barang nganggur jadi uang</p>
-        <p className="mt-1 text-[32px] font-extrabold leading-none tracking-tight tabular-nums md:text-[40px]">
+        <p className="fs-13 font-semibold text-white/60">Barang nganggur jadi uang</p>
+        <p className="mt-1 fsh-32 font-extrabold leading-none tracking-tight tabular-nums md:fsh-40">
           {formatIDR(Math.round(potential))}
         </p>
-        <p className="mt-2 text-[13px] text-white/60">
+        <p className="mt-2 fs-13 text-white/60">
           perkiraan nilai {active.length} barang di Barangku
           {cashed > 0 ? ` · sudah cair ${formatIDR(Math.round(cashed))}` : ''}
         </p>
@@ -312,15 +310,15 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
           <button
             type="button"
             onClick={() => setFlow({})}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Camera size={15} /> Foto / ketik barang lain
           </button>
         </div>
-        <ol className="relative mt-5 grid grid-cols-3 gap-2 text-[11px] text-white/70">
+        <ol className="relative mt-5 grid grid-cols-3 gap-2 fs-11 text-white/70">
           {['Foto / pilih barang', 'AI cek iklan asli', 'Iklan tersimpan & jual'].map((s, i) => (
             <li key={s} className="rounded-2xl bg-white/[0.07] px-2.5 py-2">
-              <span className="block text-[15px] font-extrabold text-emerald-300">{i + 1}</span>
+              <span className="block fs-15 font-extrabold text-emerald-300">{i + 1}</span>
               {s}
             </li>
           ))}
@@ -330,10 +328,10 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
       {selling.length > 0 && (
         <section className={cn(card, 'p-4')}>
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">
+            <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">
               Sedang dijual <span className="text-slate-400">· {selling.length}</span>
             </h3>
-            <span className="text-[11px] text-slate-400">tersimpan otomatis</span>
+            <span className="fs-11 text-slate-400">tersimpan otomatis</span>
           </div>
           <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
             {selling.map((l) => (
@@ -345,11 +343,11 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
 
       <section className={cn(card, 'p-4')}>
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Dari Barangku</h3>
-          <span className="text-[11px] text-slate-400">nilai = perkiraan susut</span>
+          <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Dari Barangku</h3>
+          <span className="fs-11 text-slate-400">nilai = perkiraan susut</span>
         </div>
         {active.length === 0 ? (
-          <p className="py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">
+          <p className="py-6 text-center fs-13 text-slate-500 dark:text-slate-400">
             Belum ada barang aktif di Barangku. Ketik barangnya langsung lewat tombol di atas.
           </p>
         ) : (
@@ -369,10 +367,10 @@ function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: s
 
       {sold.length > 0 && (
         <section className={cn(card, 'p-4')}>
-          <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Sudah terjual</h3>
+          <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Sudah terjual</h3>
           <ul className="mt-2 space-y-1.5">
             {sold.slice(0, 8).map((i) => (
-              <li key={i.id} className="flex items-center justify-between gap-3 text-[13px]">
+              <li key={i.id} className="flex items-center justify-between gap-3 fs-13">
                 <span className="min-w-0 truncate text-slate-600 dark:text-slate-300">{i.name}</span>
                 <span className="shrink-0 font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                   {i.price ? formatIDR(i.price) : '—'}
@@ -425,20 +423,20 @@ function ListingRow({ listing, onOpen }: { listing: Listing; onOpen: () => void 
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+          <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
             {listing.title || listing.name}
           </span>
-          <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+          <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
             {[listing.condition, days === 0 ? 'dipasang hari ini' : `dipasang ${days} hari lalu`]
               .filter(Boolean)
               .join(' · ')}
           </span>
         </span>
         <span className="shrink-0 text-right">
-          <span className="block text-[14px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+          <span className="block fs-14 font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
             {listing.price ? formatIDR(listing.price) : '—'}
           </span>
-          <span className="flex items-center justify-end gap-0.5 text-[11px] font-bold text-slate-400">
+          <span className="flex items-center justify-end gap-0.5 fs-11 font-bold text-slate-400">
             Buka <ChevronRight size={13} />
           </span>
         </span>
@@ -479,18 +477,18 @@ function ItemRow({
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+          <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
             {[item.brand, item.name].filter(Boolean).join(' ')}
           </span>
-          <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+          <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
             {[item.variant, item.category].filter(Boolean).join(' · ')}
           </span>
         </span>
         <span className="shrink-0 text-right">
-          <span className="block text-[13px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+          <span className="block fs-13 font-extrabold tabular-nums text-slate-900 dark:text-white">
             ≈ {formatIDR(Math.round(value))}
           </span>
-          <span className="flex items-center justify-end gap-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="flex items-center justify-end gap-0.5 fs-11 font-bold text-emerald-600 dark:text-emerald-400">
             {selling ? 'Sedang dijual' : 'Jual'} <ChevronRight size={13} />
           </span>
         </span>

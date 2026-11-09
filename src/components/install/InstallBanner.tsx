@@ -234,13 +234,13 @@ export function InstallBanner() {
             </div>
             <div className="min-w-0 flex-1 pr-5">
               <p className="text-sm font-black text-slate-900 dark:text-white">{ad.title}</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-slate-500 dark:text-slate-400">{ad.text}</p>
+              <p className="mt-0.5 fs-12 leading-snug text-slate-500 dark:text-slate-400">{ad.text}</p>
               <div className="mt-2.5 flex items-center gap-3">
                 {variant === 'leosiqra' && promptState === 'available' ? (
                   <button
                     type="button"
                     onClick={install}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 fs-12 font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
                   >
                     <Download size={13} /> {ad.cta}
                   </button>
@@ -248,16 +248,12 @@ export function InstallBanner() {
                   <Link
                     href={ad.href}
                     onClick={() => setClosed(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 fs-12 font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
                   >
                     <Download size={13} /> {ad.cta}
                   </Link>
                 )}
-                <button
-                  type="button"
-                  onClick={dismiss}
-                  className="text-[12px] font-bold text-slate-400 hover:text-slate-600"
-                >
+                <button type="button" onClick={dismiss} className="fs-12 font-bold text-slate-400 hover:text-slate-600">
                   Nanti saja
                 </button>
               </div>

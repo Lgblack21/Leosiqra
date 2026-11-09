@@ -94,8 +94,8 @@ function Trend({ r }: { r: Rapor }) {
   return (
     <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[16px] font-black">Masuk vs keluar, 6 bulan</h2>
-        <span className="flex gap-3 text-[11.5px] font-semibold text-slate-500">
+        <h2 className="fs-16 font-black">Masuk vs keluar, 6 bulan</h2>
+        <span className="flex gap-3 fs-11.5 font-semibold text-slate-500">
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-500" /> Masuk
           </span>
@@ -119,11 +119,11 @@ function Trend({ r }: { r: Rapor }) {
                 title={`Keluar ${rp(x.expense)}`}
               />
             </div>
-            <span className="text-[11px] font-semibold text-slate-400">{x.label}</span>
+            <span className="fs-11 font-semibold text-slate-400">{x.label}</span>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">* bulan berjalan</p>
+      <p className="mt-2 fs-11.5 text-slate-400">* bulan berjalan</p>
     </div>
   );
 }
@@ -138,15 +138,15 @@ function IndicatorCard({ ind, href }: { ind: Indicator; href: (h: string) => str
         <div className="flex items-center gap-3">
           <span
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[15px] font-black tabular-nums',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fs-15 font-black tabular-nums',
               tone ? GRADE_CLS[tone].soft : 'bg-slate-100 text-slate-400 dark:bg-slate-800',
             )}
           >
             {ind.score ?? '–'}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-black text-slate-900 dark:text-white">{ind.label}</p>
-            <p className="truncate text-[12.5px] text-slate-500">
+            <p className="fs-15 font-black text-slate-900 dark:text-white">{ind.label}</p>
+            <p className="truncate fs-12.5 text-slate-500">
               <span className="font-bold text-slate-700 dark:text-slate-200">{ind.value}</span> · {ind.target}
             </p>
           </div>
@@ -157,7 +157,7 @@ function IndicatorCard({ ind, href }: { ind: Indicator; href: (h: string) => str
         </div>
       </button>
       {open ? (
-        <div className="space-y-2.5 border-t border-slate-100 px-4 pb-4 pt-3 text-[13px] dark:border-slate-800">
+        <div className="space-y-2.5 border-t border-slate-100 px-4 pb-4 pt-3 fs-13 dark:border-slate-800">
           <p className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
             {ind.detail}
           </p>
@@ -178,7 +178,7 @@ function IndicatorCard({ ind, href }: { ind: Indicator; href: (h: string) => str
                   style={{ height: `${Math.max(4, v * 0.32)}px`, background: GRADE_CLS[gradeOf(v).tone].stroke }}
                 />
               ))}
-              <span className="ml-2 text-[11.5px] text-slate-400">nilai per bulan</span>
+              <span className="ml-2 fs-11.5 text-slate-400">nilai per bulan</span>
             </div>
           ) : null}
           <Link
@@ -201,12 +201,12 @@ function Simulator({ r, m }: { r: Rapor; m: Parameters<typeof simulate>[1] }) {
   const step = r.income > 10_000_000 ? 500_000 : 100_000;
   return (
     <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800">
-      <h2 className="flex items-center gap-2 text-[16px] font-black">
+      <h2 className="flex items-center gap-2 fs-16 font-black">
         <FlaskConical size={18} className="text-violet-500" /> Bagaimana kalau…
       </h2>
-      <p className="text-[12.5px] text-slate-500">Geser untuk melihat efeknya ke nilai rapormu.</p>
+      <p className="fs-12.5 text-slate-500">Geser untuk melihat efeknya ke nilai rapormu.</p>
       <label className="mt-4 block">
-        <span className="flex justify-between text-[13px] font-bold">
+        <span className="flex justify-between fs-13 font-bold">
           Pangkas pengeluaran{' '}
           <span className="text-violet-600 dark:text-violet-400">
             {cut}% · hemat {short((r.expense * cut) / 100)}/bln
@@ -222,7 +222,7 @@ function Simulator({ r, m }: { r: Rapor; m: Parameters<typeof simulate>[1] }) {
         />
       </label>
       <label className="mt-3 block">
-        <span className="flex justify-between text-[13px] font-bold">
+        <span className="flex justify-between fs-13 font-bold">
           Tambahan pemasukan <span className="text-violet-600 dark:text-violet-400">{rp(extra)}/bln</span>
         </span>
         <input
@@ -237,25 +237,23 @@ function Simulator({ r, m }: { r: Rapor; m: Parameters<typeof simulate>[1] }) {
       </label>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Nilai</p>
-          <p className="text-[22px] font-black tabular-nums">
+          <p className="fs-11 font-bold uppercase tracking-wider text-slate-400">Nilai</p>
+          <p className="fsh-22 font-black tabular-nums">
             {res.score ?? '–'}
             {diff ? (
-              <span className={cn('ml-1 text-[13px]', diff > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+              <span className={cn('ml-1 fs-13', diff > 0 ? 'text-emerald-600' : 'text-rose-600')}>
                 {diff > 0 ? `+${diff}` : diff}
               </span>
             ) : null}
           </p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Sisa/bulan</p>
-          <p className={cn('text-[16px] font-black tabular-nums', res.left < 0 && 'text-rose-600')}>
-            {short(res.left)}
-          </p>
+          <p className="fs-11 font-bold uppercase tracking-wider text-slate-400">Sisa/bulan</p>
+          <p className={cn('fs-16 font-black tabular-nums', res.left < 0 && 'text-rose-600')}>{short(res.left)}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Dana darurat 3×</p>
-          <p className="text-[16px] font-black">
+          <p className="fs-11 font-bold uppercase tracking-wider text-slate-400">Dana darurat 3×</p>
+          <p className="fs-16 font-black">
             {res.monthsToBuffer === null
               ? 'tidak tercapai'
               : res.monthsToBuffer === 0
@@ -309,8 +307,8 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
             </Link>
           ) : null}
           <div className="flex-1">
-            <h1 className="text-[26px] font-black tracking-tight md:text-[34px]">Rapor Keuangan</h1>
-            <p className="text-[13.5px] text-slate-500 dark:text-slate-400">
+            <h1 className="fsh-26 font-black tracking-tight md:fsh-34">Rapor Keuangan</h1>
+            <p className="fs-13.5 text-slate-500 dark:text-slate-400">
               Nilai kesehatan keuanganmu dari catatan & Kekayaan sendiri — diperbarui setiap kali dibuka.
             </p>
           </div>
@@ -321,17 +319,15 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
             <div className="flex flex-col items-center text-center">
               <Gauge score={r?.score ?? null} />
               <div className="-mt-14 flex items-end gap-2">
-                <span className="text-[52px] font-black leading-none tabular-nums">{r?.score ?? '–'}</span>
-                {r?.grade ? (
-                  <span className={cn('mb-1.5 text-[30px] font-black', tone!.text)}>{r.grade.letter}</span>
-                ) : null}
+                <span className="fsh-52 font-black leading-none tabular-nums">{r?.score ?? '–'}</span>
+                {r?.grade ? <span className={cn('mb-1.5 fsh-30 font-black', tone!.text)}>{r.grade.letter}</span> : null}
               </div>
-              <p className="mt-1 text-[15px] font-bold">{r?.grade?.label ?? (r ? 'Belum bisa dinilai' : 'Memuat…')}</p>
-              <p className="mt-0.5 text-[12px] text-white/50">{r?.basis}</p>
+              <p className="mt-1 fs-15 font-bold">{r?.grade?.label ?? (r ? 'Belum bisa dinilai' : 'Memuat…')}</p>
+              <p className="mt-0.5 fs-12 text-white/50">{r?.basis}</p>
               {delta !== null && delta !== 0 ? (
                 <span
                   className={cn(
-                    'mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold',
+                    'mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 fs-12 font-bold',
                     delta > 0 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-rose-400/15 text-rose-300',
                   )}
                 >
@@ -340,14 +336,14 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
                 </span>
               ) : null}
               {r?.mode === 'perkiraan' ? (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-1 text-[12px] font-bold text-amber-300">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-1 fs-12 font-bold text-amber-300">
                   <Info size={13} /> Perkiraan — makin akurat setelah sebulan penuh
                 </span>
               ) : null}
             </div>
             <div className="mt-5 flex items-start gap-3 rounded-2xl bg-white/[.07] p-3.5 ring-1 ring-white/10">
               <LeoBadge topic="investasi" size={40} />
-              <p className="text-[13px] leading-relaxed text-white/80">{leo}</p>
+              <p className="fs-13 leading-relaxed text-white/80">{leo}</p>
             </div>
             {r && r.mode !== 'kosong' ? (
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -357,8 +353,8 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
                   ['Cicilan/bln', r.cicilan, 'text-amber-300'],
                 ].map(([l, v, c]) => (
                   <div key={l as string} className="rounded-2xl bg-white/[.05] px-2 py-2.5 ring-1 ring-white/10">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-white/45">{l as string}</p>
-                    <p className={cn('text-[15px] font-black tabular-nums', c as string)}>{short(v as number)}</p>
+                    <p className="fs-10.5 font-bold uppercase tracking-wider text-white/45">{l as string}</p>
+                    <p className={cn('fs-15 font-black tabular-nums', c as string)}>{short(v as number)}</p>
                   </div>
                 ))}
               </div>
@@ -366,7 +362,7 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
             {r ? (
               <div className="mt-4 space-y-1.5">
                 {r.indicators.map((i) => (
-                  <div key={i.id} className="flex items-center gap-2.5 text-[12.5px]">
+                  <div key={i.id} className="flex items-center gap-2.5 fs-12.5">
                     <span className="w-[42%] truncate text-white/70">{i.label}</span>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
                       {i.score !== null ? (
@@ -394,8 +390,8 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
 
         {plan.length ? (
           <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800">
-            <h2 className="text-[16px] font-black">Rencana perbaikan</h2>
-            <p className="text-[12.5px] text-slate-500">Diurutkan dari yang paling berdampak ke nilaimu.</p>
+            <h2 className="fs-16 font-black">Rencana perbaikan</h2>
+            <p className="fs-12.5 text-slate-500">Diurutkan dari yang paling berdampak ke nilaimu.</p>
             <div className="mt-3 space-y-2">
               {plan.map((p, i) => (
                 <Link
@@ -403,12 +399,12 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
                   href={href(p.href)}
                   className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3.5 py-3 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[12px] font-black text-white dark:bg-white dark:text-slate-900">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 fs-12 font-black text-white dark:bg-white dark:text-slate-900">
                     {i + 1}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-bold">{p.label}</span>
-                    <span className="block text-[12.5px] text-slate-500">{p.fix}</span>
+                    <span className="block fs-14 font-bold">{p.label}</span>
+                    <span className="block fs-12.5 text-slate-500">{p.fix}</span>
                   </span>
                   <ArrowRight size={16} className="shrink-0 text-slate-400" />
                 </Link>
@@ -418,7 +414,7 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
         ) : null}
 
         <div>
-          <h2 className="mb-3 text-[16px] font-black">Tujuh indikator</h2>
+          <h2 className="mb-3 fs-16 font-black">Tujuh indikator</h2>
           <div className="grid items-start gap-3 md:grid-cols-2">
             {(r?.indicators ?? []).map((ind) => (
               <IndicatorCard key={ind.id} ind={ind} href={href} />
@@ -426,7 +422,7 @@ export function CekKeuanganApp({ variant = 'web' }: { variant?: 'web' | 'app' })
           </div>
         </div>
 
-        <p className="text-[11.5px] leading-relaxed text-slate-400">
+        <p className="fs-11.5 leading-relaxed text-slate-400">
           Batas yang dipakai adalah pedoman umum perencanaan keuangan, bukan nasihat keuangan pribadi. Beli investasi,
           transfer, dan utang-piutang tidak dihitung sebagai pemasukan/pengeluaran; bayar utang dihitung sebagai
           cicilan.

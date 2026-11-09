@@ -112,11 +112,11 @@ const Group = ({ children, className }: { children: React.ReactNode; className?:
   </div>
 );
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <p className="px-1 pb-2 pt-1 text-[14px] text-slate-500">{children}</p>
+  <p className="px-1 pb-2 pt-1 fs-14 text-slate-500">{children}</p>
 );
 
 function HistoryList({ rows }: { rows: LedgerRow[] }) {
-  if (!rows.length) return <p className="px-5 py-4 text-[14px] text-slate-500">Belum ada riwayat koin.</p>;
+  if (!rows.length) return <p className="px-5 py-4 fs-14 text-slate-500">Belum ada riwayat koin.</p>;
   return (
     <>
       {rows.map((r) => {
@@ -128,12 +128,12 @@ function HistoryList({ rows }: { rows: LedgerRow[] }) {
               <Icon size={18} className="text-slate-600" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-slate-900">{k.label}</span>
-              <span className="block text-[13px] text-slate-500">{shortDate(r.created_at)}</span>
+              <span className="block truncate fs-15 font-medium text-slate-900">{k.label}</span>
+              <span className="block fs-13 text-slate-500">{shortDate(r.created_at)}</span>
             </span>
             <span
               className={cn(
-                'flex items-center gap-1.5 text-[15px] font-semibold',
+                'flex items-center gap-1.5 fs-15 font-semibold',
                 r.amount > 0 ? 'text-emerald-600' : 'text-slate-700',
               )}
             >
@@ -149,11 +149,11 @@ function HistoryList({ rows }: { rows: LedgerRow[] }) {
 function Unavailable({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div className="space-y-3 rounded-[22px] bg-slate-50 p-5 text-center">
-      <p className="text-[14px] text-slate-600">{error}</p>
+      <p className="fs-14 text-slate-600">{error}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200"
+        className="rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-800 ring-1 ring-slate-200"
       >
         Coba lagi
       </button>
@@ -213,18 +213,18 @@ function CodeInput({ onApplied }: { onApplied: () => void }) {
             maxLength={6}
             aria-label={`Karakter kode ${i + 1}`}
             autoCapitalize="characters"
-            className="h-12 w-11 rounded-xl bg-white text-center text-[18px] font-bold uppercase text-slate-900 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="h-12 w-11 rounded-xl bg-white text-center fs-18 font-bold uppercase text-slate-900 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
         ))}
       </div>
-      <p className={cn('text-center text-[13px]', err ? 'text-rose-600' : 'text-slate-500')}>
+      <p className={cn('text-center fs-13', err ? 'text-rose-600' : 'text-slate-500')}>
         {err || 'Kode bisa ditambahkan dalam 30 hari pertama akunmu.'}
       </p>
       <button
         type="button"
         onClick={apply}
         disabled={code.length !== 6 || busy}
-        className="w-full rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:bg-slate-200 disabled:text-slate-400"
+        className="w-full rounded-full bg-slate-900 py-3 fs-15 font-bold text-white disabled:bg-slate-200 disabled:text-slate-400"
       >
         {busy ? 'Memproses…' : 'Pakai kode'}
       </button>
@@ -247,7 +247,7 @@ function ReferralView({
     return error ? (
       <Unavailable error={error} onRetry={reload} />
     ) : (
-      <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>
+      <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>
     );
   const r = data.rules;
 
@@ -268,14 +268,14 @@ function ReferralView({
   return (
     <div className="space-y-4">
       <div className="flex flex-col items-center gap-3 pb-1 pt-2">
-        <p className="text-[15px] text-slate-500">Saldo koin</p>
-        <p className="flex items-center gap-3 text-[52px] font-bold leading-none tracking-tight text-slate-900">
+        <p className="fs-15 text-slate-500">Saldo koin</p>
+        <p className="flex items-center gap-3 fsh-52 font-bold leading-none tracking-tight text-slate-900">
           {nf(data.balance)} <CoinIcon size={46} />
         </p>
         <button
           type="button"
           onClick={openPaket}
-          className="flex items-center gap-1 rounded-full bg-slate-100 px-4 py-1.5 text-[14px] text-slate-600 hover:bg-slate-200"
+          className="flex items-center gap-1 rounded-full bg-slate-100 px-4 py-1.5 fs-14 text-slate-600 hover:bg-slate-200"
         >
           Lihat paket <ChevronRight size={15} />
         </button>
@@ -284,39 +284,39 @@ function ReferralView({
         <button
           type="button"
           onClick={share}
-          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white"
+          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white"
         >
           <Share2 size={16} /> Ajak teman
         </button>
         <button
           type="button"
           onClick={() => go('koin')}
-          className="rounded-full bg-slate-100 py-3.5 text-[15px] font-bold text-slate-800 hover:bg-slate-200"
+          className="rounded-full bg-slate-100 py-3.5 fs-15 font-bold text-slate-800 hover:bg-slate-200"
         >
           Kelola koin
         </button>
       </div>
       <div className="flex items-center justify-between rounded-[22px] bg-indigo-50 px-5 py-3.5">
-        <span className="text-[14px] text-indigo-900/70">Kode kamu</span>
-        <span className="font-mono text-[18px] font-bold tracking-[0.2em] text-indigo-700">{data.code}</span>
+        <span className="fs-14 text-indigo-900/70">Kode kamu</span>
+        <span className="font-mono fs-18 font-bold tracking-[0.2em] text-indigo-700">{data.code}</span>
       </div>
 
       <Group>
         <div className="flex items-center gap-3 px-5 py-3.5">
           <CoinIcon size={20} />
-          <span className="flex-1 text-[15px] text-slate-600">Hadiah</span>
-          <span className="text-[15px] font-semibold text-slate-900">
+          <span className="flex-1 fs-15 text-slate-600">Hadiah</span>
+          <span className="fs-15 font-semibold text-slate-900">
             {data.friends.total ? `${data.friends.total} teman · ${data.friends.active} aktif` : 'Belum ada teman'}
           </span>
         </div>
         <div className="grid grid-cols-2 divide-x divide-slate-200/60 py-4 text-center">
           <div>
-            <p className="text-[13px] text-slate-500">Koin didapat</p>
-            <p className="mt-1 text-[24px] font-bold text-slate-900">{nf(data.earned)}</p>
+            <p className="fs-13 text-slate-500">Koin didapat</p>
+            <p className="mt-1 fsh-24 font-bold text-slate-900">{nf(data.earned)}</p>
           </div>
           <div>
-            <p className="text-[13px] text-slate-500">Dari referral</p>
-            <p className="mt-1 text-[24px] font-bold text-slate-900">{rp(data.fromReferralIdr)}</p>
+            <p className="fs-13 text-slate-500">Dari referral</p>
+            <p className="mt-1 fsh-24 font-bold text-slate-900">{rp(data.fromReferralIdr)}</p>
           </div>
         </div>
       </Group>
@@ -334,10 +334,10 @@ function ReferralView({
         ].map(([t, v, d]) => (
           <div key={t} className="flex items-center gap-4 px-5 py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-medium text-slate-900">{t}</span>
-              <span className="block text-[13px] leading-snug text-slate-500">{d}</span>
+              <span className="block fs-15 font-medium text-slate-900">{t}</span>
+              <span className="block fs-13 leading-snug text-slate-500">{d}</span>
             </span>
-            <span className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-600">
+            <span className="flex items-center gap-1.5 fs-15 font-semibold text-emerald-600">
               {v} <CoinIcon size={16} />
             </span>
           </div>
@@ -351,7 +351,7 @@ function ReferralView({
           <button
             type="button"
             onClick={() => go('koin-riwayat')}
-            className="flex w-full items-center px-5 py-4 text-left text-[15px] text-slate-900 hover:bg-slate-100/70"
+            className="flex w-full items-center px-5 py-4 text-left fs-15 text-slate-900 hover:bg-slate-100/70"
           >
             <span className="flex-1">Lihat semua</span> <ChevronRight size={18} className="text-slate-400" />
           </button>
@@ -373,8 +373,8 @@ function ReferralView({
         >
           <Network size={20} className="shrink-0 text-slate-600" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] text-slate-900">Kawananmu</span>
-            <span className="block text-[13px] text-slate-500">Lihat siapa saja yang bergabung lewat kodemu</span>
+            <span className="block fs-16 text-slate-900">Kawananmu</span>
+            <span className="block fs-13 text-slate-500">Lihat siapa saja yang bergabung lewat kodemu</span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </button>
@@ -411,7 +411,7 @@ function KawananView() {
     return error ? (
       <Unavailable error={error} onRetry={load} />
     ) : (
-      <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>
+      <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>
     );
 
   const r = team.rules;
@@ -442,20 +442,20 @@ function KawananView() {
     <div className="space-y-4">
       <Label>Teman yang kamu ajak · {team.friends.length}</Label>
       {!team.friends.length && (
-        <p className="rounded-[22px] bg-slate-50 px-5 py-4 text-[14px] leading-relaxed text-slate-600">
+        <p className="rounded-[22px] bg-slate-50 px-5 py-4 fs-14 leading-relaxed text-slate-600">
           Belum ada yang memakai kodemu. Bagikan lewat tombol <b>Ajak teman</b> — temanmu cukup daftar dari tautanmu
           atau memasukkan kodenya.
         </p>
       )}
 
       <div className="flex flex-col items-center gap-2 rounded-[22px] bg-slate-50 px-4 pb-6 pt-5">
-        <p className="text-[17px] font-semibold text-slate-900">Batu Singa</p>
-        <p className="-mt-1 pb-1 text-[13px] text-slate-500">
+        <p className="fs-17 font-semibold text-slate-900">Batu Singa</p>
+        <p className="-mt-1 pb-1 fs-13 text-slate-500">
           {team.friends.length
             ? `Kawananmu ${team.friends.length + team.secondLevel} singa`
             : 'Kawananmu masih sendiri'}
         </p>
-        <span className="text-[44px] leading-none" aria-hidden>
+        <span className="fsh-44 leading-none" aria-hidden>
           🦁
         </span>
         {tiers.map((t) => (
@@ -464,8 +464,8 @@ function KawananView() {
             className={cn('flex flex-col items-center justify-center px-6 py-3.5 text-center', t.cls)}
             style={{ width: t.w, clipPath: 'polygon(9% 0, 91% 0, 100% 100%, 0 100%)', borderRadius: 14 }}
           >
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-70">{t.label}</span>
-            <span className="truncate text-[15px] font-semibold">{t.value}</span>
+            <span className="fs-11 font-semibold uppercase tracking-[0.14em] opacity-70">{t.label}</span>
+            <span className="truncate fs-15 font-semibold">{t.value}</span>
           </div>
         ))}
       </div>
@@ -473,19 +473,19 @@ function KawananView() {
       <Label>Hadiahmu</Label>
       <Group>
         <div className="flex items-center gap-4 px-5 py-3.5">
-          <span className="min-w-0 flex-1 text-[15px] text-slate-900">Tiap teman aktif mencatat</span>
-          <span className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-600">
+          <span className="min-w-0 flex-1 fs-15 text-slate-900">Tiap teman aktif mencatat</span>
+          <span className="flex items-center gap-1.5 fs-15 font-semibold text-emerald-600">
             +{nf(r.refActiveReferrer)} <CoinIcon size={16} />
           </span>
         </div>
         <div className="flex items-center gap-4 px-5 py-3.5">
-          <span className="min-w-0 flex-1 text-[15px] text-slate-900">Tiap teman berlangganan PRO</span>
-          <span className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-600">
+          <span className="min-w-0 flex-1 fs-15 text-slate-900">Tiap teman berlangganan PRO</span>
+          <span className="flex items-center gap-1.5 fs-15 font-semibold text-emerald-600">
             +{nf(r.refPro)} <CoinIcon size={16} />
           </span>
         </div>
       </Group>
-      <p className="px-1 text-[13px] leading-snug text-slate-500">
+      <p className="px-1 fs-13 leading-snug text-slate-500">
         Hadiah hanya dari teman yang kamu ajak langsung. Teman dianggap aktif setelah mencatat {r.activeMinTx} transaksi
         di {r.activeMinDays} hari berbeda.
       </p>
@@ -493,18 +493,18 @@ function KawananView() {
       <Label>Kawananmu</Label>
       <Group>
         {team.friends.length === 0 ? (
-          <p className="px-5 py-4 text-[14px] text-slate-500">Belum ada yang bergabung dengan kodemu.</p>
+          <p className="px-5 py-4 fs-14 text-slate-500">Belum ada yang bergabung dengan kodemu.</p>
         ) : (
           team.friends.map((f, i) => (
             <div key={`${f.name}-${i}`} className="flex items-center gap-4 px-5 py-3.5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[15px] font-bold text-indigo-700">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 fs-15 font-bold text-indigo-700">
                 {f.name.slice(0, 1).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium text-slate-900">{f.name}</span>
-                <span className="block text-[13px] text-slate-500">Bergabung {shortDate(f.joinedAt)}</span>
+                <span className="block truncate fs-15 font-medium text-slate-900">{f.name}</span>
+                <span className="block fs-13 text-slate-500">Bergabung {shortDate(f.joinedAt)}</span>
               </span>
-              <span className={cn('rounded-full px-2.5 py-1 text-[12px] font-semibold', STATUS[f.status].cls)}>
+              <span className={cn('rounded-full px-2.5 py-1 fs-12 font-semibold', STATUS[f.status].cls)}>
                 {STATUS[f.status].label}
               </span>
             </div>
@@ -524,7 +524,7 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
     return error ? (
       <Unavailable error={error} onRetry={reload} />
     ) : (
-      <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>
+      <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>
     );
   const r = data.rules;
   const cost = r.proMonthCost * months;
@@ -559,16 +559,16 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-[22px] bg-slate-50 p-4">
-          <p className="text-[13px] text-slate-500">Saldo koin</p>
-          <p className="mt-1 flex items-center gap-2 text-[24px] font-bold text-slate-900">
+          <p className="fs-13 text-slate-500">Saldo koin</p>
+          <p className="mt-1 flex items-center gap-2 fsh-24 font-bold text-slate-900">
             {nf(data.balance)} <CoinIcon size={20} />
           </p>
         </div>
         <div className="rounded-[22px] bg-slate-50 p-4">
-          <p className="text-[13px] text-slate-500">Tukar PRO</p>
-          <p className="mt-1 flex items-center gap-1.5 text-[24px] font-bold text-slate-900">
+          <p className="fs-13 text-slate-500">Tukar PRO</p>
+          <p className="mt-1 flex items-center gap-1.5 fsh-24 font-bold text-slate-900">
             {nf(r.proMonthCost)} <CoinIcon size={18} />
-            <span className="text-[13px] font-semibold text-slate-400">/bln</span>
+            <span className="fs-13 font-semibold text-slate-400">/bln</span>
           </p>
         </div>
       </div>
@@ -586,8 +586,8 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
                 months === m ? 'bg-white ring-2 ring-slate-900' : 'bg-white/60 ring-slate-200',
               )}
             >
-              <span className="block text-[15px] font-bold text-slate-900">{m} bulan</span>
-              <span className="mt-0.5 flex items-center justify-center gap-1 text-[13px] text-slate-500">
+              <span className="block fs-15 font-bold text-slate-900">{m} bulan</span>
+              <span className="mt-0.5 flex items-center justify-center gap-1 fs-13 text-slate-500">
                 {nf(r.proMonthCost * m)} <CoinIcon size={13} />
               </span>
             </button>
@@ -597,7 +597,7 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
           type="button"
           onClick={redeem}
           disabled={busy || data.balance < cost}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-15 font-bold text-white disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <Crown size={16} />}
           {data.balance < cost ? `Kurang ${nf(cost - data.balance)} koin` : `Tukar jadi PRO ${months} bulan`}
@@ -606,7 +606,7 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
 
       <Label>Top up koin</Label>
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
-        <p className="text-[13px] leading-snug text-slate-500">
+        <p className="fs-13 leading-snug text-slate-500">
           1 koin = Rp1. Koin dipakai untuk ilustrasi AI di Cerita Hari Ini (1.000 koin) dan tukar PRO (
           {nf(r.proMonthCost)} koin/bulan). Koin tidak bisa dicairkan jadi uang.
         </p>
@@ -617,22 +617,20 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
               href={`/membership/contact?package=koin-${k}`}
               className="rounded-2xl bg-white px-3 py-3 text-center ring-1 ring-slate-200 transition-shadow hover:shadow-md"
             >
-              <span className="flex items-center justify-center gap-1 text-[16px] font-bold text-slate-900">
+              <span className="flex items-center justify-center gap-1 fs-16 font-bold text-slate-900">
                 {nf(k * 1000)} <CoinIcon size={15} />
               </span>
-              <span className="mt-0.5 block text-[13px] text-slate-500">{rp(k * 1000)}</span>
+              <span className="mt-0.5 block fs-13 text-slate-500">{rp(k * 1000)}</span>
             </a>
           ))}
         </div>
-        <p className="text-[12px] text-slate-400">
-          Bayar lewat transfer / QRIS, koin masuk setelah admin memverifikasi.
-        </p>
+        <p className="fs-12 text-slate-400">Bayar lewat transfer / QRIS, koin masuk setelah admin memverifikasi.</p>
       </div>
 
       {data.withdrawals.length > 0 && (
         <>
           <Label>Riwayat tarik tunai (lama)</Label>
-          <p className="-mt-1 px-1 text-[12px] text-slate-400">
+          <p className="-mt-1 px-1 fs-12 text-slate-400">
             Penarikan koin sudah ditutup; pengajuan lama tetap diproses admin.
           </p>
           <Group>
@@ -640,15 +638,15 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
               <div key={w.id} className="flex items-center gap-4 px-5 py-3.5">
                 <Banknote size={20} className="shrink-0 text-slate-500" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium text-slate-900">
+                  <span className="block fs-15 font-medium text-slate-900">
                     {rp(w.amount_idr)} · {w.method}
                   </span>
-                  <span className="block text-[13px] text-slate-500">
+                  <span className="block fs-13 text-slate-500">
                     {shortDate(w.created_at)}
                     {w.admin_note ? ` · ${w.admin_note}` : ''}
                   </span>
                 </span>
-                <span className={cn('rounded-full px-2.5 py-1 text-[12px] font-semibold', STATUS[w.status])}>
+                <span className={cn('rounded-full px-2.5 py-1 fs-12 font-semibold', STATUS[w.status])}>
                   {w.status === 'MENUNGGU' ? 'Diproses' : w.status === 'DIBAYAR' ? 'Dibayar' : 'Ditolak'}
                 </span>
               </div>
@@ -679,7 +677,7 @@ export function CoinSection({
       return coins.error ? (
         <Unavailable error={coins.error} onRetry={coins.reload} />
       ) : (
-        <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>
+        <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>
       );
     return (
       <Group>
@@ -701,10 +699,10 @@ export function CoinProfileRows({ go }: { go: (v: CoinView) => void }) {
         className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-100/70"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] text-slate-900">Koin Leosiqra</span>
-          <span className="block text-[13px] text-slate-500">Tukar jadi PRO atau tarik tunai</span>
+          <span className="block fs-16 text-slate-900">Koin Leosiqra</span>
+          <span className="block fs-13 text-slate-500">Tukar jadi PRO atau tarik tunai</span>
         </span>
-        <span className="flex items-center gap-1.5 text-[16px] font-semibold text-slate-900">
+        <span className="flex items-center gap-1.5 fs-16 font-semibold text-slate-900">
           <CoinIcon size={18} /> {data ? nf(data.balance) : '—'}
         </span>
         <ChevronRight size={18} className="text-slate-400" />
@@ -715,8 +713,8 @@ export function CoinProfileRows({ go }: { go: (v: CoinView) => void }) {
         className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-100/70"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] text-slate-900">Referral</span>
-          <span className="block text-[13px] text-slate-500">Ajak teman ke Leosiqra</span>
+          <span className="block fs-16 text-slate-900">Referral</span>
+          <span className="block fs-13 text-slate-500">Ajak teman ke Leosiqra</span>
         </span>
         <ChevronRight size={18} className="text-slate-400" />
       </button>

@@ -99,7 +99,7 @@ export function LeoBuddy({
 
   const action = tip?.action;
   const actionCls =
-    'mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-[12px] font-bold text-white transition-colors hover:bg-indigo-700 md:text-[13px]';
+    'mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 fs-12 font-bold text-white transition-colors hover:bg-indigo-700 md:fs-13';
 
   return (
     <div className={cn('flex items-end gap-2', className)}>
@@ -115,7 +115,7 @@ export function LeoBuddy({
               className="relative rounded-[18px] rounded-br-md bg-white/95 px-3.5 py-2.5 text-slate-800 shadow-[0_14px_32px_-20px_rgba(15,23,42,0.6)] backdrop-blur-sm"
               aria-live="polite"
             >
-              <p className="text-[13px] font-semibold leading-snug md:text-[14px]">{keepHyphenated(tip.text)}</p>
+              <p className="fs-13 font-semibold leading-snug md:fs-14">{keepHyphenated(tip.text)}</p>
               {action &&
                 (action.href ? (
                   <Link href={action.href} className={actionCls}>
@@ -130,7 +130,7 @@ export function LeoBuddy({
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="absolute bottom-0 left-1 flex items-center gap-1.5 text-[11px] font-semibold text-white/75 md:text-[12px]">
+        <div className="absolute bottom-0 left-1 flex items-center gap-1.5 fs-11 font-semibold text-white/75 md:fs-12">
           {tips.length > 1 && (
             <span className="flex gap-1" aria-hidden>
               {tips.map((t, k) => (

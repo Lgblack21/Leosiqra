@@ -81,7 +81,7 @@ export function BrandSplash({ ready, badge, greetingName }: BrandSplashProps) {
             </motion.div>
 
             <motion.h1
-              className="font-serif text-[34px] font-black tracking-tight text-slate-900"
+              className="font-serif fsh-34 font-black tracking-tight text-slate-900"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5, ease: 'easeOut' }}
@@ -89,7 +89,7 @@ export function BrandSplash({ ready, badge, greetingName }: BrandSplashProps) {
               Leosiqra
             </motion.h1>
             <motion.p
-              className="mt-1 text-[11px] font-black uppercase tracking-[0.32em] text-amber-700/80"
+              className="mt-1 fs-11 font-black uppercase tracking-[0.32em] text-amber-700/80"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35, duration: 0.5 }}

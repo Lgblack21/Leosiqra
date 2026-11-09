@@ -242,14 +242,12 @@ export function CreditCardHub({
       <div ref={rootRef} className="scroll-mt-24">
         {cards.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-[15px] font-semibold text-slate-900">Belum ada kartu kredit</p>
-            <p className="mt-1 text-[13px] text-slate-500">
-              Tambahkan kartu supaya tagihan & jatuh temponya terpantau.
-            </p>
+            <p className="fs-15 font-semibold text-slate-900">Belum ada kartu kredit</p>
+            <p className="mt-1 fs-13 text-slate-500">Tambahkan kartu supaya tagihan & jatuh temponya terpantau.</p>
             <button
               type="button"
               onClick={onAdd}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 fs-13 font-bold text-white"
             >
               <Plus size={15} /> Tambah kartu
             </button>
@@ -264,14 +262,12 @@ export function CreditCardHub({
                   className="flex items-end justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                      Total tagihan kartu
-                    </p>
-                    <p className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">
+                    <p className="fs-12 font-semibold uppercase tracking-wide text-slate-500">Total tagihan kartu</p>
+                    <p className="fsh-26 font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">
                       {hidden ? 'Rp ••••••' : formatMoney(totalIdr, 'IDR')}
                     </p>
                     {nearest && (
-                      <p className="truncate text-[13px] text-slate-500">
+                      <p className="truncate fs-13 text-slate-500">
                         Terdekat: <span className="font-semibold text-slate-700">{nearest.acc.name}</span> ·{' '}
                         {fmt(nearest.cycle!.dueDate, { day: 'numeric', month: 'short' })}
                         {nearest.cycle!.overdue
@@ -284,7 +280,7 @@ export function CreditCardHub({
                     type="button"
                     onClick={onAdd}
                     aria-label="Tambah kartu"
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 fs-13 font-bold text-slate-700 hover:bg-slate-200"
                   >
                     <Plus size={15} /> <span className="hidden sm:inline">Tambah kartu</span>
                   </button>
@@ -314,34 +310,34 @@ export function CreditCardHub({
                       );
                     })}
                   </div>
-                  <p className="mt-2 text-center text-[12px] text-slate-400">Ketuk kartu untuk membukanya</p>
+                  <p className="mt-2 text-center fs-12 text-slate-400">Ketuk kartu untuk membukanya</p>
                 </div>
 
                 {roomiest && roomiest.days > 0 && (
                   <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
                     <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white fs-18"
                       aria-hidden
                     >
                       🦁
                     </span>
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1 text-[13px] font-bold text-indigo-900">
+                      <p className="flex items-center gap-1 fs-13 font-bold text-indigo-900">
                         <Sparkles size={13} /> Paling longgar dipakai hari ini
                       </p>
-                      <p className="text-[13px] text-slate-700">
+                      <p className="fs-13 text-slate-700">
                         Belanja pakai <span className="font-semibold">{roomiest.acc.name}</span> hari ini, bayarnya{' '}
                         {fmt(roomiest.due, { day: 'numeric', month: 'short' })} —{' '}
                         <span className="font-semibold">{roomiest.days} hari lagi</span>.
                       </p>
-                      <p className="text-[11px] text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
+                      <p className="fs-11 text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
                     </div>
                   </div>
                 )}
 
                 {upcoming.length > 0 && (
                   <section>
-                    <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
+                    <h3 className="mb-2 fs-15 font-bold text-slate-900">30 hari ke depan</h3>
                     <ul className="overflow-hidden rounded-[20px] bg-slate-50 ring-1 ring-slate-100">
                       {upcoming.map((e, i) => (
                         <motion.li
@@ -364,25 +360,25 @@ export function CreditCardHub({
                             >
                               <span
                                 className={cn(
-                                  'text-[15px] font-extrabold leading-none',
+                                  'fs-15 font-extrabold leading-none',
                                   e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900',
                                 )}
                               >
                                 {Number(e.date.slice(8))}
                               </span>
-                              <span className="text-[10px] font-semibold text-slate-400">
+                              <span className="fs-10 font-semibold text-slate-400">
                                 {fmt(e.date, { month: 'short' })}
                               </span>
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[14px] font-semibold text-slate-900">
+                              <span className="block truncate fs-14 font-semibold text-slate-900">
                                 {e.kind === 'cetak'
                                   ? `Tagihan ${e.info.acc.name} dicetak`
                                   : e.kind === 'lewat'
                                     ? `${e.info.acc.name} lewat jatuh tempo`
                                     : `${e.info.acc.name} jatuh tempo`}
                               </span>
-                              <span className="block text-[12px] text-slate-500">
+                              <span className="block fs-12 text-slate-500">
                                 {fmt(e.date, { weekday: 'long' })}
                                 {e.kind === 'tempo' && e.date === today ? ' · hari ini' : ''}
                               </span>
@@ -390,7 +386,7 @@ export function CreditCardHub({
                             {e.amount !== undefined && e.amount > 0 && (
                               <span
                                 className={cn(
-                                  'shrink-0 text-[14px] font-bold tabular-nums',
+                                  'shrink-0 fs-14 font-bold tabular-nums',
                                   e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900',
                                 )}
                               >
@@ -418,7 +414,7 @@ export function CreditCardHub({
                 <button
                   type="button"
                   onClick={onAdd}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white"
                 >
                   <Plus size={16} /> Tambah kartu
                 </button>
@@ -434,7 +430,7 @@ export function CreditCardHub({
                     type="button"
                     onClick={closeCard}
                     disabled={saving}
-                    className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+                    className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 fs-13 font-bold text-slate-700 hover:bg-slate-200"
                   >
                     <ArrowLeft size={16} /> Semua kartu
                   </button>
@@ -513,10 +509,10 @@ export function CreditCardHub({
                               >
                                 <ArrowLeft size={17} />
                               </button>
-                              <p className="text-[15px] font-bold text-slate-900">Bayar tagihan {sel.acc.name}</p>
+                              <p className="fs-15 font-bold text-slate-900">Bayar tagihan {sel.acc.name}</p>
                             </div>
                             <div>
-                              <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Nominal</p>
+                              <p className="mb-1.5 fs-12 font-semibold text-slate-500">Nominal</p>
                               <div className="flex flex-wrap gap-1.5">
                                 {[
                                   sel.cycle && sel.cycle.amountDue > 0
@@ -537,7 +533,7 @@ export function CreditCardHub({
                                       type="button"
                                       onClick={() => setPayAmount(String(Math.round(o.v)))}
                                       className={cn(
-                                        'rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1',
+                                        'rounded-full px-3 py-1.5 fs-12 font-semibold ring-1',
                                         Number(payAmount) === Math.round(o.v)
                                           ? 'bg-slate-900 text-white ring-slate-900'
                                           : 'bg-white text-slate-700 ring-slate-200',
@@ -548,22 +544,22 @@ export function CreditCardHub({
                                   ))}
                               </div>
                               <label className="mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400">
-                                <span className="text-[14px] text-slate-400">Rp</span>
+                                <span className="fs-14 text-slate-400">Rp</span>
                                 <input
                                   inputMode="numeric"
                                   value={payAmount ? Number(payAmount).toLocaleString('id-ID') : ''}
                                   onChange={(e) => setPayAmount(e.target.value.replace(/[^\d]/g, ''))}
                                   placeholder="0"
                                   aria-label="Nominal pembayaran"
-                                  className="w-full bg-transparent py-2.5 text-[17px] font-bold text-slate-900 outline-none"
+                                  className="w-full bg-transparent py-2.5 fs-17 font-bold text-slate-900 outline-none"
                                 />
                               </label>
                             </div>
                             <div>
-                              <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Dibayar dari</p>
+                              <p className="mb-1.5 fs-12 font-semibold text-slate-500">Dibayar dari</p>
                               {cash.filter((a) => (a.currency || 'IDR') === (sel.acc.currency || 'IDR')).length ===
                               0 ? (
-                                <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800">
+                                <p className="rounded-2xl bg-amber-50 p-3 fs-13 text-amber-800">
                                   Belum ada rekening kas dengan mata uang {sel.acc.currency || 'IDR'}.
                                 </p>
                               ) : (
@@ -582,12 +578,12 @@ export function CreditCardHub({
                                             : 'bg-white ring-slate-200',
                                         )}
                                       >
-                                        <span className="block truncate text-[13px] font-semibold text-slate-900">
+                                        <span className="block truncate fs-13 font-semibold text-slate-900">
                                           {a.name}
                                         </span>
                                         <span
                                           className={cn(
-                                            'block truncate text-[11px] tabular-nums',
+                                            'block truncate fs-11 tabular-nums',
                                             (a.balance || 0) < Number(payAmount || 0)
                                               ? 'text-rose-500'
                                               : 'text-slate-500',
@@ -601,20 +597,20 @@ export function CreditCardHub({
                               )}
                             </div>
                             <label className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-2 ring-1 ring-slate-200">
-                              <span className="text-[13px] font-semibold text-slate-500">Tanggal bayar</span>
+                              <span className="fs-13 font-semibold text-slate-500">Tanggal bayar</span>
                               <input
                                 type="date"
                                 value={payDate}
                                 max={today ?? undefined}
                                 onChange={(e) => setPayDate(e.target.value)}
-                                className="bg-transparent text-[14px] font-semibold text-slate-900 outline-none"
+                                className="bg-transparent fs-14 font-semibold text-slate-900 outline-none"
                               />
                             </label>
                             <button
                               type="button"
                               onClick={() => void submitPay()}
                               disabled={saving || !Number(payAmount) || !payFrom || !payDate}
-                              className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+                              className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-40"
                             >
                               {saving ? (
                                 <Loader2 size={16} className="animate-spin" />
@@ -625,7 +621,7 @@ export function CreditCardHub({
                                 ? `Bayar ${formatMoney(Number(payAmount), sel.acc.currency || 'IDR')}`
                                 : 'Isi nominal'}
                             </button>
-                            <p className="text-center text-[11px] text-slate-400">
+                            <p className="text-center fs-11 text-slate-400">
                               Dicatat sebagai transfer: saldo rekening berkurang, tagihan kartu berkurang. Bukan
                               pengeluaran baru.
                             </p>
@@ -640,12 +636,12 @@ export function CreditCardHub({
                             <div className="p-4">
                               {sel.cycle ? (
                                 <>
-                                  <p className="text-[12px] font-semibold text-slate-500">
+                                  <p className="fs-12 font-semibold text-slate-500">
                                     Tagihan {fmt(sel.cycle.statementDate, { month: 'long' })} · dicetak{' '}
                                     {fmt(sel.cycle.statementDate, { day: 'numeric', month: 'short' })}
                                   </p>
                                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    <p className="text-[26px] font-extrabold tracking-tight text-slate-900 tabular-nums">
+                                    <p className="fsh-26 font-extrabold tracking-tight text-slate-900 tabular-nums">
                                       {sel.cycle.amountDue > 0 ? money(sel.cycle.amountDue, sel.acc.currency) : 'Lunas'}
                                     </p>
                                     <AnimatePresence>
@@ -662,13 +658,13 @@ export function CreditCardHub({
                                       )}
                                     </AnimatePresence>
                                   </div>
-                                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
+                                  <p className="mt-0.5 flex flex-wrap items-center gap-2 fs-13 text-slate-500">
                                     Jatuh tempo{' '}
                                     {fmt(sel.cycle.dueDate, { weekday: 'short', day: 'numeric', month: 'short' })}
                                     {sel.cycle.amountDue > 0 && (
                                       <span
                                         className={cn(
-                                          'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                                          'rounded-full px-2 py-0.5 fs-11 font-bold',
                                           sel.cycle.overdue
                                             ? 'bg-rose-100 text-rose-700'
                                             : sel.cycle.daysUntilDue <= 5
@@ -684,7 +680,7 @@ export function CreditCardHub({
                                       </span>
                                     )}
                                     {sel.cycle.amountDue > 0 && sel.cycle.minPayment > 0 && (
-                                      <span className="text-[12px]">
+                                      <span className="fs-12">
                                         min. {hidden ? '••••' : short(sel.cycle.minPayment)}
                                       </span>
                                     )}
@@ -694,7 +690,7 @@ export function CreditCardHub({
                                 <button
                                   type="button"
                                   onClick={() => onEdit(sel.acc)}
-                                  className="w-full rounded-2xl bg-amber-50 p-3 text-left text-[13px] text-amber-900 ring-1 ring-amber-100"
+                                  className="w-full rounded-2xl bg-amber-50 p-3 text-left fs-13 text-amber-900 ring-1 ring-amber-100"
                                 >
                                   Atur tanggal cetak & jatuh tempo supaya tagihan dan pengingatnya jalan.{' '}
                                   <span className="font-bold">Atur →</span>
@@ -705,14 +701,14 @@ export function CreditCardHub({
                                   type="button"
                                   onClick={startPay}
                                   disabled={cash.length === 0}
-                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 fs-13 font-bold text-white disabled:opacity-40"
                                 >
                                   <Check size={15} strokeWidth={3} /> Sudah bayar
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => onEdit(sel.acc)}
-                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white py-2.5 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
                                 >
                                   <Pencil size={14} /> Ubah kartu
                                 </button>
@@ -725,25 +721,25 @@ export function CreditCardHub({
                             </div>
                             <div className="grid grid-cols-3 gap-2 px-4 pb-4 pt-1">
                               <div className="min-w-0">
-                                <p className="text-[11px] font-semibold text-slate-500">Belum ditagih</p>
-                                <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">
+                                <p className="fs-11 font-semibold text-slate-500">Belum ditagih</p>
+                                <p className="truncate fs-14 font-bold text-slate-900 tabular-nums">
                                   {unbilled === null ? '—' : hidden ? '••••' : short(unbilled)}
                                 </p>
                                 {sel.cycle && (
-                                  <p className="text-[11px] text-slate-400">
+                                  <p className="fs-11 text-slate-400">
                                     cetak {fmt(sel.cycle.nextStatementDate, { day: 'numeric', month: 'short' })}
                                   </p>
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[11px] font-semibold text-slate-500">Total terpakai</p>
-                                <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">
+                                <p className="fs-11 font-semibold text-slate-500">Total terpakai</p>
+                                <p className="truncate fs-14 font-bold text-slate-900 tabular-nums">
                                   {hidden ? '••••' : short(sel.usage.used)}
                                 </p>
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[11px] font-semibold text-slate-500">Sisa limit</p>
-                                <p className="truncate text-[14px] font-bold text-emerald-600 tabular-nums">
+                                <p className="fs-11 font-semibold text-slate-500">Sisa limit</p>
+                                <p className="truncate fs-14 font-bold text-emerald-600 tabular-nums">
                                   {sel.usage.limit > 0 ? (hidden ? '••••' : short(sel.usage.remaining)) : '—'}
                                 </p>
                               </div>
@@ -770,18 +766,18 @@ export function CreditCardHub({
                   {sel && (
                     <section>
                       <div className="mb-1.5 flex items-baseline justify-between">
-                        <h3 className="text-[15px] font-bold text-slate-900">
+                        <h3 className="fs-15 font-bold text-slate-900">
                           Belanja {sel.cycle ? 'siklus ini' : '30 hari terakhir'}
                         </h3>
                         <Link
                           href={`/membership/transactions/daily?rekening=${encodeURIComponent(sel.acc.id ?? '')}&periode=semua`}
-                          className="flex items-center gap-0.5 text-[12px] font-bold text-indigo-600 hover:underline"
+                          className="flex items-center gap-0.5 fs-12 font-bold text-indigo-600 hover:underline"
                         >
                           Semua <ChevronRight size={14} />
                         </Link>
                       </div>
                       {cycleSpend.length === 0 ? (
-                        <p className="rounded-[18px] bg-slate-50 py-5 text-center text-[13px] text-slate-500">
+                        <p className="rounded-[18px] bg-slate-50 py-5 text-center fs-13 text-slate-500">
                           Belum ada belanja di kartu ini{sel.cycle ? ' sejak tanggal cetak' : ''}.
                         </p>
                       ) : (
@@ -798,7 +794,7 @@ export function CreditCardHub({
                               >
                                 <span
                                   className={cn(
-                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]',
+                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full fs-15',
                                     v.tile,
                                   )}
                                   aria-hidden
@@ -806,14 +802,14 @@ export function CreditCardHub({
                                   {v.emoji}
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-[13px] font-semibold text-slate-900">
+                                  <span className="block truncate fs-13 font-semibold text-slate-900">
                                     {t.note || t.subCategory || t.category}
                                   </span>
-                                  <span className="block truncate text-[11px] text-slate-500">
+                                  <span className="block truncate fs-11 text-slate-500">
                                     {fmt(localYmd(t.date), { day: 'numeric', month: 'short' })} · {t.category}
                                   </span>
                                 </span>
-                                <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">
+                                <span className="shrink-0 fs-13 font-bold text-slate-900 tabular-nums">
                                   −{money(Number(t.amount) || 0, t.currency)}
                                 </span>
                               </motion.li>
@@ -822,7 +818,7 @@ export function CreditCardHub({
                         </ul>
                       )}
                       {cycleSpend.length > 12 && (
-                        <p className="mt-1 text-center text-[11px] text-slate-400">
+                        <p className="mt-1 text-center fs-11 text-slate-400">
                           +{cycleSpend.length - 12} transaksi lain
                         </p>
                       )}

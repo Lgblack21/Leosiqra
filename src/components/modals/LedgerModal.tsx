@@ -76,7 +76,7 @@ export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerM
         )}
 
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Utama</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Utama</label>
           <input
             type="text"
             value={formData.category}
@@ -87,10 +87,8 @@ export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerM
           />
         </div>
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-            Subkategori Spesifik
-          </label>
-          <p className="text-[10px] text-slate-400 pl-1">Bisa isi lebih dari satu, pisahkan dengan koma.</p>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Subkategori Spesifik</label>
+          <p className="fs-10 text-slate-400 pl-1">Bisa isi lebih dari satu, pisahkan dengan koma.</p>
           <input
             type="text"
             value={formData.subCategory}

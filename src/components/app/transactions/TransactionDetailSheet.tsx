@@ -193,7 +193,7 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
               className={inputClass}
               aria-label="Catatan"
             />
-            <p className="text-[11px] text-slate-400 px-1">
+            <p className="fs-11 text-slate-400 px-1">
               Nominal & rekening tidak bisa diubah di sini — hapus lalu catat ulang supaya saldo tetap benar.
             </p>
             <div className="grid grid-cols-2 gap-2 pt-1">
@@ -245,7 +245,7 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
 
             {(tagPref.enabled || txTags.length > 0) && (
               <div className="space-y-1.5">
-                <p className="flex items-center gap-1.5 px-1 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <p className="flex items-center gap-1.5 px-1 fs-11 font-black uppercase tracking-wider text-slate-400">
                   Tag {tagSaving && <Loader2 size={11} className="animate-spin" />}
                 </p>
                 <AppTagChips value={txTags} onChange={(next) => void saveTags(next)} />
@@ -253,7 +253,7 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
             )}
 
             {(linked || isTransfer) && (
-              <p className="flex gap-2 text-[11px] text-slate-500 dark:text-slate-400 px-1">
+              <p className="flex gap-2 fs-11 text-slate-500 dark:text-slate-400 px-1">
                 <Info size={14} className="shrink-0 mt-px" />
                 {linked
                   ? 'Transaksi ini bagian dari fitur lain (hutang, tabungan, atau investasi). Kelola dari halaman fitur tersebut.'
@@ -297,7 +297,7 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
               </Link>
             )}
             {confirmDelete && (
-              <p className="text-[11px] text-center text-slate-500 dark:text-slate-400">
+              <p className="fs-11 text-center text-slate-500 dark:text-slate-400">
                 {isTransfer
                   ? 'Kedua sisi transfer dihapus & saldo kedua rekening dikembalikan.'
                   : 'Saldo rekening akan dikembalikan.'}{' '}

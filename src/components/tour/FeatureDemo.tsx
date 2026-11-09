@@ -143,10 +143,10 @@ const Row = ({
       <Icon size={14} />
     </span>
     <span className="min-w-0 flex-1">
-      <span className="block truncate text-[11px] font-bold text-slate-800">{label}</span>
-      {sub && <span className="block truncate text-[9px] text-slate-400">{sub}</span>}
+      <span className="block truncate fs-11 font-bold text-slate-800">{label}</span>
+      {sub && <span className="block truncate fs-9 text-slate-400">{sub}</span>}
     </span>
-    <span className="shrink-0 text-[11px] font-black tabular-nums text-slate-800">{value}</span>
+    <span className="shrink-0 fs-11 font-black tabular-nums text-slate-800">{value}</span>
   </div>
 );
 
@@ -155,7 +155,7 @@ function Dashboard() {
   return (
     <Frame>
       <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 p-3 text-white">
-        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80">Saldo bersih</p>
+        <p className="fs-9 font-bold uppercase tracking-widest opacity-80">Saldo bersih</p>
         <p className="text-lg font-black tabular-nums">
           <Count to={12_475_000} active={f >= 1} />
         </p>
@@ -167,8 +167,8 @@ function Dashboard() {
           ['Tabungan', 1_500_000, 'text-indigo-600'],
         ].map(([l, v, c]) => (
           <div key={l as string} className="rounded-xl bg-white p-2 shadow-sm">
-            <p className="text-[8px] font-bold uppercase text-slate-400">{l as string}</p>
-            <p className={cn('text-[10px] font-black tabular-nums', c as string)}>
+            <p className="fs-8 font-bold uppercase text-slate-400">{l as string}</p>
+            <p className={cn('fs-10 font-black tabular-nums', c as string)}>
               <Count to={v as number} active={f >= 1} format={(n) => (n / 1e6).toFixed(1).replace('.', ',') + ' jt'} />
             </p>
           </div>
@@ -207,7 +207,7 @@ function Input() {
             key={c}
             show={done}
             delay={i * 0.08}
-            className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100"
+            className="rounded-full bg-white px-2 py-1 fs-10 font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100"
           >
             {c}
           </Pop>
@@ -216,7 +216,7 @@ function Input() {
       <Pop
         show={done}
         delay={0.45}
-        className="absolute inset-x-3.5 bottom-3 flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+        className="absolute inset-x-3.5 bottom-3 flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 fs-11 font-bold text-white"
       >
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
           <Check size={11} strokeWidth={3} />
@@ -245,7 +245,7 @@ function Rekening() {
       </div>
       <Pop
         show={f >= 4}
-        className="absolute bottom-3 right-3.5 rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-black text-white"
+        className="absolute bottom-3 right-3.5 rounded-full bg-indigo-600 px-3 py-1 fs-10 font-black text-white"
       >
         Total {rp(9_025_000)}
       </Pop>
@@ -258,11 +258,11 @@ function Kartu() {
   return (
     <Frame>
       <div className="rounded-xl bg-gradient-to-br from-slate-800 to-indigo-900 p-3 text-white">
-        <div className="flex items-center justify-between text-[9px] font-bold opacity-80">
+        <div className="flex items-center justify-between fs-9 font-bold opacity-80">
           <span>BCA Visa</span>
           <CreditCard size={13} />
         </div>
-        <p className="mt-3 text-[9px] opacity-70">Terpakai dari limit Rp 20 jt</p>
+        <p className="mt-3 fs-9 opacity-70">Terpakai dari limit Rp 20 jt</p>
         <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/20">
           <motion.div
             className="h-full rounded-full bg-amber-300"
@@ -273,7 +273,7 @@ function Kartu() {
       </div>
       <Pop
         show={f >= 2}
-        className="mt-2 flex items-center gap-2 rounded-xl bg-amber-50 px-2.5 py-2 text-[10px] font-bold text-amber-700 ring-1 ring-amber-100"
+        className="mt-2 flex items-center gap-2 rounded-xl bg-amber-50 px-2.5 py-2 fs-10 font-bold text-amber-700 ring-1 ring-amber-100"
       >
         <CalendarClock size={13} /> Jatuh tempo 5 Okt · minimum Rp 760.000
       </Pop>
@@ -287,8 +287,8 @@ function Investasi() {
   return (
     <Frame>
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold text-slate-500">Portofolio</p>
-        <Pop show={f >= 2} className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-600">
+        <p className="fs-10 font-bold text-slate-500">Portofolio</p>
+        <Pop show={f >= 2} className="rounded-full bg-emerald-50 px-2 py-0.5 fs-10 font-black text-emerald-600">
           +6,4%
         </Pop>
       </div>
@@ -309,7 +309,7 @@ function Investasi() {
       </svg>
       <div className="flex gap-1.5">
         {['Saham', 'Emas', 'Deposito'].map((t) => (
-          <span key={t} className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-slate-500 shadow-sm">
+          <span key={t} className="rounded-full bg-white px-2 py-0.5 fs-9 font-bold text-slate-500 shadow-sm">
             {t}
           </span>
         ))}
@@ -348,10 +348,10 @@ function Tabungan() {
         <p className="flex items-center gap-1.5 text-xs font-black text-slate-800">
           <PiggyBank size={14} className="text-rose-500" /> Dana Darurat
         </p>
-        <p className="text-[10px] text-slate-500">Target Rp 20 jt</p>
+        <p className="fs-10 text-slate-500">Target Rp 20 jt</p>
         <Pop
           show={f >= 2}
-          className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-600"
+          className="inline-flex rounded-full bg-emerald-50 px-2 py-1 fs-10 font-black text-emerald-600"
         >
           + Setor Rp 5 jt
         </Pop>
@@ -369,13 +369,13 @@ function Budget() {
   ];
   return (
     <Frame>
-      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+      <p className="mb-2 flex items-center gap-1.5 fs-10 font-bold text-slate-500">
         <Target size={12} /> Budget bulan ini
       </p>
       <div className="space-y-2.5">
         {rows.map(([l, p], i) => (
           <div key={l}>
-            <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-700">
+            <div className="mb-1 flex justify-between fs-10 font-bold text-slate-700">
               <span>{l}</span>
               <span className={p > 90 && f >= 1 ? 'text-rose-500' : ''}>{f >= 1 ? p : 0}%</span>
             </div>
@@ -394,7 +394,7 @@ function Budget() {
       </div>
       <Pop
         show={f >= 2}
-        className="absolute bottom-2.5 right-3 rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black text-rose-600"
+        className="absolute bottom-2.5 right-3 rounded-full bg-rose-50 px-2 py-0.5 fs-9 font-black text-rose-600"
       >
         Hiburan hampir habis!
       </Pop>
@@ -423,12 +423,12 @@ function Hutang() {
       </div>
       <Pop
         show={f >= 1}
-        className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-2.5 py-2 text-[10px] font-bold shadow-sm"
+        className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-2.5 py-2 fs-10 font-bold shadow-sm"
       >
         <span className="text-slate-600">Bayar cicilan dari BCA</span>
         <span className="text-rose-500">− Rp 1.000.000</span>
       </Pop>
-      <Pop show={f >= 3} className="absolute bottom-3 left-3.5 text-[10px] font-bold text-emerald-600">
+      <Pop show={f >= 3} className="absolute bottom-3 left-3.5 fs-10 font-bold text-emerald-600">
         Sisa & saldo BCA ter-update otomatis ✓
       </Pop>
     </Frame>
@@ -451,10 +451,10 @@ function Rutin() {
               <Repeat size={13} />
             </span>
             <span className="flex-1">
-              <span className="block text-[11px] font-bold text-slate-800">{l}</span>
-              <span className="block text-[9px] text-slate-400">{s}</span>
+              <span className="block fs-11 font-bold text-slate-800">{l}</span>
+              <span className="block fs-9 text-slate-400">{s}</span>
             </span>
-            <span className="text-[10px] font-black text-slate-700">{v}</span>
+            <span className="fs-10 font-black text-slate-700">{v}</span>
             <motion.span
               animate={{ scale: f > i ? 1 : 0 }}
               className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white"
@@ -473,7 +473,7 @@ function Laporan() {
   const bars = [42, 55, 48, 70, 62, 85];
   return (
     <Frame>
-      <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+      <p className="flex items-center gap-1.5 fs-10 font-bold text-slate-500">
         <FileText size={12} /> Laporan tahunan
       </p>
       <div className="mt-2 flex h-24 items-end gap-2">
@@ -484,7 +484,7 @@ function Laporan() {
               animate={{ height: f >= 1 ? `${h}%` : '4%' }}
               transition={{ duration: 0.8, delay: i * 0.07 }}
             />
-            <span className="text-[8px] font-bold text-slate-400">{['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][i]}</span>
+            <span className="fs-8 font-bold text-slate-400">{['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][i]}</span>
           </div>
         ))}
       </div>
@@ -506,7 +506,7 @@ function Pajak() {
           <Pop
             key={l}
             show={f > i}
-            className="flex justify-between rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold shadow-sm"
+            className="flex justify-between rounded-lg bg-white px-2.5 py-1.5 fs-10 font-bold shadow-sm"
           >
             <span className="text-slate-500">{l}</span>
             <span className="text-slate-800">{v}</span>
@@ -515,7 +515,7 @@ function Pajak() {
       </div>
       <Pop
         show={f >= 4}
-        className="absolute inset-x-3.5 bottom-3 flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+        className="absolute inset-x-3.5 bottom-3 flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 fs-11 font-bold text-white"
       >
         <span>PPh terutang</span>
         <span className="text-emerald-300">Rp 1.650.000</span>
@@ -530,7 +530,7 @@ function Ai() {
     <Frame className="space-y-2">
       <Pop
         show={f >= 0}
-        className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-md bg-indigo-600 px-3 py-2 text-[11px] font-semibold text-white"
+        className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-md bg-indigo-600 px-3 py-2 fs-11 font-semibold text-white"
       >
         Aku boros di mana bulan ini?
       </Pop>
@@ -546,9 +546,9 @@ function Ai() {
       </Pop>
       <Pop
         show={f >= 2}
-        className="w-fit max-w-[88%] rounded-2xl rounded-bl-md bg-white px-3 py-2 text-[11px] leading-snug text-slate-700 shadow-sm"
+        className="w-fit max-w-[88%] rounded-2xl rounded-bl-md bg-white px-3 py-2 fs-11 leading-snug text-slate-700 shadow-sm"
       >
-        <span className="mb-0.5 flex items-center gap-1 text-[9px] font-black text-violet-600">
+        <span className="mb-0.5 flex items-center gap-1 fs-9 font-black text-violet-600">
           <Sparkles size={10} /> AI Leosiqra
         </span>
         Pengeluaran <b>Hiburan</b> naik 49% dari rata-rata — terbesar dari langganan & nonton.
@@ -562,7 +562,7 @@ function Kategori() {
   const chips = ['Makan', 'Jajan & Kopi', 'Bensin', 'Listrik'];
   return (
     <Frame>
-      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+      <p className="mb-2 flex items-center gap-1.5 fs-10 font-bold text-slate-500">
         <Tags size={12} /> Kategori & sub-kategori
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -570,12 +570,12 @@ function Kategori() {
           <Pop
             key={c}
             show={f > i}
-            className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm"
+            className="rounded-full bg-white px-2.5 py-1 fs-10 font-bold text-slate-700 shadow-sm"
           >
             {c}
           </Pop>
         ))}
-        <span className="flex items-center gap-1 rounded-full border border-dashed border-indigo-300 px-2.5 py-1 text-[10px] font-bold text-indigo-600">
+        <span className="flex items-center gap-1 rounded-full border border-dashed border-indigo-300 px-2.5 py-1 fs-10 font-bold text-indigo-600">
           <Plus size={11} /> Tambah
         </span>
       </div>
@@ -588,14 +588,14 @@ function Profil() {
   return (
     <Frame className="space-y-2">
       <div className="flex items-center gap-2.5 rounded-xl bg-white px-2.5 py-2 shadow-sm">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-black text-white">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 fs-11 font-black text-white">
           RP
         </span>
-        <span className="flex-1 text-[11px] font-bold text-slate-800">Rina Pratama</span>
+        <span className="flex-1 fs-11 font-bold text-slate-800">Rina Pratama</span>
       </div>
       <div className="flex items-center gap-2.5 rounded-xl bg-white px-2.5 py-2 shadow-sm">
         <ShieldCheck size={16} className={f >= 1 ? 'text-emerald-500' : 'text-slate-300'} />
-        <span className="flex-1 text-[11px] font-bold text-slate-800">Verifikasi 2 langkah</span>
+        <span className="flex-1 fs-11 font-bold text-slate-800">Verifikasi 2 langkah</span>
         <span
           className={cn('relative h-5 w-9 rounded-full transition-colors', f >= 1 ? 'bg-emerald-500' : 'bg-slate-200')}
         >
@@ -605,7 +605,7 @@ function Profil() {
           />
         </span>
       </div>
-      <Pop show={f >= 2} className="text-center text-[10px] font-bold text-emerald-600">
+      <Pop show={f >= 2} className="text-center fs-10 font-bold text-emerald-600">
         Akun lebih aman ✓
       </Pop>
     </Frame>
@@ -626,7 +626,7 @@ function Menu() {
         <div
           key={l}
           className={cn(
-            'relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors',
+            'relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 fs-11 font-bold transition-colors',
             f === i ? 'text-indigo-700' : 'text-slate-500',
           )}
         >
@@ -652,7 +652,7 @@ function TambahCepat() {
       <div className="flex justify-end">
         <motion.span
           animate={{ scale: f === 1 ? 0.92 : 1 }}
-          className="flex items-center gap-1.5 rounded-xl bg-emerald-800 px-3 py-1.5 text-[10px] font-bold text-white"
+          className="flex items-center gap-1.5 rounded-xl bg-emerald-800 px-3 py-1.5 fs-10 font-bold text-white"
         >
           <Plus size={12} /> Tambah Cepat
         </motion.span>
@@ -665,7 +665,7 @@ function TambahCepat() {
           <p
             key={t}
             className={cn(
-              'rounded-lg px-2 py-1 text-[10px] font-bold',
+              'rounded-lg px-2 py-1 fs-10 font-bold',
               i === 0 && f >= 2 ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600',
             )}
           >
@@ -693,10 +693,10 @@ function Transaksi() {
           className="flex items-center justify-between rounded-xl bg-white px-2.5 py-2 shadow-sm"
         >
           <span>
-            <span className="block text-[11px] font-bold text-slate-800">{l}</span>
-            <span className="block text-[9px] text-slate-400">{s}</span>
+            <span className="block fs-11 font-bold text-slate-800">{l}</span>
+            <span className="block fs-9 text-slate-400">{s}</span>
           </span>
-          <span className={cn('text-[11px] font-black', c)}>{v}</span>
+          <span className={cn('fs-11 font-black', c)}>{v}</span>
         </Pop>
       ))}
     </Frame>
@@ -715,7 +715,7 @@ function Statistik() {
     <Frame className="space-y-2">
       {rows.map(([l, w, c], i) => (
         <div key={l} className="flex items-center gap-2">
-          <span className="w-14 text-right text-[10px] font-bold text-slate-500">{l}</span>
+          <span className="w-14 text-right fs-10 font-bold text-slate-500">{l}</span>
           <motion.div
             className={cn('h-3.5 rounded-md', c)}
             animate={{ width: f >= 1 ? `${w * 0.7}%` : '2%' }}
@@ -746,11 +746,11 @@ function Scan() {
         )}
       </div>
       <div className="space-y-1.5">
-        <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+        <p className="flex items-center gap-1.5 fs-11 font-bold text-slate-700">
           <ScanLine size={14} className="text-sky-500" /> Foto struk
         </p>
         <Pop show={f >= 2} className="rounded-xl bg-white px-2.5 py-2 shadow-sm">
-          <span className="block text-[9px] text-slate-400">Terbaca · Belanja</span>
+          <span className="block fs-9 text-slate-400">Terbaca · Belanja</span>
           <span className="block text-sm font-black text-slate-800">Rp 128.500</span>
         </Pop>
       </div>
@@ -776,8 +776,8 @@ function Voice() {
           <Mic size={20} />
         </span>
       </div>
-      <p className="text-[11px] font-bold text-slate-700">{f >= 1 ? '“makan siang 35 ribu”' : 'Mendengarkan…'}</p>
-      <Pop show={f >= 2} className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-indigo-700 shadow-sm">
+      <p className="fs-11 font-bold text-slate-700">{f >= 1 ? '“makan siang 35 ribu”' : 'Mendengarkan…'}</p>
+      <Pop show={f >= 2} className="rounded-full bg-white px-3 py-1 fs-10 font-bold text-indigo-700 shadow-sm">
         Rp 35.000 · Makanan
       </Pop>
     </Frame>
@@ -801,7 +801,7 @@ function InstallDemo() {
           <span className="relative block h-14 w-14 overflow-hidden rounded-[16px] bg-white shadow-lg">
             <Image src={src} alt="" fill sizes="56px" className="object-cover" />
           </span>
-          <span className="text-[10px] font-bold text-white drop-shadow">{name}</span>
+          <span className="fs-10 font-bold text-white drop-shadow">{name}</span>
         </motion.div>
       ))}
     </Frame>
@@ -816,7 +816,7 @@ function Selamat() {
         🎉
       </motion.span>
       <p className="mt-2 text-xs font-black text-slate-800">Siap mencatat!</p>
-      <p className="text-[10px] text-slate-500">Mulai dari transaksi pertamamu hari ini</p>
+      <p className="fs-10 text-slate-500">Mulai dari transaksi pertamamu hari ini</p>
     </Frame>
   );
 }
@@ -861,8 +861,8 @@ export function HowTo({ steps }: { steps: string[] }) {
   return (
     <ol className="space-y-1.5">
       {steps.map((s, i) => (
-        <li key={i} className="flex items-start gap-2 text-[12px] leading-snug text-slate-600">
-          <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[9px] font-black text-indigo-600">
+        <li key={i} className="flex items-start gap-2 fs-12 leading-snug text-slate-600">
+          <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-50 fs-9 font-black text-indigo-600">
             {i + 1}
           </span>
           {s}

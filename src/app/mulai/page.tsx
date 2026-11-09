@@ -24,7 +24,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
-import { BalanceChip, BrandBackdrop, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
+import { BalanceChip, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
+import { Aurora } from '@/components/auth/AuthLayout';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { resolveNext, sanitizeNext, withNext } from '@/lib/authNext';
 import { parseQuickText } from '@/lib/quick/parse';
@@ -32,6 +33,7 @@ import { DEFAULT_CATEGORY_GROUPS, GUEST_CATEGORY_HINTS } from '@/lib/defaultCate
 import {
   EMPTY_GUEST,
   GUEST_GOALS,
+  clearGuest,
   loadGuest,
   saveGuest,
   type GuestGoal,
@@ -80,13 +82,13 @@ const PARSE_CTX = {
 };
 
 const pill =
-  'inline-flex h-12 sm:h-14 items-center justify-center gap-2 px-8 rounded-full text-[15px] sm:text-[16px] font-bold transition-all active:scale-[0.98]';
+  'inline-flex h-12 sm:h-14 items-center justify-center gap-2 px-8 rounded-full fs-15 sm:fs-16 font-bold transition-all active:scale-[0.98]';
 const pillMain = cn(
   pill,
   'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-[0_14px_30px_-12px_rgba(79,70,229,0.7)] hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-12px_rgba(79,70,229,0.75)] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0',
 );
 const pillGhost = cn(pill, 'bg-white text-indigo-700 ring-1 ring-indigo-100 hover:ring-indigo-200');
-const h2 = 'text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-slate-900 sm:text-[44px]';
+const h2 = 'fsh-34 font-extrabold leading-[1.08] tracking-[-0.03em] text-slate-900 sm:fsh-44';
 
 export default function MulaiPage() {
   const router = useRouter();
@@ -95,6 +97,9 @@ export default function MulaiPage() {
   const [next, setNext] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [now, setNow] = useState<Date | null>(null);
+  // Isian lama yang sudah selesai: TIDAK langsung lompat ke langkah terakhir (dari tombol "Daftar" terlihat
+  // seperti bug) — tampilkan pilihan Lanjutkan / Mulai dari awal di layar sambutan.
+  const [resumable, setResumable] = useState(false);
 
   // Pulihkan pilihan sebelumnya; yang sudah login tidak perlu lewat sini.
   useEffect(() => {
@@ -105,7 +110,7 @@ export default function MulaiPage() {
     if (saved) {
       setG(saved);
       if (saved.note) setText(saved.note.text);
-      if (saved.done) setStep(LAST);
+      if (saved.done) setResumable(true);
     }
     setNow(new Date());
     cloudflareApi<{ user?: unknown }>('/api/auth/me')
@@ -152,6 +157,14 @@ export default function MulaiPage() {
     go(LAST);
   };
 
+  const restart = () => {
+    clearGuest();
+    setG(EMPTY_GUEST);
+    setText('');
+    setResumable(false);
+    go(1);
+  };
+
   const registerHref = withNext('/auth/register', next);
   const loginHref = withNext('/auth/login', next);
 
@@ -161,8 +174,16 @@ export default function MulaiPage() {
         <header className="flex h-12 items-center justify-between">
           {step === 0 ? (
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/images/Logo-new.png" alt="Leosiqra" width={30} height={30} />
-              <span className="text-[19px] font-extrabold tracking-tight">Leosiqra</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white p-1 shadow-[0_6px_16px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/70">
+                <Image
+                  src="/images/logo-emblem.png"
+                  alt="Leosiqra"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                />
+              </span>
+              <span className="fs-19 font-extrabold tracking-tight">Leosiqra</span>
             </Link>
           ) : (
             <button
@@ -174,14 +195,12 @@ export default function MulaiPage() {
               <ChevronLeft size={20} />
             </button>
           )}
-          {step > 0 && step < LAST && (
-            <span className="text-[13px] font-bold text-indigo-600">Langkah {step} dari 4</span>
-          )}
+          {step > 0 && step < LAST && <span className="fs-13 font-bold text-indigo-600">Langkah {step} dari 4</span>}
         </header>
         {step > 0 && step < LAST && (
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-indigo-50">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-violet-500 to-amber-400 transition-all duration-500"
               style={{ width: `${(step / 4) * 100}%` }}
             />
           </div>
@@ -193,20 +212,46 @@ export default function MulaiPage() {
         >
           {step === 0 && (
             <>
-              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 text-[12px] font-bold text-indigo-700">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 fs-12 font-bold text-indigo-700">
                 <Sparkles size={14} /> Catatan keuangan pribadi, dibantu Leo
               </span>
-              <h1 className="mt-5 text-[44px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[58px] xl:text-[64px]">
+              <h1 className="mt-5 fsh-44 font-extrabold leading-[1.02] tracking-[-0.035em] sm:fsh-58 xl:fsh-64">
                 Catat 5 detik.
                 <br />
                 <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
                   Paham sebulan.
                 </span>
               </h1>
-              <p className="mt-5 max-w-md text-[17px] leading-relaxed text-slate-500 sm:text-[19px]">
+              <p className="mt-5 max-w-md fs-17 leading-relaxed text-slate-500 sm:fs-19">
                 Ketik, ngomong, atau foto struk. Leo yang merapikan jadi saldo, budget, dan laporan — tanpa spreadsheet.
               </p>
-              <div className="mt-9 flex flex-wrap gap-3">
+              {resumable && (
+                <div className="mt-8 max-w-md rounded-3xl bg-indigo-50/70 p-5 ring-1 ring-indigo-100">
+                  <p className="fs-15 font-bold text-slate-900">Pilihanmu sebelumnya masih tersimpan</p>
+                  <p className="mt-1 fs-14 text-slate-500">
+                    {[
+                      g.goals.length ? `${g.goals.length} tujuan dipilih` : null,
+                      g.note ? `catatan pertama ${formatIDR(g.note.amount)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'Pilihan awalmu sudah diisi'}
+                    . Lanjut buat akun, atau ulangi dari awal.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-4">
+                    <button type="button" onClick={() => go(LAST)} className={pillMain}>
+                      Lanjutkan daftar <ArrowRight size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={restart}
+                      className="fs-14 font-semibold text-slate-500 hover:text-slate-800"
+                    >
+                      Mulai dari awal
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className={cn('mt-9 flex flex-wrap gap-3', resumable && 'hidden')}>
                 <button type="button" onClick={() => go(1)} className={cn(pillMain, 'min-w-[12rem]')}>
                   Mulai sekarang <ArrowRight size={18} />
                 </button>
@@ -214,7 +259,7 @@ export default function MulaiPage() {
                   Lihat contoh
                 </Link>
               </div>
-              <p className="mt-5 text-[14px] text-slate-500">
+              <p className="mt-5 fs-14 text-slate-500">
                 Sudah punya akun?{' '}
                 <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">
                   Masuk
@@ -226,9 +271,7 @@ export default function MulaiPage() {
           {step === 1 && (
             <>
               <h2 className={h2}>Apa yang paling bikin pusing soal uang?</h2>
-              <p className="mt-3 text-[16px] text-slate-500">
-                Pilih sebanyak yang kamu mau — berandamu disusun dari sini.
-              </p>
+              <p className="mt-3 fs-16 text-slate-500">Pilih sebanyak yang kamu mau — berandamu disusun dari sini.</p>
               <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {GUEST_GOALS.map((goal) => {
                   const on = g.goals.includes(goal.id);
@@ -256,7 +299,7 @@ export default function MulaiPage() {
                       >
                         <Icon size={18} />
                       </span>
-                      <span className="flex-1 text-[15px] font-semibold text-slate-800">{goal.label}</span>
+                      <span className="flex-1 fs-15 font-semibold text-slate-800">{goal.label}</span>
                       <span
                         className={cn(
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
@@ -285,9 +328,7 @@ export default function MulaiPage() {
           {step === 2 && (
             <>
               <h2 className={h2}>Paling enak nyatat pakai apa?</h2>
-              <p className="mt-3 text-[16px] text-slate-500">
-                Ketiganya tetap bisa dipakai — ini cuma yang muncul duluan.
-              </p>
+              <p className="mt-3 fs-16 text-slate-500">Ketiganya tetap bisa dipakai — ini cuma yang muncul duluan.</p>
               <div className="mt-6 grid grid-cols-3 gap-2.5">
                 {MODES.map((m) => {
                   const on = mode === m.id;
@@ -305,12 +346,12 @@ export default function MulaiPage() {
                       )}
                     >
                       <m.icon size={22} />
-                      <span className="text-[14px] font-bold">{m.title}</span>
+                      <span className="fs-14 font-bold">{m.title}</span>
                     </button>
                   );
                 })}
               </div>
-              <p className="mt-4 text-[15px] text-slate-600">{MODES.find((m) => m.id === mode)!.desc}</p>
+              <p className="mt-4 fs-15 text-slate-600">{MODES.find((m) => m.id === mode)!.desc}</p>
               <div className="mt-8">
                 <button
                   type="button"
@@ -333,7 +374,7 @@ export default function MulaiPage() {
                 <br />
                 tiap malam.
               </h2>
-              <p className="mt-3 text-[16px] text-slate-500">
+              <p className="mt-3 fs-16 text-slate-500">
                 Satu notifikasi buat menutup hari. Kalau hari itu sudah ada catatan, Leo diam.
               </p>
               <div className="mt-6 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
@@ -342,8 +383,8 @@ export default function MulaiPage() {
                     <Bell size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[16px] font-bold">Ingatkan aku</p>
-                    <p className="text-[13px] text-slate-500">Bisa diubah di Profil → Notifikasi</p>
+                    <p className="fs-16 font-bold">Ingatkan aku</p>
+                    <p className="fs-13 text-slate-500">Bisa diubah di Profil → Notifikasi</p>
                   </div>
                   <button
                     type="button"
@@ -372,7 +413,7 @@ export default function MulaiPage() {
                         type="button"
                         onClick={() => update({ reminder: { on: true, time: t } })}
                         className={cn(
-                          'rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors',
+                          'rounded-full px-3.5 py-1.5 fs-13 font-bold transition-colors',
                           g.reminder.time === t
                             ? 'bg-indigo-600 text-white'
                             : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100',
@@ -395,7 +436,7 @@ export default function MulaiPage() {
                       update({ reminder: { ...g.reminder, on: false } });
                       go(4);
                     }}
-                    className="text-[15px] font-semibold text-slate-500 hover:text-slate-800"
+                    className="fs-15 font-semibold text-slate-500 hover:text-slate-800"
                   >
                     Nggak usah
                   </button>
@@ -407,7 +448,7 @@ export default function MulaiPage() {
           {step === 4 && (
             <>
               <h2 className={h2}>Catatan pertamamu.</h2>
-              <p className="mt-3 text-[16px] text-slate-500">
+              <p className="mt-3 fs-16 text-slate-500">
                 Tadi bayar apa? Atau ada uang masuk? Tulis biasa saja, Leo yang menebak sisanya.
               </p>
               <div className="mt-6 rounded-2xl bg-white p-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-500">
@@ -417,9 +458,9 @@ export default function MulaiPage() {
                   rows={2}
                   aria-label="Catatan pertama"
                   placeholder="Kopi susu 25rb"
-                  className="w-full resize-none bg-transparent text-[18px] font-medium outline-none placeholder:text-slate-300"
+                  className="w-full resize-none bg-transparent fs-18 font-medium outline-none placeholder:text-slate-300"
                 />
-                <div className="mt-1 flex items-center justify-between gap-3 text-[12px]">
+                <div className="mt-1 flex items-center justify-between gap-3 fs-12">
                   {draftOk ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700">
                       <Check size={12} strokeWidth={3} />
@@ -442,7 +483,7 @@ export default function MulaiPage() {
                     key={ex}
                     type="button"
                     onClick={() => setText(ex)}
-                    className="rounded-full bg-indigo-50 px-4 py-2 text-[14px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                    className="rounded-full bg-indigo-50 px-4 py-2 fs-14 font-semibold text-indigo-700 hover:bg-indigo-100"
                   >
                     {ex}
                   </button>
@@ -458,7 +499,7 @@ export default function MulaiPage() {
                     update({ note: null, done: true });
                     go(LAST);
                   }}
-                  className="text-[15px] font-semibold text-slate-500 hover:text-slate-800"
+                  className="fs-15 font-semibold text-slate-500 hover:text-slate-800"
                 >
                   Lewati dulu
                 </button>
@@ -468,15 +509,15 @@ export default function MulaiPage() {
 
           {step === LAST && (
             <>
-              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3.5 py-1.5 text-[13px] font-bold text-amber-700">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3.5 py-1.5 fs-13 font-bold text-amber-700">
                 <Flame size={15} /> Hari ke-1 bersama Leo
               </span>
               <h2 className={cn(h2, 'mt-4')}>Hari pertama, beres.</h2>
-              <p className="mt-3 text-[16px] text-slate-500">
+              <p className="mt-3 fs-16 text-slate-500">
                 Simpan ke akun supaya {g.note ? 'catatan & pilihanmu' : 'pilihanmu'} nggak hilang. Gratis 14 hari, tanpa
                 kartu kredit.
               </p>
-              <ul className="mt-6 space-y-2.5 text-[15px] text-slate-700">
+              <ul className="mt-6 space-y-2.5 fs-15 text-slate-700">
                 <li className="flex items-center gap-2.5">
                   <Check size={17} className="text-emerald-500" strokeWidth={3} /> {g.goals.length} tujuan dipilih
                 </li>
@@ -499,11 +540,15 @@ export default function MulaiPage() {
                 <Link href={registerHref} className={cn(pillMain, 'min-w-[12rem]')}>
                   Simpan ke akun <ArrowRight size={18} />
                 </Link>
-                <p className="mt-4 text-[14px] text-slate-500">
+                <p className="mt-4 fs-14 text-slate-500">
                   Sudah punya akun?{' '}
                   <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">
                     Masuk
                   </Link>
+                  <span className="mx-2 text-slate-300">·</span>
+                  <button type="button" onClick={restart} className="font-semibold hover:text-slate-800">
+                    Ulangi dari awal
+                  </button>
                 </p>
               </div>
             </>
@@ -511,8 +556,8 @@ export default function MulaiPage() {
         </div>
       </section>
 
-      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] lg:m-4 lg:min-h-0">
-        <BrandBackdrop />
+      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] ring-1 ring-slate-200/70 lg:sticky lg:top-4 lg:m-4 lg:h-[calc(100vh-2rem)] lg:min-h-0">
+        <Aurora />
         {step === 0 ? (
           <WelcomeScene />
         ) : (
@@ -553,7 +598,7 @@ function WelcomeScene() {
 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_80px_-30px_rgba(30,27,75,0.6)] sm:w-[300px]">
+    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_90px_-30px_rgba(30,27,75,0.55),0_0_80px_-24px_rgba(251,191,36,0.45)] sm:w-[300px]">
       <div className="relative h-[560px] overflow-hidden rounded-[38px] bg-[#f6f7fb] sm:h-[600px]">
         <div className="absolute left-1/2 top-2 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-slate-900" />
         {children}
@@ -565,8 +610,8 @@ function Phone({ children }: { children: React.ReactNode }) {
 function AppTop({ title, sub }: { title: string; sub?: string }) {
   return (
     <div className="px-5 pb-3 pt-12">
-      {sub && <p className="text-[11px] font-semibold text-slate-400">{sub}</p>}
-      <p className="text-[20px] font-extrabold tracking-tight text-slate-900">{title}</p>
+      {sub && <p className="fs-11 font-semibold text-slate-400">{sub}</p>}
+      <p className="fsh-20 font-extrabold tracking-tight text-slate-900">{title}</p>
     </div>
   );
 }
@@ -576,8 +621,8 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
   const widgets: Record<GuestGoal, React.ReactNode> = {
     arus_uang: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">Keluar {month}</p>
-        <p className="text-[17px] font-extrabold">Rp3.240.000</p>
+        <p className="fs-11 font-semibold text-slate-500">Keluar {month}</p>
+        <p className="fs-17 font-extrabold">Rp3.240.000</p>
         <div className="mt-2 flex h-10 items-end gap-1.5">
           {[40, 62, 30, 75, 52, 90, 58].map((h, i) => (
             <span
@@ -591,8 +636,8 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
     ),
     budget: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">Budget makan</p>
-        <p className="text-[17px] font-extrabold">72% terpakai</p>
+        <p className="fs-11 font-semibold text-slate-500">Budget makan</p>
+        <p className="fs-17 font-extrabold">72% terpakai</p>
         <div className="mt-2 h-2 rounded-full bg-amber-100">
           <div className="h-full w-[72%] rounded-full bg-amber-500" />
         </div>
@@ -600,8 +645,8 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
     ),
     nabung: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">Tabungan mudik</p>
-        <p className="text-[17px] font-extrabold">35% · Rp3,5 jt</p>
+        <p className="fs-11 font-semibold text-slate-500">Tabungan mudik</p>
+        <p className="fs-17 font-extrabold">35% · Rp3,5 jt</p>
         <div className="mt-2 h-2 rounded-full bg-pink-100">
           <div className="h-full w-[35%] rounded-full bg-pink-500" />
         </div>
@@ -609,8 +654,8 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
     ),
     hutang: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">Cicilan motor</p>
-        <p className="text-[17px] font-extrabold">Sisa 8 bulan</p>
+        <p className="fs-11 font-semibold text-slate-500">Cicilan motor</p>
+        <p className="fs-17 font-extrabold">Sisa 8 bulan</p>
         <div className="mt-2 h-2 rounded-full bg-sky-100">
           <div className="h-full w-[60%] rounded-full bg-sky-500" />
         </div>
@@ -618,16 +663,16 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
     ),
     pajak: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">SPT Tahunan</p>
-        <p className="text-[17px] font-extrabold">Ringkasan siap</p>
-        <p className="mt-1 text-[11px] text-slate-500">Harta, utang & penghasilan</p>
+        <p className="fs-11 font-semibold text-slate-500">SPT Tahunan</p>
+        <p className="fs-17 font-extrabold">Ringkasan siap</p>
+        <p className="mt-1 fs-11 text-slate-500">Harta, utang & penghasilan</p>
       </>
     ),
     aset: (
       <>
-        <p className="text-[11px] font-semibold text-slate-500">Kekayaan bersih</p>
-        <p className="text-[17px] font-extrabold">Rp48.200.000</p>
-        <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+        <p className="fs-11 font-semibold text-slate-500">Kekayaan bersih</p>
+        <p className="fs-17 font-extrabold">Rp48.200.000</p>
+        <p className="mt-1 flex items-center gap-1 fs-11 font-bold text-emerald-600">
           <TrendingUp size={12} /> naik bulan ini
         </p>
       </>
@@ -640,7 +685,7 @@ function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
         {goals.length === 0 ? (
           <div className="mt-16 flex flex-col items-center text-center">
             <LeoMascot mood="peek" size={110} />
-            <p className="mt-2 px-6 text-[13px] text-slate-500">Pilih di sebelah, berandamu terbentuk di sini.</p>
+            <p className="mt-2 px-6 fs-13 text-slate-500">Pilih di sebelah, berandamu terbentuk di sini.</p>
           </div>
         ) : (
           GUEST_GOALS.filter((x) => goals.includes(x.id)).map((x) => (
@@ -661,10 +706,8 @@ function PhoneInput({ mode }: { mode: GuestInputMode }) {
   if (mode === 'suara') {
     return (
       <div className="flex h-full flex-col items-center bg-gradient-to-b from-indigo-600 to-violet-700 px-6 pt-20 text-white">
-        <p className="text-[13px] font-semibold text-white/70">Mendengarkan…</p>
-        <p className="mt-3 text-center text-[22px] font-bold leading-snug">
-          “parkir lima ribu, kopi dua puluh lima ribu”
-        </p>
+        <p className="fs-13 font-semibold text-white/70">Mendengarkan…</p>
+        <p className="mt-3 text-center fsh-22 font-bold leading-snug">“parkir lima ribu, kopi dua puluh lima ribu”</p>
         <div className="mt-10 flex h-16 items-center gap-1">
           {[30, 60, 45, 90, 70, 100, 55, 80, 40, 65, 35].map((h, i) => (
             <span
@@ -684,7 +727,7 @@ function PhoneInput({ mode }: { mode: GuestInputMode }) {
   if (mode === 'foto') {
     return (
       <div className="flex h-full flex-col bg-slate-900 px-6 pt-16 text-white">
-        <p className="text-center text-[13px] font-semibold text-white/70">Arahkan ke struk</p>
+        <p className="text-center fs-13 font-semibold text-white/70">Arahkan ke struk</p>
         <div className="relative mx-auto mt-5 w-full rounded-2xl border-2 border-dashed border-white/40 p-4">
           <div className="space-y-2 rounded-lg bg-white p-4 text-slate-700">
             {[
@@ -692,19 +735,19 @@ function PhoneInput({ mode }: { mode: GuestInputMode }) {
               ['Telur 1kg', '28.500'],
               ['Minyak 2L', '36.000'],
             ].map(([a, b]) => (
-              <p key={a} className="flex justify-between font-mono text-[11px]">
+              <p key={a} className="flex justify-between font-mono fs-11">
                 <span>{a}</span>
                 <span>{b}</span>
               </p>
             ))}
-            <p className="flex justify-between border-t border-dashed border-slate-300 pt-2 font-mono text-[12px] font-bold">
+            <p className="flex justify-between border-t border-dashed border-slate-300 pt-2 font-mono fs-12 font-bold">
               <span>TOTAL</span>
               <span>132.500</span>
             </p>
           </div>
           <span className="scan-line absolute inset-x-4 h-0.5 bg-indigo-400 shadow-[0_0_14px_3px_rgba(129,140,248,0.7)]" />
         </div>
-        <p className="mt-5 flex items-center justify-center gap-2 text-[13px] font-semibold text-indigo-200">
+        <p className="mt-5 flex items-center justify-center gap-2 fs-13 font-semibold text-indigo-200">
           <ScanLine size={15} /> 3 item terbaca · Rp132.500
         </p>
         <span className="mx-auto mt-auto mb-12 h-16 w-16 rounded-full border-4 border-white bg-white/20" />
@@ -716,14 +759,14 @@ function PhoneInput({ mode }: { mode: GuestInputMode }) {
       <AppTop sub="Input cepat" title="Catat" />
       <div className="px-4">
         <div className="rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-          <p className="text-[15px] font-medium text-slate-900">
+          <p className="fs-15 font-medium text-slate-900">
             makan siang 30rb bca
             <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-indigo-600 align-middle" />
           </p>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {['Pengeluaran', 'Rp30.000', 'Makan', 'BCA'].map((t) => (
-            <span key={t} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700">
+            <span key={t} className="rounded-full bg-indigo-50 px-2.5 py-1 fs-11 font-bold text-indigo-700">
               {t}
             </span>
           ))}
@@ -732,7 +775,7 @@ function PhoneInput({ mode }: { mode: GuestInputMode }) {
           {'qwertyuiopasdfghjkl'.split('').map((k) => (
             <span
               key={k}
-              className="flex h-8 items-center justify-center rounded-md bg-white text-[12px] text-slate-600 shadow-[0_1px_0_rgba(15,23,42,0.1)]"
+              className="flex h-8 items-center justify-center rounded-md bg-white fs-12 text-slate-600 shadow-[0_1px_0_rgba(15,23,42,0.1)]"
             >
               {k}
             </span>
@@ -747,8 +790,8 @@ function PhoneLock({ on, time, now }: { on: boolean; time: string; now: Date | n
   const date = now ? now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   return (
     <div className="flex h-full flex-col items-center bg-[radial-gradient(120%_70%_at_50%_0%,#4338ca,#1e1b4b_70%)] px-4 pt-16 text-white">
-      <p className="text-[13px] font-semibold text-white/70">{date}</p>
-      <p className="mt-1 text-[68px] font-extrabold leading-none tracking-tight">{time}</p>
+      <p className="fs-13 font-semibold text-white/70">{date}</p>
+      <p className="mt-1 fsh-68 font-extrabold leading-none tracking-tight">{time}</p>
       <div
         className={cn(
           'mt-10 w-full rounded-[22px] bg-white/15 p-3.5 backdrop-blur-md transition-all duration-500',
@@ -760,16 +803,16 @@ function PhoneLock({ on, time, now }: { on: boolean; time: string; now: Date | n
             <Image src="/images/Logo-new.png" alt="" width={24} height={24} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="flex justify-between text-[11px] text-white/70">
+            <p className="flex justify-between fs-11 text-white/70">
               <span>Leosiqra</span>
               <span>sekarang</span>
             </p>
-            <p className="text-[14px] font-bold">Waktunya tutup hari</p>
-            <p className="text-[12px] text-white/80">Semenit bareng Leo: catat yang tadi, lalu istirahat.</p>
+            <p className="fs-14 font-bold">Waktunya tutup hari</p>
+            <p className="fs-12 text-white/80">Semenit bareng Leo: catat yang tadi, lalu istirahat.</p>
           </div>
         </div>
       </div>
-      {!on && <p className="mt-4 text-[12px] text-white/60">Pengingat mati</p>}
+      {!on && <p className="mt-4 fs-12 text-white/60">Pengingat mati</p>}
     </div>
   );
 }
@@ -782,14 +825,14 @@ function PhoneHistory({ draftOk, draft }: { draftOk: boolean; draft: ReturnType<
       <div className="px-4">
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-            <p className="text-[11px] font-semibold text-slate-500">Masuk</p>
-            <p className="text-[14px] font-extrabold text-emerald-600">
+            <p className="fs-11 font-semibold text-slate-500">Masuk</p>
+            <p className="fs-14 font-extrabold text-emerald-600">
               {draftOk && income ? formatIDR(draft!.amount!) : 'Rp0'}
             </p>
           </div>
           <div className="rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-            <p className="text-[11px] font-semibold text-slate-500">Keluar</p>
-            <p className="text-[14px] font-extrabold text-slate-900">
+            <p className="fs-11 font-semibold text-slate-500">Keluar</p>
+            <p className="fs-14 font-extrabold text-slate-900">
               {draftOk && !income ? formatIDR(draft!.amount!) : 'Rp0'}
             </p>
           </div>
@@ -805,12 +848,12 @@ function PhoneHistory({ draftOk, draft }: { draftOk: boolean; draft: ReturnType<
               {income ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold">{draft.note || 'Catatan'}</p>
-              <p className="text-[11px] text-slate-500">
+              <p className="truncate fs-14 font-semibold">{draft.note || 'Catatan'}</p>
+              <p className="fs-11 text-slate-500">
                 {draft.subCategory || draft.category || (income ? 'Pemasukan' : 'Pengeluaran')}
               </p>
             </div>
-            <p className={cn('text-[13px] font-bold', income ? 'text-emerald-600' : 'text-slate-900')}>
+            <p className={cn('fs-13 font-bold', income ? 'text-emerald-600' : 'text-slate-900')}>
               {income ? '+' : '−'}
               {formatIDR(draft.amount!)}
             </p>
@@ -818,7 +861,7 @@ function PhoneHistory({ draftOk, draft }: { draftOk: boolean; draft: ReturnType<
         ) : (
           <div className="mt-14 flex flex-col items-center text-center">
             <LeoMascot mood="watch" size={110} />
-            <p className="mt-2 text-[13px] text-slate-500">Ketik di sebelah, muncul di sini.</p>
+            <p className="mt-2 fs-13 text-slate-500">Ketik di sebelah, muncul di sini.</p>
           </div>
         )}
       </div>
@@ -833,7 +876,7 @@ function PhoneDayOne({ g }: { g: GuestOnboarding }) {
       <AppTop sub="Leosiqra" title="Hari ke-1" />
       <div className="space-y-3 px-4">
         <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
-          <p className="flex items-center gap-1.5 text-[12px] font-bold text-white/80">
+          <p className="flex items-center gap-1.5 fs-12 font-bold text-white/80">
             <Flame size={14} /> Rutinitas mencatat
           </p>
           <div className="mt-3 flex justify-between">
@@ -841,13 +884,13 @@ function PhoneDayOne({ g }: { g: GuestOnboarding }) {
               <span key={i} className="flex flex-col items-center gap-1">
                 <span
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold',
+                    'flex h-7 w-7 items-center justify-center rounded-full fs-11 font-bold',
                     i === 0 ? 'bg-white text-indigo-700' : 'bg-white/15 text-white/70',
                   )}
                 >
                   {i === 0 ? <Check size={13} strokeWidth={3.5} /> : ''}
                 </span>
-                <span className="text-[10px] text-white/70">{d}</span>
+                <span className="fs-10 text-white/70">{d}</span>
               </span>
             ))}
           </div>
@@ -858,16 +901,16 @@ function PhoneDayOne({ g }: { g: GuestOnboarding }) {
               <Check size={16} strokeWidth={3} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold">{g.note.note}</p>
-              <p className="text-[11px] text-slate-500">Catatan pertama</p>
+              <p className="truncate fs-14 font-semibold">{g.note.note}</p>
+              <p className="fs-11 text-slate-500">Catatan pertama</p>
             </div>
-            <p className="text-[13px] font-bold">
+            <p className="fs-13 font-bold">
               {g.note.type === 'pemasukan' ? '+' : '−'}
               {formatIDR(g.note.amount)}
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl bg-white p-3.5 text-[13px] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl bg-white p-3.5 fs-13 text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
             Catatan pertama menyusul — santai.
           </div>
         )}
@@ -875,14 +918,14 @@ function PhoneDayOne({ g }: { g: GuestOnboarding }) {
           {GUEST_GOALS.filter((x) => g.goals.includes(x.id)).map((x) => (
             <span
               key={x.id}
-              className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+              className="rounded-full bg-white px-2.5 py-1 fs-11 font-bold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
             >
               {x.label}
             </span>
           ))}
         </div>
         {g.reminder.on && (
-          <p className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+          <p className="flex items-center gap-2 fs-12 font-semibold text-slate-500">
             <Bell size={13} /> Leo ingetin jam {g.reminder.time}
           </p>
         )}

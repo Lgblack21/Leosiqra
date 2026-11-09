@@ -105,7 +105,7 @@ export function KalenderView({
         >
           <ChevronLeft size={18} />
         </button>
-        <span className="min-w-[120px] text-center text-[15px] font-extrabold text-slate-900 dark:text-white">
+        <span className="min-w-[120px] text-center fs-15 font-extrabold text-slate-900 dark:text-white">
           {view === 'bulan' ? `${MONTHS[month]} ${year}` : year}
         </span>
         <button
@@ -127,7 +127,7 @@ export function KalenderView({
                 type="button"
                 onClick={() => setColorBy(k)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[12px] font-bold',
+                  'rounded-full px-3 py-1 fs-12 font-bold',
                   colorBy === k
                     ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
                     : 'text-slate-500',
@@ -145,7 +145,7 @@ export function KalenderView({
               type="button"
               onClick={() => setView(k)}
               className={cn(
-                'rounded-full px-3.5 py-1 text-[12px] font-bold',
+                'rounded-full px-3.5 py-1 fs-12 font-bold',
                 view === k
                   ? 'bg-white text-slate-900 dark:bg-slate-900 dark:text-white'
                   : 'text-white/70 dark:text-slate-500',
@@ -179,7 +179,7 @@ export function KalenderView({
                 }}
                 className="rounded-[20px] bg-white p-2.5 text-left ring-1 ring-slate-100 transition-shadow hover:shadow-md disabled:opacity-60 disabled:hover:shadow-none dark:bg-slate-900 dark:ring-slate-800"
               >
-                <p className="mb-1.5 text-[12px] font-bold text-slate-700 dark:text-slate-200">{name}</p>
+                <p className="mb-1.5 fs-12 font-bold text-slate-700 dark:text-slate-200">{name}</p>
                 <div className="grid grid-cols-7 gap-[3px]">
                   {Array.from({ length: lead }, (_, i) => (
                     <span key={`x${i}`} />
@@ -208,7 +208,7 @@ export function KalenderView({
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 fs-11 text-slate-500">
           {colorBy === 'mood' ? (
             MOODS.map((m) => (
               <span key={m.id} className="inline-flex items-center gap-1">
@@ -241,10 +241,7 @@ export function KalenderView({
         <div className="rounded-[28px] bg-white p-2.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-4">
           <div className="mb-1.5 grid grid-cols-7 gap-1.5 md:gap-2">
             {WEEK.map((w, i) => (
-              <span
-                key={w}
-                className={cn('text-center text-[11px] font-bold', i === 6 ? 'text-rose-400' : 'text-slate-400')}
-              >
+              <span key={w} className={cn('text-center fs-11 font-bold', i === 6 ? 'text-rose-400' : 'text-slate-400')}>
                 {w}
               </span>
             ))}
@@ -287,7 +284,7 @@ export function KalenderView({
                   {item && !img && <LeoFace mood={item.mood} className="absolute inset-0 m-auto h-[76%] w-[76%]" />}
                   <span
                     className={cn(
-                      'absolute left-1 top-1 rounded-md px-1 text-[10px] font-extrabold leading-4 md:left-1.5 md:top-1.5 md:text-[11px]',
+                      'absolute left-1 top-1 rounded-md px-1 fs-10 font-extrabold leading-4 md:left-1.5 md:top-1.5 md:fs-11',
                       img
                         ? 'bg-black/45 text-white'
                         : future
@@ -299,7 +296,7 @@ export function KalenderView({
                   </span>
                   {m && (
                     <span
-                      className="absolute bottom-0.5 right-0.5 text-[11px] leading-none md:bottom-1 md:right-1 md:text-[14px]"
+                      className="absolute bottom-0.5 right-0.5 fs-11 leading-none md:bottom-1 md:right-1 md:fs-14"
                       aria-hidden
                     >
                       {m.emoji}
@@ -314,11 +311,11 @@ export function KalenderView({
 
       <aside className="space-y-3">
         <div className="rounded-[24px] bg-gradient-to-br from-amber-100 via-pink-100 to-violet-100 p-4 dark:from-amber-500/15 dark:via-pink-500/15 dark:to-violet-500/15">
-          <p className="text-[12px] font-semibold text-slate-600 dark:text-slate-300">
+          <p className="fs-12 font-semibold text-slate-600 dark:text-slate-300">
             {MONTHS[month]} {year}
           </p>
-          <p className="text-[26px] font-black tracking-tight text-slate-900 dark:text-white">
-            {monthItems.length} <span className="text-[14px] font-bold text-slate-500">hari bercerita</span>
+          <p className="fsh-26 font-black tracking-tight text-slate-900 dark:text-white">
+            {monthItems.length} <span className="fs-14 font-bold text-slate-500">hari bercerita</span>
           </p>
           <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-white/70 dark:bg-slate-900/50">
             {moodTotal > 0 &&
@@ -326,7 +323,7 @@ export function KalenderView({
                 .filter((x) => x.n)
                 .map((x) => <span key={x.id} style={{ width: `${(x.n / moodTotal) * 100}%`, background: x.color }} />)}
           </div>
-          <div className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+          <div className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 fs-11 font-semibold text-slate-600 dark:text-slate-300">
             {moodCount
               .filter((x) => x.n)
               .map((x) => (
@@ -342,8 +339,8 @@ export function KalenderView({
             <Wallet size={18} />
           </span>
           <span>
-            <span className="block text-[12px] text-slate-500">Pengeluaran bulan ini</span>
-            <span className="block text-[17px] font-extrabold text-slate-900 dark:text-white">
+            <span className="block fs-12 text-slate-500">Pengeluaran bulan ini</span>
+            <span className="block fs-17 font-extrabold text-slate-900 dark:text-white">
               {rb(Math.round(monthSpend))}
             </span>
           </span>

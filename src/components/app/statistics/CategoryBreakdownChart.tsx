@@ -44,10 +44,8 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   const item = payload[0].payload;
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-lg px-3 py-2">
-      <p className="text-[11px] font-black text-slate-900 dark:text-white">{item.category}</p>
-      <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">
-        {formatFullIDR(item.amount)}
-      </p>
+      <p className="fs-11 font-black text-slate-900 dark:text-white">{item.category}</p>
+      <p className="fs-11 font-bold text-slate-500 dark:text-slate-400 tabular-nums">{formatFullIDR(item.amount)}</p>
     </div>
   );
 }

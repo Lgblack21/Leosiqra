@@ -202,9 +202,9 @@ export function RekapPanel({
   if (!status.all)
     return (
       <div className="rounded-[22px] bg-white p-5 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-        <p className="text-[30px]">🗺️</p>
-        <p className="mt-1 text-[15px] font-black">Belum ada wilayah untuk direkap</p>
-        <p className="mx-auto mt-1 max-w-xs text-[12.5px] text-slate-500">
+        <p className="fsh-30">🗺️</p>
+        <p className="mt-1 fs-15 font-black">Belum ada wilayah untuk direkap</p>
+        <p className="mx-auto mt-1 max-w-xs fs-12.5 text-slate-500">
           Tandai lokasi pengeluaranmu dulu — rekap per kecamatan muncul otomatis.
         </p>
       </div>
@@ -214,7 +214,7 @@ export function RekapPanel({
     <div className="space-y-4">
       {status.busy || rekap.pending ? (
         <div className="rounded-2xl bg-indigo-50 px-3.5 py-2.5 dark:bg-indigo-500/10">
-          <p className="text-[12.5px] font-bold text-indigo-800 dark:text-indigo-200">
+          <p className="fs-12.5 font-bold text-indigo-800 dark:text-indigo-200">
             {status.stalled
               ? 'Sebagian wilayah belum bisa dikenali sekarang — coba buka lagi nanti.'
               : `Mengenali wilayah… ${status.known}/${status.all} tempat`}
@@ -230,21 +230,19 @@ export function RekapPanel({
 
       {top ? (
         <div className="overflow-hidden rounded-[22px] bg-slate-950 p-4 text-white">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50">
-            Wilayah terboros · {periodLabel}
-          </p>
-          <p className="mt-1 text-[24px] font-black leading-tight">
+          <p className="fs-11 font-black uppercase tracking-[0.18em] text-white/50">Wilayah terboros · {periodLabel}</p>
+          <p className="mt-1 fsh-24 font-black leading-tight">
             {LEVEL_NOTE[top.level]} {top.name}
           </p>
-          <p className="text-[12.5px] text-white/60">{top.kota ?? ''}</p>
+          <p className="fs-12.5 text-white/60">{top.kota ?? ''}</p>
           <div className="mt-3 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[22px] font-black tabular-nums">{rp(top.total)}</p>
-              <p className="text-[12px] text-white/60">
+              <p className="fsh-22 font-black tabular-nums">{rp(top.total)}</p>
+              <p className="fs-12 text-white/60">
                 {top.places.length} tempat · {top.visits} kunjungan
               </p>
             </div>
-            <p className="text-[34px] font-black leading-none text-fuchsia-300">{pct(top.share)}</p>
+            <p className="fsh-34 font-black leading-none text-fuchsia-300">{pct(top.share)}</p>
           </div>
           <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/10">
             {groups.slice(0, 6).map((g, i) => (
@@ -269,14 +267,14 @@ export function RekapPanel({
               key={k}
               className="rounded-2xl bg-white px-3 py-2.5 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
             >
-              <p className="text-[11px] font-bold text-slate-400">{k}</p>
-              <p className="text-[17px] font-black tabular-nums">{v}</p>
+              <p className="fs-11 font-bold text-slate-400">{k}</p>
+              <p className="fs-17 font-black tabular-nums">{v}</p>
             </div>
           ))}
         </div>
       ) : null}
       {groups.length ? (
-        <p className="text-[12.5px] leading-relaxed text-slate-500">
+        <p className="fs-12.5 leading-relaxed text-slate-500">
           {rekap.radius80 ? `80% belanjamu terjadi dalam ±${fmtKm(rekap.radius80)} dari pusat belanjamu. ` : ''}
           {fresh.length
             ? `Wilayah baru dibanding periode sebelumnya: ${fresh
@@ -306,7 +304,7 @@ export function RekapPanel({
               >
                 <span
                   className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[13px] font-black',
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl fs-13 font-black',
                     i === 0
                       ? 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -315,7 +313,7 @@ export function RekapPanel({
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-bold">
+                  <span className="block truncate fs-14 font-bold">
                     {LEVEL_NOTE[g.level]} {g.name}
                   </span>
                   <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -324,31 +322,31 @@ export function RekapPanel({
                       style={{ width: pct(g.share) }}
                     />
                   </span>
-                  <span className="mt-0.5 block truncate text-[11.5px] text-slate-500">
+                  <span className="mt-0.5 block truncate fs-11.5 text-slate-500">
                     {g.kota ? `${g.kota} · ` : ''}
                     {g.places.length} tempat · {pct(g.share)}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block text-[14px] font-black tabular-nums">{short(g.total)}</span>
+                  <span className="block fs-14 font-black tabular-nums">{short(g.total)}</span>
                   {delta !== null ? (
                     <span
                       className={cn(
-                        'block text-[11.5px] font-bold',
+                        'block fs-11.5 font-bold',
                         delta > 0.05 ? 'text-rose-600' : delta < -0.05 ? 'text-emerald-600' : 'text-slate-400',
                       )}
                     >
                       {delta > 0 ? '▲' : delta < 0 ? '▼' : '•'} {Math.abs(Math.round(delta * 100))}%
                     </span>
                   ) : hasPrev ? (
-                    <span className="block text-[11.5px] font-bold text-indigo-600">baru</span>
+                    <span className="block fs-11.5 font-bold text-indigo-600">baru</span>
                   ) : null}
                 </span>
               </button>
               {open ? (
                 <div className="space-y-1 border-t border-slate-100 px-3 py-2 dark:border-slate-800">
                   {g.places.slice(0, 5).map((p) => (
-                    <div key={p.key} className="flex items-center gap-2 text-[12.5px]">
+                    <div key={p.key} className="flex items-center gap-2 fs-12.5">
                       <span>{categoryVisual(p.category, 'pengeluaran').emoji}</span>
                       <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
                       <span className="text-slate-500">{p.visits}×</span>
@@ -362,7 +360,7 @@ export function RekapPanel({
         })}
       </ol>
       {groups.some((g) => g.level === 'kel') ? (
-        <p className="text-[11.5px] text-slate-400">
+        <p className="fs-11.5 text-slate-400">
           Kecamatan diambil dari data OpenStreetMap. Wilayah bertanda “Kel.” belum punya data kecamatan, jadi
           ditampilkan per kelurahan.
         </p>

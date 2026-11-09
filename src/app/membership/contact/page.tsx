@@ -188,17 +188,17 @@ export default function PembayaranPage() {
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[30px]">
+          <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 dark:text-white md:fsh-30">
             Upgrade & Top up
           </h1>
-          <p className="text-[14px] text-slate-500">
+          <p className="fs-14 text-slate-500">
             Langganan PRO atau isi koin — bayar transfer / QRIS, admin verifikasi maks. 1×24 jam.
           </p>
         </div>
         <div className="flex gap-2">
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold',
+              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 fs-13 font-bold',
               isPro
                 ? 'bg-gradient-to-r from-amber-300 to-yellow-200 text-amber-950'
                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -210,7 +210,7 @@ export default function PembayaranPage() {
               : 'Paket FREE'}
           </span>
           {balance !== null && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 text-[13px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 fs-13 font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
               <Coins size={15} /> {nf(balance)} koin
             </span>
           )}
@@ -225,8 +225,8 @@ export default function PembayaranPage() {
         >
           <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-600" />
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold text-emerald-900 dark:text-emerald-200">Konfirmasi {done} terkirim</p>
-            <p className="text-[13px] text-emerald-800/80 dark:text-emerald-300/80">
+            <p className="fs-15 font-bold text-emerald-900 dark:text-emerald-200">Konfirmasi {done} terkirim</p>
+            <p className="fs-13 text-emerald-800/80 dark:text-emerald-300/80">
               Admin memverifikasi maks. 1×24 jam. Status bisa dilihat di Riwayat di bawah.
             </p>
             {wa && (
@@ -234,7 +234,7 @@ export default function PembayaranPage() {
                 href={`https://wa.me/${wa}?text=${encodeURIComponent(`Halo admin Leosiqra, saya sudah kirim konfirmasi pembayaran ${done} (${me?.email ?? ''}).`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-[12px] font-bold text-white"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 fs-12 font-bold text-white"
               >
                 <MessageCircle size={14} /> Kabari admin via WhatsApp
               </a>
@@ -266,7 +266,7 @@ export default function PembayaranPage() {
                 onClick={() => switchTab(k)}
                 aria-pressed={tab === k}
                 className={cn(
-                  'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[14px] font-bold transition-colors',
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 fs-14 font-bold transition-colors',
                   tab === k ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500',
                 )}
               >
@@ -282,7 +282,7 @@ export default function PembayaranPage() {
               ))}
             </div>
           ) : !list.length ? (
-            <p className={cn(card, 'p-6 text-center text-[14px] text-slate-500')}>
+            <p className={cn(card, 'p-6 text-center fs-14 text-slate-500')}>
               {tab === 'pro' ? 'Paket PRO belum diatur admin.' : 'Paket koin belum tersedia.'}
             </p>
           ) : (
@@ -304,7 +304,7 @@ export default function PembayaranPage() {
                     )}
                   >
                     {p.isPopular && (
-                      <span className="absolute -top-2 right-3 rounded-full bg-gradient-to-r from-amber-400 to-pink-400 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow">
+                      <span className="absolute -top-2 right-3 rounded-full bg-gradient-to-r from-amber-400 to-pink-400 px-2.5 py-0.5 fs-10 font-black uppercase tracking-wide text-white shadow">
                         Populer
                       </span>
                     )}
@@ -320,11 +320,11 @@ export default function PembayaranPage() {
                     >
                       {tab === 'pro' ? <Crown size={18} /> : <Coins size={18} />}
                     </span>
-                    <span className="mt-3 text-[15px] font-bold leading-tight">
+                    <span className="mt-3 fs-15 font-bold leading-tight">
                       {tab === 'pro' ? p.name : `${nf(p.coins ?? p.price)} koin`}
                     </span>
-                    <span className="mt-1 text-[22px] font-black tracking-tight">{rp(p.price)}</span>
-                    <span className={cn('text-[12px]', on ? 'text-white/70 dark:text-slate-500' : 'text-slate-500')}>
+                    <span className="mt-1 fsh-22 font-black tracking-tight">{rp(p.price)}</span>
+                    <span className={cn('fs-12', on ? 'text-white/70 dark:text-slate-500' : 'text-slate-500')}>
                       {tab === 'pro'
                         ? months > 1
                           ? `${rp(p.price / months)}/bulan · ${months} bulan`
@@ -345,12 +345,12 @@ export default function PembayaranPage() {
           <div className={cn(card, 'p-4 md:p-5')}>
             {tab === 'pro' ? (
               <>
-                <p className="flex items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white">
+                <p className="flex items-center gap-2 fs-14 font-bold text-slate-900 dark:text-white">
                   <Crown size={16} className="text-amber-500" /> Yang kamu dapat dengan PRO
                 </p>
                 <ul className="mt-3 space-y-2.5">
                   {PRO_PERKS.map(({ icon: Icon, text }) => (
-                    <li key={text} className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300">
+                    <li key={text} className="flex items-start gap-2.5 fs-13 text-slate-600 dark:text-slate-300">
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15">
                         <Icon size={14} />
                       </span>
@@ -358,21 +358,21 @@ export default function PembayaranPage() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-[12px] text-slate-400">
+                <p className="mt-3 fs-12 text-slate-400">
                   FREE tetap bisa mencatat tanpa batas; AI dibatasi 5 chat, 3 scan & 5 catat suara per hari.
                 </p>
               </>
             ) : (
               <>
-                <p className="flex items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white">
+                <p className="flex items-center gap-2 fs-14 font-bold text-slate-900 dark:text-white">
                   <Coins size={16} className="text-amber-500" /> Koin dipakai untuk
                 </p>
-                <ul className="mt-3 space-y-2 text-[13px] text-slate-600 dark:text-slate-300">
+                <ul className="mt-3 space-y-2 fs-13 text-slate-600 dark:text-slate-300">
                   <li>✨ Ilustrasi AI Cerita Hari Ini — 1.000 koin / gambar</li>
                   <li>👑 Tukar PRO — 15.000 koin / bulan</li>
                   <li>🔌 Aktivasi aplikasi terhubung</li>
                 </ul>
-                <p className="mt-3 text-[12px] text-slate-400">
+                <p className="mt-3 fs-12 text-slate-400">
                   Koin tidak bisa dicairkan jadi uang & tidak bisa dipindah ke akun lain.
                 </p>
               </>
@@ -383,9 +383,9 @@ export default function PembayaranPage() {
         <section className={cn(card, 'h-fit space-y-4 p-4 md:p-5 lg:sticky lg:top-6')}>
           <div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
             <div className="min-w-0">
-              <p className="text-[12px] text-white/70">Total bayar</p>
-              <p className="text-[28px] font-black leading-tight tracking-tight">{pkg ? rp(pkg.price) : '—'}</p>
-              <p className="truncate text-[12px] text-white/80">
+              <p className="fs-12 text-white/70">Total bayar</p>
+              <p className="fsh-28 font-black leading-tight tracking-tight">{pkg ? rp(pkg.price) : '—'}</p>
+              <p className="truncate fs-12 text-white/80">
                 {pkg ? (isCoin(pkg) ? `${nf(pkg.coins ?? pkg.price)} koin` : pkg.name) : 'Pilih paket'}
               </p>
             </div>
@@ -393,7 +393,7 @@ export default function PembayaranPage() {
               <button
                 type="button"
                 onClick={() => copy(String(Math.round(pkg.price)), 'amount')}
-                className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold hover:bg-white/25"
+                className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 fs-12 font-bold hover:bg-white/25"
               >
                 {copied === 'amount' ? <Check size={13} /> : <Copy size={13} />}{' '}
                 {copied === 'amount' ? 'Disalin' : 'Salin'}
@@ -402,7 +402,7 @@ export default function PembayaranPage() {
           </div>
 
           <div>
-            <p className="mb-2 text-[13px] font-bold text-slate-800 dark:text-slate-100">1. Bayar ke</p>
+            <p className="mb-2 fs-13 font-bold text-slate-800 dark:text-slate-100">1. Bayar ke</p>
             <div className="mb-2 flex rounded-full bg-slate-100 p-1 dark:bg-slate-800">
               {(
                 [
@@ -415,7 +415,7 @@ export default function PembayaranPage() {
                   type="button"
                   onClick={() => setMethod(k)}
                   className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-bold',
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 fs-13 font-bold',
                     method === k
                       ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
                       : 'text-slate-500',
@@ -432,23 +432,23 @@ export default function PembayaranPage() {
                     <Building2 size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-semibold text-slate-500">{settings?.bankName}</p>
-                    <p className="text-[18px] font-black tabular-nums tracking-wide text-slate-900 dark:text-white">
+                    <p className="fs-12 font-semibold text-slate-500">{settings?.bankName}</p>
+                    <p className="fs-18 font-black tabular-nums tracking-wide text-slate-900 dark:text-white">
                       {settings?.bankNumber}
                     </p>
-                    <p className="truncate text-[12px] text-slate-500">a.n. {settings?.bankAccountName}</p>
+                    <p className="truncate fs-12 text-slate-500">a.n. {settings?.bankAccountName}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => copy(settings!.bankNumber!, 'bank')}
-                    className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200"
+                    className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200"
                   >
                     {copied === 'bank' ? <Check size={13} /> : <Copy size={13} />}{' '}
                     {copied === 'bank' ? 'Disalin' : 'Salin'}
                   </button>
                 </div>
               ) : (
-                <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                <p className="rounded-2xl bg-amber-50 p-3 fs-13 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
                   Rekening tujuan belum diatur admin. Pakai QRIS atau hubungi admin.
                 </p>
               )
@@ -464,19 +464,19 @@ export default function PembayaranPage() {
                     unoptimized
                   />
                 </div>
-                <p className="text-center text-[12px] text-slate-500">
+                <p className="text-center fs-12 text-slate-500">
                   {settings?.qrisText || 'Scan dengan aplikasi bank / e-wallet, bayar sesuai total.'}
                 </p>
               </div>
             ) : (
-              <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <p className="rounded-2xl bg-amber-50 p-3 fs-13 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
                 QRIS belum diatur admin. Pakai transfer bank.
               </p>
             )}
           </div>
 
           <div className="space-y-2.5">
-            <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">2. Kirim bukti</p>
+            <p className="fs-13 font-bold text-slate-800 dark:text-slate-100">2. Kirim bukti</p>
             <input
               ref={fileRef}
               type="file"
@@ -503,10 +503,10 @@ export default function PembayaranPage() {
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-bold text-slate-800 dark:text-slate-100">
+                <span className="block fs-14 font-bold text-slate-800 dark:text-slate-100">
                   {uploading ? 'Mengunggah…' : proofUrl ? 'Bukti terunggah' : 'Unggah screenshot bukti bayar'}
                 </span>
-                <span className="block text-[12px] text-slate-500">
+                <span className="block fs-12 text-slate-500">
                   {proofUrl ? 'Ketuk untuk mengganti' : 'JPG / PNG, maks. 5 MB'}
                 </span>
               </span>
@@ -520,18 +520,18 @@ export default function PembayaranPage() {
               value={ref}
               onChange={(e) => setRef(e.target.value.slice(0, 80))}
               placeholder="No. referensi transaksi (opsional jika ada bukti)"
-              className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[14px] outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+              className="w-full rounded-2xl bg-slate-50 px-4 py-3 fs-14 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
             />
             <input
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 300))}
               placeholder="Catatan untuk admin (opsional)"
-              className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[14px] outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+              className="w-full rounded-2xl bg-slate-50 px-4 py-3 fs-14 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
             />
           </div>
 
           {error && (
-            <p role="alert" className="text-[13px] font-semibold text-rose-600">
+            <p role="alert" className="fs-13 font-semibold text-rose-600">
               {error}
             </p>
           )}
@@ -539,11 +539,11 @@ export default function PembayaranPage() {
             type="button"
             onClick={submit}
             disabled={!pkg || sending || uploading}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-[15px] font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-slate-900"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 fs-15 font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-slate-900"
           >
             {sending ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />} Kirim konfirmasi pembayaran
           </button>
-          <p className="text-center text-[11px] text-slate-400">
+          <p className="text-center fs-11 text-slate-400">
             Atas nama akun {me?.name || me?.email || 'kamu'}
             {me?.email && me?.name ? ` · ${me.email}` : ''}.{' '}
             {settings?.billingEmail ? `Kendala? ${settings.billingEmail}` : ''}
@@ -553,7 +553,7 @@ export default function PembayaranPage() {
 
       {history.length > 0 && (
         <section className={cn(card, 'p-4 md:p-5')}>
-          <p className="mb-2 text-[15px] font-bold text-slate-900 dark:text-white">Riwayat pembayaranku</p>
+          <p className="mb-2 fs-15 font-bold text-slate-900 dark:text-white">Riwayat pembayaranku</p>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {history.map((h) => {
               let info: { name?: string; kind?: string } = {};
@@ -579,10 +579,10 @@ export default function PembayaranPage() {
                     {info.kind === 'coin' ? <Coins size={16} /> : <Crown size={16} />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold text-slate-800 dark:text-slate-100">
+                    <span className="block truncate fs-14 font-semibold text-slate-800 dark:text-slate-100">
                       {info.name ?? 'Pembayaran'}
                     </span>
-                    <span className="block text-[12px] text-slate-400">
+                    <span className="block fs-12 text-slate-400">
                       {new Date(h.created_at).toLocaleString('id-ID', {
                         day: 'numeric',
                         month: 'short',
@@ -593,10 +593,7 @@ export default function PembayaranPage() {
                     </span>
                   </span>
                   <span
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold',
-                      st.cls,
-                    )}
+                    className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 fs-12 font-bold', st.cls)}
                   >
                     <st.Icon size={13} /> {st.label}
                   </span>

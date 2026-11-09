@@ -172,7 +172,7 @@ export function RecurringSheet({ isOpen, onClose, accounts, categories, editing 
         />
 
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
             {type === 'Tabungan' ? 'Pos tabungan' : 'Kategori'}
           </p>
           {options.length > 0 && (
@@ -226,7 +226,7 @@ export function RecurringSheet({ isOpen, onClose, accounts, categories, editing 
           label={type === 'Pemasukan' ? 'Masuk ke rekening' : 'Dari rekening'}
         />
         <div>
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 block">
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-2 px-1 block">
             Tanggal berikutnya
           </label>
           <input
@@ -238,7 +238,7 @@ export function RecurringSheet({ isOpen, onClose, accounts, categories, editing 
             aria-label="Tanggal berikutnya"
           />
           {dateInvalid && !unchangedDate && (
-            <p className="mt-2 px-1 text-[11px] font-bold text-rose-500">
+            <p className="mt-2 px-1 fs-11 font-bold text-rose-500">
               {missedToday
                 ? 'Pencatatan hari ini sudah lewat (jam 10:00). Pilih besok atau setelahnya.'
                 : 'Tanggal lampau tidak akan dijalankan — pilih tanggal mendatang.'}
@@ -252,7 +252,7 @@ export function RecurringSheet({ isOpen, onClose, accounts, categories, editing 
           className={inputClass}
           aria-label="Catatan"
         />
-        <p className="text-[11px] text-slate-400 px-1">
+        <p className="fs-11 text-slate-400 px-1">
           Dicatat otomatis tiap jam 10:00 WIB pada tanggalnya, dan saldo rekening ikut berubah.
         </p>
       </div>

@@ -44,39 +44,39 @@ export function PajakKesehatan({ year }: { year: number }) {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Biaya kesehatan setahun</p>
+          <p className="fs-10 font-black uppercase tracking-widest text-slate-400">Biaya kesehatan setahun</p>
           <p className="mt-1 text-2xl font-black text-slate-900">{data ? rp(costs) : '…'}</p>
           <div className="mt-3 space-y-1.5">
             {(data?.costs.bySub ?? []).map((s) => (
-              <div key={s.sub} className="flex justify-between text-[13px]">
+              <div key={s.sub} className="flex justify-between fs-13">
                 <span className="text-slate-500">{s.sub === 'Asuransi' ? 'Premi asuransi' : s.sub}</span>
                 <span className="font-bold text-slate-800">{rp(s.total)}</span>
               </div>
             ))}
             {data && data.costs.bySub.length === 0 && (
-              <p className="text-[13px] text-slate-400">Belum ada biaya kesehatan tercatat.</p>
+              <p className="fs-13 text-slate-400">Belum ada biaya kesehatan tercatat.</p>
             )}
           </div>
         </div>
 
         <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Klaim asuransi cair</p>
+          <p className="fs-10 font-black uppercase tracking-widest text-slate-400">Klaim asuransi cair</p>
           <p className="mt-1 text-2xl font-black text-emerald-600">{data ? rp(cair) : '…'}</p>
-          <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-3 fs-13 leading-relaxed text-slate-500">
             Biaya bersih setelah klaim (di luar premi):{' '}
             <span className="font-bold text-slate-800">{data ? rp(Math.max(0, costs - premi - cair)) : '…'}</span>
           </p>
-          <p className="mt-1 text-[12px] text-slate-400">Klaim/penggantian biaya dari asuransi bukan objek PPh.</p>
+          <p className="mt-1 fs-12 text-slate-400">Klaim/penggantian biaya dari asuransi bukan objek PPh.</p>
         </div>
 
         <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Polis tercatat</p>
+          <p className="fs-10 font-black uppercase tracking-widest text-slate-400">Polis tercatat</p>
           <div className="mt-2 space-y-2">
-            {policies.length === 0 && <p className="text-[13px] text-slate-400">Belum ada polis di Sehatku.</p>}
+            {policies.length === 0 && <p className="fs-13 text-slate-400">Belum ada polis di Sehatku.</p>}
             {policies.slice(0, 5).map((p) => (
               <div key={p.id} className="flex items-start gap-2">
                 <ShieldCheck size={16} className="mt-0.5 shrink-0 text-sky-500" />
-                <div className="min-w-0 text-[13px]">
+                <div className="min-w-0 fs-13">
                   <p className="truncate font-bold text-slate-800">
                     {p.insurer_name}
                     {p.product ? ` · ${p.product}` : ''}
@@ -88,7 +88,7 @@ export function PajakKesehatan({ year }: { year: number }) {
                       : ''}
                   </p>
                   {cashValueKinds.has(p.kind) && (
-                    <p className="text-[11.5px] font-semibold text-amber-600">
+                    <p className="fs-11.5 font-semibold text-amber-600">
                       Kalau punya nilai tunai, masukkan ke Daftar Harta SPT.
                     </p>
                   )}
@@ -96,13 +96,13 @@ export function PajakKesehatan({ year }: { year: number }) {
               </div>
             ))}
           </div>
-          <Link href="/membership/sehat#asuransi" className="mt-3 inline-block text-[12px] font-bold text-indigo-600">
+          <Link href="/membership/sehat#asuransi" className="mt-3 inline-block fs-12 font-bold text-indigo-600">
             Kelola di Sehatku ›
           </Link>
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-[24px] bg-amber-50 p-5 text-[13px] leading-relaxed text-amber-900">
+      <div className="flex items-start gap-3 rounded-[24px] bg-amber-50 p-5 fs-13 leading-relaxed text-amber-900">
         <Info size={18} className="mt-0.5 shrink-0" />
         <p>
           Biaya berobat dan premi asuransi pribadi <strong>tidak mengurangi pajak penghasilan</strong> di SPT orang

@@ -101,18 +101,18 @@ export default function AppDebtsPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-rose-500 text-white p-4 shadow-lg shadow-rose-200/50 dark:shadow-none">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Sisa hutang</p>
+          <p className="fs-10 font-bold uppercase tracking-wider text-white/80">Sisa hutang</p>
           <p key={sisaHutang} className="mt-1 text-lg font-black tabular-nums truncate animate-in">
             {formatIDR(sisaHutang)}
           </p>
-          <p className="text-[10px] text-white/70">yang harus kamu bayar</p>
+          <p className="fs-10 text-white/70">yang harus kamu bayar</p>
         </div>
         <div className="rounded-3xl bg-emerald-500 text-white p-4 shadow-lg shadow-emerald-200/50 dark:shadow-none">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Sisa piutang</p>
+          <p className="fs-10 font-bold uppercase tracking-wider text-white/80">Sisa piutang</p>
           <p key={sisaPiutang} className="mt-1 text-lg font-black tabular-nums truncate animate-in">
             {formatIDR(sisaPiutang)}
           </p>
-          <p className="text-[10px] text-white/70">yang akan kamu terima</p>
+          <p className="fs-10 text-white/70">yang akan kamu terima</p>
         </div>
       </div>
 
@@ -192,7 +192,7 @@ export default function AppDebtsPage() {
                       <p className="text-sm font-black text-slate-900 dark:text-white truncate">
                         {d.lenderName || d.note || d.category}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="fs-11 text-slate-400 truncate">
                         <span className={isHutang ? 'text-rose-500' : 'text-emerald-600'}>
                           {isHutang ? 'Hutang' : 'Piutang'}
                         </span>
@@ -205,7 +205,7 @@ export default function AppDebtsPage() {
                           return (
                             <p
                               className={cn(
-                                'mt-0.5 text-[11px] font-bold truncate',
+                                'mt-0.5 fs-11 font-bold truncate',
                                 lbl.urgent ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400',
                               )}
                             >
@@ -224,7 +224,7 @@ export default function AppDebtsPage() {
                         {rem <= 0 ? 'Lunas' : formatMoney(rem, d.currency || 'IDR')}
                       </p>
                       {rem > 0 && rem < principal && (
-                        <p className="text-[10px] text-slate-400 tabular-nums">
+                        <p className="fs-10 text-slate-400 tabular-nums">
                           dari {formatMoney(principal, d.currency || 'IDR')}
                         </p>
                       )}

@@ -104,20 +104,20 @@ export function HookSection({
 
   return (
     <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
-      <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900 dark:text-white">
+      <p className="flex items-center gap-1.5 fs-14 font-extrabold text-slate-900 dark:text-white">
         <PlugZap size={16} className="text-emerald-500" /> Sambungkan website (otomatis)
       </p>
-      <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 fs-12 text-slate-500 dark:text-slate-400">
         Setiap order yang dibayar di websitemu langsung masuk ke kasir & saldo, dan harga kasir bisa ikut harga website
         — tanpa input manual.
       </p>
       {error && (
-        <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="mt-2 fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
       {!shop.hookReady ? (
-        <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+        <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2.5 fs-12 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
           Fitur ini sedang disiapkan di server — sebentar lagi bisa dipakai.
         </p>
       ) : (
@@ -128,7 +128,7 @@ export function HookSection({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
               </span>
-              <span className="min-w-0 flex-1 text-[12px] text-emerald-900 dark:text-emerald-200">
+              <span className="min-w-0 flex-1 fs-12 text-emerald-900 dark:text-emerald-200">
                 <b>Tersambung</b>
                 {accName ? ` → ${accName}` : ''} · {ago(shop.hookLastAt)}
               </span>
@@ -137,7 +137,7 @@ export function HookSection({
 
           {made ? (
             <div className="mt-3 space-y-2.5 rounded-2xl bg-slate-950 p-3 text-white">
-              <p className="flex items-start gap-1.5 text-[12px] font-semibold text-amber-300">
+              <p className="flex items-start gap-1.5 fs-12 font-semibold text-amber-300">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />{' '}
                 <span>
                   Kunci hanya tampil SEKALI. Simpan di server websitemu (environment variable{' '}
@@ -149,11 +149,9 @@ export function HookSection({
                 ['Kunci rahasia', made.key],
               ].map(([k, v]) => (
                 <div key={k}>
-                  <p className="text-[11px] text-white/50">{k}</p>
+                  <p className="fs-11 text-white/50">{k}</p>
                   <div className="flex items-center gap-2">
-                    <code className="min-w-0 flex-1 truncate rounded-lg bg-white/10 px-2.5 py-1.5 text-[12px]">
-                      {v}
-                    </code>
+                    <code className="min-w-0 flex-1 truncate rounded-lg bg-white/10 px-2.5 py-1.5 fs-12">{v}</code>
                     <button
                       type="button"
                       onClick={() => copy(v, `${k} tersalin.`)}
@@ -168,7 +166,7 @@ export function HookSection({
               <button
                 type="button"
                 onClick={() => setMade(null)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-full bg-white py-2 text-[12px] font-bold text-slate-900"
+                className="flex w-full items-center justify-center gap-1.5 rounded-full bg-white py-2 fs-12 font-bold text-slate-900"
               >
                 <Check size={13} /> Sudah saya simpan
               </button>
@@ -195,7 +193,7 @@ export function HookSection({
                   type="button"
                   onClick={make}
                   disabled={Boolean(busy)}
-                  className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-2.5 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-2.5 fs-13 font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
                   {busy === 'make' ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -212,7 +210,7 @@ export function HookSection({
                     onClick={off}
                     disabled={Boolean(busy)}
                     className={cn(
-                      'flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-bold disabled:opacity-40',
+                      'flex items-center justify-center gap-1.5 rounded-full py-2.5 fs-13 font-bold disabled:opacity-40',
                       confirmOff
                         ? 'bg-rose-600 text-white'
                         : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300',
@@ -224,7 +222,7 @@ export function HookSection({
                 )}
               </div>
               {shop.hookOn && (
-                <p className="text-[11px] text-slate-400">
+                <p className="fs-11 text-slate-400">
                   Ganti kunci = kunci lama langsung tidak berlaku (pasang kunci baru di websitemu).
                 </p>
               )}
@@ -233,10 +231,10 @@ export function HookSection({
 
           {(shop.hookOn || made) && (
             <details className="mt-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-              <summary className="cursor-pointer text-[12px] font-bold text-slate-700 dark:text-slate-200">
+              <summary className="cursor-pointer fs-12 font-bold text-slate-700 dark:text-slate-200">
                 Cara pasang di websitemu
               </summary>
-              <ul className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+              <ul className="mt-2 space-y-1 fs-11 text-slate-600 dark:text-slate-300">
                 <li>
                   <b>POST</b> ke alamat di atas, header <code>Authorization: Bearer &lt;kunci&gt;</code>, body JSON.
                 </li>
@@ -257,7 +255,7 @@ export function HookSection({
                     onClick={() => setTab(t)}
                     aria-pressed={tab === t}
                     className={cn(
-                      'flex-1 rounded-full py-1.5 text-[11px] font-bold',
+                      'flex-1 rounded-full py-1.5 fs-11 font-bold',
                       tab === t ? 'bg-slate-900 text-white dark:bg-violet-600' : 'text-slate-500',
                     )}
                   >
@@ -265,13 +263,13 @@ export function HookSection({
                   </button>
                 ))}
               </div>
-              <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200">
+              <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 fs-11 leading-relaxed text-emerald-200">
                 {code}
               </pre>
               <button
                 type="button"
                 onClick={() => copy(code, 'Contoh kode tersalin.')}
-                className="mt-2 flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-300"
+                className="mt-2 flex items-center gap-1 fs-11 font-bold text-violet-600 dark:text-violet-300"
               >
                 <Copy size={12} /> Salin contoh kode
               </button>
@@ -279,11 +277,11 @@ export function HookSection({
           )}
           {(shop.hookOn || made) && (
             <details className="mt-3 rounded-2xl bg-sky-50 p-3 dark:bg-sky-500/10">
-              <summary className="cursor-pointer text-[12px] font-bold text-sky-900 dark:text-sky-200">
+              <summary className="cursor-pointer fs-12 font-bold text-sky-900 dark:text-sky-200">
                 Perbarui harga otomatis dari website
                 {shop.catalogSyncedAt ? ` · terakhir ${ago(shop.catalogSyncedAt)}` : ''}
               </summary>
-              <ul className="mt-2 space-y-1 text-[11px] text-sky-900/80 dark:text-sky-100/80">
+              <ul className="mt-2 space-y-1 fs-11 text-sky-900/80 dark:text-sky-100/80">
                 <li>
                   <b>POST</b> ke{' '}
                   <code>
@@ -303,13 +301,13 @@ export function HookSection({
                 </li>
                 <li>Kirim setiap harga berubah, atau jadwalkan (cron) tiap jam. Maks 120 produk.</li>
               </ul>
-              <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200">
+              <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 fs-11 leading-relaxed text-emerald-200">
                 {priceCode}
               </pre>
               <button
                 type="button"
                 onClick={() => copy(priceCode, 'Contoh kode harga tersalin.')}
-                className="mt-2 flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-300"
+                className="mt-2 flex items-center gap-1 fs-11 font-bold text-violet-600 dark:text-violet-300"
               >
                 <Copy size={12} /> Salin contoh kode
               </button>

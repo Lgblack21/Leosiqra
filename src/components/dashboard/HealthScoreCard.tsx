@@ -37,8 +37,8 @@ export function HealthScoreCard({
           <HeartPulse size={20} />
         </span>
         <div className="min-w-0">
-          <p className="text-[15px] font-bold text-slate-900 dark:text-white">Skor kesehatan finansial</p>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400">{result.reason}</p>
+          <p className="fs-15 font-bold text-slate-900 dark:text-white">Skor kesehatan finansial</p>
+          <p className="fs-13 text-slate-500 dark:text-slate-400">{result.reason}</p>
         </div>
       </div>
     );
@@ -79,18 +79,18 @@ export function HealthScoreCard({
             />
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[24px] font-extrabold leading-none text-slate-900 tabular-nums dark:text-white">
+            <span className="fsh-24 font-extrabold leading-none text-slate-900 tabular-nums dark:text-white">
               {result.score}
             </span>
-            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">/100</span>
+            <span className="fs-10 font-semibold text-slate-400 dark:text-slate-500">/100</span>
           </span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2 text-[16px] font-bold text-slate-900 dark:text-white">
+          <p className="flex flex-wrap items-center gap-2 fs-16 font-bold text-slate-900 dark:text-white">
             Skor kesehatan finansial
-            <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', st.chip)}>{result.grade}</span>
+            <span className={cn('rounded-full px-2 py-0.5 fs-11 font-bold', st.chip)}>{result.grade}</span>
           </p>
-          <p className="mt-1 flex items-start gap-1.5 text-[13px] text-slate-600 dark:text-slate-300">
+          <p className="mt-1 flex items-start gap-1.5 fs-13 text-slate-600 dark:text-slate-300">
             <Lightbulb size={14} className="mt-0.5 shrink-0 text-amber-500" />
             <span>
               <b className="font-semibold text-slate-800 dark:text-slate-100">{result.weakest.label}:</b>{' '}
@@ -103,7 +103,7 @@ export function HealthScoreCard({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-3 flex items-center gap-1 text-[13px] font-semibold text-indigo-600 dark:text-indigo-400"
+        className="mt-3 flex items-center gap-1 fs-13 font-semibold text-indigo-600 dark:text-indigo-400"
       >
         {open ? 'Sembunyikan rincian' : 'Lihat rincian'}{' '}
         <ChevronDown size={14} className={cn('transition-transform', open && 'rotate-180')} />
@@ -112,7 +112,7 @@ export function HealthScoreCard({
         <ul className="mt-3 space-y-3">
           {result.parts.map((p) => (
             <li key={p.key}>
-              <div className="flex items-baseline justify-between gap-3 text-[13px]">
+              <div className="flex items-baseline justify-between gap-3 fs-13">
                 <span className="font-semibold text-slate-800 dark:text-slate-100">{p.label}</span>
                 <span className="tabular-nums text-slate-500">{Math.round(p.score)}</span>
               </div>
@@ -122,10 +122,10 @@ export function HealthScoreCard({
                   style={{ width: `${Math.max(3, p.score)}%` }}
                 />
               </div>
-              <p className="mt-1 text-[12px] text-slate-500">{p.detail}</p>
+              <p className="mt-1 fs-12 text-slate-500">{p.detail}</p>
             </li>
           ))}
-          <li className="pt-1 text-[11px] text-slate-400">
+          <li className="pt-1 fs-11 text-slate-400">
             Panduan kebiasaan dari catatanmu sendiri, bukan nasihat keuangan. Beli/jual investasi, transfer & cicilan
             hutang tidak dihitung sebagai pemasukan/pengeluaran.
           </li>

@@ -79,7 +79,7 @@ const Group = ({ children, className }: { children: React.ReactNode; className?:
 );
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <p className="px-1 pb-2 pt-1 text-[14px] text-slate-500">{children}</p>
+  <p className="px-1 pb-2 pt-1 fs-14 text-slate-500">{children}</p>
 );
 
 function Toggle({
@@ -133,8 +133,8 @@ function Row({
       <div className="flex items-center gap-4">
         <Icon size={20} className="shrink-0 text-slate-500" strokeWidth={1.8} />
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-medium text-slate-900">{title}</p>
-          {desc && <p className="text-[13px] leading-snug text-slate-500">{desc}</p>}
+          <p className="fs-16 font-medium text-slate-900">{title}</p>
+          {desc && <p className="fs-13 leading-snug text-slate-500">{desc}</p>}
         </div>
         {action}
       </div>
@@ -144,7 +144,7 @@ function Row({
 }
 
 const pill =
-  'shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60';
+  'shrink-0 rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60';
 
 // Profil yang dibutuhkan bagian ini (email, HP, alamat, status 2FA).
 function useAccountProfile() {
@@ -203,19 +203,19 @@ function KontakView() {
     }
   };
   const input =
-    'mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400';
+    'mt-1.5 w-full rounded-2xl bg-white px-4 py-3 fs-16 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400';
   return (
     <div className="space-y-4">
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+          <span className="flex items-center gap-1.5 px-1 fs-14 text-slate-500">
             <Mail size={14} /> Email
           </span>
           <input value={profile.email} disabled className={cn(input, 'text-slate-400')} />
-          <span className="mt-1 block px-1 text-[12px] text-slate-400">Email tidak bisa diubah.</span>
+          <span className="mt-1 block px-1 fs-12 text-slate-400">Email tidak bisa diubah.</span>
         </label>
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+          <span className="flex items-center gap-1.5 px-1 fs-14 text-slate-500">
             <Phone size={14} /> Nomor HP
           </span>
           <input
@@ -227,7 +227,7 @@ function KontakView() {
           />
         </label>
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+          <span className="flex items-center gap-1.5 px-1 fs-14 text-slate-500">
             <MapPin size={14} /> Alamat
           </span>
           <textarea
@@ -243,7 +243,7 @@ function KontakView() {
         type="button"
         onClick={save}
         disabled={saving || !user}
-        className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+        className="w-full rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white disabled:opacity-60"
       >
         {saving ? 'Menyimpan…' : 'Simpan'}
       </button>
@@ -360,7 +360,7 @@ function KeamananView() {
               <button
                 type="button"
                 onClick={() => setShow2FASetup(true)}
-                className="shrink-0 rounded-full bg-slate-900 px-4 py-2 text-[14px] font-semibold text-white"
+                className="shrink-0 rounded-full bg-slate-900 px-4 py-2 fs-14 font-semibold text-white"
               >
                 Aktifkan
               </button>
@@ -372,9 +372,9 @@ function KeamananView() {
       <Label>Perangkat yang masuk</Label>
       <Group>
         {sessionsLoading ? (
-          <p className="px-5 py-4 text-[14px] text-slate-400">Memuat…</p>
+          <p className="px-5 py-4 fs-14 text-slate-400">Memuat…</p>
         ) : sessions.length === 0 ? (
-          <p className="px-5 py-4 text-[14px] text-slate-500">Tidak ada sesi aktif.</p>
+          <p className="px-5 py-4 fs-14 text-slate-500">Tidak ada sesi aktif.</p>
         ) : (
           sessions.map((s) => (
             <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
@@ -384,20 +384,20 @@ function KeamananView() {
                 <Monitor size={20} className="shrink-0 text-slate-500" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-slate-900">
+                <p className="truncate fs-15 font-medium text-slate-900">
                   {s.device}
                   {s.isCurrent && (
-                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 fs-11 font-semibold text-emerald-700">
                       Perangkat ini
                     </span>
                   )}
                   {s.isPermanent && (
-                    <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                    <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 fs-11 font-semibold text-indigo-700">
                       Aplikasi
                     </span>
                   )}
                 </p>
-                <p className="text-[13px] text-slate-500">Aktif terakhir {fmt(s.lastSeenAt)}</p>
+                <p className="fs-13 text-slate-500">Aktif terakhir {fmt(s.lastSeenAt)}</p>
               </div>
               {!s.isCurrent && (
                 <button
@@ -591,21 +591,21 @@ function NotifikasiView() {
           desc="Pengingat & ringkasan ke HP atau browser ini."
           action={
             iosNeedsInstall ? (
-              <span className="text-[12px] font-semibold text-amber-600">Pasang dulu</span>
+              <span className="fs-12 font-semibold text-amber-600">Pasang dulu</span>
             ) : !supported ? (
-              <span className="text-[12px] text-slate-400">Tidak didukung</span>
+              <span className="fs-12 text-slate-400">Tidak didukung</span>
             ) : (
               <Toggle on={pushOn} onClick={togglePush} label="Notifikasi push" disabled={pushLoading} />
             )
           }
         >
           {iosNeedsInstall && (
-            <p className="text-[12px] text-slate-500">
+            <p className="fs-12 text-slate-500">
               Di iPhone, tambahkan Leosiqra ke Home Screen dulu: Share di Safari → &quot;Add to Home Screen&quot;, lalu
               buka dari ikon itu.
             </p>
           )}
-          {pushError && <p className="text-[12px] text-rose-600">{pushError}</p>}
+          {pushError && <p className="fs-12 text-rose-600">{pushError}</p>}
         </Row>
         {reminder && (
           <Row
@@ -627,7 +627,7 @@ function NotifikasiView() {
                 disabled={reminderSaving}
                 onChange={(e) => saveReminder({ on: true, time: e.target.value })}
                 aria-label="Jam pengingat"
-                className="rounded-xl bg-white px-3 py-2 text-[14px] text-slate-800 ring-1 ring-slate-200"
+                className="rounded-xl bg-white px-3 py-2 fs-14 text-slate-800 ring-1 ring-slate-200"
               >
                 {[...new Set([...REMINDER_TIMES, reminder.time])].sort().map((t) => (
                   <option key={t} value={t}>
@@ -636,7 +636,7 @@ function NotifikasiView() {
                 ))}
               </select>
             )}
-            {reminderError && <p className="text-[12px] text-rose-600">{reminderError}</p>}
+            {reminderError && <p className="fs-12 text-rose-600">{reminderError}</p>}
           </Row>
         )}
         <Row
@@ -645,13 +645,13 @@ function NotifikasiView() {
           desc="Ringkasan pemasukan, pengeluaran & anggaran tiap awal bulan."
           action={
             !reportAvailable && !reportOn && !reportLoading ? (
-              <span className="text-[12px] text-slate-400">Segera</span>
+              <span className="fs-12 text-slate-400">Segera</span>
             ) : (
               <Toggle on={reportOn} onClick={toggleReport} label="Laporan bulanan via email" disabled={reportLoading} />
             )
           }
         >
-          {reportError && <p className="text-[12px] text-rose-600">{reportError}</p>}
+          {reportError && <p className="fs-12 text-rose-600">{reportError}</p>}
         </Row>
       </Group>
       {notify && (
@@ -675,11 +675,9 @@ function NotifikasiView() {
               />
             ))}
           </Group>
-          {notifyError && <p className="px-1 text-[12px] text-rose-600">{notifyError}</p>}
+          {notifyError && <p className="px-1 fs-12 text-rose-600">{notifyError}</p>}
           {!pushOn && (
-            <p className="px-1 text-[12px] text-slate-500">
-              Pilihan ini berlaku setelah notifikasi push dinyalakan di atas.
-            </p>
+            <p className="px-1 fs-12 text-slate-500">Pilihan ini berlaku setelah notifikasi push dinyalakan di atas.</p>
           )}
         </>
       )}
@@ -800,8 +798,8 @@ function LainnyaView() {
         <a href="/input-cepat" className="flex items-center gap-4 px-5 py-4 hover:bg-slate-100/70">
           <Smartphone size={20} className="shrink-0 text-slate-500" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-medium text-slate-900">Buka Input Cepat</span>
-            <span className="block text-[13px] text-slate-500">
+            <span className="block fs-16 font-medium text-slate-900">Buka Input Cepat</span>
+            <span className="block fs-13 text-slate-500">
               Catat dari HP — tambahkan ke layar utama biar tinggal tap.
             </span>
           </span>
@@ -810,8 +808,8 @@ function LainnyaView() {
         <a href="/install" className="flex items-center gap-4 px-5 py-4 hover:bg-slate-100/70">
           <Download size={20} className="shrink-0 text-slate-500" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-medium text-slate-900">Pasang Leosiqra di HP</span>
-            <span className="block text-[13px] text-slate-500">Buka langsung dari layar utama, tanpa Play Store.</span>
+            <span className="block fs-16 font-medium text-slate-900">Pasang Leosiqra di HP</span>
+            <span className="block fs-13 text-slate-500">Buka langsung dari layar utama, tanpa Play Store.</span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </a>
@@ -819,14 +817,14 @@ function LainnyaView() {
 
       <Label>Zona berbahaya</Label>
       <div className="space-y-3 rounded-[22px] bg-rose-50 p-4">
-        <p className="text-[13px] leading-relaxed text-rose-700/90">
+        <p className="fs-13 leading-relaxed text-rose-700/90">
           Menghapus permanen semua transaksi, rekening, anggaran, investasi, tabungan, kategori, mata uang, transaksi
           rutin, dan riwayat chat AI. Akun (login, paket, riwayat pembayaran) tidak terhapus.
         </p>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3 text-[15px] font-bold text-white hover:bg-rose-700"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3 fs-15 font-bold text-white hover:bg-rose-700"
         >
           <Trash2 size={16} /> Reset semua data
         </button>
@@ -858,7 +856,7 @@ function LainnyaView() {
             </div>
             {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-600">{error}</p>}
             {user?.hasPassword === false ? (
-              <p className="rounded-xl bg-slate-50 p-4 text-[12px] leading-relaxed text-slate-500">
+              <p className="rounded-xl bg-slate-50 p-4 fs-12 leading-relaxed text-slate-500">
                 Akun ini masuk pakai Google — sesi yang aktif jadi bukti identitas. Ketik frasa konfirmasi di bawah.
               </p>
             ) : (
@@ -880,7 +878,7 @@ function LainnyaView() {
                 </button>
               </div>
             )}
-            <label className="block text-[12px] text-slate-500">
+            <label className="block fs-12 text-slate-500">
               Ketik &quot;{RESET_CONFIRM_WORD}&quot; untuk konfirmasi
               <input
                 value={confirmText}

@@ -234,8 +234,8 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                   <LeoBadge topic={topic} size={60} thinking={thinking} />
                 </motion.span>
                 <div className="min-w-0 pr-8">
-                  <div className="text-[17px] font-black leading-tight">{guide.name}</div>
-                  <p className="mt-0.5 text-[13px] leading-snug text-white/90">{guide.greeting}</p>
+                  <div className="fs-17 font-black leading-tight">{guide.name}</div>
+                  <p className="mt-0.5 fs-13 leading-snug text-white/90">{guide.greeting}</p>
                 </div>
               </div>
             </div>
@@ -243,7 +243,7 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
             <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
               {msgs.length === 0 ? (
                 <div>
-                  <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  <div className="mb-2 px-1 fs-11 font-bold uppercase tracking-widest text-slate-400">
                     Materi singkat
                   </div>
                   <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
@@ -253,10 +253,8 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                         className="w-[220px] shrink-0 snap-start rounded-2xl bg-slate-50 p-3.5 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-800"
                       >
                         <div className="text-xl">{f.emoji}</div>
-                        <div className="mt-1 text-[13px] font-bold text-slate-800 dark:text-slate-100">{f.title}</div>
-                        <p className="mt-0.5 text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-                          {f.body}
-                        </p>
+                        <div className="mt-1 fs-13 font-bold text-slate-800 dark:text-slate-100">{f.title}</div>
+                        <p className="mt-0.5 fs-12 leading-relaxed text-slate-500 dark:text-slate-400">{f.body}</p>
                       </div>
                     ))}
                   </div>
@@ -265,14 +263,14 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                 msgs.map((m, i) =>
                   m.role === 'user' ? (
                     <div key={i} className="flex justify-end">
-                      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2 text-[13px] text-white dark:bg-indigo-600">
+                      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2 fs-13 text-white dark:bg-indigo-600">
                         {m.text}
                       </div>
                     </div>
                   ) : (
                     <div key={i} className="flex items-start gap-2">
                       <LeoBadge topic={topic} size={28} />
-                      <div className="min-w-0 max-w-[88%] rounded-2xl rounded-tl-md bg-slate-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:text-slate-200 dark:ring-slate-800">
+                      <div className="min-w-0 max-w-[88%] rounded-2xl rounded-tl-md bg-slate-50 px-3.5 py-2.5 fs-13 leading-relaxed text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:text-slate-200 dark:ring-slate-800">
                         <AiMarkdown text={m.text} />
                       </div>
                     </div>
@@ -280,14 +278,14 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                 )
               )}
               {thinking ? (
-                <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-400">
+                <div className="flex items-center gap-2 fs-12 font-semibold text-slate-400">
                   <LeoBadge topic={topic} size={28} thinking /> Leo lagi mikir…
                 </div>
               ) : null}
 
               {suggestions.length ? (
                 <div>
-                  <div className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  <div className="mb-2 flex items-center gap-1.5 px-1 fs-11 font-bold uppercase tracking-widest text-slate-400">
                     <Sparkles size={12} /> {msgs.length ? 'Tanya lagi' : 'Tanya Leo'}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -297,7 +295,7 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                         type="button"
                         disabled={thinking}
                         onClick={() => void ask(q)}
-                        className="rounded-full bg-white px-3 py-1.5 text-left text-[12.5px] font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
+                        className="rounded-full bg-white px-3 py-1.5 text-left fs-12.5 font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
                       >
                         {q}
                       </button>
@@ -327,7 +325,7 @@ export function LeoGuide({ topic, className }: { topic: LeoGuideTopic; className
                 }}
                 placeholder="Tanya apa aja ke Leo…"
                 maxLength={2000}
-                className="max-h-28 min-h-[42px] flex-1 resize-none rounded-2xl bg-slate-100 px-3.5 py-2.5 text-[14px] text-slate-800 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300 dark:bg-slate-800 dark:text-slate-100"
+                className="max-h-28 min-h-[42px] flex-1 resize-none rounded-2xl bg-slate-100 px-3.5 py-2.5 fs-14 text-slate-800 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300 dark:bg-slate-800 dark:text-slate-100"
               />
               <button
                 type="submit"

@@ -365,7 +365,7 @@ export default function InputCepatPage() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-black text-slate-900 leading-tight">Input Cepat</h1>
-                <p className="text-[11px] font-bold text-slate-400 truncate">
+                <p className="fs-11 font-bold text-slate-400 truncate">
                   {profile?.name ? `Halo, ${profile.name.split(' ')[0]}` : 'Leosiqra'}
                 </p>
               </div>
@@ -380,7 +380,7 @@ export default function InputCepatPage() {
             >
               <span
                 className={cn(
-                  'block text-[9px] font-black uppercase tracking-wider',
+                  'block fs-9 font-black uppercase tracking-wider',
                   type === 'pengeluaran' ? 'text-rose-400' : 'text-emerald-500',
                 )}
               >
@@ -399,7 +399,7 @@ export default function InputCepatPage() {
 
           <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" autoStart={autoStart} initialText={initialText} />
           {hint && (
-            <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 text-[11px] font-bold text-indigo-700">
+            <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 fs-11 font-bold text-indigo-700">
               <Sparkles size={13} className="mt-0.5 shrink-0" />
               <span>
                 Terisi dari {hint.source === 'voice' ? 'suara' : hint.source === 'scan' ? 'foto struk' : 'teks'} — cek
@@ -441,7 +441,7 @@ export default function InputCepatPage() {
             </div>
 
             <div className="pt-6 pb-4 text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</p>
+              <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Nominal</p>
               <motion.div animate={amountControls} className="mt-1 flex items-baseline justify-center gap-2">
                 <span className="text-xl font-black text-slate-300">{selectedAccount?.currency ?? 'IDR'}</span>
                 <NumberInput
@@ -476,7 +476,7 @@ export default function InputCepatPage() {
                     setShowDatePicker(false);
                   }}
                   className={cn(
-                    'px-3.5 py-1.5 rounded-full text-[11px] font-bold border',
+                    'px-3.5 py-1.5 rounded-full fs-11 font-bold border',
                     date === value
                       ? 'bg-slate-900 border-slate-900 text-white'
                       : 'bg-white border-slate-200 text-slate-500',
@@ -490,7 +490,7 @@ export default function InputCepatPage() {
                 onClick={() => setShowDatePicker((v) => !v)}
                 aria-label="Pilih tanggal lain"
                 className={cn(
-                  'h-[30px] shrink-0 rounded-full border flex items-center justify-center gap-1.5 px-3 text-[11px] font-bold',
+                  'h-[30px] shrink-0 rounded-full border flex items-center justify-center gap-1.5 px-3 fs-11 font-bold',
                   showDatePicker || (date !== null && date !== yesterday)
                     ? 'bg-slate-900 border-slate-900 text-white'
                     : 'bg-white border-slate-200 text-slate-500',
@@ -514,7 +514,7 @@ export default function InputCepatPage() {
 
           <div className="mt-3 bg-white rounded-3xl border border-slate-100 shadow-sm divide-y divide-slate-100">
             <div className="p-4 relative" ref={accountPickerRef}>
-              <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <p className="flex items-center gap-1.5 fs-10 font-black text-slate-400 uppercase tracking-widest mb-2">
                 <Wallet size={12} /> {type === 'pengeluaran' ? 'Dari rekening' : 'Masuk ke rekening'}
               </p>
               {accounts.length === 0 ? (
@@ -544,7 +544,7 @@ export default function InputCepatPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-black text-slate-800 truncate">{selectedAccount.name}</p>
-                          <p className="text-[11px] font-bold text-slate-400 tabular-nums">
+                          <p className="fs-11 font-bold text-slate-400 tabular-nums">
                             {isCreditAccountType(selectedAccount.type)
                               ? `Sisa limit ${formatBalance(creditUsageByAccount.get(selectedAccount.id ?? '')?.remaining ?? 0, selectedAccount.currency)}`
                               : `Saldo ${formatBalance(selectedAccount.balance || 0, selectedAccount.currency)}`}
@@ -604,7 +604,7 @@ export default function InputCepatPage() {
                                 >
                                   {formatBalance(displayAmount, a.currency)}
                                 </p>
-                                {isCredit && <p className="text-[9px] font-bold text-slate-400">Sisa limit</p>}
+                                {isCredit && <p className="fs-9 font-bold text-slate-400">Sisa limit</p>}
                               </div>
                               {isSelected && <Check size={15} className="text-indigo-600 shrink-0" />}
                             </button>
@@ -631,7 +631,7 @@ export default function InputCepatPage() {
               />
               <Link
                 href="/membership/dashboard?pengaturan=kategori"
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2 pl-1"
+                className="inline-flex items-center gap-1 fs-10 font-bold text-indigo-600 mt-2 pl-1"
               >
                 Kelola kategori <ExternalLink size={10} />
               </Link>
@@ -679,7 +679,7 @@ export default function InputCepatPage() {
               )}
             </button>
             {!canSubmit && amountNumber > 0 && !category && (
-              <p className="mt-2 text-center text-[11px] font-bold text-slate-400">Pilih kategori dulu</p>
+              <p className="mt-2 text-center fs-11 font-bold text-slate-400">Pilih kategori dulu</p>
             )}
           </div>
         </div>
@@ -748,7 +748,7 @@ export default function InputCepatPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{t.subCategory || t.category || '-'}</p>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                      <p className="fs-10 font-bold text-slate-400 mt-0.5">
                         {formatTime(new Date(t.createdAt))} · {getAccountName(t.accountId)}
                         {t.note ? ` · ${t.note}` : ''}
                       </p>

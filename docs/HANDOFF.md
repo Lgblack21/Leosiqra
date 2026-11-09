@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.16.1 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (live: 3.25.0 run #201, commit e9d2355 — Pajak Center baru; migrasi 0043 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,238 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.16.1 — BELUM DEPLOY. Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
+- **2026-11-09 — 3.25.0 Pajak Center baru — LIVE (run #201, commit e9d2355, Release v3.25.0). MIGRASI 0043 SUDAH
+  dijalankan Bos (dikonfirmasi 2026-11-09).**
+  Branch `claude/pajak-center-20261109`.
+  - **MIGRASI 0043 (`cloudflare/migrations/0043_tax_settings.sql`)**: tabel `tax_settings(user_id, year, data_json,
+    updated_at, PK(user_id,year))`. Tanpa 0043: GET → ready:false, PUT → 503 not_ready, klien simpan di localStorage
+    (`leosiqra-pajak-<tahun>`); setelan lama (`pajak-center-marital-status`, `-dependents`, `-pph21-<tahun>`) ikut terbawa.
+  - Worker `handleMemberTax` (`/api/member/tax/settings?year=`): requireSession, `sanitizeTaxSettings` (whitelist,
+    clamp, bulan 01–12, dokumen TAX_DOC_KEYS), maks 16 KB (413).
+  - Frontend: `src/lib/pajak/rules.ts` (SEMUA angka aturan: PTKP, tarif Pasal 17, biaya jabatan 5%/6 jt, UMKM 0,5% /
+    Rp500 jt / Rp4,8 M / 7 th, tenggat + geser hari kerja via hariLibur), `settings.ts`, `pajakXlsx.ts`,
+    `components/pajak/PajakCenter.tsx` (5 tab). page.tsx lama (1197 baris) diganti; PajakKesehatan tetap dipakai.
+  - Mode usaha `final` TIDAK masuk tarif progresif; `pembukuan` = omzet − Biaya Usaha masuk neto. Neto lama (semua
+    pemasukan − pengeluaran) DIBUANG — salah untuk karyawan.
+  - Dites: 18 kasus hitung manual (esbuild + node) cocok; E2E wrangler dev lokal (gaji 135 jt, omzet 675,85 jt, zakat
+    2,5 jt) → UMKM 879.270, PKP 72,5 jt, PPh 4.875.000 cocok; setelan tersimpan di akun & bertahan reload; xlsx 4 sheet;
+    HP 390 tanpa overflow; API tanpa tabel/401/400/413/sanitasi. Belum: cetak PDF dicek visual (pakai window.print biasa).
+
+- **2026-11-09 — 3.24.0 Laporan Usahaku + PDF/Excel — LIVE (run #200, commit 0f7aad0, Release v3.24.0). Tanpa SQL.**
+  Branch `claude/usaha-laporan-20261109`. (Rilis 2 berikutnya: Pajak Center baru — lihat "Langkah berikutnya".)
+  - Worker `GET /api/member/shops/:id/report?from&to` (BACA SAJA, di handleShopRoutes → requireSession + cek
+    `shops.user_id`): penjualan dengan items/pembeli/kasir/sumber dari payload_json, biaya per jenis, bahan & riwayat
+    stok; maks ±400 hari & 5.000 transaksi (`truncated`). Dites wrangler dev lokal: 401 tanpa login, 404 toko user lain.
+  - Frontend: `src/lib/shopReport.ts` (fetch + `summarize`), `components/ladang/LaporanUsaha.tsx` (rute
+    `/membership/ladang/laporan?id=` & `/app/ladang/laporan?id=`), tombol "Laporan & unduh" di UsahaView.
+    PDF = `window.print()` dengan CSS cetak (hanya `#laporan-sheet`, rincian mulai halaman 2).
+    Excel = `src/lib/shopReportXlsx.ts`, **dependency baru `exceljs@4.4.0`** dimuat lewat import() build browser
+    `exceljs/dist/exceljs.min.js` (shim tipe `src/types/exceljs-browser.d.ts`).
+  - Dites E2E (wrangler dev --local + out, 21 penjualan/3 biaya): angka cocok manual (omzet 854.000, biaya 475.000),
+    xlsx 6 sheet dibuka openpyxl, PDF 3 halaman, web 1280 & HP 390, 0 error JS.
+  - Tes lokal: D1 lokal dibuat dari `cloudflare/schema-production.sql` + migrasi 0027/0029–0033/0036 + `ALTER TABLE
+    accounts ADD sort_order`; butuh `.dev.vars` SESSION_SECRET (di-gitignore) dan `wrangler dev --local-protocol https`.
+
+- **2026-11-09 — Tema TERANG untuk landing, /mulai, masuk & daftar (ikut 3.23.6) — LIVE (run #199, commit 0eae434,
+  Release v3.23.6). Tanpa SQL.** Branch `claude/tema-terang-20261109` (berisi juga perbaikan blur 3.23.6 + hapus ScrollTilt).
+  - Bos: "jangan hitam-hitam, buat putih, bersih tapi tetap keren". Navy dibuang: `Aurora` kini pastel
+    (indigo .18 / amber .2 / ungu .14 + titik indigo), panel/pita auth & aside /mulai = gradien `#eef0ff → white →
+    #fff5e4`, teks slate. Landing: hero terang, judul `.lp-ink` (indigo→ungu→emas, globals.css), tombol utama emas,
+    kotak fakta putih, lengkung SVG dihapus, CTA penutup kartu pastel. `Navbar variant="clean"` (dulu "dark") = kaca
+    putih + lambang LS + tombol emas.
+  - Dites 1280×656 (landing, masuk, daftar, mulai) & 390×844: 0 error JS; gulir landing 60 fps/0 jank, login 60 fps.
+
+- **2026-11-09 — 3.23.6 + landing: animasi tanpa kedip — LIVE (run #199). Tanpa SQL.**
+  Branch `claude/landing-flicker-20261109`.
+  - Bos: demo landing kedap-kedip/lag. Penyebab: blur yang di-render ulang tiap frame — `Aurora` (blob `blur-[90px]`
+    yang bergerak), glow `blur-3xl` di belakang AppShowcase, transisi layar demo `filter: blur(6px)`, heroItem
+    `filter: blur(10px)`, dan `backdrop-blur` di Navbar dark (fixed, di atas konten bergerak), tombol, kotak fakta,
+    serta `FinanceChips`.
+  - Semua diganti: Aurora = `radial-gradient` tanpa filter (hanya transform bergerak), glow = radial-gradient,
+    transisi demo = opacity+y, Navbar dark = latar hampir pekat tanpa backdrop-filter, chip = `bg-white` tanpa blur.
+  - Ukur rAF 12 s di 1280×656 (headless): landing 20 fps/±70 jank → 60 fps/0 jank; /auth/login 17 fps/93 jank →
+    60 fps/0 jank. ATURAN: jangan pakai `filter: blur` / `backdrop-blur` pada elemen yang bergerak atau di atasnya.
+  - Rekaman layar Bos (run #198): saat digulir jendela demo SEBAGIAN KOSONG/PUTIH → penyebab `ScrollTilt` (rotateX 3D
+    + perspective + useSpring ikut scroll) pada lapisan 1120×680. ScrollTilt DIHAPUS (file juga). Gulir terus 8 s:
+    20 fps/30 jank → 60 fps/0 jank. Jangan pasang transform 3D yang mengikuti scroll di elemen besar.
+
+- **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — LIVE (run #198). TANPA naik
+  versi. Tanpa SQL.** Branch `claude/landing-showcase-20261109`.
+  - Bos: hero ngelag karena pita kartu (`.auth-ticker` + FinanceChips ber-backdrop-blur) → pita & Leo di atas mockup
+    DIHAPUS dari landing. Jangan tambah animasi berat di hero landing; ubah yang sudah ada.
+  - `AppShowcase.tsx`: sidebar mockup pakai lambang `logo-emblem.png`, ubin ikon berwarna (`tint` per SCREENS, senada
+    Sidebar.tsx), item aktif kartu putih + garis aksen, tombol "Catat transaksi" gelap + kartu profil PRO; header
+    "Cari fitur… Ctrl K" + tombol Leo gradien (ganti "Tambah Cepat" hijau). Tinggi item tetap 42 px/langkah (kursor
+    animasi bergantung ini). Tab HP pakai ikon bulat berwarna. `.auth-aurora` + `will-change: transform`.
+  - Dites Playwright 1280×656 & 390×844: kursor tetap pas di menu, halaman tidak tergulir sendiri, 0 error JS.
+
+- **2026-11-09 — Landing page (/) baru — LIVE (run #197). TANPA naik versi (keputusan Bos: landing di
+  luar versi aplikasi) → CHANGELOG tidak disentuh, Release tidak dibuat. Tanpa SQL.** Branch `claude/landing-baru-20261109`.
+  - Hero gelap navy-emas (`Aurora` dari AuthLayout), badge `.auth-shine`, judul sans + `.lp-gold` (globals.css), CTA
+    emas, pita `.auth-ticker` berisi FinanceChips, AppShowcase + Leo mengintip + 2 kartu `paper-float`, FACTS kaca gelap,
+    lengkung SVG ke bagian terang; marquee teks diberi berlian emas; CTA penutup navy + Aurora + tombol emas.
+  - `Navbar variant="dark"` dirombak (dulu gaya Dark Luxury, tidak dipakai): kaca navy, lambang `logo-emblem.png`, link
+    putih/amber, tombol Daftar emas. Halaman publik lain tetap `light`.
+  - Bug lama diperbaiki: `AppShowcase` (HP) memanggil `scrollIntoView` tiap tab demo berganti → halaman ikut tergulir
+    (sekarang 287 px saat dibuka). Kini hanya deretan tab yang digeser (`box.scrollTo`).
+  - Dites Playwright 1280×656, 1440×900, 390×844: tanpa overflow-x, tanpa error JS, HP tidak lagi tergulir sendiri.
+  - Banner "Pasang Leosiqra di HP" (komponen lama) masih menutup pojok kanan bawah — tidak diubah.
+
+- **2026-11-09 — 3.23.5 Panel auth diam (sticky), form bergulir — LIVE (run #196, commit 380549f, Release v3.23.5). Tanpa SQL.**
+  Branch `claude/auth-panel-diam-20261109`. Permintaan Bos: panel diam, form yang geser.
+  - Aside `lg:sticky lg:top-0 lg:h-screen lg:self-start` (self-start wajib di grid supaya sticky jalan), isi tetap rata
+    atas tanpa overflow-y. Layar ≤ 620px tinggi: subjudul keunggulan disembunyikan, pita & header dirapatkan.
+  - Dites Playwright (gulir 500px di kolom form): 1280×656 login/daftar, 1100×540, 1440×900 → panel top 0, tombol
+    kembali tetap di y=40 (540: y=24), keunggulan terakhir masih di dalam layar; HP tidak terpengaruh; 0 error JS.
+
+- **2026-11-09 — 3.23.4 Perbaikan panel auth (regresi 3.23.3) — LIVE (run #195, commit 0f6dc0f, Release v3.23.4). Tanpa SQL.**
+  Branch `claude/auth-panel-fix-20261109`.
+  - 3.23.3 membuat panel `lg:sticky lg:h-screen lg:overflow-y-auto` + isi `justify-center` → di layar Bos (±1280×656)
+    celah kosong besar di bawah logo & panel menggulir sendiri (logo hilang). Bos kecewa ("tambah hancur").
+  - Sekarang panel ikut tinggi halaman (`lg:min-h-screen`, tanpa sticky/overflow), isi rata atas
+    (`pt-[clamp(28px,7vh,72px)]`), kartu dekorasi `mt-auto` & tetap disembunyikan bila tinggi < 860px.
+  - Dites Playwright 1280×656 (login, daftar, + gulir), 1100×540, 1440×900: tidak ada celah/tumpukan, 0 error JS.
+  - Bos protes animasi hilang (kartu dekorasi tersembunyi < 860px). Diganti pita `.auth-ticker` (Tx/Voice/Budget/Balance
+    ×2, 42 s) TEPAT DI BAWAH JUDUL (bukan di dasar panel — dasar panel = dasar halaman, di bawah layar), ikon PERKS
+    `paper-float`, badge `.auth-shine` + `.auth-twinkle`. Layar < 760px tinggi: paragraf sub disembunyikan.
+    Dites: pita terlihat & bergerak di 1280×656 (login & daftar) dan 1440×900.
+  - PELAJARAN: tes di ukuran layar Bos (tablet landscape ±1280×650) DAN dalam keadaan digulir sebelum minta "gas".
+
+- **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — LIVE (run #194, commit eaab081, Release v3.23.3). Tanpa SQL.**
+  Branch `claude/auth-logo-20261109`.
+  - Laporan Bos (tablet ±1100×540 CSS px): logo jelek, nama "Leo/siqra" dua warna jelek, panel kiri bertumpuk.
+  - Aset baru `public/images/logo-emblem.png` (256 px, potongan lambang dari Logo-new.png, latar transparan) dipakai
+    di `Brand` AuthLayout & header /mulai (tile putih). Nama polos "Leosiqra".
+  - Panel brand: `lg:overflow-y-auto`, header & isi `shrink-0`, kartu dekorasi `[@media(max-height:860px)]:hidden`.
+  - Dites Playwright 1100×540 (login, daftar, mulai), 1280×720, 1440×900, 390×844: tidak bertumpuk, 0 error JS.
+
+- **2026-11-09 — 3.23.1 Langit Teduh + 3.23.2 /mulai senada — LIVE (run #193, commit bb2db55, Release v3.23.2;
+  ikut 3.22.1 & 3.23.0). Tanpa SQL.** Rantai branch: mulai-lanjut → daftar-baru → teduh-langit → `claude/mulai-baru-20261109`
+  (paling ujung, berisi semuanya).
+  - Teduh `LangitHero` (ui.tsx): warna langit diinterpolasi dari tabel `LANGIT` (jam → 3 warna), matahari terbit 5.85 /
+    terbenam 17.95 di busur kanan, tenggelam di balik 3 lapis bukit SVG, bulan sabit SVG (mask), bintang & bintang jatuh
+    sesuai `gelap`, update tiap menit. `faseLangit` dihapus. Sapaan `sapaWaktu()` dipakai TeduhApp & AlkitabHome
+    (sore sampai 18.15, lalu malam). Dites jam 05:30–21:00 dengan clock Playwright (Islam; Kristen tidak dites karena
+    Alkitab butuh API).
+  - /mulai: aside = gradien navy + `Aurora` (diekspor dari AuthLayout), sticky di laptop; frame HP bercahaya emas;
+    logo tile putih + wordmark Leo/siqra; progress bar sampai emas. Dites web 1440 & HP 390, 0 error JS.
+
+- **2026-11-09 — 3.23.0 Halaman daftar & masuk baru — LIVE (run #193). Tanpa SQL.**
+  Branch `claude/daftar-baru-20261109` (di atas `claude/mulai-lanjut-20261109`).
+  - Hanya tampilan `components/auth/AuthLayout.tsx` (dipakai /auth/register & /auth/login): laptop = 2 kolom, panel
+    brand navy-emas sticky (aurora `.auth-aurora` di globals.css, 3 PERKS, TxChip/VoiceChip/BudgetChip) + form kanan;
+    HP = pita gelap atas + kartu form `-mt-[120px]`. Props AuthLayout tidak berubah; logika form tidak diubah.
+  - Klaim di panel dijaga faktual (Gratis 14 hari tanpa kartu kredit, verifikasi 2 langkah tersedia). Desain sendiri,
+    bukan tiruan Oyenza.
+  - Dites Playwright: register 1440 & Pixel-ish 390, login 1440 & 390, submit daftar (mock) → body benar + "Akunmu
+    siap", 0 error JS.
+
+- **2026-11-09 — 3.22.1 /mulai: isian tamu lama tidak lagi melompat ke langkah terakhir — LIVE (run #193).
+  Tanpa SQL.** Branch `claude/mulai-lanjut-20261109`.
+  - Laporan Bos: klik Daftar → langsung "Hari pertama, beres." Penyebab: `leosiqra-guest-onboarding.done` di
+    localStorage → `setStep(LAST)` saat halaman dibuka. Sekarang `resumable` → kartu "Lanjutkan daftar / Mulai dari
+    awal" di layar sambutan; "Ulangi dari awal" di langkah terakhir (`clearGuest`).
+  - Dites Playwright (build lokal): kartu muncul, Lanjutkan → langkah terakhir, Ulangi/Mulai dari awal → Langkah 1
+    + localStorage terhapus, reload tanpa kartu, 0 error JS. Sidebar.tsx ikut dirapikan Prettier (tanpa ubah perilaku).
+
+- **2026-11-09 — 3.22.0 Menu samping baru — LIVE (run #192, commit f004177, Release v3.22.0). Tanpa SQL.**
+  - `Sidebar.tsx` hanya tampilan: ubin ikon berwarna (fitur pakai `tint` features.ts, 4 halaman inti `KEUANGAN_TINT`),
+    item aktif = kartu putih + garis aksen (layoutId `sidebar-active`), `GroupLabel`, kartu profil (pil Gratis/PRO).
+    Logika menu/PRO/tamu/shortcut N tidak diubah.
+  - Tombol "Cari fitur… Ctrl K" → `OPEN_PALETTE_EVENT` (`leosiqra:open-palette`) di CommandPalette; Tanya Leo jadi
+    tombol ikon gradien di sebelahnya.
+  - Bug lama diperbaiki: di `.web-dark` tombol Catat transaksi (bg-slate-950) berubah putih tanpa teks → `web-keep`.
+  - Dites Playwright (build lokal, API mock): web 1440 terang/gelap, tablet 1000 (rel ikon), HP 390 (laci), tombol Cari
+    membuka palet & fokus ke input, 0 error JS. Belum dicek: akun PRO (pil PRO + sisa hari), akun tamu.
+
+- **2026-11-09 — 3.21.1 Stikerku: foto kamera/galeri bisa disimpan lagi — LIVE (run #191, commit 4bb871e,
+  Release v3.21.1). Tanpa SQL.** Workflow dijalankan Bos (dispatch dari session cloud ditolak auto mode).
+  - Penyebab: html-to-image `cacheBust` menambah `?waktu` ke URL gambar; `blob:` URL ber-query gagal di-fetch →
+    "Gagal membuat gambar" setiap latar foto. Perbaikan: foto dikonversi ke data URL JPEG (sisi terpanjang 2160 px)
+    saat dipilih (`photoToDataUrl` di `StikerApp.tsx`). Jangan kembalikan ke `URL.createObjectURL` untuk gambar yang diekspor.
+  - Dites Playwright (build lokal, API mock): kode lama tidak ada unduhan; kode baru Galeri/Kamera → PNG 1080×1920
+    berisi foto, 0 error JS. Belum dites: Bagikan (share sheet) di HP asli, foto HEIC.
+  - Video "Perjalanan v1→v3.21" (1080×1920, 82 dtk) dibuat di session ini; skripnya tidak di-commit.
+
+- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — LIVE (run #190, Release v3.21.0 09:37 UTC). Tanpa SQL.**
+  - Teduh layar penuh (`/membership/teduh` masuk FULLSCREEN_PATHS) + dock; bahan UI bersama di
+    `components/teduh/ui.tsx` (TeduhShell, LangitHero langit per waktu, AngkaNaik, CincinProgres, JedaSejenak,
+    LembarTab, NomorAyat, CatatanPribadi). Animasi framer-motion, hormati `useReducedMotion`. JANGAN pasang
+    `filter`/`transform` yang menetap di pembungkus konten — elemen `fixed` (lembar Pelajari) jadi terkurung.
+  - Renungan harian: `lib/teduh/renungan.ts` (bahan renungan & langkah per tema = tulisan tim, bukan tafsir;
+    catatan pribadi localStorage `leosiqra-teduh-catatan`).
+  - Pelajari Al-Qur'an: tafsir Al-Mukhtasar QuranEnc (`scripts/teduh/build-tafsir.mjs` → `public/teduh/tafsir/t*.json`,
+    tanpa diubah, tanpa nomor versi → dicatat tanggal salinan) + kata per kata langsung dari api.quran.com (publik,
+    CORS *, arti per kata Inggris) + catatan. Pelajari Alkitab: rujukan silang OpenBible.info CC BY 4.0
+    (`scripts/teduh/build-silang.mjs` → `public/teduh/silang/b*.json`, 6 teratas per ayat) + konteks perikop + catatan.
+  - **Audio murattal**: `audioService` kini jatuh ke CDN publik `verses.quran.com/<qari>/mp3/SSSAAA.mp3` (9 qari,
+    dicek 206) bila Worker 503 (kunci QF belum ada). Kalau kunci QF dipasang, otomatis pakai API QF.
+  - Dites Playwright web 1440 + Pixel 7 (siang & malam): renungan, audio diputar, tafsir, kata per kata, catatan,
+    jeda, pembaca surah + Pelajari, Alkitab renungan/ayat terkait/konteks (Alkitab pakai respons tiruan).
+
+- **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — LIVE (run #189, commit 9b764fe; termasuk 3.18.0 & 3.19.0). Tanpa SQL.**
+  - Bos sudah memasang secret `APIINDONESIA_KEY`. Respons API asli belum dicek dari sisi kita (butuh login akun
+    produksi) — menunggu konfirmasi/screenshot Bos.
+  - Keputusan Bos (eksplisit): pakai API Indonesia (apiindonesia.id), termasuk **Alkitab TB** selagi menunggu izin
+    LAI (surat sudah disiapkan untuk Bos kirim ke info@alkitab.or.id; surat AYT ke ylsa@sabda.org). Bila ada
+    keberatan → **takedown: tambah `ALKITAB_TB_OFF` = `1` bertipe SECRET** di dashboard Cloudflare (tanpa deploy; tipe Text akan terhapus saat deploy karena wrangler.toml punya [vars] tanpa keep_vars) → 451 + layar
+    "Alkitab sedang disiapkan".
+  - Worker `handleApiIndonesia`: `/api/member/libur`, `/api/member/teduh/sholat/kota`, `/api/member/teduh/sholat`,
+    `/api/member/teduh/alkitab/kitab|pasal`. Header `x-api-key` dari **secret `APIINDONESIA_KEY`** (belum ada →
+    503 unconfigured, klien pakai cadangan). Cache bersama caches.default (libur 7 hari, sholat 30 hari, Alkitab 7
+    hari); limiter `apiid:user:` hanya saat cache kosong. Bentuk respons dari OpenAPI apiindonesia.id/openapi.json.
+  - Klien: `lib/hariLiburApi.ts` (API menimpa data bawaan per tahun; `pakaiDataApi`, `liburStore`), JadwalSholat
+    (cari 514 kab/kota → jadwal bulanan disimpan per bulan di localStorage; GPS → hitung lokal), `lib/teduh/alkitab.ts`
+    + `components/teduh/AlkitabHome.tsx` (Kristen & Katolik `siap: true`; teks tidak disimpan permanen; progres
+    pasal/tanda di localStorage `leosiqra-teduh-alkitab`; TTS Web Speech id-ID).
+  - **Belum dites dengan API asli** (dites dengan respons tiruan + Worker tanpa kunci/kunci palsu/saklar takedown).
+    Saat kunci terpasang: cek format `abbr` kitab (Worker menolak abbr di luar `^[1-3]?[A-Za-z]{1,12}$`), isi ayat
+    tema (rujukan per nomor kitab kanon 1–66), dan field `ashr`/`ashar`.
+
+- **2026-11-09 — 3.19.0 Tanggal merah + jadwal sholat — LIVE (run #189). Tanpa SQL.**
+  - `src/lib/hariLibur.ts`: daftar SKB 3 Menteri 2026 (Setneg) & 2027 (Kemenag), dicek jumlah (17+8, 18+8) & nama
+    hari. **Tambah tahun berikutnya saat SKB terbit (±September)**; tanggal Hijriah bisa digeser KMA → perbarui.
+    Helper: isHariKerja, hariKerjaSebelum, rentangLibur (libur panjang), liburBerikutnya.
+  - `components/libur/LiburCard.tsx` (Ringkasan web setelah HealthScoreCard, Beranda /app setelah WeeklyInsights;
+    dihitung di browser via useSyncExternalStore — build statis tak tahu "hari ini") + modal kalender;
+    `LiburHint` di /membership/recurring & /app/recurring.
+  - Jadwal sholat: `src/lib/teduh/sholat.ts` (adhan 4.4.3 MIT; Subuh 20°, Isya 18°, Syafi'i, ihtiyat
+    Subuh/Ashar/Isya +2, Dzuhur/Maghrib +3, pembulatan ke atas — dikalibrasi ke Bimas Islam Kemenag Jakarta Nov 2026,
+    selisih ≤1 menit), lokasi localStorage `leosiqra-teduh-lokasi` (dibulatkan 2 desimal), `JadwalSholat.tsx`.
+  - API Indonesia TIDAK dipakai (perantara berbayar per request); data diambil dari sumber aslinya.
+  - Dites Playwright web + Pixel 7: kartu Natal 45 hari lagi / 4 hari, kalender 2027, hint rutin 25 Des → Rab 23
+    Des, jadwal sholat GPS Bogor, 0 error JS.
+
+- **2026-11-09 — 3.18.0 Teduh (Rilis 1: Al-Qur'an) — LIVE (run #189). Tanpa SQL.**
+  - Data statis: `scripts/teduh/build-quran.mjs` dari `data/teduh/quran/` (Tanzil Uthmani 1.1 **XML** — basmalah di
+    atribut `bismillah`, bukan bagian ayat 1; metadata Tanzil; QuranEnc `indonesian_affairs` v1.0.1-csv.1) →
+    `public/teduh/quran/surah.json` + `s1..s114.json` (di-commit). Lisensi: Tanzil CC BY 3.0 verbatim + catatan hak
+    cipta ikut di tiap file; QuranEnc: tanpa diubah, cantumkan versi, perbarui bila ada versi baru, tanpa iklan
+    tak pantas. Kredit tampil di bawah halaman.
+  - Pilihan agama & progres/tanda ayat **hanya localStorage** (`leosiqra-teduh-agama`, `leosiqra-teduh-quran`) —
+    agama = data pribadi spesifik (UU PDP). Sinkron ke akun belum ada (butuh persetujuan eksplisit kalau dibuat).
+  - Audio: Worker `GET /api/member/teduh/reciters|audio?surah=&reciter=` → Quran Foundation Content API (OAuth client
+    credentials, cache 1 hari). **Butuh secret `QF_CLIENT_ID` + `QF_CLIENT_SECRET`** (opsional `QF_ENV=prelive`);
+    tanpa itu 503 "Audio murattal sedang disiapkan." **Belum dites dengan API asli** (dites dengan audio tiruan:
+    sorot, lanjut otomatis, ulangi, qari). URL relatif di-resolve ke `https://verses.quran.foundation/` — cek saat
+    kunci ada.
+  - UI: `components/teduh/{TeduhApp,QuranReader}.tsx`, `lib/teduh/{agama,quran}.ts`, rute `/membership/teduh`,
+    `/app/teduh`, fitur id `teduh` (features + PREF_FEATURES + fiturCatalog + /app/more). Font Amiri Quran (OFL).
+  - Agama lain: belum ada teks — Kristen/Katolik (LAI, TB berhak cipta; TL 1954 perlu cek), Hindu, Buddha, Konghucu
+    menunggu sumber berizin. Jangan pakai teks/terjemahan tanpa izin; jangan buat isi kitab dengan AI.
+
+- **2026-11-09 — 3.17.0 Ukuran teks LIVE (run #188, commit e390955). Tanpa SQL. Diff besar (±257 file) tapi mekanis.**
+  - Codemod: SEMUA `text-[Npx]` (4.244×) → `fs-N` (N<20) / `fsh-N` (N≥20). Utility di globals.css:
+    `fs-*` = N px × `--fs` (min 9px), `fsh-*` = N px × `--fs-h`. `--text-xs…9xl`, `text-label/caption` juga ×skala.
+    **Mulai sekarang tulis `fs-13` / `fsh-24`, bukan `text-[13px]`** (yang lama tidak ikut setelan).
+  - Skala: sedang (bawaan, baru) --fs .95 / --fs-h .88; kecil .9/.82; besar 1.06/1. `:root[data-teks=…]`.
+  - `src/lib/textSizeBoot.ts` (skrip <head> di root layout, tanpa React) + `src/lib/textSize.ts` (`useTextSize`,
+    useSyncExternalStore). UI: AppearanceView (judul baris Pengaturan → "Tampilan"), /app/profile Preferensi.
+  - tailwind-merge: classGroups font-size + `fs`/`fsh` (utils.ts) → `cn('fs-13','text-sm')` menyisakan terakhir.
+  - Dites Playwright: h1 Ringkasan 31,7px (sedang) / 29,5 (kecil) / 36 (besar), klik Kecil di Pengaturan & Besar di
+    Profil HP tersimpan, 0 error JS. Belum dicek halaman satu per satu (mungkin ada teks yang sekarang terlalu kecil).
+
+- **2026-11-09 — 3.16.1 LIVE (run #187, commit 2b04b06). Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
   semua tab + pitch, lapisan kepadatan `tempat-heat` (heatmap), Lokasiku (GPS sekali, marker `.peta-me`, tidak
   disimpan), kompas saat miring), `usePlaceLayers` (tiang `tempat-3d` per tempat, memudar zoom 13→14,5 karena
   `building-3d` gaya liberty muncul zoom ≥14). PlaceMap: `attributionControl:false` + kredit kecil sendiri
@@ -1510,6 +1741,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
 - `0033_shop_stock.sql` — sudah (dikonfirmasi Bos 2026-11-06, 3 tabel ada).
 - `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
+- `0043_tax_settings.sql` — sudah (dikonfirmasi Bos 2026-11-09).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi
@@ -1558,6 +1790,12 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
+
+- ~~Pajak Center baru~~ → dikerjakan di 3.25.0 (lihat Menunggu). Catatan lama: PPh final UMKM 0,5% dari omzet Usahaku
+  (batas Rp500 jt/tahun tidak kena, setor tgl 15), asisten SPT tahunan (karyawan/usaha/campuran, biaya jabatan 5% maks
+  Rp6 jt, zakat pengurang), kalender & pengingat pajak, setelan pajak disimpan di akun (butuh migrasi D1 baru), ekspor
+  .xlsx (exceljs sudah ada), desain & animasi baru. Pajak Center sekarang: `src/app/membership/pajak-center/page.tsx`
+  (1197 baris, setelan PTKP/PPh21 hanya localStorage, ekspor .xls HTML + window.print).
 
 Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pengaturan →
 bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal

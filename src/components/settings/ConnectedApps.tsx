@@ -78,17 +78,17 @@ function AppCard({
     <>
       <Tile icon={icon} cls={tile} />
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 text-[17px] font-semibold text-slate-900">
+        <span className="flex items-center gap-2 fs-17 font-semibold text-slate-900">
           {title}
           {connected && (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 fs-11 font-semibold text-emerald-700">
               Terhubung
             </span>
           )}
         </span>
-        <span className="mt-0.5 block text-[14px] leading-snug text-slate-500">{desc}</span>
+        <span className="mt-0.5 block fs-14 leading-snug text-slate-500">{desc}</span>
       </span>
-      <span className="hidden shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 sm:block">
+      <span className="hidden shrink-0 rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-800 ring-1 ring-slate-200 sm:block">
         {action}
       </span>
       <ChevronRight size={18} className="shrink-0 text-slate-400 sm:hidden" />
@@ -162,7 +162,7 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
   }, [go]);
   return (
     <div className="space-y-3">
-      <p className="px-1 pb-1 text-[15px] leading-relaxed text-slate-500">
+      <p className="px-1 pb-1 fs-15 leading-relaxed text-slate-500">
         Hubungkan aplikasi yang sudah kamu pakai — asisten AI, pencatatan cepat dari HP, dan aplikasi lain yang
         menyusul.
       </p>
@@ -246,7 +246,7 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
         action="Pasang"
         href="/install"
       />
-      <p className="px-1 pt-2 text-[13px] leading-relaxed text-slate-400">
+      <p className="px-1 pt-2 fs-13 leading-relaxed text-slate-400">
         Leosiqra tidak pernah melihat kata sandi Google-mu. Memutuskan koneksi langsung mematikan tautannya.
       </p>
     </div>
@@ -338,7 +338,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
     }
   };
 
-  if (!feeds) return <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;
+  if (!feeds) return <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>;
 
   return (
     <div className="space-y-4">
@@ -346,9 +346,9 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white ring-1 ring-slate-200">
           <ShieldCheck size={22} className="text-slate-700" />
         </span>
-        <p className="text-[19px] font-semibold text-slate-900">{c.title}</p>
-        <p className="text-[14px] leading-relaxed text-slate-600">{c.intro}</p>
-        <p className="text-[14px] leading-relaxed text-slate-600">
+        <p className="fs-19 font-semibold text-slate-900">{c.title}</p>
+        <p className="fs-14 leading-relaxed text-slate-600">{c.intro}</p>
+        <p className="fs-14 leading-relaxed text-slate-600">
           Siapa pun yang memegang tautan ini bisa membaca isinya — jangan dibagikan. Kamu bisa membuat ulang atau
           memutusnya kapan saja.
         </p>
@@ -359,7 +359,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
           type="button"
           onClick={() => create(false)}
           disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white disabled:opacity-60"
         >
           {busy && <Loader2 size={16} className="animate-spin" />} Buat tautan
         </button>
@@ -367,8 +367,8 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
         <>
           <ol className="space-y-2 rounded-[22px] bg-slate-50 p-5">
             {c.steps.map((s, i) => (
-              <li key={s} className="flex gap-3 text-[14px] leading-snug text-slate-700">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-bold text-slate-900 ring-1 ring-slate-200">
+              <li key={s} className="flex gap-3 fs-14 leading-snug text-slate-700">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white fs-12 font-bold text-slate-900 ring-1 ring-slate-200">
                   {i + 1}
                 </span>
                 {s}
@@ -376,13 +376,13 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
             ))}
           </ol>
           <div className="space-y-2">
-            <p className="px-1 text-[14px] text-slate-500">{c.copyLabel}</p>
+            <p className="px-1 fs-14 text-slate-500">{c.copyLabel}</p>
             <div className="flex items-center gap-2 rounded-2xl bg-white p-2 pl-4 ring-1 ring-slate-200">
-              <code className="min-w-0 flex-1 truncate text-[13px] text-slate-700">{value}</code>
+              <code className="min-w-0 flex-1 truncate fs-13 text-slate-700">{value}</code>
               <button
                 type="button"
                 onClick={copy}
-                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[13px] font-semibold text-white"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 fs-13 font-semibold text-white"
               >
                 <Copy size={14} /> Salin
               </button>
@@ -392,7 +392,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
             href={c.open.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white"
           >
             {c.open.label} <ExternalLink size={16} />
           </a>
@@ -401,7 +401,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
               type="button"
               onClick={() => create(true)}
               disabled={busy}
-              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 fs-14 font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
             >
               <RefreshCw size={15} /> Buat ulang
             </button>
@@ -409,7 +409,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
               type="button"
               onClick={disconnect}
               disabled={busy}
-              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 fs-14 font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
             >
               <Unlink size={15} /> Putuskan
             </button>
@@ -532,11 +532,9 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
     }
   };
 
-  if (apps.state === 'loading') return <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;
+  if (apps.state === 'loading') return <p className="py-10 text-center fs-14 text-slate-400">Memuat…</p>;
   if (apps.state !== 'ready')
-    return (
-      <p className="rounded-[22px] bg-slate-50 p-5 text-[14px] text-slate-600">{apps.error ?? 'Belum tersedia.'}</p>
-    );
+    return <p className="rounded-[22px] bg-slate-50 p-5 fs-14 text-slate-600">{apps.error ?? 'Belum tersedia.'}</p>;
 
   return (
     <div className="space-y-4">
@@ -544,12 +542,12 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white ring-1 ring-slate-200">
           <ShieldCheck size={22} className="text-slate-700" />
         </span>
-        <p className="text-[19px] font-semibold text-slate-900">Hubungkan {copy.name}</p>
-        <p className="text-[14px] leading-relaxed text-slate-600">
+        <p className="fs-19 font-semibold text-slate-900">Hubungkan {copy.name}</p>
+        <p className="fs-14 leading-relaxed text-slate-600">
           Setelah ini kamu akan melihat nama mitra koneksi kami, <b>Composio</b>, layanan bersertifikat SOC 2 Type II
           yang menjaga koneksi ini tetap aman. Leosiqra tidak pernah melihat kata sandi {copy.provider}-mu.
         </p>
-        <p className="text-[14px] leading-relaxed text-slate-600">{copy.about}</p>
+        <p className="fs-14 leading-relaxed text-slate-600">{copy.about}</p>
       </div>
 
       <ActivationCard toolkit={toolkit} access={apps.access?.[toolkit]} onChange={reload} />
@@ -558,12 +556,12 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
         <>
           <div
             className={cn(
-              'rounded-[22px] p-4 text-[15px]',
+              'rounded-[22px] p-4 fs-15',
               check?.ok === false ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800',
             )}
           >
             {busy && !check ? 'Memeriksa koneksi…' : (check?.text ?? 'Terhubung')}
-            {check?.logId && <span className="mt-1 block font-mono text-[11px] opacity-60">log {check.logId}</span>}
+            {check?.logId && <span className="mt-1 block font-mono fs-11 opacity-60">log {check.logId}</span>}
           </div>
           {children}
           <div className="grid grid-cols-2 gap-3">
@@ -571,7 +569,7 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
               type="button"
               onClick={() => void runCheck()}
               disabled={busy}
-              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 fs-14 font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
             >
               <RefreshCw size={15} className={cn(busy && 'animate-spin')} /> Periksa
             </button>
@@ -579,7 +577,7 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
               type="button"
               onClick={disconnect}
               disabled={busy}
-              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 fs-14 font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
             >
               <Unlink size={15} /> Putuskan
             </button>
@@ -590,7 +588,7 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
           type="button"
           onClick={connect}
           disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white disabled:opacity-60"
         >
           {busy && <Loader2 size={16} className="animate-spin" />} Lanjutkan ke {copy.provider}
         </button>
@@ -622,7 +620,7 @@ function ActivationCard({
 
   if (access.reason === 'pro' || access.reason === 'beta') {
     return (
-      <div className="flex items-center gap-3 rounded-[22px] bg-indigo-50 px-4 py-3 text-[14px] text-indigo-900">
+      <div className="flex items-center gap-3 rounded-[22px] bg-indigo-50 px-4 py-3 fs-14 text-indigo-900">
         <ShieldCheck size={18} className="shrink-0 text-indigo-600" />
         {access.reason === 'pro'
           ? 'Gratis untuk member PRO.'
@@ -652,7 +650,7 @@ function ActivationCard({
 
   return (
     <div className="space-y-3 rounded-[22px] bg-amber-50 p-4">
-      <p className="text-[14px] leading-relaxed text-amber-900">
+      <p className="fs-14 leading-relaxed text-amber-900">
         {access.active && until ? (
           <>
             Aktif sampai <b>{until}</b>. Perpanjang kapan saja — sisa harinya tidak hilang.
@@ -672,14 +670,14 @@ function ActivationCard({
           type="button"
           onClick={activate}
           disabled={busy}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-[14px] font-bold text-white disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 fs-14 font-bold text-white disabled:opacity-60"
         >
           {busy && <Loader2 size={15} className="animate-spin" />} {access.active ? 'Perpanjang' : 'Aktifkan'} ·{' '}
           {access.price.toLocaleString('id-ID')} koin
         </button>
         <a
           href="/membership/dashboard?pengaturan=koin"
-          className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200"
+          className="inline-flex items-center rounded-full bg-white px-4 py-2.5 fs-14 font-semibold text-slate-700 ring-1 ring-amber-200"
         >
           Lihat koin
         </a>
@@ -778,8 +776,8 @@ export function NotionReportCard() {
       <div className="flex items-center gap-3">
         <NotebookText size={20} className="shrink-0 text-slate-700" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">Laporan bulanan</span>
-          <span className="block truncate text-[13px] text-slate-500">
+          <span className="block fs-15 font-semibold text-slate-900">Laporan bulanan</span>
+          <span className="block truncate fs-13 text-slate-500">
             {state.parentId ? `Ditulis di bawah “${state.parentTitle}”` : 'Pilih halaman Notion tujuan dulu.'}
           </span>
         </span>
@@ -805,7 +803,7 @@ export function NotionReportCard() {
         )}
       </div>
       {state.parentId && (
-        <p className="px-1 text-[12px] text-slate-500">
+        <p className="px-1 fs-12 text-slate-500">
           {state.enabled
             ? 'Otomatis tiap tanggal 1–7 untuk bulan sebelumnya.'
             : 'Nyalakan untuk menulis otomatis tiap awal bulan.'}
@@ -815,7 +813,7 @@ export function NotionReportCard() {
       {pages && (
         <div className="max-h-64 space-y-1 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-slate-200">
           {pages.length === 0 ? (
-            <p className="p-3 text-[13px] text-slate-500">
+            <p className="p-3 fs-13 text-slate-500">
               Belum ada halaman yang dibagikan. Putuskan lalu hubungkan lagi, dan pilih halaman tujuan saat login
               Notion.
             </p>
@@ -829,7 +827,7 @@ export function NotionReportCard() {
                   setPages(null);
                 }}
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100',
+                  'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left fs-14 hover:bg-slate-100',
                   state.parentId === p.id && 'bg-indigo-50 font-semibold text-indigo-700',
                 )}
               >
@@ -842,7 +840,7 @@ export function NotionReportCard() {
       )}
 
       {result && (
-        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">
+        <p className="rounded-2xl bg-white px-4 py-2.5 fs-13 text-slate-600 ring-1 ring-slate-200">
           {result.text}{' '}
           {result.url && (
             <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600">
@@ -858,7 +856,7 @@ export function NotionReportCard() {
           onClick={() => void loadPages()}
           disabled={busy}
           className={cn(
-            'flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60',
+            'flex items-center justify-center gap-2 rounded-full py-3 fs-14 font-bold disabled:opacity-60',
             state.parentId
               ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100'
               : 'bg-slate-900 text-white',
@@ -872,7 +870,7 @@ export function NotionReportCard() {
             type="button"
             onClick={() => void write()}
             disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-60"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : null} Tulis laporan bulan lalu
           </button>
@@ -883,7 +881,7 @@ export function NotionReportCard() {
           href={state.lastPageUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600"
+          className="flex items-center justify-center gap-1.5 fs-13 font-semibold text-indigo-600"
         >
           Buka laporan terakhir <ExternalLink size={13} />
         </a>
@@ -978,10 +976,10 @@ export function SlackInboxCard() {
       <div className="flex items-center gap-3">
         <Hash size={20} className="shrink-0 text-violet-600" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">
+          <span className="block fs-15 font-semibold text-slate-900">
             {state.channelId ? `#${state.channelName}` : 'Catat dari pesan channel'}
           </span>
-          <span className="block truncate text-[13px] text-slate-500">
+          <span className="block truncate fs-13 text-slate-500">
             {state.channelId
               ? `Tiap ±10 menit${when ? ` · terakhir ${when}` : ''}. Hasilnya masuk Kotak Masuk.`
               : 'Pilih channel yang kamu pakai untuk catatan keuangan.'}
@@ -1009,7 +1007,7 @@ export function SlackInboxCard() {
         )}
       </div>
       {state.channelId && (
-        <p className="px-1 text-[12px] text-slate-500">
+        <p className="px-1 fs-12 text-slate-500">
           Contoh pesan: “makan siang 45rb pakai BCA” atau “gaji masuk 8jt”. Hanya pesan setelah channel dipilih yang
           dibaca.
         </p>
@@ -1028,19 +1026,19 @@ export function SlackInboxCard() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cari nama channel"
-              className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+              className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 fs-14 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <button
               type="submit"
               disabled={busy}
-              className="rounded-xl bg-slate-900 px-3 text-[13px] font-bold text-white disabled:opacity-60"
+              className="rounded-xl bg-slate-900 px-3 fs-13 font-bold text-white disabled:opacity-60"
             >
               Cari
             </button>
           </form>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {channels.length === 0 ? (
-              <p className="p-3 text-[13px] text-slate-500">Channel tidak ditemukan. Coba cari dengan nama lain.</p>
+              <p className="p-3 fs-13 text-slate-500">Channel tidak ditemukan. Coba cari dengan nama lain.</p>
             ) : (
               channels.map((c) => (
                 <button
@@ -1051,7 +1049,7 @@ export function SlackInboxCard() {
                     setChannels(null);
                   }}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100',
+                    'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left fs-14 hover:bg-slate-100',
                     state.channelId === c.id && 'bg-indigo-50 font-semibold text-indigo-700',
                   )}
                 >
@@ -1061,7 +1059,7 @@ export function SlackInboxCard() {
                     <Hash size={14} className="shrink-0 text-slate-400" />
                   )}
                   <span className="truncate">{c.name}</span>
-                  {!c.isMember && <span className="ml-auto shrink-0 text-[11px] text-slate-400">belum bergabung</span>}
+                  {!c.isMember && <span className="ml-auto shrink-0 fs-11 text-slate-400">belum bergabung</span>}
                 </button>
               ))
             )}
@@ -1070,7 +1068,7 @@ export function SlackInboxCard() {
       )}
 
       {result && (
-        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+        <p className="rounded-2xl bg-white px-4 py-2.5 fs-13 text-slate-600 ring-1 ring-slate-200">{result}</p>
       )}
 
       <div className={cn('grid gap-2', state.channelId && 'sm:grid-cols-2')}>
@@ -1079,7 +1077,7 @@ export function SlackInboxCard() {
           onClick={() => (channels ? setChannels(null) : void loadChannels(''))}
           disabled={busy}
           className={cn(
-            'flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60',
+            'flex items-center justify-center gap-2 rounded-full py-3 fs-14 font-bold disabled:opacity-60',
             state.channelId
               ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100'
               : 'bg-slate-900 text-white',
@@ -1093,7 +1091,7 @@ export function SlackInboxCard() {
             type="button"
             onClick={() => void check()}
             disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-60"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Periksa sekarang
           </button>
@@ -1102,7 +1100,7 @@ export function SlackInboxCard() {
       {state.channelId && (
         <a
           href="/membership/kotak-masuk"
-          className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600"
+          className="flex items-center justify-center gap-1.5 fs-13 font-semibold text-indigo-600"
         >
           Buka Kotak Masuk <ChevronRight size={13} />
         </a>
@@ -1168,8 +1166,8 @@ export function SheetsSyncCard() {
       <div className="flex items-center gap-3">
         <Sheet size={20} className="shrink-0 text-emerald-600" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">Salinan transaksi</span>
-          <span className="block text-[13px] text-slate-500">
+          <span className="block fs-15 font-semibold text-slate-900">Salinan transaksi</span>
+          <span className="block fs-13 text-slate-500">
             {state?.enabled
               ? `${state.rows} transaksi · diperbarui otomatis tiap hari${when ? ` · terakhir ${when}` : ''}`
               : 'Belum ada spreadsheet — dibuat saat pertama kali disalin.'}
@@ -1177,14 +1175,14 @@ export function SheetsSyncCard() {
         </span>
       </div>
       {result && (
-        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+        <p className="rounded-2xl bg-white px-4 py-2.5 fs-13 text-slate-600 ring-1 ring-slate-200">{result}</p>
       )}
       <div className={cn('grid gap-2', state?.url && 'sm:grid-cols-2')}>
         <button
           type="button"
           onClick={sync}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-60"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}{' '}
           {state?.enabled ? 'Sinkronkan sekarang' : 'Buat spreadsheet & salin'}
@@ -1194,7 +1192,7 @@ export function SheetsSyncCard() {
             href={state.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 fs-14 font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
           >
             Buka spreadsheet <ExternalLink size={14} />
           </a>
@@ -1271,8 +1269,8 @@ export function CalendarSyncCard() {
       <div className="flex items-center gap-3">
         <CalendarDays size={20} className="shrink-0 text-sky-600" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">Jadwal di kalender</span>
-          <span className="block text-[13px] text-slate-500">
+          <span className="block fs-15 font-semibold text-slate-900">Jadwal di kalender</span>
+          <span className="block fs-13 text-slate-500">
             {state?.enabled
               ? `${state.count} acara · sinkron otomatis tiap hari${when ? ` · terakhir ${when}` : ''}`
               : 'Transaksi rutin & jatuh tempo kartu kredit.'}
@@ -1280,7 +1278,7 @@ export function CalendarSyncCard() {
         </span>
       </div>
       {result && (
-        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+        <p className="rounded-2xl bg-white px-4 py-2.5 fs-13 text-slate-600 ring-1 ring-slate-200">{result}</p>
       )}
       {Boolean(state?.events?.length) && (
         <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
@@ -1292,16 +1290,14 @@ export function CalendarSyncCard() {
             return (
               <li key={`${e.summary}-${i}`} className="flex items-center gap-3 px-4 py-3">
                 <span className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-                  <span className="text-[10px] font-semibold uppercase leading-none">
+                  <span className="fs-10 font-semibold uppercase leading-none">
                     {start ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(start) : '—'}
                   </span>
-                  <span className="text-[15px] font-bold leading-tight">{start ? start.getDate() : ''}</span>
+                  <span className="fs-15 font-bold leading-tight">{start ? start.getDate() : ''}</span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium text-slate-900">
-                    {e.summary ?? 'Acara jadwal'}
-                  </span>
-                  <span className="block text-[12px] text-slate-500">
+                  <span className="block truncate fs-14 font-medium text-slate-900">{e.summary ?? 'Acara jadwal'}</span>
+                  <span className="block fs-12 text-slate-500">
                     {start
                       ? `Mulai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(start)}`
                       : 'Tanggal belum terbaca — sinkronkan ulang'}
@@ -1312,7 +1308,7 @@ export function CalendarSyncCard() {
                   href={e.link ?? dayUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-semibold text-slate-700 hover:bg-slate-200"
                 >
                   Lihat <ExternalLink size={12} />
                 </a>
@@ -1325,7 +1321,7 @@ export function CalendarSyncCard() {
         type="button"
         onClick={sync}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-15 font-bold text-white disabled:opacity-60"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}{' '}
         {state?.enabled ? 'Sinkronkan sekarang' : 'Salin jadwal ke kalender'}

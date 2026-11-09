@@ -58,7 +58,7 @@ export default function HubungiKamiPage() {
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center gap-4">
           <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat kontak...</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Memuat kontak...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -68,7 +68,7 @@ export default function HubungiKamiPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-black text-slate-900 tracking-tight">WhatsApp</h2>
-              <p className="text-[13px] font-bold text-slate-400 mt-1">
+              <p className="fs-13 font-bold text-slate-400 mt-1">
                 {normalizedWhatsApp ? `+${normalizedWhatsApp}` : 'Belum diatur'}
               </p>
             </div>
@@ -83,7 +83,7 @@ export default function HubungiKamiPage() {
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </a>
             ) : (
-              <p className="text-[11px] font-bold text-slate-300">Nomor WhatsApp belum diatur admin.</p>
+              <p className="fs-11 font-bold text-slate-300">Nomor WhatsApp belum diatur admin.</p>
             )}
           </div>
 
@@ -93,7 +93,7 @@ export default function HubungiKamiPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-black text-slate-900 tracking-tight">Email</h2>
-              <p className="text-[13px] font-bold text-slate-400 mt-1 break-all">
+              <p className="fs-13 font-bold text-slate-400 mt-1 break-all">
                 {settings?.billingEmail || 'Belum diatur'}
               </p>
             </div>
@@ -114,7 +114,7 @@ export default function HubungiKamiPage() {
                 </button>
               </div>
             ) : (
-              <p className="text-[11px] font-bold text-slate-300">Email belum diatur admin.</p>
+              <p className="fs-11 font-bold text-slate-300">Email belum diatur admin.</p>
             )}
           </div>
         </div>

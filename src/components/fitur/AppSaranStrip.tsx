@@ -20,7 +20,7 @@ export function AppSaranStrip({ saran }: { saran: Saran[] }) {
       <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-gradient-to-br from-fuchsia-500/40 to-orange-400/30 blur-3xl" />
       <div className="relative flex items-center gap-2.5">
         <LeoBadge topic="investasi" size={38} />
-        <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">
+        <p className="flex items-center gap-1.5 fs-11 font-black uppercase tracking-[0.18em] text-amber-300">
           <Sparkles size={12} /> Untukmu hari ini
         </p>
       </div>
@@ -37,8 +37,8 @@ export function AppSaranStrip({ saran }: { saran: Saran[] }) {
                 s.tone === 'warn' ? 'bg-amber-300' : s.tone === 'good' ? 'bg-emerald-300' : 'bg-sky-300',
               )}
             />
-            <span className="block text-[14px] font-black">{s.title}</span>
-            <span className="mt-0.5 block text-[12px] leading-snug text-white/65">{s.text}</span>
+            <span className="block fs-14 font-black">{s.title}</span>
+            <span className="mt-0.5 block fs-12 leading-snug text-white/65">{s.text}</span>
           </Link>
         ))}
       </div>

@@ -69,7 +69,7 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
         )}
 
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
             Nama Rekening
           </label>
           <input
@@ -82,7 +82,7 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
             Jenis
           </label>
           <div className="grid grid-cols-3 gap-2 mt-2">
@@ -111,7 +111,7 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
         <CurrencySelect label="Mata Uang" value={currency} onChange={setCurrency} />
 
         <div className="bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-6">
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Saldo Awal
           </label>
           <div className="flex items-baseline gap-2 mt-2">

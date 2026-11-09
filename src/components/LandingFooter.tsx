@@ -111,7 +111,7 @@ export const LandingFooter = ({ variant = 'light' }: { variant?: 'light' | 'dark
 
         <div className={dark ? 'pt-8 border-t border-white/[0.06]' : 'pt-8 border-t border-slate-100'}>
           <p
-            className={`${dark ? 'text-[#6f6b64]' : 'text-slate-400'} text-[11px] font-medium leading-relaxed text-center md:text-left`}
+            className={`${dark ? 'text-[#6f6b64]' : 'text-slate-400'} fs-11 font-medium leading-relaxed text-center md:text-left`}
           >
             Leosiqra membantu keteraturan finansial pribadi. Bukan saran investasi personal dan bukan janji keuntungan.
           </p>

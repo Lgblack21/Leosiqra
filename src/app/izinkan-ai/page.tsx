@@ -82,7 +82,7 @@ export default function IzinkanAiPage() {
             <Bot size={20} />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leosiqra</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Leosiqra</p>
             <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">Hubungkan aplikasi AI</h1>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function IzinkanAiPage() {
             <p className="text-xs font-medium text-rose-700 leading-relaxed">
               {error || 'Permintaan izin tidak valid.'}
             </p>
-            <p className="text-[11px] font-medium text-rose-600 leading-relaxed">
+            <p className="fs-11 font-medium text-rose-600 leading-relaxed">
               Tutup halaman ini lalu ulangi pemasangan connector dari aplikasi AI-nya.
             </p>
           </div>
@@ -115,19 +115,19 @@ export default function IzinkanAiPage() {
                   info.verified ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200',
                 )}
               >
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Akan kembali ke</p>
+                <p className="fs-10 font-black uppercase tracking-widest text-slate-500">Akan kembali ke</p>
                 <p className="text-base font-black text-slate-900 break-all">{info.redirectHost}</p>
                 {info.verified ? (
-                  <p className="mt-1 text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                  <p className="mt-1 fs-11 font-bold text-emerald-700 flex items-center gap-1">
                     <BadgeCheck size={14} /> Domain aplikasi AI resmi yang dikenal Leosiqra
                   </p>
                 ) : (
-                  <p className="mt-1 text-[11px] font-bold text-amber-700 leading-relaxed">
+                  <p className="mt-1 fs-11 font-bold text-amber-700 leading-relaxed">
                     Tidak terverifikasi. Lanjutkan hanya kalau kamu sendiri yang sedang memasang aplikasi di domain ini.
                   </p>
                 )}
               </div>
-              <p className="text-[11px] font-medium text-slate-400">
+              <p className="fs-11 font-medium text-slate-400">
                 Masuk sebagai <span className="font-bold text-slate-600">{info.userEmail}</span>
               </p>
             </div>
@@ -168,12 +168,12 @@ export default function IzinkanAiPage() {
               </li>
             </ul>
 
-            <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
+            <p className="fs-11 font-medium text-slate-400 leading-relaxed">
               Data yang dibaca AI dikirim ke penyedia aplikasi tersebut. Koneksi bisa diputus kapan saja di Profil →
               Hubungkan ke AI, dan otomatis terputus saat password diganti/direset.
             </p>
 
-            {error && <p className="text-[11px] font-bold text-rose-500">{error}</p>}
+            {error && <p className="fs-11 font-bold text-rose-500">{error}</p>}
 
             <div className="flex gap-2">
               <button

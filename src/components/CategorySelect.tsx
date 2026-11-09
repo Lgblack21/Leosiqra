@@ -148,8 +148,8 @@ export const CategorySelect = ({
       <label
         className={
           size === 'sm'
-            ? 'block text-[12px] font-semibold text-slate-500'
-            : 'text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1'
+            ? 'block fs-12 font-semibold text-slate-500'
+            : 'fs-10 font-black text-slate-400 uppercase tracking-widest pl-1'
         }
       >
         {label}
@@ -170,7 +170,7 @@ export const CategorySelect = ({
           <span
             className={cn(
               'min-w-0 truncate font-bold',
-              size === 'sm' ? 'text-[13.5px] font-semibold' : 'text-sm',
+              size === 'sm' ? 'fs-13.5 font-semibold' : 'text-sm',
               !selectedCategory && 'text-slate-400',
             )}
           >
@@ -199,7 +199,7 @@ export const CategorySelect = ({
                   <button
                     type="button"
                     onClick={() => setExpandedCategory(null)}
-                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[12.5px] font-bold text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left fs-12.5 font-bold text-slate-700 hover:bg-slate-50"
                   >
                     <ChevronDown size={14} className="rotate-90 text-slate-400" />
                     <span className="text-base leading-none">{categoryVisual(expandedCategory, wantKind).emoji}</span>
@@ -212,7 +212,7 @@ export const CategorySelect = ({
                       type="button"
                       onClick={() => handleSelectSubCategory(expandedCategory, sub)}
                       className={cn(
-                        'flex w-full items-center justify-between rounded-xl py-2 pl-9 pr-2.5 text-left text-[13px] transition-colors',
+                        'flex w-full items-center justify-between rounded-xl py-2 pl-9 pr-2.5 text-left fs-13 transition-colors',
                         value === expandedCategory && subValue === sub
                           ? 'bg-slate-900 font-semibold text-white'
                           : 'font-medium text-slate-600 hover:bg-slate-50',
@@ -224,7 +224,7 @@ export const CategorySelect = ({
                   ))}
                 </>
               ) : uniqueMainCategories.length === 0 ? (
-                <p className="px-3 py-4 text-center text-[12.5px] text-slate-400">Belum ada kategori.</p>
+                <p className="px-3 py-4 text-center fs-12.5 text-slate-400">Belum ada kategori.</p>
               ) : (
                 uniqueMainCategories.map((cat) => {
                   const subOptions = getSubCategoryOptions(cat.category);
@@ -241,17 +241,14 @@ export const CategorySelect = ({
                       )}
                     >
                       <span
-                        className={cn(
-                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[16px]',
-                          vis.tile,
-                        )}
+                        className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg fs-16', vis.tile)}
                       >
                         {vis.emoji}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-slate-800">{cat.category}</span>
+                        <span className="block truncate fs-13 font-semibold text-slate-800">{cat.category}</span>
                         {subOptions.length > 0 && (
-                          <span className="block truncate text-[11px] text-slate-400">
+                          <span className="block truncate fs-11 text-slate-400">
                             {subOptions.length === 1 ? subOptions[0] : `${subOptions.length} sub kategori`}
                           </span>
                         )}
@@ -277,11 +274,11 @@ export const CategorySelect = ({
                   <button
                     type="button"
                     onClick={() => setExpandedCategory(null)}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2 fs-10 font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
                   >
                     <ChevronDown size={12} className="rotate-90" /> Kembali
                   </button>
-                  <p className="px-4 pt-1 pb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <p className="px-4 pt-1 pb-2 fs-10 font-black text-slate-400 uppercase tracking-widest">
                     {expandedCategory} — pilih sub kategori
                   </p>
                   {getSubCategoryOptions(expandedCategory).map((sub) => (
@@ -312,11 +309,9 @@ export const CategorySelect = ({
                     >
                       <div>
                         <p className="font-bold">{cat.category}</p>
-                        {subOptions.length === 1 && (
-                          <p className="text-[10px] text-slate-400 mt-0.5">{subOptions[0]}</p>
-                        )}
+                        {subOptions.length === 1 && <p className="fs-10 text-slate-400 mt-0.5">{subOptions[0]}</p>}
                         {subOptions.length > 1 && (
-                          <p className="text-[10px] text-slate-400 mt-0.5">{subOptions.length} sub kategori</p>
+                          <p className="fs-10 text-slate-400 mt-0.5">{subOptions.length} sub kategori</p>
                         )}
                       </div>
                       {subOptions.length > 1 ? (
@@ -340,7 +335,7 @@ export const CategorySelect = ({
         <div className="flex gap-2 p-1">
           <span
             className={cn(
-              'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest',
+              'px-3 py-1 rounded-full fs-10 font-black uppercase tracking-widest',
               type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600',
             )}
           >

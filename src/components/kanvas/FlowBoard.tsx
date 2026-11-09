@@ -96,8 +96,8 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
           <div className="flex justify-center">
             <LeoBadge topic="investasi" size={48} />
           </div>
-          <p className="mt-1 text-[10.5px] font-black uppercase tracking-[0.18em] text-slate-400">Mulai</p>
-          <p className="text-[14px] font-black text-slate-900 dark:text-white">Uangmu datang</p>
+          <p className="mt-1 fs-10.5 font-black uppercase tracking-[0.18em] text-slate-400">Mulai</p>
+          <p className="fs-14 font-black text-slate-900 dark:text-white">Uangmu datang</p>
         </div>
       ),
     });
@@ -119,12 +119,11 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
                 tones[c],
               )}
             >
-              <p className="truncate text-[13px] font-bold text-slate-600 dark:text-slate-300">{n.label}</p>
-              <p className="text-[16px] font-black tabular-nums text-slate-900 dark:text-white">
-                {rp(n.value)}{' '}
-                {pct !== null ? <span className="text-[11.5px] font-bold text-slate-400">{pct}%</span> : null}
+              <p className="truncate fs-13 font-bold text-slate-600 dark:text-slate-300">{n.label}</p>
+              <p className="fs-16 font-black tabular-nums text-slate-900 dark:text-white">
+                {rp(n.value)} {pct !== null ? <span className="fs-11.5 font-bold text-slate-400">{pct}%</span> : null}
               </p>
-              {n.sub ? <p className="truncate text-[10.5px] text-slate-400">{n.sub}</p> : null}
+              {n.sub ? <p className="truncate fs-10.5 text-slate-400">{n.sub}</p> : null}
             </div>
           ),
         });
@@ -141,8 +140,8 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
             data-handle={id}
             className={cn('cursor-grab rounded-2xl px-3.5 py-2 text-white active:cursor-grabbing', cls)}
           >
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">{label}</p>
-            <p className="text-[17px] font-black tabular-nums">{rp(value)}</p>
+            <p className="fs-10 font-black uppercase tracking-[0.18em] opacity-80">{label}</p>
+            <p className="fs-17 font-black tabular-nums">{rp(value)}</p>
           </div>
         ),
       });
@@ -160,16 +159,16 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
           data-handle="sisa"
           className="cursor-grab rounded-[22px] bg-slate-950 p-4 text-white shadow-xl active:cursor-grabbing"
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">Sisa {flow.label}</p>
-          <p className={cn('text-[22px] font-black tabular-nums', left >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
+          <p className="fs-10 font-black uppercase tracking-[0.18em] text-amber-300">Sisa {flow.label}</p>
+          <p className={cn('fsh-22 font-black tabular-nums', left >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
             {rp(left)}
           </p>
-          <p className="mt-1 text-[12px] text-white/60">
+          <p className="mt-1 fs-12 text-white/60">
             {flow.income > 0
               ? `${Math.round((left / flow.income) * 100)}% dari uang masuk`
               : 'Belum ada pemasukan tercatat'}
           </p>
-          <p className="mt-2 text-[11px] leading-snug text-white/45">
+          <p className="mt-2 fs-11 leading-snug text-white/45">
             Transfer antar-rekening, beli investasi & utang-piutang tidak dihitung.
           </p>
         </div>
@@ -195,7 +194,7 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
               type="button"
               onClick={() => setPeriod(p.id)}
               className={cn(
-                'h-8 rounded-full px-3 text-[12.5px] font-bold',
+                'h-8 rounded-full px-3 fs-12.5 font-bold',
                 period === p.id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500',
               )}
             >
@@ -204,14 +203,14 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
           ))}
         </div>
         {flow ? (
-          <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/95 dark:ring-slate-700">
+          <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 fs-12 font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/95 dark:ring-slate-700">
             {flow.label} · masuk {short(flow.income)} · keluar {short(flow.expense)}
           </span>
         ) : null}
       </div>
       <div className="absolute inset-0">
         {flow && !flow.links.length ? (
-          <p className="absolute left-1/2 top-24 z-10 w-[min(90%,22rem)] -translate-x-1/2 rounded-2xl bg-white p-4 text-center text-[13.5px] font-semibold text-slate-600 shadow ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+          <p className="absolute left-1/2 top-24 z-10 w-[min(90%,22rem)] -translate-x-1/2 rounded-2xl bg-white p-4 text-center fs-13.5 font-semibold text-slate-600 shadow ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
             Belum ada pemasukan/pengeluaran di periode ini. Coba periode lain, atau catat transaksi dulu.
           </p>
         ) : null}

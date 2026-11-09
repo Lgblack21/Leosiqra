@@ -417,7 +417,7 @@ export function FocusTimer({
   const needMusicTap = Boolean(run && focusing && settings.track && musicOff);
 
   const chipBase =
-    'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[10px] font-bold leading-tight transition-colors md:py-2 md:text-[12px]';
+    'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 py-1.5 fs-10 font-bold leading-tight transition-colors md:py-2 md:fs-12';
   const musicChips = (
     <div className="grid grid-cols-5 gap-1.5">
       {[{ id: null, label: 'Hening', emoji: '🤫' }, ...FOCUS_TRACKS].map((tr) => {
@@ -437,7 +437,7 @@ export function FocusTimer({
                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300',
             )}
           >
-            <span className="text-[15px] leading-none md:text-[18px]" aria-hidden>
+            <span className="fs-15 leading-none md:fs-18" aria-hidden>
               {tr.emoji}
             </span>
             <span className="truncate">{tr.label}</span>
@@ -487,7 +487,7 @@ export function FocusTimer({
         <button
           type="button"
           onClick={preview}
-          className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           {audio.track ? 'Stop' : 'Coba'}
         </button>
@@ -522,7 +522,7 @@ export function FocusTimer({
         >
           <span
             className={cn(
-              'rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur md:text-[11px]',
+              'rounded-full px-3 py-0.5 fs-10 font-bold uppercase tracking-[0.16em] backdrop-blur md:fs-11',
               night ? 'bg-white/10 text-white/80' : 'bg-white/55 text-slate-600',
             )}
           >
@@ -568,7 +568,7 @@ export function FocusTimer({
           type="button"
           onClick={onOpenSettings}
           className={cn(
-            'absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold backdrop-blur transition-colors md:right-4 md:top-4',
+            'absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 fs-12 font-bold backdrop-blur transition-colors md:right-4 md:top-4',
             night ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/70 text-slate-700 hover:bg-white',
           )}
           aria-label="Musik & pengaturan"
@@ -593,7 +593,7 @@ export function FocusTimer({
             initial={reduce ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="inline-flex min-w-0 items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200 md:text-[13px]"
+            className="inline-flex min-w-0 items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 fs-12 font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200 md:fs-13"
           >
             <span
               className={cn(
@@ -607,7 +607,7 @@ export function FocusTimer({
             <button
               type="button"
               onClick={() => settings.track && focusAudio.play(settings.track, settings.volume)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[12px] font-bold text-white shadow-md"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 fs-12 font-bold text-white shadow-md"
             >
               <Music2 size={13} /> Putar musik
             </button>
@@ -620,10 +620,8 @@ export function FocusTimer({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="hidden min-w-0 flex-1 md:block">
-                <p className="truncate text-[15px] font-bold text-slate-900 dark:text-white">
-                  {run.label || kindLabel}
-                </p>
-                <p className="text-[12px] text-slate-500">
+                <p className="truncate fs-15 font-bold text-slate-900 dark:text-white">{run.label || kindLabel}</p>
+                <p className="fs-12 text-slate-500">
                   {run.phase === 'focus'
                     ? `Istirahat ${(run.cycle + 1) % longEvery === 0 ? settings.longBreakMin : settings.breakMin} mnt setelah ini`
                     : `Lalu fokus ${settings.minutes} mnt`}
@@ -633,7 +631,7 @@ export function FocusTimer({
                 <button
                   type="button"
                   onClick={resume}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3.5 text-[15px] font-bold text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] md:w-56 md:flex-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3.5 fs-15 font-bold text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] md:w-56 md:flex-none"
                 >
                   <Play size={17} fill="currentColor" /> Lanjut
                 </button>
@@ -641,7 +639,7 @@ export function FocusTimer({
                 <button
                   type="button"
                   onClick={pause}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-[15px] font-bold text-white active:scale-[0.98] dark:bg-white dark:text-slate-900 md:w-56 md:flex-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 fs-15 font-bold text-white active:scale-[0.98] dark:bg-white dark:text-slate-900 md:w-56 md:flex-none"
                 >
                   <Pause size={17} fill="currentColor" /> Jeda
                 </button>
@@ -649,7 +647,7 @@ export function FocusTimer({
               <button
                 type="button"
                 onClick={() => extend(5)}
-                className="h-[52px] rounded-2xl bg-slate-100 px-4 text-[14px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
+                className="h-[52px] rounded-2xl bg-slate-100 px-4 fs-14 font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
                 aria-label="Tambah 5 menit"
               >
                 +5
@@ -658,7 +656,7 @@ export function FocusTimer({
                 <button
                   type="button"
                   onClick={skipBreak}
-                  className="h-[52px] rounded-2xl bg-slate-100 px-4 text-[13px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
+                  className="h-[52px] rounded-2xl bg-slate-100 px-4 fs-13 font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
                 >
                   Lewati
                 </button>
@@ -682,7 +680,7 @@ export function FocusTimer({
                   className="overflow-hidden"
                 >
                   <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-2.5 dark:bg-rose-500/10">
-                    <p className="min-w-0 flex-1 text-[12px] text-rose-700 dark:text-rose-300">
+                    <p className="min-w-0 flex-1 fs-12 text-rose-700 dark:text-rose-300">
                       {elapsedSec(run, now) >= 60
                         ? `Berhenti? ${Math.floor(elapsedSec(run, now) / 60)} menit tetap tercatat di Rekap.`
                         : 'Berhenti? Kurang dari 1 menit — tidak dicatat.'}
@@ -690,14 +688,14 @@ export function FocusTimer({
                     <button
                       type="button"
                       onClick={() => setConfirmStop(false)}
-                      className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      className="rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     >
                       Lanjut
                     </button>
                     <button
                       type="button"
                       onClick={stop}
-                      className="rounded-full bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white"
+                      className="rounded-full bg-rose-600 px-3 py-1.5 fs-12 font-bold text-white"
                     >
                       Berhenti
                     </button>
@@ -720,7 +718,7 @@ export function FocusTimer({
                     }}
                     aria-pressed={settings.kind === k.id}
                     className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold transition-colors md:text-[13px]',
+                      'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 fs-12 font-bold transition-colors md:fs-13',
                       settings.kind === k.id
                         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300',
@@ -737,7 +735,7 @@ export function FocusTimer({
                 maxLength={80}
                 placeholder="Lagi ngerjain apa? (boleh kosong)"
                 aria-label="Lagi ngerjain apa"
-                className="w-full rounded-2xl bg-slate-50 px-4 py-2.5 text-[14px] text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                className="w-full rounded-2xl bg-slate-50 px-4 py-2.5 fs-14 text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
               />
             </div>
             <div className="space-y-2.5">
@@ -752,7 +750,7 @@ export function FocusTimer({
                       setSettings({ minutes: m });
                     }}
                     className={cn(
-                      'min-w-0 flex-1 rounded-full py-2 text-[13px] font-bold tabular-nums transition-colors',
+                      'min-w-0 flex-1 rounded-full py-2 fs-13 font-bold tabular-nums transition-colors',
                       settings.minutes === m && !customOpen
                         ? 'bg-indigo-600 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300',
@@ -771,7 +769,7 @@ export function FocusTimer({
                     >
                       <Minus size={13} />
                     </button>
-                    <span className="w-8 text-center text-[13px] font-bold tabular-nums">{settings.minutes}</span>
+                    <span className="w-8 text-center fs-13 font-bold tabular-nums">{settings.minutes}</span>
                     <button
                       type="button"
                       onClick={() => setSettings({ minutes: clampInt(settings.minutes + 5, 5, 180, 25) })}
@@ -785,7 +783,7 @@ export function FocusTimer({
                   <button
                     type="button"
                     onClick={() => setCustomOpen(true)}
-                    className="min-w-0 flex-1 rounded-full bg-slate-100 py-2 text-[13px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    className="min-w-0 flex-1 rounded-full bg-slate-100 py-2 fs-13 font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
                   >
                     Atur
                   </button>
@@ -794,7 +792,7 @@ export function FocusTimer({
               <button
                 type="button"
                 onClick={start}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[16px] font-bold text-white shadow-lg shadow-indigo-600/30 transition-transform active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-16 font-bold text-white shadow-lg shadow-indigo-600/30 transition-transform active:scale-[0.98]"
               >
                 <Play size={18} fill="currentColor" /> Mulai fokus {settings.minutes} menit
               </button>
@@ -824,13 +822,13 @@ export function FocusTimer({
               className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[calc(env(safe-area-inset-bottom)+20px)] shadow-2xl dark:bg-slate-900 md:rounded-[28px] md:pb-5"
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="flex items-center gap-2 text-[16px] font-bold text-slate-900 dark:text-white">
+                <p className="flex items-center gap-2 fs-16 font-bold text-slate-900 dark:text-white">
                   <Settings2 size={17} className="text-slate-400" /> Musik & pengaturan
                 </p>
                 <button
                   type="button"
                   onClick={onCloseSettings}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                 >
                   Selesai
                 </button>
@@ -838,14 +836,14 @@ export function FocusTimer({
               <div className="space-y-3">
                 <div className="space-y-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
                   <div className="flex items-center justify-between">
-                    <p className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800 dark:text-slate-100">
+                    <p className="flex items-center gap-1.5 fs-13 font-bold text-slate-800 dark:text-slate-100">
                       <Music2 size={15} className="text-indigo-500" /> Musik fokus
                     </p>
-                    <span className="text-[11px] font-semibold text-slate-400">dibuat langsung · bebas royalti</span>
+                    <span className="fs-11 font-semibold text-slate-400">dibuat langsung · bebas royalti</span>
                   </div>
                   {musicChips}
                   {volumeRow}
-                  <p className="text-[11px] text-slate-400">
+                  <p className="fs-11 text-slate-400">
                     {settings.track ? 'Musik otomatis menyala saat fokus dimulai.' : 'Tanpa musik.'}
                   </p>
                 </div>
@@ -929,7 +927,7 @@ function Stepper({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-[13px] text-slate-600 dark:text-slate-300">{label}</span>
+      <span className="fs-13 text-slate-600 dark:text-slate-300">{label}</span>
       <span className="flex items-center gap-1 rounded-full bg-slate-50 p-1 dark:bg-slate-800">
         <button
           type="button"
@@ -940,7 +938,7 @@ function Stepper({
         >
           <Minus size={13} />
         </button>
-        <span className="w-14 text-center text-[13px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
+        <span className="w-14 text-center fs-13 font-bold tabular-nums text-slate-800 dark:text-slate-100">
           {value} {unit}
         </span>
         <button
@@ -966,7 +964,7 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
       onClick={() => onChange(!on)}
       className="flex w-full items-center justify-between gap-3 text-left"
     >
-      <span className="text-[13px] text-slate-600 dark:text-slate-300">{label}</span>
+      <span className="fs-13 text-slate-600 dark:text-slate-300">{label}</span>
       <span
         className={cn(
           'relative h-6 w-10 shrink-0 rounded-full transition-colors',

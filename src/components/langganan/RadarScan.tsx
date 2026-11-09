@@ -90,10 +90,10 @@ export function RadarScan({
         <div className="flex items-center gap-3">
           <RadarDisc spinning={!done} />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/80">
+            <p className="fs-11 font-bold uppercase tracking-widest text-emerald-300/80">
               {RADAR_DAYS} hari · {fmtShort(from)} – {fmtShort(today)}
             </p>
-            <p className="text-[17px] font-extrabold leading-tight">
+            <p className="fs-17 font-extrabold leading-tight">
               {done
                 ? hits.length
                   ? `Radar menemukan ${hits.length} langganan`
@@ -133,10 +133,7 @@ export function RadarScan({
                 >
                   {!lit && (
                     <span
-                      className={cn(
-                        'text-[11px] font-semibold tabular-nums',
-                        scanned ? 'text-white/45' : 'text-white/20',
-                      )}
+                      className={cn('fs-11 font-semibold tabular-nums', scanned ? 'text-white/45' : 'text-white/20')}
                     >
                       {Number(day.slice(8))}
                     </span>
@@ -169,7 +166,7 @@ export function RadarScan({
             )}
           </div>
           <div
-            className="mx-auto mt-1.5 w-max text-[10px] text-white/40"
+            className="mx-auto mt-1.5 w-max fs-10 text-white/40"
             style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, ${CELL}px)`, gap: GAP }}
           >
             {Array.from({ length: columns }, (_, c) => {
@@ -198,16 +195,16 @@ export function RadarScan({
               ))}
             </AnimatePresence>
             {found.length === 0 && (
-              <span className="text-[12px] text-white/50">
+              <span className="fs-12 text-white/50">
                 {done ? 'Belum ada pola langganan di catatanmu.' : 'Mencari pola bayar berulang…'}
               </span>
             )}
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">{found.length} ditemukan</p>
-            <p className="text-[15px] font-extrabold tabular-nums">
+            <p className="fs-10 font-semibold uppercase tracking-wider text-white/50">{found.length} ditemukan</p>
+            <p className="fs-15 font-extrabold tabular-nums">
               ±{formatIDR(Math.round(runningTotal))}
-              <span className="text-[11px] font-semibold text-white/50">/bln</span>
+              <span className="fs-11 font-semibold text-white/50">/bln</span>
             </p>
           </div>
         </div>
@@ -215,7 +212,7 @@ export function RadarScan({
           <button
             type="button"
             onClick={() => setPos(RADAR_DAYS)}
-            className="mt-3 w-full text-center text-[12px] font-bold text-white/60 hover:text-white"
+            className="mt-3 w-full text-center fs-12 font-bold text-white/60 hover:text-white"
           >
             Lewati animasi
           </button>
@@ -289,8 +286,8 @@ function RadarResults({ hits, onDone }: { hits: RadarHit[]; onDone: (msg: string
     return (
       <div className="rounded-3xl bg-slate-50 p-5 text-center dark:bg-slate-800/60">
         <Sparkles size={22} className="mx-auto text-slate-400" />
-        <p className="mt-2 text-[14px] font-bold text-slate-900 dark:text-white">Tidak ada langganan baru terdeteksi</p>
-        <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+        <p className="mt-2 fs-14 font-bold text-slate-900 dark:text-white">Tidak ada langganan baru terdeteksi</p>
+        <p className="mt-1 fs-12 text-slate-500 dark:text-slate-400">
           Radar membaca catatan transaksi 30 hari terakhir. Catat tagihan seperti “Netflix” atau “Spotify” di catatan
           transaksi supaya radar mengenalinya, atau tambah manual.
         </p>
@@ -301,8 +298,8 @@ function RadarResults({ hits, onDone }: { hits: RadarHit[]; onDone: (msg: string
   const section = (title: string, desc: string | null, list: RadarHit[]) =>
     list.length > 0 && (
       <section>
-        <h3 className="px-1 text-[13px] font-extrabold text-slate-900 dark:text-white">{title}</h3>
-        {desc && <p className="px-1 text-[12px] text-slate-500 dark:text-slate-400">{desc}</p>}
+        <h3 className="px-1 fs-13 font-extrabold text-slate-900 dark:text-white">{title}</h3>
+        {desc && <p className="px-1 fs-12 text-slate-500 dark:text-slate-400">{desc}</p>}
         <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-3xl bg-slate-50 dark:divide-slate-800 dark:bg-slate-800/60">
           {list.map((h) => {
             const on = picked.has(h.id);
@@ -325,16 +322,14 @@ function RadarResults({ hits, onDone }: { hits: RadarHit[]; onDone: (msg: string
                   </span>
                   <SubLogo name={h.name} domain={h.domain} color={h.color} size={42} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
-                      {h.name}
-                    </span>
-                    <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+                    <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{h.name}</span>
+                    <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
                       {h.dates.length}× bayar · berikutnya ±{fmtShort(next)}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap text-right text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+                  <span className="whitespace-nowrap text-right fs-14 font-extrabold tabular-nums text-slate-900 dark:text-white">
                     {formatIDR(h.amount)}
-                    <span className="text-[11px] font-semibold text-slate-400">{CYCLE_SHORT[h.cycle]}</span>
+                    <span className="fs-11 font-semibold text-slate-400">{CYCLE_SHORT[h.cycle]}</span>
                   </span>
                 </button>
               </li>
@@ -349,7 +344,7 @@ function RadarResults({ hits, onDone }: { hits: RadarHit[]; onDone: (msg: string
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -368,12 +363,12 @@ function RadarResults({ hits, onDone }: { hits: RadarHit[]; onDone: (msg: string
         type="button"
         onClick={save}
         disabled={busy || !chosen.length}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-emerald-600"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-emerald-600"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}{' '}
         {chosen.length ? `Simpan ${chosen.length} · ±${formatIDR(Math.round(total))}/bln` : 'Pilih langganan dulu'}
       </button>
-      <p className="px-1 text-center text-[11px] text-slate-400">
+      <p className="px-1 text-center fs-11 text-slate-400">
         Harga diambil dari pembayaran terakhir. Bisa diubah kapan saja.
       </p>
     </div>

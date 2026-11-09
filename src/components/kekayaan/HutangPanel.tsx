@@ -413,13 +413,13 @@ export default function HutangPanel() {
         />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-[22px] font-extrabold tracking-tight md:text-[26px]">Hutang & Piutang</h2>
-            <p className="text-[13px] text-white/60">Yang harus kamu bayar dan yang masih ditagih ke orang lain.</p>
+            <h2 className="fsh-22 font-extrabold tracking-tight md:fsh-26">Hutang & Piutang</h2>
+            <p className="fs-13 text-white/60">Yang harus kamu bayar dan yang masih ditagih ke orang lain.</p>
           </div>
           <button
             type="button"
             onClick={() => openModal('hutang_piutang')}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Plus size={15} strokeWidth={2.6} /> Catat baru
           </button>
@@ -455,10 +455,10 @@ export default function HutangPanel() {
               >
                 <Scale size={18} className="text-white/40" />
                 <span className="text-center">
-                  <span className="block text-[11px] text-white/50">Selisih</span>
+                  <span className="block fs-11 text-white/50">Selisih</span>
                   <span
                     className={cn(
-                      'block text-[15px] font-extrabold tabular-nums',
+                      'block fs-15 font-extrabold tabular-nums',
                       net >= 0 ? 'text-emerald-300' : 'text-rose-300',
                     )}
                   >
@@ -477,14 +477,11 @@ export default function HutangPanel() {
                   typeFilter === b.cat ? 'ring-white/60' : 'ring-white/10',
                 )}
               >
-                <p className="flex items-center gap-1.5 text-[12px] font-semibold text-white/60">
+                <p className="flex items-center gap-1.5 fs-12 font-semibold text-white/60">
                   <b.icon size={14} className={b.color} /> {b.cat}
                   <span className="hidden md:inline"> · {b.label}</span>
                 </p>
-                <p
-                  key={b.total}
-                  className={cn('mt-1 truncate text-[19px] font-extrabold tabular-nums md:text-[30px]', b.color)}
-                >
+                <p key={b.total} className={cn('mt-1 truncate fs-19 font-extrabold tabular-nums md:fsh-30', b.color)}>
                   Rp {formatRp(b.total)}
                 </p>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -495,7 +492,7 @@ export default function HutangPanel() {
                     className={cn('h-full rounded-full', b.bar)}
                   />
                 </div>
-                <p className="mt-1.5 text-[11px] text-white/50">
+                <p className="mt-1.5 fs-11 text-white/50">
                   {b.n === 0
                     ? 'Tidak ada yang berjalan'
                     : `${b.n} catatan · ${Math.round(paidPct(b.total, openOriginal(b.cat)))}% sudah ${b.cat === 'Hutang' ? 'dibayar' : 'kembali'}`}
@@ -523,7 +520,7 @@ export default function HutangPanel() {
                 aria-selected={typeFilter === t}
                 onClick={() => setTypeFilter(t)}
                 className={cn(
-                  'relative flex-1 rounded-full px-3.5 py-1.5 text-[13px] font-semibold md:flex-none',
+                  'relative flex-1 rounded-full px-3.5 py-1.5 fs-13 font-semibold md:flex-none',
                   typeFilter === t ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700',
                 )}
               >
@@ -535,7 +532,7 @@ export default function HutangPanel() {
                   />
                 )}
                 <span className="relative">
-                  {t} <span className="text-[11px] text-slate-400">{counts[t]}</span>
+                  {t} <span className="fs-11 text-slate-400">{counts[t]}</span>
                 </span>
               </button>
             ))}
@@ -564,11 +561,11 @@ export default function HutangPanel() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nama atau catatan…"
-            className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-[14px] ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 fs-14 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-300"
           />
         </div>
       </div>
-      <p className="px-1 text-[12px] text-slate-500">
+      <p className="px-1 fs-12 text-slate-500">
         {statusFilter === 'Belum lunas' ? 'Semua yang belum lunas, dari bulan mana pun' : `Periode ${periodLabel}`}
       </p>
 
@@ -619,15 +616,15 @@ export default function HutangPanel() {
                   <div className="flex items-start gap-3">
                     <span
                       className={cn(
-                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[16px] font-extrabold',
+                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fs-16 font-extrabold',
                         isHutang ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600',
                       )}
                     >
                       {who.trim()[0]?.toUpperCase() ?? '?'}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[16px] font-bold text-slate-900">{who}</p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <p className="truncate fs-16 font-bold text-slate-900">{who}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 fs-11">
                         <span
                           className={cn(
                             'rounded-full px-2 py-0.5 font-bold',
@@ -649,7 +646,7 @@ export default function HutangPanel() {
                       </div>
                     </div>
                     {lunas ? (
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 fs-11 font-bold text-emerald-700">
                         <CheckCircle2 size={13} /> Lunas
                       </span>
                     ) : (
@@ -667,10 +664,10 @@ export default function HutangPanel() {
 
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <div>
-                      <p className="text-[11px] text-slate-500">{lunas ? 'Total' : 'Sisa'}</p>
+                      <p className="fs-11 text-slate-500">{lunas ? 'Total' : 'Sisa'}</p>
                       <p
                         className={cn(
-                          'text-[24px] font-extrabold leading-tight tabular-nums',
+                          'fsh-24 font-extrabold leading-tight tabular-nums',
                           lunas
                             ? 'text-slate-400 line-through decoration-2'
                             : isHutang
@@ -682,9 +679,7 @@ export default function HutangPanel() {
                       </p>
                     </div>
                     {!lunas && remaining < trx.amount && (
-                      <p className="text-right text-[12px] text-slate-500">
-                        dari {formatAmount(trx.amount, trx.currency)}
-                      </p>
+                      <p className="text-right fs-12 text-slate-500">dari {formatAmount(trx.amount, trx.currency)}</p>
                     )}
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -698,7 +693,7 @@ export default function HutangPanel() {
                       )}
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-slate-500">
+                  <p className="mt-1.5 fs-11 text-slate-500">
                     {lunas
                       ? 'Sudah beres'
                       : pct > 0
@@ -706,7 +701,7 @@ export default function HutangPanel() {
                         : `Belum ada ${isHutang ? 'pembayaran' : 'yang kembali'}`}
                   </p>
 
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 p-3 text-[12px]">
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 p-3 fs-12">
                     <div>
                       <dt className="text-slate-400">Sejak</dt>
                       <dd className="font-semibold text-slate-700">{formatDate(trx.date)}</dd>
@@ -752,7 +747,7 @@ export default function HutangPanel() {
                             <button
                               type="button"
                               onClick={() => setDueEdit({ trx, value: d })}
-                              className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-indigo-600 ring-1 ring-slate-200 hover:bg-indigo-50"
+                              className="shrink-0 rounded-full bg-white px-3 py-1 fs-11 font-bold text-indigo-600 ring-1 ring-slate-200 hover:bg-indigo-50"
                             >
                               {d ? 'Ubah' : 'Atur'}
                             </button>
@@ -776,7 +771,7 @@ export default function HutangPanel() {
                           setPayAmount('');
                         }}
                         className={cn(
-                          'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-bold text-white',
+                          'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 fs-13 font-bold text-white',
                           isHutang ? 'bg-slate-900 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700',
                         )}
                       >
@@ -786,7 +781,7 @@ export default function HutangPanel() {
                         type="button"
                         onClick={() => handleMarkLunas(trx)}
                         disabled={settlingId === trx.id}
-                        className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
                       >
                         <CheckCircle2 size={15} /> {settlingId === trx.id ? 'Menyimpan…' : 'Lunas'}
                       </button>
@@ -796,7 +791,7 @@ export default function HutangPanel() {
                       type="button"
                       onClick={() => trx.id && handleDelete(trx)}
                       disabled={deletingId === trx.id}
-                      className="mt-3 self-start text-[12px] font-semibold text-slate-400 hover:text-rose-600 disabled:opacity-50"
+                      className="mt-3 self-start fs-12 font-semibold text-slate-400 hover:text-rose-600 disabled:opacity-50"
                     >
                       Hapus catatan
                     </button>
@@ -808,7 +803,7 @@ export default function HutangPanel() {
         </div>
       )}
       {!loading && shown.length > 0 && (
-        <p className="px-1 text-[12px] text-slate-400">
+        <p className="px-1 fs-12 text-slate-400">
           Menampilkan {shown.length} catatan · {statusFilter === 'Belum lunas' ? 'semua bulan' : periodLabel}
         </p>
       )}
@@ -816,7 +811,7 @@ export default function HutangPanel() {
       <Modal isOpen={!!dueEdit} onClose={() => setDueEdit(null)} title="Jatuh tempo" maxWidth="max-w-sm">
         {dueEdit && (
           <div className="space-y-4">
-            <p className="text-[13px] text-slate-600">
+            <p className="fs-13 text-slate-600">
               {dueEdit.trx.category === 'Hutang' ? 'Hutang ke' : 'Piutang dari'}{' '}
               <b className="text-slate-900">{dueEdit.trx.lenderName || dueEdit.trx.note || dueEdit.trx.category}</b>
             </p>
@@ -845,10 +840,10 @@ export default function HutangPanel() {
         {payingDebt && pay && (
           <div className="space-y-4">
             <div className={cn('rounded-2xl p-4', pay.isHutang ? 'bg-rose-50' : 'bg-emerald-50')}>
-              <p className="text-[14px] font-bold text-slate-900">
+              <p className="fs-14 font-bold text-slate-900">
                 {payingDebt.lenderName || payingDebt.note || payingDebt.category}
               </p>
-              <p className="mt-0.5 text-[12px] text-slate-600">
+              <p className="mt-0.5 fs-12 text-slate-600">
                 Sisa {formatAmount(pay.remaining, payingDebt.currency)} dari{' '}
                 {formatAmount(payingDebt.amount, payingDebt.currency)}
               </p>
@@ -859,7 +854,7 @@ export default function HutangPanel() {
                 ></div>
               </div>
               {payNum > 0 && (
-                <p className="mt-1.5 text-[12px] font-semibold text-slate-700">
+                <p className="mt-1.5 fs-12 font-semibold text-slate-700">
                   Setelah ini:{' '}
                   {payNum >= pay.remaining
                     ? 'lunas ✓'
@@ -868,7 +863,7 @@ export default function HutangPanel() {
               )}
             </div>
             <div className="space-y-2">
-              <label className="pl-1 text-[12px] font-semibold text-slate-500">
+              <label className="pl-1 fs-12 font-semibold text-slate-500">
                 {pay.isHutang ? 'Dibayar sekarang' : 'Diterima sekarang'}
               </label>
               <div className="relative">
@@ -888,7 +883,7 @@ export default function HutangPanel() {
                     key={f}
                     type="button"
                     onClick={() => setPayAmount(String(Math.round(pay.remaining * f)))}
-                    className="flex-1 rounded-full bg-slate-100 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-slate-200"
+                    className="flex-1 rounded-full bg-slate-100 py-1.5 fs-12 font-semibold text-slate-600 hover:bg-slate-200"
                   >
                     {f === 1 ? 'Semua sisa' : `${f * 100}%`}
                   </button>

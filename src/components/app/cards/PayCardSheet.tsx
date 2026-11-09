@@ -108,13 +108,13 @@ export function PayCardSheet({ card, used, cycle, sources, onClose }: Props) {
 
         <div className="rounded-3xl bg-slate-50 dark:bg-slate-800/60 p-4 grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terpakai</p>
+            <p className="fs-10 font-bold text-slate-400 uppercase tracking-wider">Terpakai</p>
             <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
               {formatMoney(used, cardCurrency)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tagihan tercetak</p>
+            <p className="fs-10 font-bold text-slate-400 uppercase tracking-wider">Tagihan tercetak</p>
             <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
               {cycle ? formatMoney(cycle.amountDue, cardCurrency) : '—'}
             </p>
@@ -150,7 +150,7 @@ export function PayCardSheet({ card, used, cycle, sources, onClose }: Props) {
           <AccountPicker accounts={sources} value={fromId} onChange={setFromId} label="Bayar dari rekening" />
         )}
         {from && !sameCurrency && (
-          <p className="text-[11px] text-slate-400 px-1">
+          <p className="fs-11 text-slate-400 px-1">
             Nominal dalam {from.currency}; dikonversi otomatis ke {cardCurrency} dengan kurs hari ini.
           </p>
         )}

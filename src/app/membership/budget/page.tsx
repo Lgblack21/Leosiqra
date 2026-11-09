@@ -159,14 +159,14 @@ export default function BudgetPage() {
   // Fungsi render (bukan komponen) supaya input tidak di-mount ulang dan kehilangan fokus tiap ketikan.
   const amountInput = (r: CategoryRow) => (
     <label className="flex w-36 shrink-0 items-center gap-1 rounded-xl bg-slate-50 px-2.5 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400 md:w-44">
-      <span className="text-[12px] text-slate-400">Rp</span>
+      <span className="fs-12 text-slate-400">Rp</span>
       <input
         inputMode="numeric"
         value={draft[r.name] ? Number(digits(draft[r.name])).toLocaleString('id-ID') : ''}
         onChange={(e) => setDraft((d) => ({ ...d, [r.name]: digits(e.target.value) }))}
         placeholder="Tanpa anggaran"
         aria-label={`Anggaran ${r.name}`}
-        className="w-full bg-transparent py-2 text-right text-[14px] font-semibold text-slate-900 outline-none placeholder:text-[12px] placeholder:font-normal placeholder:text-slate-400"
+        className="w-full bg-transparent py-2 text-right fs-14 font-semibold text-slate-900 outline-none placeholder:fs-12 placeholder:font-normal placeholder:text-slate-400"
       />
     </label>
   );
@@ -179,7 +179,7 @@ export default function BudgetPage() {
         onChange={(e) => setNames((d) => ({ ...d, [r.name]: e.target.value }))}
         aria-label={`Nama kategori ${r.name}`}
         className={cn(
-          'w-full min-w-0 rounded-lg bg-transparent px-1.5 py-1 -ml-1.5 text-[14px] font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-400',
+          'w-full min-w-0 rounded-lg bg-transparent px-1.5 py-1 -ml-1.5 fs-14 font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-400',
           renamed.includes(r) && 'bg-indigo-50/60 ring-indigo-200',
         )}
       />
@@ -208,8 +208,8 @@ export default function BudgetPage() {
     <div className={cn('mx-auto max-w-4xl space-y-6 pb-12', editing && 'pb-28')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Anggaran</h1>
-          <p className="text-[13px] text-slate-500">
+          <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Anggaran</h1>
+          <p className="fs-13 text-slate-500">
             {formatBudgetPeriod(period)} · sisa {daysLeft} hari
           </p>
         </div>
@@ -218,7 +218,7 @@ export default function BudgetPage() {
             type="button"
             onClick={() => openSettings('periode')}
             aria-label="Awal periode anggaran"
-            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 fs-13 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <CalendarDays size={15} /> <span className="hidden sm:inline">Awal periode</span>
           </button>
@@ -228,7 +228,7 @@ export default function BudgetPage() {
               onClick={startEdit}
               disabled={loading}
               aria-label="Ubah anggaran & nama"
-              className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 fs-13 font-bold text-white disabled:opacity-40"
             >
               <PencilLine size={15} /> <span className="hidden sm:inline">Ubah</span>
             </button>
@@ -261,20 +261,20 @@ export default function BudgetPage() {
               />
               <div className="relative flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-wide text-white/70">
+                  <p className="fs-12 font-semibold uppercase tracking-wide text-white/70">
                     {left >= 0 ? 'Sisa anggaran' : 'Lewat anggaran'}
                   </p>
-                  <p className="text-[30px] font-extrabold leading-tight tabular-nums md:text-[34px]">
+                  <p className="fsh-30 font-extrabold leading-tight tabular-nums md:fsh-34">
                     {formatIDR(Math.abs(left))}
                   </p>
-                  <p className="text-[13px] text-white/85">
+                  <p className="fs-13 text-white/85">
                     Terpakai {short(used)} dari {short(budgetTotal)}
                     {daysLeft > 0 && left > 0
                       ? ` · ±${short(Math.round(left / Math.max(1, daysLeft)))}/hari sampai akhir periode`
                       : ''}
                   </p>
                 </div>
-                <span className="rounded-full bg-white/20 px-3 py-1 text-[12px] font-bold">
+                <span className="rounded-full bg-white/20 px-3 py-1 fs-12 font-bold">
                   {status === 'over'
                     ? '🔥 Lewat'
                     : status === 'fast'
@@ -295,7 +295,7 @@ export default function BudgetPage() {
                   style={{ left: `${timePct * 100}%` }}
                 />
               </div>
-              <div className="relative mt-2 flex flex-wrap justify-between gap-x-4 text-[12px] text-white/80">
+              <div className="relative mt-2 flex flex-wrap justify-between gap-x-4 fs-12 text-white/80">
                 <span>
                   Hari ke-{elapsedDays} dari {totalDays} (penanda)
                 </span>
@@ -304,15 +304,15 @@ export default function BudgetPage() {
             </section>
           ) : (
             <section className="rounded-[24px] bg-white p-6 text-center ring-1 ring-slate-100">
-              <p className="text-[15px] font-bold text-slate-900">Belum ada anggaran bulanan</p>
-              <p className="mt-1 text-[13px] text-slate-500">
+              <p className="fs-15 font-bold text-slate-900">Belum ada anggaran bulanan</p>
+              <p className="mt-1 fs-13 text-slate-500">
                 Tentukan batas belanja per kategori supaya Leosiqra bisa memberi tahu kalau mulai boros.
               </p>
               {!editing && (
                 <button
                   type="button"
                   onClick={startEdit}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[13px] font-bold text-white"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 fs-13 font-bold text-white"
                 >
                   <Plus size={15} /> Atur anggaran
                 </button>
@@ -322,8 +322,8 @@ export default function BudgetPage() {
 
           {(monthly.length > 0 || yearly.length > 0) && (
             <section>
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Per kategori</h2>
-              <p className="text-[12px] text-slate-500">Garis tegak = seberapa jauh periode sudah berjalan.</p>
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Per kategori</h2>
+              <p className="fs-12 text-slate-500">Garis tegak = seberapa jauh periode sudah berjalan.</p>
               <ul className="mt-3 divide-y divide-slate-100 rounded-[20px] bg-white ring-1 ring-slate-100">
                 {[...monthly, ...yearly]
                   .sort((a, b) => b.spent / (b.budget?.amount || 1) - a.spent / (a.budget?.amount || 1))
@@ -335,7 +335,7 @@ export default function BudgetPage() {
                       <li key={r.name} className="flex items-center gap-3 px-4 py-3">
                         <span
                           className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px]',
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full fs-18',
                             v.tile,
                           )}
                           aria-hidden
@@ -348,16 +348,16 @@ export default function BudgetPage() {
                               nameInput(
                                 r,
                                 r.budget?.period === 'yearly' && (
-                                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 fs-10 font-semibold text-slate-500">
                                     tahunan
                                   </span>
                                 ),
                               )
                             ) : (
-                              <p className="truncate text-[14px] font-semibold text-slate-900">
+                              <p className="truncate fs-14 font-semibold text-slate-900">
                                 {r.name}
                                 {r.budget?.period === 'yearly' && (
-                                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 fs-10 font-semibold text-slate-500">
                                     tahunan
                                   </span>
                                 )}
@@ -366,13 +366,13 @@ export default function BudgetPage() {
                             {!editing && (
                               <span
                                 className={cn(
-                                  'shrink-0 text-[13px] font-bold',
+                                  'shrink-0 fs-13 font-bold',
                                   p === 'over' ? 'text-rose-600' : p === 'fast' ? 'text-amber-600' : 'text-slate-700',
                                 )}
                               >
                                 {p === 'over' ? `Lewat ${short(r.spent - amount)}` : `Sisa ${short(amount - r.spent)}`}
                                 {p === 'fast' && (
-                                  <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px]">
+                                  <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 fs-10">
                                     terlalu cepat
                                   </span>
                                 )}
@@ -380,7 +380,7 @@ export default function BudgetPage() {
                             )}
                           </div>
                           {!editing && bar(r.spent, amount, p === 'over')}
-                          <p className="mt-1 text-[12px] tabular-nums text-slate-500">
+                          <p className="mt-1 fs-12 tabular-nums text-slate-500">
                             {formatIDR(r.spent)}
                             {!editing && ` / ${formatIDR(amount)}`}
                           </p>
@@ -395,8 +395,8 @@ export default function BudgetPage() {
 
           {unbudgeted.length > 0 && (
             <section>
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Belum ada anggaran</h2>
-              <p className="text-[12px] text-slate-500">
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Belum ada anggaran</h2>
+              <p className="fs-12 text-slate-500">
                 {outside > 0
                   ? `${short(outside)} belanja periode ini belum dibatasi.`
                   : 'Kategori pengeluaran tanpa batas.'}
@@ -407,10 +407,7 @@ export default function BudgetPage() {
                   return (
                     <li key={r.name} className="flex items-center gap-3 px-4 py-2.5">
                       <span
-                        className={cn(
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]',
-                          v.tile,
-                        )}
+                        className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full fs-16', v.tile)}
                         aria-hidden
                       >
                         {v.emoji}
@@ -418,19 +415,17 @@ export default function BudgetPage() {
                       {editing ? (
                         <div className="min-w-0 flex-1">{nameInput(r)}</div>
                       ) : (
-                        <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{r.name}</p>
+                        <p className="min-w-0 flex-1 truncate fs-14 font-semibold text-slate-900">{r.name}</p>
                       )}
                       {editing ? (
                         amountInput(r)
                       ) : (
                         <>
-                          <span className="text-[13px] font-semibold tabular-nums text-slate-600">
-                            {formatIDR(r.spent)}
-                          </span>
+                          <span className="fs-13 font-semibold tabular-nums text-slate-600">{formatIDR(r.spent)}</span>
                           <button
                             type="button"
                             onClick={startEdit}
-                            className="rounded-full bg-indigo-50 px-2.5 py-1 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-100"
+                            className="rounded-full bg-indigo-50 px-2.5 py-1 fs-12 font-semibold text-indigo-600 hover:bg-indigo-100"
                           >
                             Atur
                           </button>
@@ -443,7 +438,7 @@ export default function BudgetPage() {
             </section>
           )}
 
-          <p className="px-1 text-[12px] text-slate-400">
+          <p className="px-1 fs-12 text-slate-400">
             &ldquo;Terlalu cepat&rdquo; = kalau belanja terus seperti sekarang, kategori itu melewati anggarannya di
             akhir periode. Ikon, subkategori, dan kategori baru diatur di{' '}
             <button
@@ -461,7 +456,7 @@ export default function BudgetPage() {
       {editing && (
         <div className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-3 md:bottom-6 md:left-[84px] lg:left-72 print:hidden">
           <div className="flex w-full max-w-xl items-center gap-2 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)]">
-            <p className="min-w-0 flex-1 text-[13px] font-semibold">
+            <p className="min-w-0 flex-1 fs-13 font-semibold">
               {changeCount
                 ? `${changeCount} kategori diubah`
                 : 'Ubah nama atau nominal; nominal kosong = hapus anggaran'}
@@ -470,7 +465,7 @@ export default function BudgetPage() {
               type="button"
               onClick={() => setEditing(false)}
               disabled={saving}
-              className="flex items-center gap-1 rounded-full px-3 py-2 text-[13px] font-semibold text-white/80 hover:bg-white/10"
+              className="flex items-center gap-1 rounded-full px-3 py-2 fs-13 font-semibold text-white/80 hover:bg-white/10"
             >
               <X size={15} /> Batal
             </button>
@@ -478,7 +473,7 @@ export default function BudgetPage() {
               type="button"
               onClick={() => void saveAll()}
               disabled={saving || changeCount === 0}
-              className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2 text-[13px] font-bold disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2 fs-13 font-bold disabled:opacity-40"
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />} Simpan
             </button>

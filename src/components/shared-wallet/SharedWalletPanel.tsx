@@ -194,11 +194,11 @@ export function SharedWalletPanel({ platform }: { platform: 'web' | 'app' }) {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <span className="truncate text-sm font-bold text-slate-900 dark:text-white">{w.name}</span>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', ROLE_TONE[w.role])}>
+                  <span className={cn('rounded-full px-2 py-0.5 fs-10 font-bold', ROLE_TONE[w.role])}>
                     {ROLE_LABEL[w.role]}
                   </span>
                   {w.archived_at && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 fs-10 font-bold text-slate-500 dark:bg-slate-800">
                       Arsip
                     </span>
                   )}
@@ -390,7 +390,7 @@ function WalletDetail({
         <button type="button" onClick={onBack} className={btnGhost}>
           <ArrowLeft size={14} /> Semua dompet
         </button>
-        <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-bold', ROLE_TONE[wallet.role])}>
+        <span className={cn('rounded-full px-2.5 py-1 fs-11 font-bold', ROLE_TONE[wallet.role])}>
           Kamu: {ROLE_LABEL[wallet.role]}
         </span>
       </div>
@@ -603,7 +603,7 @@ function TransactionsSection({
                   {t.category}
                   {t.note ? ` · ${t.note}` : ''}
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className="fs-11 text-slate-500 dark:text-slate-400">
                   {fmtDay(t.date)} · {t.created_by_name}
                 </p>
               </div>
@@ -802,7 +802,7 @@ function MembersSection({
                 </button>
               </>
             ) : (
-              <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', ROLE_TONE[m.role])}>
+              <span className={cn('rounded-full px-2 py-0.5 fs-10 font-bold', ROLE_TONE[m.role])}>
                 {ROLE_LABEL[m.role]}
               </span>
             )}

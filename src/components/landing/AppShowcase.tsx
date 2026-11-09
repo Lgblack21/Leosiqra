@@ -10,6 +10,7 @@ import {
   PiggyBank,
   FileText,
   Search,
+  Sparkles,
   Bell,
   Plus,
   ArrowUpRight,
@@ -24,13 +25,50 @@ const H = 680;
 const SIDEBAR_W = 216;
 const DURATION = 5200; // ms per layar
 
+// tint = warna ubin ikon, sama dengan menu samping aplikasi (Sidebar.tsx / features.ts).
 const SCREENS = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, title: 'Dashboard Bulanan' },
-  { key: 'transaksi', label: 'Transaksi', icon: ListOrdered, title: 'Data Transaksi' },
-  { key: 'kartu', label: 'Rekening & Kartu', icon: CreditCard, title: 'Kartu Saya' },
-  { key: 'investasi', label: 'Investasi', icon: TrendingUp, title: 'Portofolio Investasi' },
-  { key: 'tabungan', label: 'Tabungan & Budget', icon: PiggyBank, title: 'Tabungan & Budget' },
-  { key: 'pajak', label: 'Pajak Center', icon: FileText, title: 'Pajak Center' },
+  {
+    key: 'dashboard',
+    label: 'Ringkasan',
+    icon: LayoutDashboard,
+    title: 'Dashboard Bulanan',
+    tint: 'from-sky-50 to-indigo-100 text-indigo-600',
+  },
+  {
+    key: 'transaksi',
+    label: 'Transaksi',
+    icon: ListOrdered,
+    title: 'Data Transaksi',
+    tint: 'from-orange-50 to-rose-100 text-orange-600',
+  },
+  {
+    key: 'kartu',
+    label: 'Rekening & Kartu',
+    icon: CreditCard,
+    title: 'Kartu Saya',
+    tint: 'from-emerald-50 to-teal-100 text-emerald-700',
+  },
+  {
+    key: 'investasi',
+    label: 'Investasi',
+    icon: TrendingUp,
+    title: 'Portofolio Investasi',
+    tint: 'from-blue-50 to-blue-100 text-blue-600',
+  },
+  {
+    key: 'tabungan',
+    label: 'Tabungan & Budget',
+    icon: PiggyBank,
+    title: 'Tabungan & Budget',
+    tint: 'from-violet-50 to-violet-100 text-violet-600',
+  },
+  {
+    key: 'pajak',
+    label: 'Pajak Center',
+    icon: FileText,
+    title: 'Pajak Center',
+    tint: 'from-amber-50 to-pink-100 text-pink-600',
+  },
 ] as const;
 type ScreenKey = (typeof SCREENS)[number]['key'];
 
@@ -58,11 +96,11 @@ function Dashboard() {
     <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-3">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-lg shadow-emerald-600/20">
         <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">Saldo bersih</p>
-        <p className="mt-3 text-[26px] font-black tabular-nums">
+        <p className="fs-10 font-bold uppercase tracking-wider text-emerald-100">Saldo bersih</p>
+        <p className="mt-3 fsh-26 font-black tabular-nums">
           <CountUp to={84_210_500} format={rp} duration={1.6} />
         </p>
-        <p className="mt-3 text-[10px] font-bold text-emerald-100">6 rekening · 128 transaksi bulan ini</p>
+        <p className="mt-3 fs-10 font-bold text-emerald-100">6 rekening · 128 transaksi bulan ini</p>
       </div>
       {[
         ['Pemasukan', 18_500_000, 100, 'bg-emerald-500', ArrowUpRight, 'text-emerald-500'],
@@ -71,10 +109,10 @@ function Dashboard() {
         const I = Icon as React.ElementType;
         return (
           <div key={label as string} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <p className="flex items-center gap-1.5 fs-10 font-bold uppercase tracking-wider text-slate-500">
               <I size={12} className={ic as string} /> {label as string}
             </p>
-            <p className="mt-3 text-[22px] font-black tabular-nums text-slate-900">
+            <p className="mt-3 fsh-22 font-black tabular-nums text-slate-900">
               <CountUp to={v as number} format={rp} duration={1.6} />
             </p>
             <div className="mt-4">
@@ -85,10 +123,8 @@ function Dashboard() {
       })}
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-2">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Arus kas 12 bulan</p>
-          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-            +18% YoY
-          </span>
+          <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Arus kas 12 bulan</p>
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 fs-10 font-bold text-emerald-600">+18% YoY</span>
         </div>
         <div className="mt-5 flex h-[130px] items-end gap-1.5 @3xl:h-[170px] @3xl:gap-2.5">
           {months.map((h, i) => (
@@ -99,7 +135,7 @@ function Dashboard() {
                 animate={{ height: `${h}%` }}
                 transition={{ duration: 0.9, delay: 0.1 + i * 0.05, ease }}
               />
-              <span className="text-[9px] font-bold text-slate-400">
+              <span className="fs-9 font-bold text-slate-400">
                 {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}
               </span>
             </div>
@@ -107,7 +143,7 @@ function Dashboard() {
         </div>
       </div>
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Transaksi terakhir</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Transaksi terakhir</p>
         <ul className="mt-3 space-y-3">
           {[
             ['Kopi Kenangan', 'Makanan', -25_000],
@@ -123,11 +159,11 @@ function Dashboard() {
               className="flex items-center justify-between"
             >
               <span>
-                <span className="block text-[12px] font-bold text-slate-800">{n as string}</span>
-                <span className="block text-[10px] text-slate-400">{c as string}</span>
+                <span className="block fs-12 font-bold text-slate-800">{n as string}</span>
+                <span className="block fs-10 text-slate-400">{c as string}</span>
               </span>
               <span
-                className={`text-[12px] font-black tabular-nums ${(v as number) > 0 ? 'text-emerald-600' : 'text-slate-700'}`}
+                className={`fs-12 font-black tabular-nums ${(v as number) > 0 ? 'text-emerald-600' : 'text-slate-700'}`}
               >
                 {(v as number) > 0 ? '+' : '−'}
                 {rp(Math.abs(v as number))}
@@ -161,19 +197,19 @@ function Transaksi() {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white shadow-sm">
       <div className="flex items-center gap-2 border-b border-slate-100 p-4">
-        <div className="hidden flex-1 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-400 @3xl:flex">
+        <div className="hidden flex-1 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 fs-11 text-slate-400 @3xl:flex">
           <Search size={13} /> Cari transaksi…
         </div>
         {['Semua', 'Masuk', 'Keluar'].map((f, i) => (
           <span
             key={f}
-            className={`rounded-full px-3 py-1.5 text-[10px] font-black ${i === 0 ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-500'}`}
+            className={`rounded-full px-3 py-1.5 fs-10 font-black ${i === 0 ? 'bg-slate-900 text-white' : 'border border-slate-200 text-slate-500'}`}
           >
             {f}
           </span>
         ))}
       </div>
-      <div className="hidden grid-cols-[70px_1fr_110px_120px_130px] gap-3 px-5 py-3 text-[9px] font-black uppercase tracking-wider text-slate-400 @3xl:grid">
+      <div className="hidden grid-cols-[70px_1fr_110px_120px_130px] gap-3 px-5 py-3 fs-9 font-black uppercase tracking-wider text-slate-400 @3xl:grid">
         <span>Tanggal</span>
         <span>Keterangan</span>
         <span>Kategori</span>
@@ -189,24 +225,24 @@ function Transaksi() {
             transition={{ delay: i === 0 ? 1.1 : 0.1 + i * 0.07, duration: i === 0 ? 1.6 : 0.5, ease }}
             className="grid grid-cols-[1fr_auto] items-center gap-3 border-t border-slate-50 px-5 py-3 @3xl:grid-cols-[70px_1fr_110px_120px_130px]"
           >
-            <span className="hidden text-[11px] font-bold text-slate-400 @3xl:block">{d}</span>
+            <span className="hidden fs-11 font-bold text-slate-400 @3xl:block">{d}</span>
             <span className="min-w-0">
-              <span className="flex items-center gap-2 text-[12px] font-bold text-slate-800">
+              <span className="flex items-center gap-2 fs-12 font-bold text-slate-800">
                 {n}
                 {i === 0 && (
-                  <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[8px] font-black text-white">BARU</span>
+                  <span className="rounded bg-indigo-600 px-1.5 py-0.5 fs-8 font-black text-white">BARU</span>
                 )}
               </span>
-              <span className="block text-[10px] text-slate-400 @3xl:hidden">
+              <span className="block fs-10 text-slate-400 @3xl:hidden">
                 {d} · {c} · {a}
               </span>
             </span>
             <span className="hidden @3xl:block">
-              <span className={`rounded-md px-2 py-1 text-[9px] font-black ${chip[c]}`}>{c}</span>
+              <span className={`rounded-md px-2 py-1 fs-9 font-black ${chip[c]}`}>{c}</span>
             </span>
-            <span className="hidden text-[11px] font-bold text-slate-500 @3xl:block">{a}</span>
+            <span className="hidden fs-11 font-bold text-slate-500 @3xl:block">{a}</span>
             <span
-              className={`text-right text-[12px] font-black tabular-nums ${v > 0 ? 'text-emerald-600' : 'text-slate-800'}`}
+              className={`text-right fs-12 font-black tabular-nums ${v > 0 ? 'text-emerald-600' : 'text-slate-800'}`}
             >
               {v > 0 ? '+' : '−'}
               {rp(Math.abs(v))}
@@ -234,7 +270,7 @@ function Kartu() {
             <span className="text-sm font-black">BCA Silver</span>
             <CreditCard size={20} className="text-white/60" />
           </div>
-          <p className="mt-8 text-[10px] font-bold uppercase tracking-wider text-white/60">Terpakai</p>
+          <p className="mt-8 fs-10 font-bold uppercase tracking-wider text-white/60">Terpakai</p>
           <p className="text-2xl font-black tabular-nums">
             <CountUp to={4_250_000} format={rp} duration={1.4} />
           </p>
@@ -246,28 +282,28 @@ function Kartu() {
               transition={{ duration: 1.2, delay: 0.3, ease }}
             />
           </div>
-          <div className="mt-2 flex justify-between text-[10px] text-white/70">
+          <div className="mt-2 flex justify-between fs-10 text-white/70">
             <span>Sisa Rp 10.750.000</span>
             <span>Limit Rp 15.000.000</span>
           </div>
         </motion.div>
         <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Tagihan tercetak 15 Sep</p>
+            <p className="fs-10 font-bold uppercase tracking-wider text-amber-700">Tagihan tercetak 15 Sep</p>
             <motion.span
               animate={{ scale: [1, 1.08, 1] }}
               transition={{ repeat: Infinity, duration: 1.6 }}
-              className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white"
+              className="rounded-full bg-amber-500 px-2 py-0.5 fs-10 font-black text-white"
             >
               3 hari lagi
             </motion.span>
           </div>
           <p className="mt-1 text-xl font-black tabular-nums text-slate-900">Rp 3.980.000</p>
-          <p className="text-[10px] text-slate-500">Jatuh tempo 5 Okt · minimum Rp 398.000</p>
+          <p className="fs-10 text-slate-500">Jatuh tempo 5 Okt · minimum Rp 398.000</p>
         </div>
       </div>
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rekening</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Rekening</p>
         <ul className="mt-3 divide-y divide-slate-50">
           {[
             ['BCA Platinum', 'Bank', 'BC', rp(145_494_000), 'bg-blue-600'],
@@ -283,16 +319,14 @@ function Kartu() {
               transition={{ delay: 0.15 + i * 0.08 }}
               className="flex items-center gap-3 py-2.5"
             >
-              <span
-                className={`flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white ${c}`}
-              >
+              <span className={`flex h-8 w-8 items-center justify-center rounded-lg fs-10 font-black text-white ${c}`}>
                 {badge}
               </span>
               <span className="flex-1">
-                <span className="block text-[12px] font-bold text-slate-800">{n}</span>
-                <span className="block text-[10px] text-slate-400">{t}</span>
+                <span className="block fs-12 font-bold text-slate-800">{n}</span>
+                <span className="block fs-10 text-slate-400">{t}</span>
               </span>
-              <span className="text-[12px] font-black tabular-nums text-slate-800">{v}</span>
+              <span className="fs-12 font-black tabular-nums text-slate-800">{v}</span>
             </motion.li>
           ))}
         </ul>
@@ -311,11 +345,11 @@ function Investasi() {
   return (
     <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-5">
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nilai portofolio</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Nilai portofolio</p>
         <p className="mt-2 text-2xl font-black tabular-nums text-slate-900">
           <CountUp to={548_300_000} format={rp} duration={1.5} />
         </p>
-        <p className="text-[11px] font-bold text-emerald-600">+Rp 14.820.000 (+2,78%)</p>
+        <p className="fs-11 font-bold text-emerald-600">+Rp 14.820.000 (+2,78%)</p>
         <div className="mt-5 flex items-center gap-5">
           <svg viewBox="0 0 42 42" className="h-32 w-32 -rotate-90">
             <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f1f5f9" strokeWidth="6" />
@@ -340,7 +374,7 @@ function Investasi() {
               return el;
             })}
           </svg>
-          <ul className="space-y-2 text-[11px]">
+          <ul className="space-y-2 fs-11">
             {alloc.map(([label, pct, color]) => (
               <li key={label} className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ background: color }} />{' '}
@@ -351,7 +385,7 @@ function Investasi() {
         </div>
       </div>
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Posisi aktif</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Posisi aktif</p>
         <ul className="mt-3 space-y-2">
           {[
             ['Deposito BCA', '4,5%/th · jatuh tempo 10 Agu', 350_000_000, null],
@@ -367,14 +401,14 @@ function Investasi() {
               className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
             >
               <span>
-                <span className="block text-[12px] font-bold text-slate-800">{n as string}</span>
-                <span className="block text-[10px] text-slate-400">{d as string}</span>
+                <span className="block fs-12 font-bold text-slate-800">{n as string}</span>
+                <span className="block fs-10 text-slate-400">{d as string}</span>
               </span>
               <span className="text-right">
-                <span className="block text-[12px] font-black tabular-nums text-slate-800">{rp(v as number)}</span>
+                <span className="block fs-12 font-black tabular-nums text-slate-800">{rp(v as number)}</span>
                 {g !== null && (
                   <span
-                    className={`block text-[10px] font-black ${(g as number) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}
+                    className={`block fs-10 font-black ${(g as number) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}
                   >
                     {(g as number) >= 0 ? '+' : ''}
                     {g}%
@@ -393,7 +427,7 @@ function Tabungan() {
   return (
     <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-2">
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tabungan per tujuan</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Tabungan per tujuan</p>
         <div className="mt-4 grid grid-cols-3 gap-3">
           {[
             ['Dana Darurat', 0.72, '#10b981', 'Rp 24,5 jt'],
@@ -416,23 +450,21 @@ function Tabungan() {
                   transition={{ duration: 1.4, delay: 0.2 + i * 0.15, ease }}
                 />
               </svg>
-              <span className="mt-2 text-[11px] font-black text-slate-800">{n as string}</span>
-              <span className="text-[10px] text-slate-400">
+              <span className="mt-2 fs-11 font-black text-slate-800">{n as string}</span>
+              <span className="fs-10 text-slate-400">
                 {v as string} · {Math.round((p as number) * 100)}%
               </span>
             </div>
           ))}
         </div>
-        <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[11px] font-bold text-emerald-700">
+        <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 fs-11 font-bold text-emerald-700">
           <Check size={13} /> Setoran otomatis Dana Darurat Rp 1.000.000 tercatat hari ini
         </div>
       </div>
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Budget September</p>
-          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-600">
-            1 lewat batas
-          </span>
+          <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Budget September</p>
+          <span className="rounded-full bg-rose-50 px-2 py-0.5 fs-10 font-black text-rose-600">1 lewat batas</span>
         </div>
         <ul className="mt-4 space-y-4">
           {[
@@ -445,7 +477,7 @@ function Tabungan() {
             const over = (used as number) > (lim as number);
             return (
               <li key={n as string}>
-                <div className="mb-1.5 flex justify-between text-[11px]">
+                <div className="mb-1.5 flex justify-between fs-11">
                   <span className="font-bold text-slate-700">{n as string}</span>
                   <span className={`font-bold tabular-nums ${over ? 'text-rose-600' : 'text-slate-500'}`}>
                     {rp(used as number)} / {rp(lim as number)}
@@ -470,8 +502,8 @@ function Pajak() {
     <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-5">
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-3">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Daftar harta SPT 2026</p>
-          <span className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black text-white">
+          <p className="fs-10 font-bold uppercase tracking-wider text-slate-500">Daftar harta SPT 2026</p>
+          <span className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 fs-10 font-black text-white">
             <Download size={12} /> Ekspor PDF
           </span>
         </div>
@@ -490,16 +522,14 @@ function Pajak() {
               className="flex items-center justify-between py-3"
             >
               <span className="flex items-center gap-3">
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">
-                  {k as string}
-                </span>
-                <span className="text-[12px] font-bold text-slate-800">{n as string}</span>
+                <span className="rounded bg-slate-100 px-1.5 py-0.5 fs-9 font-black text-slate-500">{k as string}</span>
+                <span className="fs-12 font-bold text-slate-800">{n as string}</span>
               </span>
-              <span className="text-[12px] font-black tabular-nums text-slate-800">{rp(v as number)}</span>
+              <span className="fs-12 font-black tabular-nums text-slate-800">{rp(v as number)}</span>
             </motion.li>
           ))}
         </ul>
-        <div className="mt-2 flex justify-between border-t border-slate-100 pt-3 text-[12px] font-black">
+        <div className="mt-2 flex justify-between border-t border-slate-100 pt-3 fs-12 font-black">
           <span>Total harta</span>
           <span className="tabular-nums">
             <CountUp to={600_382_200} format={rp} duration={1.4} />
@@ -508,11 +538,11 @@ function Pajak() {
       </div>
       <div className="space-y-4 @3xl:col-span-2">
         <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white shadow-lg shadow-indigo-600/20">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-100">Estimasi PPh terutang</p>
+          <p className="fs-10 font-bold uppercase tracking-wider text-indigo-100">Estimasi PPh terutang</p>
           <p className="mt-2 text-2xl font-black tabular-nums">
             <CountUp to={19_200_000} format={rp} duration={1.4} />
           </p>
-          <p className="mt-1 text-[10px] text-indigo-100">5% × 60 jt + 15% × 108 jt · PTKP TK/0</p>
+          <p className="mt-1 fs-10 text-indigo-100">5% × 60 jt + 15% × 108 jt · PTKP TK/0</p>
         </div>
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           {[
@@ -525,7 +555,7 @@ function Pajak() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 + i * 0.12 }}
-              className="flex justify-between py-1.5 text-[11px]"
+              className="flex justify-between py-1.5 fs-11"
             >
               <span className="text-slate-500">{k}</span>
               <span className="font-black tabular-nums text-slate-800">{v}</span>
@@ -636,17 +666,25 @@ export function AppShowcase() {
   const tabsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!compact) return;
-    const el = tabsRef.current?.querySelector<HTMLElement>(`[data-i="${active}"]`);
-    el?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+    // Geser deretan tab ke samping saja — scrollIntoView ikut menggulir halaman (menarik layar HP ke mockup).
+    const box = tabsRef.current;
+    const el = box?.querySelector<HTMLElement>(`[data-i="${active}"]`);
+    if (box && el) {
+      const off = el.getBoundingClientRect().left - box.getBoundingClientRect().left;
+      box.scrollTo({
+        left: box.scrollLeft + off - (box.clientWidth - el.clientWidth) / 2,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+    }
   }, [active, compact, reduce]);
 
   const screenBody = (
     <AnimatePresence mode="wait">
       <motion.div
         key={screen.key + runId}
-        initial={reduce ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -10, filter: 'blur(6px)' }}
+        initial={reduce ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.45, ease }}
         className="@container"
       >
@@ -674,7 +712,7 @@ export function AppShowcase() {
               <i className="h-3 w-3 rounded-full bg-[#28c840]" />
             </span>
             <span
-              className={`mx-auto flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm ${compact ? 'w-56' : 'w-80'}`}
+              className={`mx-auto flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-1 fs-11 font-semibold text-slate-500 shadow-sm ${compact ? 'w-56' : 'w-80'}`}
             >
               <span className="h-2 w-2 rounded-full bg-emerald-500" /> leosiqra.com/
               {compact ? screen.key : `membership/${screen.key}`}
@@ -685,7 +723,7 @@ export function AppShowcase() {
             <div style={{ height: winH - 44 }} className="flex flex-col bg-[#fafbfc]">
               <div
                 ref={tabsRef}
-                className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-100 bg-white px-3 py-2.5"
+                className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-100 bg-slate-50 px-3 py-2"
               >
                 {SCREENS.map((s, i) => {
                   const Icon = s.icon;
@@ -696,22 +734,27 @@ export function AppShowcase() {
                       data-i={i}
                       type="button"
                       onClick={() => go(i)}
-                      className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold ${on ? 'text-indigo-600' : 'text-slate-500'}`}
+                      className={`relative flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 fs-12 font-bold ${on ? 'text-slate-900' : 'text-slate-500'}`}
                     >
                       {on && (
                         <motion.span
                           layoutId="showcase-tab"
-                          className="absolute inset-0 rounded-full bg-indigo-50 ring-1 ring-indigo-100"
+                          className="absolute inset-0 rounded-full bg-white shadow-sm ring-1 ring-slate-200"
                           transition={{ type: 'spring', stiffness: 420, damping: 36 }}
                         />
                       )}
-                      <Icon size={14} className="relative" /> <span className="relative">{s.label}</span>
+                      <span
+                        className={`relative flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br ${s.tint}`}
+                      >
+                        <Icon size={12} strokeWidth={2.4} />
+                      </span>
+                      <span className="relative">{s.label}</span>
                     </button>
                   );
                 })}
               </div>
               <div className="px-4 pt-4">
-                <h4 className="text-[15px] font-black text-slate-900">{screen.title}</h4>
+                <h4 className="fs-15 font-black text-slate-900">{screen.title}</h4>
               </div>
               <div className="px-4 pt-3">
                 <AutoScroll
@@ -726,14 +769,13 @@ export function AppShowcase() {
           ) : (
             <div className="flex" style={{ height: winH - 44 }}>
               <aside
-                className="flex flex-col border-r border-slate-100 bg-slate-50/60 p-3"
+                className="flex flex-col border-r border-slate-200/70 bg-gradient-to-b from-white to-slate-50 p-3"
                 style={{ width: SIDEBAR_W }}
               >
                 <div className="flex items-center gap-2 px-2 py-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 text-[11px] font-black text-white">
-                    L
-                  </span>
-                  <span className="text-[13px] font-black text-slate-900">Leosiqra</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- ikon kecil statis di mockup */}
+                  <img src="/images/logo-emblem.png" alt="" className="h-7 w-7 object-contain" />
+                  <span className="fs-14 font-extrabold tracking-tight text-slate-900">Leosiqra</span>
                 </div>
                 <nav className="mt-4 space-y-1">
                   {SCREENS.map((s, i) => {
@@ -744,28 +786,48 @@ export function AppShowcase() {
                         key={s.key}
                         type="button"
                         onClick={() => go(i)}
-                        className={`relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[12px] font-bold transition-colors ${on ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
+                        className={`relative flex h-[38px] w-full items-center gap-2.5 rounded-xl px-1.5 text-left fs-12 font-bold transition-colors ${on ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}
                       >
                         {on && (
                           <motion.span
                             layoutId="showcase-nav"
-                            className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200/70"
+                            className="absolute inset-0 rounded-xl bg-white shadow-[0_6px_16px_-10px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80"
                             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-                          />
+                          >
+                            <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+                          </motion.span>
                         )}
-                        <Icon size={15} className="relative" />
+                        <span
+                          className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${s.tint}`}
+                        >
+                          <Icon size={14} strokeWidth={2.3} />
+                        </span>
                         <span className="relative">{s.label}</span>
                       </button>
                     );
                   })}
                 </nav>
-                <div className="mt-auto flex items-center gap-2 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-slate-100">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-[10px] font-black text-white">
-                    AD
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-700">
-                    Akun Demo<span className="block text-[9px] font-black text-emerald-600">PRO</span>
-                  </span>
+                <div className="mt-auto space-y-2">
+                  <div className="flex items-center gap-2 rounded-2xl bg-slate-950 p-1.5 text-white shadow-[0_10px_22px_-12px_rgba(2,6,23,0.8)]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-amber-300 via-orange-400 to-rose-500 text-slate-950">
+                      <Plus size={15} strokeWidth={2.8} />
+                    </span>
+                    <span className="leading-tight">
+                      <span className="block fs-11 font-extrabold">Catat transaksi</span>
+                      <span className="block fs-9 text-white/55">Masuk / keluar, 10 detik</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl bg-white p-2 ring-1 ring-slate-200/80">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-orange-400 fs-10 font-black text-slate-950">
+                      AD
+                    </span>
+                    <span className="fs-11 font-bold text-slate-800">
+                      Akun Demo
+                      <span className="mt-0.5 block w-fit rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 fs-8 font-black tracking-wider text-white">
+                        PRO
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </aside>
 
@@ -778,7 +840,7 @@ export function AppShowcase() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.3 }}
-                      className="text-[15px] font-black text-slate-900"
+                      className="fs-15 font-black text-slate-900"
                     >
                       {screen.title}
                     </motion.h4>
@@ -787,8 +849,12 @@ export function AppShowcase() {
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400">
                       <Bell size={14} />
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-2 text-[11px] font-black text-white">
-                      <Plus size={13} /> Tambah Cepat
+                    <span className="flex w-44 items-center gap-1.5 rounded-lg bg-white px-2.5 py-2 fs-11 text-slate-400 ring-1 ring-slate-200">
+                      <Search size={12} /> Cari fitur…
+                      <span className="ml-auto rounded bg-slate-100 px-1 fs-9 font-bold text-slate-500">Ctrl K</span>
+                    </span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white">
+                      <Sparkles size={14} />
                     </span>
                   </div>
                 </div>
@@ -823,7 +889,7 @@ export function AppShowcase() {
         </div>
       </div>
 
-      <p className="mt-4 text-center text-[11px] text-slate-400">Tampilan dengan data contoh.</p>
+      <p className="mt-4 text-center fs-11 text-slate-400">Tampilan dengan data contoh.</p>
 
       {/* Pilihan layar + progres (juga navigasi manual) — di HP sudah ada tab di dalam jendela. */}
       {!compact && (

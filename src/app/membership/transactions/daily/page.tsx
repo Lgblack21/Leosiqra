@@ -92,7 +92,7 @@ const csvCell = (v: string | number) => {
 
 const chip = (active: boolean) =>
   cn(
-    'shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors whitespace-nowrap',
+    'shrink-0 rounded-full px-3 py-1.5 fs-13 font-semibold transition-colors whitespace-nowrap',
     active ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50',
   );
 
@@ -505,8 +505,8 @@ export default function DailyTransactionLogPage() {
     <div className="mx-auto max-w-6xl space-y-4 pb-12">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Transaksi</h1>
-          <p className="text-[13px] text-slate-500">
+          <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Transaksi</h1>
+          <p className="fs-13 text-slate-500">
             {loading ? 'Memuat…' : `${filtered.length} transaksi · ${periodLabel.toLowerCase()}`}
           </p>
         </div>
@@ -518,7 +518,7 @@ export default function DailyTransactionLogPage() {
             aria-pressed={selectMode}
             aria-label={selectMode ? 'Selesai memilih' : 'Pilih transaksi'}
             className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold ring-1 transition-colors disabled:opacity-40 md:px-3.5',
+              'flex items-center gap-1.5 rounded-full px-3 py-2 fs-13 font-semibold ring-1 transition-colors disabled:opacity-40 md:px-3.5',
               selectMode
                 ? 'bg-indigo-600 text-white ring-indigo-600'
                 : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50',
@@ -532,14 +532,14 @@ export default function DailyTransactionLogPage() {
               type="button"
               onClick={exportCsv}
               disabled={filtered.length === 0}
-              className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 fs-13 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
             >
               <Download size={15} /> Ekspor CSV
             </button>
             <button
               type="button"
               onClick={primaryAdd}
-              className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-[13px] font-bold text-white shadow-[0_10px_20px_-12px_rgba(79,70,229,0.8)] hover:brightness-110"
+              className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 fs-13 font-bold text-white shadow-[0_10px_20px_-12px_rgba(79,70,229,0.8)] hover:brightness-110"
             >
               <Plus size={15} strokeWidth={2.6} /> Tambah transaksi
             </button>
@@ -561,8 +561,8 @@ export default function DailyTransactionLogPage() {
             },
           ].map((x) => (
             <div key={x.label} className="min-w-0 px-3 md:px-5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
-              <p className={cn('truncate text-[14px] font-bold tabular-nums md:text-[16px]', x.cls)}>
+              <p className="fs-11 font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
+              <p className={cn('truncate fs-14 font-bold tabular-nums md:fs-16', x.cls)}>
                 {x.sign}
                 <Amount value={x.value} />
               </p>
@@ -571,7 +571,7 @@ export default function DailyTransactionLogPage() {
         </div>
       )}
       {!loading && totalMove > 0 && kind === 'semua' && (
-        <p className="-mt-2 hidden px-1 text-[12px] text-slate-400 md:block">
+        <p className="-mt-2 hidden px-1 fs-12 text-slate-400 md:block">
           {totalMove} transfer & pindah dana (termasuk beli/jual investasi) tidak dihitung di atas.
         </p>
       )}
@@ -590,7 +590,7 @@ export default function DailyTransactionLogPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari judul, kategori, rekening, nominal"
               aria-label="Cari transaksi"
-              className="w-full rounded-full bg-white py-2 pl-9 pr-4 text-[13px] text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full rounded-full bg-white py-2 pl-9 pr-4 fs-13 text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
           <button
@@ -598,13 +598,13 @@ export default function DailyTransactionLogPage() {
             onClick={() => setShowFilters((v) => !v)}
             aria-expanded={showFilters}
             className={cn(
-              'relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold ring-1 md:hidden',
+              'relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 fs-13 font-semibold ring-1 md:hidden',
               showFilters ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200',
             )}
           >
             <SlidersHorizontal size={15} /> Filter
             {activeFilters > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] text-white">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 fs-10 text-white">
                 {activeFilters}
               </span>
             )}
@@ -618,7 +618,7 @@ export default function DailyTransactionLogPage() {
                   onClick={() => setKind(k.id)}
                   title={k.id === 'transfer' ? 'Transfer, tabungan & beli/jual investasi' : undefined}
                   className={cn(
-                    'rounded-full px-3 py-1 text-[13px] font-semibold transition-colors',
+                    'rounded-full px-3 py-1 fs-13 font-semibold transition-colors',
                     kind === k.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
                   )}
                 >
@@ -643,7 +643,7 @@ export default function DailyTransactionLogPage() {
                 type="button"
                 onClick={() => setKind(k.id)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[13px] font-semibold',
+                  'rounded-full px-3 py-1 fs-13 font-semibold',
                   kind === k.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                 )}
               >
@@ -751,12 +751,12 @@ export default function DailyTransactionLogPage() {
                 setSearchQuery('');
                 setPeriod('bulan');
               }}
-              className="shrink-0 rounded-full px-2.5 py-1.5 text-[13px] font-semibold text-indigo-600 hover:bg-indigo-50"
+              className="shrink-0 rounded-full px-2.5 py-1.5 fs-13 font-semibold text-indigo-600 hover:bg-indigo-50"
             >
               Reset
             </button>
           )}
-          <label className="relative ml-auto flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 pr-7 text-[13px] font-semibold text-slate-600 hover:bg-slate-100">
+          <label className="relative ml-auto flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 pr-7 fs-13 font-semibold text-slate-600 hover:bg-slate-100">
             {sort === 'terbaru' ? 'Terbaru' : sort === 'terlama' ? 'Terlama' : 'Terbesar'}
             <ChevronDown size={13} className="absolute right-2.5" />
             <select
@@ -804,7 +804,7 @@ export default function DailyTransactionLogPage() {
                   <button
                     type="button"
                     onClick={() => toggleMany(g.items)}
-                    className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 hover:text-slate-800"
+                    className="flex items-center gap-2 fs-13 font-semibold text-slate-500 hover:text-slate-800"
                   >
                     {(() => {
                       const n = g.items.filter((t) => t.id && selected.has(t.id)).length;
@@ -827,10 +827,10 @@ export default function DailyTransactionLogPage() {
                     {g.label}
                   </button>
                 ) : (
-                  <h2 className="text-[13px] font-semibold text-slate-500">{g.label}</h2>
+                  <h2 className="fs-13 font-semibold text-slate-500">{g.label}</h2>
                 )}
                 {sort !== 'terbesar' && (
-                  <p className="text-[12px] font-semibold tabular-nums text-slate-400">
+                  <p className="fs-12 font-semibold tabular-nums text-slate-400">
                     {g.in > 0 && <span className="mr-3 text-emerald-600">+{formatIDR(g.in)}</span>}
                     {g.out > 0 && <span>−{formatIDR(g.out)}</span>}
                   </p>
@@ -861,7 +861,7 @@ export default function DailyTransactionLogPage() {
                       {selectMode ? (
                         <span
                           className={cn(
-                            'relative flex h-9 w-9 items-center justify-center rounded-full text-[17px] transition-all duration-200',
+                            'relative flex h-9 w-9 items-center justify-center rounded-full fs-17 transition-all duration-200',
                             isSel
                               ? 'scale-105 bg-indigo-600 text-white shadow-[0_6px_14px_-6px_rgba(79,70,229,0.8)]'
                               : cn(v.tile, 'ring-2 ring-slate-200'),
@@ -872,14 +872,14 @@ export default function DailyTransactionLogPage() {
                         </span>
                       ) : (
                         <span
-                          className={cn('flex h-9 w-9 items-center justify-center rounded-full text-[17px]', v.tile)}
+                          className={cn('flex h-9 w-9 items-center justify-center rounded-full fs-17', v.tile)}
                           aria-hidden
                         >
                           {v.emoji}
                         </span>
                       )}
                       <div className="min-w-0">
-                        <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-slate-900">
+                        <p className="flex min-w-0 items-center gap-1.5 fs-14 font-semibold text-slate-900">
                           <span className="truncate">{titleOf(t)}</span>
                           {tagsPref.enabled && t.id && !t.tags?.length && tagEditId !== t.id && (
                             <button
@@ -905,7 +905,7 @@ export default function DailyTransactionLogPage() {
                             </a>
                           )}
                         </p>
-                        <p className="truncate text-[12px] text-slate-500">
+                        <p className="truncate fs-12 text-slate-500">
                           {sort === 'terbesar'
                             ? `${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))} · `
                             : ''}
@@ -918,18 +918,18 @@ export default function DailyTransactionLogPage() {
                           </span>
                         </p>
                       </div>
-                      <p className="hidden truncate text-[13px] text-slate-500 md:block">
+                      <p className="hidden truncate fs-13 text-slate-500 md:block">
                         {t.subCategory && t.subCategory !== titleOf(t)
                           ? `${t.category} · ${t.subCategory}`
                           : t.category}
                       </p>
-                      <p className="hidden truncate text-[13px] text-slate-500 md:block">
+                      <p className="hidden truncate fs-13 text-slate-500 md:block">
                         {accountName.get(t.accountId) ?? '—'}
                       </p>
                       <div className="text-right">
                         <p
                           className={cn(
-                            'whitespace-nowrap text-[14px] font-semibold tabular-nums',
+                            'whitespace-nowrap fs-14 font-semibold tabular-nums',
                             incoming ? 'text-emerald-600' : move ? 'text-slate-500' : 'text-slate-900',
                           )}
                         >
@@ -937,7 +937,7 @@ export default function DailyTransactionLogPage() {
                           {formatMoney(Number(t.amount) || 0, t.currency)}
                         </p>
                         {t.currency && t.currency !== 'IDR' && (
-                          <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(idr(t))}</p>
+                          <p className="fs-12 text-slate-400 tabular-nums">≈ {formatIDR(idr(t))}</p>
                         )}
                       </div>
                       <div className="hidden items-center md:flex">
@@ -970,7 +970,7 @@ export default function DailyTransactionLogPage() {
                               <button
                                 type="button"
                                 onClick={() => setTagEditId(null)}
-                                className="rounded-full px-2.5 py-1 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50"
+                                className="rounded-full px-2.5 py-1 fs-12 font-semibold text-indigo-600 hover:bg-indigo-50"
                               >
                                 Selesai
                               </button>
@@ -986,7 +986,7 @@ export default function DailyTransactionLogPage() {
                                 <button
                                   type="button"
                                   onClick={() => setTagEditId(t.id!)}
-                                  className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:bg-slate-100 hover:text-indigo-600 md:inline-flex md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+                                  className="hidden items-center gap-1 rounded-full px-2 py-0.5 fs-11 font-medium text-slate-400 hover:bg-slate-100 hover:text-indigo-600 md:inline-flex md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                                 >
                                   <Hash size={10} /> Ubah
                                 </button>
@@ -1004,7 +1004,7 @@ export default function DailyTransactionLogPage() {
                                 setTagEditId(t.id!);
                                 setActionId(null);
                               }}
-                              className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-700"
+                              className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 fs-13 font-semibold text-slate-700"
                             >
                               <Hash size={14} /> Tag
                             </button>
@@ -1012,7 +1012,7 @@ export default function DailyTransactionLogPage() {
                           {t.type === 'pengeluaran' && !t.relatedType && !isInvestmentFlow(t) && t.id && (
                             <Link
                               href={`/membership/kekayaan?dari=${encodeURIComponent(t.id)}#barangku`}
-                              className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 text-[13px] font-semibold text-amber-700"
+                              className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 fs-13 font-semibold text-amber-700"
                             >
                               <Package size={14} /> Jadikan barang
                             </Link>
@@ -1021,7 +1021,7 @@ export default function DailyTransactionLogPage() {
                             type="button"
                             onClick={() => handleDelete(t)}
                             disabled={deletingId === t.id}
-                            className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3.5 py-2 text-[13px] font-semibold text-rose-600 disabled:opacity-50"
+                            className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3.5 py-2 fs-13 font-semibold text-rose-600 disabled:opacity-50"
                           >
                             <Trash2 size={14} /> Hapus
                           </button>
@@ -1037,7 +1037,7 @@ export default function DailyTransactionLogPage() {
             <button
               type="button"
               onClick={() => setShown((n) => n + PAGE)}
-              className="w-full rounded-full bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              className="w-full rounded-full bg-white py-2.5 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
             >
               Tampilkan lebih banyak ({filtered.length - shown} lagi)
             </button>

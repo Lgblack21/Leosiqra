@@ -101,14 +101,14 @@ function DraftRow({
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-semibold text-slate-900">
+            <span className="block truncate fs-14 font-semibold text-slate-900">
               {draft.note || 'Tanpa keterangan'}
             </span>
-            <span className="flex flex-wrap items-center gap-x-2 text-[12px] text-slate-500">
+            <span className="flex flex-wrap items-center gap-x-2 fs-12 text-slate-500">
               {dateShort(draft.date)}
               {draft.category && <span>· {draft.category}</span>}
               {draft.duplicate && (
-                <span className="rounded-full bg-amber-100 px-1.5 py-px text-[11px] font-semibold text-amber-700">
+                <span className="rounded-full bg-amber-100 px-1.5 py-px fs-11 font-semibold text-amber-700">
                   Sudah ada
                 </span>
               )}
@@ -116,7 +116,7 @@ function DraftRow({
           </span>
           <span
             className={cn(
-              'whitespace-nowrap text-[14px] font-bold tabular-nums',
+              'whitespace-nowrap fs-14 font-bold tabular-nums',
               incoming ? 'text-emerald-600' : 'text-slate-900',
             )}
           >
@@ -134,22 +134,20 @@ function DraftRow({
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block rounded-2xl bg-slate-50 px-4 py-2">
-              <span className="text-[12px] font-semibold text-slate-500">
-                Nominal{currency ? ` (${currency})` : ''}
-              </span>
+              <span className="fs-12 font-semibold text-slate-500">Nominal{currency ? ` (${currency})` : ''}</span>
               <NumberInput
                 value={String(draft.amount)}
                 onChange={(v) => onChange({ amount: Number(v || '0') })}
-                className="w-full bg-transparent text-[18px] font-bold tabular-nums text-slate-900 outline-none"
+                className="w-full bg-transparent fs-18 font-bold tabular-nums text-slate-900 outline-none"
               />
             </label>
             <label className="block rounded-2xl bg-slate-50 px-4 py-2">
-              <span className="text-[12px] font-semibold text-slate-500">Tanggal</span>
+              <span className="fs-12 font-semibold text-slate-500">Tanggal</span>
               <input
                 type="date"
                 value={draft.date}
                 onChange={(e) => e.target.value && onChange({ date: e.target.value })}
-                className="w-full bg-transparent text-[16px] font-semibold text-slate-900 outline-none"
+                className="w-full bg-transparent fs-16 font-semibold text-slate-900 outline-none"
               />
             </label>
           </div>
@@ -157,7 +155,7 @@ function DraftRow({
             value={draft.note}
             onChange={(e) => onChange({ note: e.target.value })}
             placeholder="Keterangan"
-            className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[15px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full rounded-2xl bg-slate-50 px-4 py-3 fs-15 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
           <CategorySelect
             label="Kategori (kosong = Impor Mutasi)"
@@ -185,11 +183,11 @@ function MappingPanel({
 }) {
   const select = (label: string, key: 'date' | 'note' | 'amount' | 'debit' | 'credit' | 'kind') => (
     <label className="block">
-      <span className="text-[12px] font-semibold text-slate-500">{label}</span>
+      <span className="fs-12 font-semibold text-slate-500">{label}</span>
       <select
         value={mapping[key]}
         onChange={(e) => onChange({ ...mapping, [key]: e.target.value })}
-        className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+        className="mt-1 w-full rounded-xl bg-white px-3 py-2 fs-14 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
       >
         <option value="">— tidak ada —</option>
         {table.headers.map((h) => (
@@ -202,9 +200,9 @@ function MappingPanel({
   );
   return (
     <div className="space-y-3 rounded-[20px] bg-slate-50 p-4">
-      <p className="text-[13px] text-slate-600">
+      <p className="fs-13 text-slate-600">
         Cocokkan kolom file dengan data transaksi. Contoh baris pertama:{' '}
-        <span className="font-mono text-[12px]">{(table.rows[0] ?? []).slice(0, 5).join(' | ')}</span>
+        <span className="font-mono fs-12">{(table.rows[0] ?? []).slice(0, 5).join(' | ')}</span>
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {select('Tanggal', 'date')}
@@ -217,7 +215,7 @@ function MappingPanel({
             type="button"
             onClick={() => onChange({ ...mapping, mode })}
             className={cn(
-              'rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1',
+              'rounded-full px-3 py-1.5 fs-13 font-semibold ring-1',
               mapping.mode === mode
                 ? 'bg-slate-900 text-white ring-slate-900'
                 : 'bg-white text-slate-600 ring-slate-200',
@@ -267,8 +265,8 @@ function OtherWay({
         <Icon size={19} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-slate-900">{title}</span>
-        <span className="block text-[13px] text-slate-500">{desc}</span>
+        <span className="block fs-15 font-semibold text-slate-900">{title}</span>
+        <span className="block fs-13 text-slate-500">{desc}</span>
       </span>
       <ChevronRight size={18} className="shrink-0 text-slate-300" />
     </a>
@@ -550,8 +548,8 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
     <div className={inPanel ? 'space-y-6' : 'mx-auto max-w-4xl space-y-6 pb-12'}>
       {!inPanel && (
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[38px]">Impor</h1>
-          <p className="mt-1 text-[15px] text-slate-500">
+          <h1 className="fsh-30 font-extrabold tracking-tight text-slate-900 md:fsh-38">Impor</h1>
+          <p className="mt-1 fs-15 text-slate-500">
             Masukkan mutasi bank & e-wallet, lalu tinjau setiap baris sebelum disimpan.
           </p>
         </div>
@@ -559,23 +557,23 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
 
       <section className={cn('space-y-4', !inPanel && 'rounded-[26px] bg-white p-4 ring-1 ring-slate-100 sm:p-6')}>
         {inPanel ? (
-          <p className="px-1 text-[14px] text-slate-500">Pilih rekening pemilik mutasi ini, lalu taruh file-nya.</p>
+          <p className="px-1 fs-14 text-slate-500">Pilih rekening pemilik mutasi ini, lalu taruh file-nya.</p>
         ) : (
           <div>
-            <h2 className="text-[18px] font-bold text-slate-900">Impor mutasi</h2>
-            <p className="text-[14px] text-slate-500">Pilih rekening pemilik mutasi ini, lalu taruh file-nya.</p>
+            <h2 className="fs-18 font-bold text-slate-900">Impor mutasi</h2>
+            <p className="fs-14 text-slate-500">Pilih rekening pemilik mutasi ini, lalu taruh file-nya.</p>
           </div>
         )}
         <div className={cn('grid gap-3', !inPanel && 'md:grid-cols-2')}>
           <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label="Rekening" />
           <label className="block">
-            <span className="pl-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span className="pl-1 fs-10 font-black uppercase tracking-widest text-slate-400">
               Template bank/penyedia
             </span>
             <select
               value={template}
               onChange={(e) => setTemplate(e.target.value as Template)}
-              className="mt-1 w-full rounded-2xl bg-slate-50 px-4 py-3.5 text-[15px] font-semibold text-slate-900 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full rounded-2xl bg-slate-50 px-4 py-3.5 fs-15 font-semibold text-slate-900 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
             >
               {TEMPLATES.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -583,7 +581,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                 </option>
               ))}
             </select>
-            <span className="mt-1 block pl-1 text-[12px] text-slate-500">
+            <span className="mt-1 block pl-1 fs-12 text-slate-500">
               {TEMPLATES.find((t) => t.id === template)?.desc}
             </span>
           </label>
@@ -609,14 +607,14 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-100">
               {reading ? <Loader2 size={28} className="animate-spin text-indigo-600" /> : <UploadCloud size={28} />}
             </span>
-            <p className="text-[18px] font-bold text-slate-900">{reading || 'Taruh file mutasi di sini'}</p>
+            <p className="fs-18 font-bold text-slate-900">{reading || 'Taruh file mutasi di sini'}</p>
             {!reading && (
               <>
-                <p className="max-w-lg text-[14px] leading-relaxed text-slate-500">
+                <p className="max-w-lg fs-14 leading-relaxed text-slate-500">
                   CSV & Excel dibaca langsung di perangkatmu. PDF bank lain & tangkapan layar aplikasi bank dibaca AI
                   (maks. 40 halaman/gambar per hari). Kamu meninjau setiap baris sebelum ada yang disimpan.
                 </p>
-                <p className="flex max-w-lg items-start gap-1.5 text-[13px] text-slate-500">
+                <p className="flex max-w-lg items-start gap-1.5 fs-13 text-slate-500">
                   <Lock size={14} className="mt-0.5 shrink-0 text-emerald-600" /> File tidak disimpan di server — hanya
                   baris yang kamu pilih yang tercatat. Impor tidak mengubah saldo rekening.
                 </p>
@@ -624,7 +622,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                   {['PDF', 'XLSX', 'CSV', 'Tangkapan layar'].map((f) => (
                     <span
                       key={f}
-                      className="rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-slate-600 ring-1 ring-slate-200"
+                      className="rounded-full bg-white px-3 py-1 fs-12 font-semibold text-slate-600 ring-1 ring-slate-200"
                     >
                       {f}
                     </span>
@@ -633,7 +631,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="mt-1 flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-[15px] font-bold text-white hover:bg-indigo-600"
+                  className="mt-1 flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 fs-15 font-bold text-white hover:bg-indigo-600"
                 >
                   <FolderOpen size={17} /> Pilih file
                 </button>
@@ -665,16 +663,14 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                 <Lock size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[15px] font-bold text-slate-900">{fileName} dikunci kata sandi</p>
-                <p className="text-[13px] leading-snug text-slate-600">
+                <p className="fs-15 font-bold text-slate-900">{fileName} dikunci kata sandi</p>
+                <p className="fs-13 leading-snug text-slate-600">
                   Biasanya tanggal lahir atau sebagian nomor kartu — lihat email dari bank. Sandi hanya dipakai di
                   perangkat ini untuk membuka file, tidak dikirim & tidak disimpan.
                 </p>
               </div>
             </div>
-            {pdfLock.wrong && (
-              <p className="text-[13px] font-semibold text-rose-600">Kata sandinya salah, coba lagi.</p>
-            )}
+            {pdfLock.wrong && <p className="fs-13 font-semibold text-rose-600">Kata sandinya salah, coba lagi.</p>}
             <div className="flex gap-2">
               <input
                 type="password"
@@ -684,28 +680,24 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                 onChange={(e) => setPdfPassword(e.target.value)}
                 placeholder="Kata sandi PDF"
                 aria-label="Kata sandi PDF"
-                className="min-w-0 flex-1 rounded-2xl bg-white px-4 py-3 text-[15px] text-slate-900 ring-1 ring-amber-200 outline-none focus:ring-2 focus:ring-amber-400"
+                className="min-w-0 flex-1 rounded-2xl bg-white px-4 py-3 fs-15 text-slate-900 ring-1 ring-amber-200 outline-none focus:ring-2 focus:ring-amber-400"
               />
               <button
                 type="submit"
                 disabled={!pdfPassword}
-                className="shrink-0 rounded-full bg-slate-900 px-5 text-[14px] font-bold text-white disabled:opacity-40"
+                className="shrink-0 rounded-full bg-slate-900 px-5 fs-14 font-bold text-white disabled:opacity-40"
               >
                 Buka
               </button>
             </div>
-            <button
-              type="button"
-              onClick={reset}
-              className="text-[13px] font-semibold text-slate-500 hover:text-slate-700"
-            >
+            <button type="button" onClick={reset} className="fs-13 font-semibold text-slate-500 hover:text-slate-700">
               Batal, pilih file lain
             </button>
           </form>
         )}
 
         {error && (
-          <p className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-[14px] text-rose-700">
+          <p className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 fs-14 text-rose-700">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {error}
           </p>
         )}
@@ -715,7 +707,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
             <button
               type="button"
               onClick={() => setShowMapping((v) => !v)}
-              className="flex items-center gap-2 text-[13px] font-semibold text-indigo-600"
+              className="flex items-center gap-2 fs-13 font-semibold text-indigo-600"
             >
               <SlidersHorizontal size={14} />{' '}
               {showMapping ? 'Tutup pemetaan kolom' : 'Kolom salah? Atur pemetaan kolom'}
@@ -727,7 +719,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
         {drafts && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[14px] text-slate-600">
+              <p className="fs-14 text-slate-600">
                 <span className="font-semibold text-slate-900">{fileName}</span> · {drafts.length} baris
                 {duplicateCount ? ` · ${duplicateCount} sudah ada (tidak dicentang)` : ''}
               </p>
@@ -735,14 +727,14 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                 <button
                   type="button"
                   onClick={() => setDrafts((cur) => cur?.map((d) => ({ ...d, include: !allChosen })) ?? cur)}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200"
+                  className="rounded-full bg-slate-100 px-3 py-1.5 fs-13 font-semibold text-slate-700 hover:bg-slate-200"
                 >
                   {allChosen ? 'Kosongkan semua' : 'Pilih semua'}
                 </button>
                 <button
                   type="button"
                   onClick={reset}
-                  className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200"
+                  className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-13 font-semibold text-slate-700 hover:bg-slate-200"
                 >
                   <X size={14} /> Ganti file
                 </button>
@@ -764,7 +756,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
               }
             >
               <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 rounded-[22px] bg-slate-900 p-3 pl-5 text-white shadow-2xl">
-                <span className="min-w-0 flex-1 text-[13px] leading-tight">
+                <span className="min-w-0 flex-1 fs-13 leading-tight">
                   <span className="block font-semibold">
                     {chosen.length} dari {drafts.length} baris dipilih
                   </span>
@@ -776,7 +768,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                   type="button"
                   onClick={() => void save()}
                   disabled={!chosen.length || saving}
-                  className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-bold text-slate-900 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 fs-14 font-bold text-slate-900 disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan {chosen.length}
                 </button>
@@ -788,15 +780,15 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
 
       <section className={cn('space-y-3', !inPanel && 'rounded-[26px] bg-white p-4 ring-1 ring-slate-100 sm:p-6')}>
         <div>
-          <h2 className="text-[18px] font-bold text-slate-900">Riwayat</h2>
-          <p className="text-[14px] text-slate-500">Setiap impor bisa dibatalkan.</p>
+          <h2 className="fs-18 font-bold text-slate-900">Riwayat</h2>
+          <p className="fs-14 text-slate-500">Setiap impor bisa dibatalkan.</p>
         </div>
         {history === null ? (
-          <p className="py-6 text-center text-[14px] text-slate-400">Memuat…</p>
+          <p className="py-6 text-center fs-14 text-slate-400">Memuat…</p>
         ) : history.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-[16px] font-semibold text-slate-800">Belum ada riwayat impor</p>
-            <p className="text-[14px] text-slate-500">Impor terbaru akan muncul di sini.</p>
+            <p className="fs-16 font-semibold text-slate-800">Belum ada riwayat impor</p>
+            <p className="fs-14 text-slate-500">Impor terbaru akan muncul di sini.</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -806,10 +798,8 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                   <FileSpreadsheet size={18} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-slate-900">
-                    {b.name ?? 'Impor mutasi'}
-                  </span>
-                  <span className="block text-[13px] text-slate-500">
+                  <span className="block truncate fs-15 font-semibold text-slate-900">{b.name ?? 'Impor mutasi'}</span>
+                  <span className="block fs-13 text-slate-500">
                     {b.account_name ?? 'Rekening'} · {b.rows_count} transaksi · {dateShort(b.first_date)}–
                     {dateShort(b.last_date)} · {dateTime(b.created_at)}
                   </span>
@@ -818,7 +808,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
                   type="button"
                   onClick={() => void undo(b)}
                   disabled={undoing === b.id}
-                  className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
+                  className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 fs-13 font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
                 >
                   {undoing === b.id ? <Loader2 size={14} className="animate-spin" /> : <Undo2 size={14} />} Batalkan
                 </button>
@@ -829,7 +819,7 @@ export function ImportMutasi({ inPanel = false }: { inPanel?: boolean }) {
       </section>
 
       <section className={cn(!inPanel && 'rounded-[26px] bg-white ring-1 ring-slate-100')}>
-        <h2 className={cn('text-[18px] font-bold text-slate-900', !inPanel && 'px-4 pt-5 sm:px-5')}>
+        <h2 className={cn('fs-18 font-bold text-slate-900', !inPanel && 'px-4 pt-5 sm:px-5')}>
           {inPanel ? 'File CSV' : 'Cara lain memasukkan data'}
         </h2>
         <div className={cn('divide-y divide-slate-100 pb-2', inPanel && '-mx-4')}>

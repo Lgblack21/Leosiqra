@@ -118,7 +118,7 @@ export default function AdminLaporanPage() {
               onClick={exportCSV}
               disabled={logs.length === 0}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all',
+                'flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl fs-12 font-bold text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all',
                 logs.length === 0 && 'opacity-40 cursor-not-allowed',
               )}
             >
@@ -128,7 +128,7 @@ export default function AdminLaporanPage() {
               onClick={exportJSON}
               disabled={logs.length === 0}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all',
+                'flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl fs-12 font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all',
                 logs.length === 0 && 'opacity-40 cursor-not-allowed',
               )}
             >
@@ -150,7 +150,7 @@ export default function AdminLaporanPage() {
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl fs-13 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
           >
             <option>Semua aksi</option>
             {uniqueActions.map((action) => (
@@ -164,7 +164,7 @@ export default function AdminLaporanPage() {
               placeholder="Cari admin / aksi / target / catatan"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl fs-13 font-medium placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
             />
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function AdminLaporanPage() {
                 {['WAKTU', 'ADMIN', 'AKSI', 'TARGET', 'CATATAN'].map((head) => (
                   <th
                     key={head}
-                    className="text-left py-3 px-3 text-[10px] font-black text-slate-400 tracking-widest uppercase"
+                    className="text-left py-3 px-3 fs-10 font-black text-slate-400 tracking-widest uppercase"
                   >
                     {head}
                   </th>
@@ -189,9 +189,7 @@ export default function AdminLaporanPage() {
                   <td colSpan={5} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                        Memuat audit logs...
-                      </p>
+                      <p className="fs-11 font-black text-slate-400 uppercase tracking-widest">Memuat audit logs...</p>
                     </div>
                   </td>
                 </tr>
@@ -206,14 +204,14 @@ export default function AdminLaporanPage() {
               ) : (
                 filteredLogs.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-3 text-[12px] font-medium text-slate-400 whitespace-nowrap">
+                    <td className="py-4 px-3 fs-12 font-medium text-slate-400 whitespace-nowrap">
                       {row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}
                     </td>
-                    <td className="py-4 px-3 text-[12px] font-medium text-slate-900">{row.admin_email}</td>
+                    <td className="py-4 px-3 fs-12 font-medium text-slate-900">{row.admin_email}</td>
                     <td className="py-4 px-3">
                       <span
                         className={cn(
-                          'inline-flex px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase',
+                          'inline-flex px-3 py-1.5 rounded-full fs-10 font-black tracking-widest uppercase',
                           row.color === 'indigo'
                             ? 'bg-indigo-50 text-indigo-600'
                             : row.color === 'orange'
@@ -228,10 +226,8 @@ export default function AdminLaporanPage() {
                         {row.action}
                       </span>
                     </td>
-                    <td className="py-4 px-3 text-[12px] font-black text-slate-900 truncate max-w-[140px]">
-                      {row.target}
-                    </td>
-                    <td className="py-4 px-3 text-[12px] font-medium text-slate-500 italic">&quot;{row.note}&quot;</td>
+                    <td className="py-4 px-3 fs-12 font-black text-slate-900 truncate max-w-[140px]">{row.target}</td>
+                    <td className="py-4 px-3 fs-12 font-medium text-slate-500 italic">&quot;{row.note}&quot;</td>
                   </tr>
                 ))
               )}

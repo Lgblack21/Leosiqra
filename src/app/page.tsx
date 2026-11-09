@@ -34,8 +34,8 @@ import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicCont
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
 import { Reveal } from '@/components/landing/Reveal';
 import { AppShowcase } from '@/components/landing/AppShowcase';
-import { ScrollTilt } from '@/components/landing/ScrollTilt';
 import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
+import { Aurora } from '@/components/auth/AuthLayout';
 
 // Semua klaim di halaman ini mengacu ke fitur yang benar-benar ada di aplikasi.
 const MARQUEE = [
@@ -212,36 +212,34 @@ export default function LandingPage() {
     reduce
       ? {}
       : {
-          initial: { opacity: 0, y: 24, filter: 'blur(10px)' },
-          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+          initial: { opacity: 0, y: 24 },
+          animate: { opacity: 1, y: 0 },
           transition: { duration: 1, delay: 0.15 + i * 0.12, ease: [0.16, 1, 0.3, 1] as const },
         };
 
   return (
     <div id="beranda" className="min-h-screen overflow-x-clip scroll-mt-20 bg-[#f7f8fb] text-slate-900">
-      <Navbar />
+      <Navbar variant="clean" />
 
-      <section className="relative overflow-hidden px-5 pb-20 pt-36 sm:px-6 sm:pb-28 sm:pt-44">
-        <div aria-hidden className="hero-aurora" />
-        <div aria-hidden className="dot-grid" />
+      {/* ── Hero: terang & bersih dengan cahaya pastel (senada halaman Masuk/Daftar & Mulai) ── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#eef0ff] via-white to-[#f7f8fb] px-5 pb-20 pt-32 text-slate-900 sm:px-6 sm:pb-28 sm:pt-40">
+        <Aurora />
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.div
             {...heroItem(0)}
-            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-indigo-600 shadow-sm backdrop-blur"
+            className="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-amber-100 px-4 py-1.5 fs-12 font-bold text-amber-800 ring-1 ring-amber-200"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-            </span>
-            Aplikasi catatan keuangan pribadi
+            <span aria-hidden className="auth-shine" />
+            <Sparkles size={14} className="auth-twinkle" />
+            Aplikasi catatan keuangan pribadi · Gratis 14 hari
           </motion.div>
           <motion.h1
             {...heroItem(1)}
-            className="mt-7 font-serif text-[2.7rem] leading-[1.04] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl"
+            className="mt-7 text-[2.6rem] font-extrabold leading-[1.04] tracking-[-0.035em] sm:text-6xl lg:text-7xl"
           >
             Semua uang Anda,
             <br />
-            <span className="lp-shine italic">dalam satu layar.</span>
+            <span className="lp-ink">dalam satu layar.</span>
           </motion.h1>
           <motion.p
             {...heroItem(2)}
@@ -253,13 +251,13 @@ export default function LandingPage() {
           <motion.div {...heroItem(3)} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/mulai"
-              className="lp-btn group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-8 py-4 text-sm font-extrabold text-slate-950 shadow-[0_16px_40px_-14px_rgba(251,191,36,0.85)] transition-all hover:-translate-y-0.5"
             >
               Mulai gratis 14 hari <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-8 py-4 text-sm font-bold text-slate-700 backdrop-blur transition-colors hover:border-slate-300 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
             >
               Masuk ke akun
             </Link>
@@ -276,60 +274,56 @@ export default function LandingPage() {
           className="relative mx-auto mt-16 max-w-6xl sm:mt-20"
           initial={reduce ? false : { opacity: 0, y: 60, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1.2, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <div
             aria-hidden
-            className="absolute -inset-x-10 -top-10 bottom-24 -z-10 rounded-[60px] bg-gradient-to-b from-indigo-200/40 via-violet-100/30 to-transparent blur-3xl"
+            className="absolute -inset-x-24 -top-24 bottom-0 -z-10 bg-[radial-gradient(ellipse_at_50%_20%,rgba(251,191,36,0.22),rgba(99,102,241,0.14)_40%,transparent_70%)]"
           />
-          <ScrollTilt>
-            <AppShowcase />
-          </ScrollTilt>
-          <motion.div
-            initial={reduce ? false : { opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.8, duration: 0.8 }}
-            className="lp-card animate-floaty absolute -left-14 top-[64%] hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <CreditCard size={17} />
-            </span>
-            <span className="leading-tight">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
-              <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
-            </span>
-          </motion.div>
-          <motion.div
-            initial={reduce ? false : { opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 2.1, duration: 0.8 }}
-            className="lp-card animate-floaty [animation-delay:2s] absolute -right-10 -top-7 hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <Check size={17} />
-            </span>
-            <span className="leading-tight">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
-              <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
-            </span>
-          </motion.div>
+          {/* Tanpa efek miring 3D saat digulir: lapisan besar itu bikin jendela demo kosong/berkedip di tablet. */}
+          <AppShowcase />
+          <div className="absolute -left-14 top-[60%] hidden xl:block">
+            <div
+              className="paper-float flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-900 shadow-[0_24px_48px_-20px_rgba(2,6,23,0.6)]"
+              style={{ animationDelay: '-2s' } as React.CSSProperties}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <CreditCard size={17} />
+              </span>
+              <span className="leading-tight">
+                <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
+                <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
+              </span>
+            </div>
+          </div>
+          <div className="absolute -right-10 top-[18%] hidden xl:block">
+            <div className="paper-float flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-900 shadow-[0_24px_48px_-20px_rgba(2,6,23,0.6)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Check size={17} />
+              </span>
+              <span className="leading-tight">
+                <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
+                <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
+              </span>
+            </div>
+          </div>
         </motion.div>
 
-        <div className="relative mx-auto mt-16 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
+        <div className="relative mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-slate-200/80 shadow-sm ring-1 ring-slate-200/80 lg:grid-cols-4">
           {FACTS.map(([big, small], i) => (
-            <Reveal key={big} delay={i * 0.08} y={14} className="bg-white/90 px-5 py-6 text-center backdrop-blur">
-              <p className="font-serif text-xl text-slate-900 sm:text-2xl">{big}</p>
+            <Reveal key={big} delay={i * 0.08} y={14} className="bg-white px-5 py-6 text-center">
+              <p className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">{big}</p>
               <p className="mt-1 text-xs text-slate-500">{small}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
-      <div className="relative border-y border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div className="relative border-b border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
         <div className="marquee-x flex w-max gap-10 whitespace-nowrap">
           {[...MARQUEE, ...MARQUEE].map((m, i) => (
-            <span key={i} className="flex items-center gap-10 text-sm text-slate-500">
-              {m} <span className="h-1 w-1 rotate-45 bg-indigo-300" />
+            <span key={i} className="flex items-center gap-10 text-sm font-semibold text-slate-500">
+              {m} <span className="h-1.5 w-1.5 rotate-45 bg-gradient-to-br from-amber-300 to-orange-400" />
             </span>
           ))}
         </div>
@@ -338,7 +332,7 @@ export default function LandingPage() {
       <section id="produk" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Produk</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Produk</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Semua yang Anda miliki, dalam satu pandangan.
             </h2>
@@ -382,12 +376,12 @@ export default function LandingPage() {
                 Tagihan tercetak, minimum bayar, dan hitung mundur jatuh tempo.
               </p>
               <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between fs-11 text-slate-500">
                   <span>Tagihan tercetak</span>
                   <span className="text-amber-600">3 hari lagi</span>
                 </div>
                 <p className="mt-1 font-serif text-2xl tabular-nums">Rp 4.250.000</p>
-                <p className="mt-1 text-[11px] text-slate-500">Minimum Rp 425.000</p>
+                <p className="mt-1 fs-11 text-slate-500">Minimum Rp 425.000</p>
               </div>
             </Reveal>
 
@@ -449,7 +443,7 @@ export default function LandingPage() {
         />
         <div className="mx-auto grid grid-cols-1 max-w-7xl items-center gap-16 lg:grid-cols-2">
           <Reveal>
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Input Cepat</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Input Cepat</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Catat dalam hitungan detik. Dengan cara Anda.
             </h2>
@@ -491,7 +485,7 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Fitur</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Fitur</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Lengkap, tanpa terasa rumit.</h2>
           </Reveal>
           <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-[28px] border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
@@ -520,7 +514,7 @@ export default function LandingPage() {
             className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.12),transparent)]"
           />
           <div className="relative">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pajak Center</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Pajak Center</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               SPT tahunan, disiapkan dari catatan Anda.
             </h2>
@@ -569,7 +563,7 @@ export default function LandingPage() {
       <section className="relative px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Prinsip kami</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Prinsip kami</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Dibangun untuk dipercaya.</h2>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -587,7 +581,7 @@ export default function LandingPage() {
       <section id="cara-kerja" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Cara mulai</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Cara mulai</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Tiga langkah menuju keuangan yang tenang.
             </h2>
@@ -617,7 +611,7 @@ export default function LandingPage() {
       <section id="harga" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-5xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Harga</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Harga</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Coba dulu. Lanjutkan kalau cocok.</h2>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -687,7 +681,7 @@ export default function LandingPage() {
                 className="object-cover"
               />
             </div>
-            <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-600">Di balik Leosiqra</p>
+            <p className="mt-6 fs-10 font-bold uppercase tracking-[0.3em] text-indigo-600">Di balik Leosiqra</p>
             {developer.name && <h3 className="mt-2 font-serif text-3xl">{developer.name}</h3>}
             {developer.quote && (
               <p className="mt-5 font-serif text-xl italic leading-relaxed text-slate-600">
@@ -699,26 +693,21 @@ export default function LandingPage() {
       )}
 
       <section className="relative px-5 py-20 sm:px-6 sm:py-28">
-        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#0f172a] via-indigo-700 to-violet-600 px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(79,70,229,0.7)] sm:px-12 sm:py-24">
-          <div aria-hidden className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div
-            aria-hidden
-            className="absolute -bottom-28 -right-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl"
-          />
-          <div aria-hidden className="dot-grid opacity-30" />
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] px-6 py-16 text-center text-slate-900 shadow-[0_40px_100px_-50px_rgba(79,70,229,0.45)] ring-1 ring-slate-200/80 sm:px-12 sm:py-24">
+          <Aurora />
           <div className="relative">
-            <h2 className="font-serif text-4xl leading-[1.08] sm:text-6xl">
+            <h2 className="text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-6xl">
               Mulai hari ini.
               <br />
-              <span className="italic text-indigo-100">Tenang seterusnya.</span>
+              <span className="lp-ink">Tenang seterusnya.</span>
             </h2>
-            <p className="mx-auto mt-6 max-w-md text-indigo-100/90">
+            <p className="mx-auto mt-6 max-w-md text-slate-500">
               Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/mulai"
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-indigo-700 shadow-xl shadow-black/20 transition-all hover:-translate-y-0.5 sm:w-auto"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-9 py-4 text-sm font-extrabold text-slate-950 shadow-[0_16px_40px_-14px_rgba(251,191,36,0.85)] transition-all hover:-translate-y-0.5 sm:w-auto"
               >
                 Daftar gratis{' '}
                 <ArrowUpRight
@@ -728,7 +717,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/hubungi-kami"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-9 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-9 py-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto"
               >
                 <Globe2 size={16} /> Hubungi kami
               </Link>

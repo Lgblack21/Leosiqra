@@ -197,7 +197,7 @@ export default function AppTransactionsPage() {
             ['Net', summary.net, summary.net < 0 ? 'text-rose-200' : 'text-white'],
           ].map(([label, value, cls]) => (
             <div key={label as string} className="rounded-2xl bg-white/10 px-2 py-2.5 min-w-0">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{label}</p>
+              <p className="fs-10 font-bold text-white/70 uppercase tracking-wider">{label}</p>
               <p
                 className={cn('text-sm font-black tabular-nums truncate', cls as string)}
                 title={formatIDR(value as number)}
@@ -244,7 +244,7 @@ export default function AppTransactionsPage() {
                   setTagFilter(on ? null : tg.name);
                 }}
                 className={cn(
-                  'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold ring-1 transition-colors',
+                  'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 fs-11 font-bold ring-1 transition-colors',
                   on
                     ? tagStyle(tg.color).chip
                     : 'bg-white text-slate-400 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-800',
@@ -329,7 +329,7 @@ export default function AppTransactionsPage() {
                           <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">
                             {txTitle(t)}
                           </span>
-                          <span className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
+                          <span className="block fs-11 font-medium text-slate-400 dark:text-slate-500 truncate">
                             {subtitle}
                           </span>
                           {t.tags && t.tags.length > 0 && (
@@ -338,7 +338,7 @@ export default function AppTransactionsPage() {
                                 <span
                                   key={n}
                                   className={cn(
-                                    'inline-flex max-w-[96px] items-center gap-0.5 rounded-full px-1.5 py-px text-[10px] font-bold ring-1',
+                                    'inline-flex max-w-[96px] items-center gap-0.5 rounded-full px-1.5 py-px fs-10 font-bold ring-1',
                                     tagStyle(colorOf(n)).chip,
                                   )}
                                 >

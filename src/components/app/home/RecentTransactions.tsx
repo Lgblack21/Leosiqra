@@ -66,7 +66,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{tx.category || 'Umum'}</p>
-                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                    <p className="fs-11 font-medium text-slate-400 dark:text-slate-500">
                       {formatDate(new Date(tx.date))}
                     </p>
                   </div>

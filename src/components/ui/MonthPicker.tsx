@@ -96,7 +96,7 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
                       onChange({ month: m, year: displayYear });
                       setIsOpen(false);
                     }}
-                    className={`py-3 px-2 rounded-xl text-[11px] font-black capitalize transition-all ${
+                    className={`py-3 px-2 rounded-xl fs-11 font-black capitalize transition-all ${
                       isSelected
                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105'
                         : 'bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
@@ -110,7 +110,7 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
 
             <button
               onClick={goToToday}
-              className="w-full mt-3 py-2 rounded-xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-widest"
+              className="w-full mt-3 py-2 rounded-xl fs-10 font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-widest"
             >
               Bulan Ini
             </button>

@@ -156,7 +156,7 @@ export const RecurringModal = ({
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Transaksi</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nama Transaksi</label>
           <input
             type="text"
             value={formData.name}
@@ -168,7 +168,7 @@ export const RecurringModal = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Jenis</label>
             <div className="relative">
               <select
                 value={formData.type}
@@ -188,7 +188,7 @@ export const RecurringModal = ({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Interval</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Interval</label>
             <div className="relative">
               <select
                 value={formData.interval}
@@ -215,7 +215,7 @@ export const RecurringModal = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                 {currencySymbol}
@@ -230,9 +230,7 @@ export const RecurringModal = ({
           </div>
           {isTabungan ? (
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                Goal Tabungan
-              </label>
+              <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Goal Tabungan</label>
               <div className="relative">
                 <select
                   value={formData.category}
@@ -265,7 +263,7 @@ export const RecurringModal = ({
 
         {isTabungan && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               Target Total (Opsional)
             </label>
             <div className="relative">
@@ -279,7 +277,7 @@ export const RecurringModal = ({
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
               />
             </div>
-            <p className="text-[10px] font-medium text-slate-400 pl-1">
+            <p className="fs-10 font-medium text-slate-400 pl-1">
               Isi kalau mau lihat progress bar menuju target. Kosongkan kalau cuma mau setoran rutin tanpa target.
             </p>
           </div>
@@ -287,9 +285,7 @@ export const RecurringModal = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Akun / Rekening
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Akun / Rekening</label>
             <div className="relative">
               <select
                 value={formData.accountId}
@@ -310,9 +306,7 @@ export const RecurringModal = ({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Mulai Tanggal
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Mulai Tanggal</label>
             <input
               type="date"
               value={formData.nextDate}
@@ -323,7 +317,7 @@ export const RecurringModal = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Catatan</label>
           <textarea
             rows={2}
             value={formData.note}

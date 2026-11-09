@@ -176,10 +176,10 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   if (!shop) {
     return (
       <div className="rounded-[28px] bg-white p-8 text-center ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-        <p className="text-[15px] font-bold text-slate-900 dark:text-white">{error || 'Usaha tidak ditemukan.'}</p>
+        <p className="fs-15 font-bold text-slate-900 dark:text-white">{error || 'Usaha tidak ditemukan.'}</p>
         <Link
           href={back}
-          className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-violet-600 dark:text-violet-300"
+          className="mt-3 inline-flex items-center gap-1 fs-13 font-bold text-violet-600 dark:text-violet-300"
         >
           <ArrowLeft size={15} /> Kembali ke Usahaku
         </Link>
@@ -208,7 +208,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const todayCost = Math.round(todayCosts.reduce((x, t) => x + amt(t), 0));
   // HP: ikon di atas label (5 tombol muat satu baris); layar lebar: pil sebaris.
   const actBtn =
-    'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 text-[11px] font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:text-[12px]';
+    'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 fs-11 font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:fs-12';
   const actions = (
     <>
       <button
@@ -230,7 +230,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       >
         <Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>
         {lowCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-slate-900 sm:static">
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900 sm:static">
             {lowCount}
           </span>
         )}
@@ -277,7 +277,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {flash && (
         <div
           role="status"
-          className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg"
+          className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center fs-13 font-semibold text-white shadow-lg"
         >
           {flash}
         </div>
@@ -299,7 +299,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             <ArrowLeft size={17} />
           </Link>
           {!compactHead && (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-[26px]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
               <CatalogImage
                 src={shop.style.logoUrl}
                 alt={`Logo ${shop.name}`}
@@ -310,26 +310,21 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           )}
           <div className="min-w-0 flex-1">
             {!compactHead && (
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50">
+              <p className="flex items-center gap-1.5 fs-11 font-bold uppercase tracking-wider text-white/50">
                 <Store size={12} /> Kasir
               </p>
             )}
-            <h1
-              className={cn(
-                'truncate font-extrabold leading-tight',
-                compactHead ? 'text-[16px]' : 'text-[20px] md:text-[24px]',
-              )}
-            >
+            <h1 className={cn('truncate font-extrabold leading-tight', compactHead ? 'fs-16' : 'fsh-20 md:fsh-24')}>
               {compactHead && `${shop.emoji || '🏪'} `}
               {shop.name}
             </h1>
             {compactHead && shop.style.showStats ? (
-              <p className="truncate text-[11px] text-white/70">
+              <p className="truncate fs-11 text-white/70">
                 Hari ini {short(todayTotal)} · {todaySales.length} transaksi
                 {todayCost ? ` · biaya ${short(todayCost)}` : ''}
               </p>
             ) : (
-              shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>
+              shop.style.greeting && <p className="truncate fs-12 text-white/70">{shop.style.greeting}</p>
             )}
           </div>
           <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{actions}</div>
@@ -349,8 +344,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                 key={k}
                 className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"
               >
-                <p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p>
-                <p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px] md:text-[18px]">
+                <p className="truncate fs-10 text-white/55 min-[380px]:fs-11">{k}</p>
+                <p className="truncate fs-14 font-extrabold tabular-nums tracking-tight min-[380px]:fs-16 md:fs-18">
                   {v}
                 </p>
               </div>
@@ -364,15 +359,15 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
             <ShoppingBag size={26} />
           </span>
-          <p className="mt-3 text-[16px] font-extrabold text-slate-900 dark:text-white">Katalog masih kosong</p>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+          <p className="mt-3 fs-16 font-extrabold text-slate-900 dark:text-white">Katalog masih kosong</p>
+          <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
             Tambahkan produk & harga, atau ambil otomatis dari website tokomu — kategorinya langsung jadi kategori
             kasir.
           </p>
           <button
             type="button"
             onClick={() => setManage(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 fs-13 font-bold text-white hover:bg-violet-700"
           >
             <Settings2 size={15} /> Isi katalog
           </button>
@@ -395,7 +390,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                 }}
                 onCheckout={openStruk}
               />
-              <p className="px-2 text-[11px] text-slate-400">
+              <p className="px-2 fs-11 text-slate-400">
                 Desain buatanmu (mode bebas) · data uang & pembeli tetap diisi di struk Leosiqra — jangan ketik
                 PIN/password di dalam desain.
               </p>
@@ -432,21 +427,21 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
               <ReceiptText size={18} />
               {count > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-extrabold text-emerald-700">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 fs-11 font-extrabold text-emerald-700">
                   {count}
                 </span>
               )}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold text-white/70">
+              <span className="block fs-11 font-semibold text-white/70">
                 {count ? `${count} item di struk` : 'Struk kosong'}
               </span>
-              <span className="block text-[16px] font-extrabold tabular-nums">
+              <span className="block fs-16 font-extrabold tabular-nums">
                 {count ? formatIDR(sum) : 'Ketuk produk untuk mulai'}
               </span>
             </span>
             {count > 0 && (
-              <span className="shrink-0 rounded-full bg-white px-3.5 py-2 text-[13px] font-extrabold text-emerald-700">
+              <span className="shrink-0 rounded-full bg-white px-3.5 py-2 fs-13 font-extrabold text-emerald-700">
                 Bayar
               </span>
             )}
@@ -670,7 +665,7 @@ export function Catalog({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari produk…"
             aria-label="Cari produk"
-            className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+            className="min-w-0 flex-1 bg-transparent fs-14 font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
           />
           {query && (
             <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400">
@@ -686,14 +681,14 @@ export function Catalog({
             type="button"
             onClick={() => open(null)}
             className={cn(
-              'flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold',
+              'flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 fs-13 font-bold',
               themeOf(style).chip,
             )}
           >
             <ArrowLeft size={15} /> Kembali ke katalog
           </button>
-          {avatar(active, 'h-9 w-9 rounded-xl', 'text-[12px]')}
-          <span className="min-w-0 truncate text-[16px] font-extrabold text-slate-900 dark:text-white">
+          {avatar(active, 'h-9 w-9 rounded-xl', 'fs-12')}
+          <span className="min-w-0 truncate fs-16 font-extrabold text-slate-900 dark:text-white">
             {active || 'Lainnya'}
           </span>
         </div>
@@ -716,25 +711,21 @@ export function Catalog({
                   )}
                 >
                   {inCart > 0 && (
-                    <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-extrabold text-white">
+                    <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 fs-11 font-extrabold text-white">
                       ×{inCart}
                     </span>
                   )}
-                  {avatar(
-                    group,
-                    cn('rounded-2xl', big ? 'h-16 w-16' : 'h-12 w-12'),
-                    big ? 'text-[20px]' : 'text-[15px]',
-                  )}
+                  {avatar(group, cn('rounded-2xl', big ? 'h-16 w-16' : 'h-12 w-12'), big ? 'fsh-20' : 'fs-15')}
                   <span className="w-full min-w-0">
                     <span
                       className={cn(
                         'line-clamp-2 font-extrabold leading-snug text-slate-900 dark:text-white',
-                        big ? 'text-[18px]' : 'text-[15px]',
+                        big ? 'fs-18' : 'fs-15',
                       )}
                     >
                       {group || 'Lainnya'}
                     </span>
-                    <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">
+                    <span className="mt-0.5 block fs-12 text-slate-500 dark:text-slate-400">
                       {items.length} pilihan · mulai{' '}
                       <b className="whitespace-nowrap text-emerald-700 dark:text-emerald-300">{short(min)}</b>
                     </span>
@@ -766,7 +757,7 @@ export function Catalog({
                     aria-selected={on}
                     onClick={() => setActive(group)}
                     className={cn(
-                      'flex shrink-0 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors',
+                      'flex shrink-0 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-3 fs-13 font-bold transition-colors',
                       on
                         ? themeOf(style).chip
                         : 'bg-white text-slate-700 ring-1 ring-slate-100 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800',
@@ -775,7 +766,7 @@ export function Catalog({
                     {group === null ? (
                       <span
                         className={cn(
-                          'flex h-7 w-7 items-center justify-center rounded-xl text-[10px] font-extrabold',
+                          'flex h-7 w-7 items-center justify-center rounded-xl fs-10 font-extrabold',
                           on
                             ? 'bg-white/15 text-current'
                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -784,12 +775,10 @@ export function Catalog({
                         ✦
                       </span>
                     ) : (
-                      avatar(group, 'h-7 w-7 rounded-xl', 'text-[10px]')
+                      avatar(group, 'h-7 w-7 rounded-xl', 'fs-10')
                     )}
                     {label}
-                    <span className={cn('text-[11px] font-semibold', on ? 'text-white/60' : 'text-slate-400')}>
-                      {n}
-                    </span>
+                    <span className={cn('fs-11 font-semibold', on ? 'text-white/60' : 'text-slate-400')}>{n}</span>
                   </button>
                 );
               })}
@@ -797,7 +786,7 @@ export function Catalog({
           )}
 
           {shown.length === 0 && (
-            <p className="rounded-2xl bg-white py-8 text-center text-[13px] text-slate-500 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+            <p className="rounded-2xl bg-white py-8 text-center fs-13 text-slate-500 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
               Tidak ada yang cocok dengan &ldquo;{query}&rdquo;.
             </p>
           )}
@@ -808,11 +797,9 @@ export function Catalog({
             >
               {named && !(folder && active !== null && !q) && (
                 <p className="mb-2.5 flex items-center gap-2 px-1">
-                  {avatar(group, 'h-8 w-8 rounded-xl', 'text-[11px]')}
-                  <span className="text-[15px] font-extrabold text-slate-900 dark:text-white">
-                    {group || 'Lainnya'}
-                  </span>
-                  <span className="text-[12px] font-semibold text-slate-400">{items.length} pilihan</span>
+                  {avatar(group, 'h-8 w-8 rounded-xl', 'fs-11')}
+                  <span className="fs-15 font-extrabold text-slate-900 dark:text-white">{group || 'Lainnya'}</span>
+                  <span className="fs-12 font-semibold text-slate-400">{items.length} pilihan</span>
                 </p>
               )}
               {style.layout === 'list' ? (
@@ -827,24 +814,24 @@ export function Catalog({
                           aria-label={`Tambah ${productLabel(p)} ke struk`}
                           className={cn(
                             'flex w-full items-center gap-3 rounded-xl px-2 text-left transition-colors',
-                            style.size === 'besar' ? 'py-4 text-[16px]' : 'py-3',
+                            style.size === 'besar' ? 'py-4 fs-16' : 'py-3',
                             n ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
                           )}
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+                            <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
                               {p.name}
                             </span>
                             {style.showUnit && p.unit && (
-                              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>
+                              <span className="block fs-11 text-slate-500 dark:text-slate-400">{p.unit}</span>
                             )}
                           </span>
-                          <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
+                          <span className="shrink-0 fs-14 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
                             {formatIDR(p.price)}
                           </span>
                           <span
                             className={cn(
-                              'flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold',
+                              'flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 fs-11 font-extrabold',
                               n ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800',
                             )}
                           >
@@ -884,7 +871,7 @@ export function Catalog({
                             <span
                               className={cn(
                                 'absolute flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 font-extrabold text-white',
-                                compact ? 'right-1 top-1 h-5 text-[10px]' : 'right-2 top-2 h-6 text-[11px]',
+                                compact ? 'right-1 top-1 h-5 fs-10' : 'right-2 top-2 h-6 fs-11',
                               )}
                             >
                               ×{n}
@@ -893,18 +880,18 @@ export function Catalog({
                           <span
                             className={cn(
                               'line-clamp-2 font-bold leading-snug text-slate-900 dark:text-white',
-                              compact ? 'pr-5 text-[12px]' : big ? 'pr-7 text-[17px]' : 'pr-6 text-[14px]',
+                              compact ? 'pr-5 fs-12' : big ? 'pr-7 fs-17' : 'pr-6 fs-14',
                             )}
                           >
                             {p.name}
                           </span>
                           {style.showUnit && p.unit && !compact && (
-                            <span className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>
+                            <span className="mt-0.5 fs-11 text-slate-500 dark:text-slate-400">{p.unit}</span>
                           )}
                           <span
                             className={cn(
                               'mt-auto font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300',
-                              compact ? 'pt-1 text-[12px]' : big ? 'pt-3 text-[19px]' : 'pt-2 text-[15px]',
+                              compact ? 'pt-1 fs-12' : big ? 'pt-3 fs-19' : 'pt-2 fs-15',
                             )}
                           >
                             {formatIDR(p.price)}
@@ -1083,14 +1070,12 @@ export function Struk({
           <Check size={28} strokeWidth={3} />
         </span>
         <div>
-          <p className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">
+          <p className="fs-13 font-semibold text-slate-500 dark:text-slate-400">
             Tercatat{done.buyer ? ` · ${done.buyer}` : ''}
           </p>
-          <p className="text-[28px] font-extrabold tabular-nums text-slate-900 dark:text-white">
-            {formatIDR(done.amount)}
-          </p>
+          <p className="fsh-28 font-extrabold tabular-nums text-slate-900 dark:text-white">{formatIDR(done.amount)}</p>
         </div>
-        <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 text-left font-sans text-[12px] leading-relaxed text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+        <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 text-left font-sans fs-12 leading-relaxed text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
           {done.text}
         </pre>
         <div className="grid grid-cols-2 gap-2">
@@ -1102,14 +1087,14 @@ export function Struk({
                 () => onDone('Tidak bisa menyalin otomatis.'),
               );
             }}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
           >
             <Copy size={14} /> Salin struk
           </button>
           <button
             type="button"
             onClick={next}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[13px] font-bold text-white hover:bg-emerald-700"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 fs-13 font-bold text-white hover:bg-emerald-700"
           >
             <Plus size={14} /> Transaksi baru
           </button>
@@ -1122,7 +1107,7 @@ export function Struk({
     <div className={cn(card, 'space-y-3')}>
       <div className={cn('flex items-center', inSheet ? 'justify-end' : 'justify-between')}>
         {!inSheet && (
-          <p className="flex items-center gap-1.5 text-[15px] font-extrabold text-slate-900 dark:text-white">
+          <p className="flex items-center gap-1.5 fs-15 font-extrabold text-slate-900 dark:text-white">
             <ReceiptText size={17} className="text-emerald-600" /> Struk
           </p>
         )}
@@ -1133,7 +1118,7 @@ export function Struk({
               clear();
               setOverride(null);
             }}
-            className="flex items-center gap-1 text-[12px] font-bold text-slate-400 hover:text-rose-500"
+            className="flex items-center gap-1 fs-12 font-bold text-slate-400 hover:text-rose-500"
           >
             <Trash2 size={13} /> Kosongkan
           </button>
@@ -1142,14 +1127,14 @@ export function Struk({
       {error && (
         <p
           role="alert"
-          className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </p>
       )}
 
       {allLines.length === 0 ? (
-        <p className="rounded-2xl border-2 border-dashed border-slate-200 px-4 py-6 text-center text-[13px] text-slate-400 dark:border-slate-700">
+        <p className="rounded-2xl border-2 border-dashed border-slate-200 px-4 py-6 text-center fs-13 text-slate-400 dark:border-slate-700">
           Ketuk produk di katalog untuk memasukkan ke struk.
         </p>
       ) : (
@@ -1157,9 +1142,9 @@ export function Struk({
           {allLines.map((l) => (
             <li key={l.key} className="flex items-center gap-2 py-2">
               <span className="min-w-0 flex-1">
-                {l.group && <span className="block truncate text-[11px] font-semibold text-slate-400">{l.group}</span>}
-                <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{l.name}</span>
-                <span className="block text-[12px] tabular-nums text-slate-500 dark:text-slate-400">
+                {l.group && <span className="block truncate fs-11 font-semibold text-slate-400">{l.group}</span>}
+                <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{l.name}</span>
+                <span className="block fs-12 tabular-nums text-slate-500 dark:text-slate-400">
                   {formatIDR(l.price)}
                 </span>
               </span>
@@ -1175,7 +1160,7 @@ export function Struk({
                 >
                   {l.qty === 1 ? <Trash2 size={13} /> : <Minus size={13} />}
                 </button>
-                <span className="w-6 text-center text-[13px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+                <span className="w-6 text-center fs-13 font-extrabold tabular-nums text-slate-900 dark:text-white">
                   {l.qty}
                 </span>
                 <button
@@ -1202,7 +1187,7 @@ export function Struk({
             maxLength={60}
             placeholder="Item lain"
             aria-label="Nama item"
-            className={cn(fieldCls, 'px-3 py-2 text-[13px]')}
+            className={cn(fieldCls, 'px-3 py-2 fs-13')}
           />
           <input
             value={manual.price ? Number(manual.price).toLocaleString('id-ID') : ''}
@@ -1210,7 +1195,7 @@ export function Struk({
             inputMode="numeric"
             placeholder="Harga"
             aria-label="Harga item"
-            className={cn(fieldCls, 'px-3 py-2 text-[13px] tabular-nums')}
+            className={cn(fieldCls, 'px-3 py-2 fs-13 tabular-nums')}
           />
           <button
             type="button"
@@ -1230,7 +1215,7 @@ export function Struk({
         <button
           type="button"
           onClick={() => setManual({ name: '', price: '' })}
-          className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"
+          className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
         >
           <Plus size={13} /> Item di luar katalog
         </button>
@@ -1250,7 +1235,7 @@ export function Struk({
         />
       </label>
       {staff ? (
-        <p className="rounded-2xl bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+        <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Masuk ke <b>{staff.accountName ?? '— belum ditentukan pemilik'}</b> · hari ini
         </p>
       ) : (
@@ -1284,9 +1269,9 @@ export function Struk({
       )}
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
-          <span className="text-[13px] font-bold text-emerald-900 dark:text-emerald-200">Total diterima</span>
-          <span className="flex min-w-0 items-center gap-1 text-[22px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
-            <span className="text-[14px]">Rp</span>
+          <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">Total diterima</span>
+          <span className="flex min-w-0 items-center gap-1 fsh-22 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <span className="fs-14">Rp</span>
             <input
               value={total ? total.toLocaleString('id-ID') : ''}
               onChange={(e) => setOverride(e.target.value.replace(/\D/g, '').slice(0, 11))}
@@ -1297,7 +1282,7 @@ export function Struk({
           </span>
         </label>
         {override !== null && total !== sum && (
-          <p className="mt-1 flex items-center justify-between text-[11px] text-emerald-800/70 dark:text-emerald-300/70">
+          <p className="mt-1 flex items-center justify-between fs-11 text-emerald-800/70 dark:text-emerald-300/70">
             <span>
               Harga katalog {formatIDR(sum)}
               {total < sum ? ` · potongan ${formatIDR(sum - total)}` : ''}
@@ -1312,11 +1297,11 @@ export function Struk({
         type="button"
         onClick={save}
         disabled={busy || !allLines.length}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-40"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Bayar & catat
       </button>
-      <p className="text-center text-[11px] text-slate-400">Masuk sebagai pemasukan Usaha & Freelance › Penjualan.</p>
+      <p className="text-center fs-11 text-slate-400">Masuk sebagai pemasukan Usaha & Freelance › Penjualan.</p>
     </div>
   );
 }
@@ -1328,20 +1313,20 @@ function RecentSales({ sales }: { sales: Transaction[] }) {
     .slice(0, 10);
   return (
     <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-      <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Hari ini</p>
+      <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Hari ini</p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((t) => {
           const out = t.type === 'pengeluaran';
           return (
             <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
-              <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700 dark:text-slate-200">
+              <span className="flex min-w-0 items-center gap-1.5 fs-13 text-slate-700 dark:text-slate-200">
                 {out && (
-                  <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                  <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 fs-10 font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                     Biaya
                   </span>
                 )}
                 {(t.note ?? '').endsWith(' · via website') && (
-                  <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                  <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 fs-10 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
                     🌐 Website
                   </span>
                 )}
@@ -1351,7 +1336,7 @@ function RecentSales({ sales }: { sales: Transaction[] }) {
               </span>
               <span
                 className={cn(
-                  'shrink-0 text-[13px] font-extrabold tabular-nums',
+                  'shrink-0 fs-13 font-extrabold tabular-nums',
                   out ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300',
                 )}
               >

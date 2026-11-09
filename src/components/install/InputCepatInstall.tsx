@@ -56,7 +56,7 @@ function InstallBody({ platform }: { platform: Platform }) {
         <ChevronDown size={14} className={cn('transition-transform', showSteps && 'rotate-180')} />
       </button>
       {showSteps && <InstallAnimation platform={platform} app="input-cepat" compact />}
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center fs-11 text-slate-400">
         Mau aplikasi lengkapnya juga?{' '}
         <Link href="/install" className="font-bold text-indigo-600">
           Pasang Leosiqra
@@ -88,7 +88,7 @@ export function InputCepatInstall() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mx-auto mt-5 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-bold text-slate-500 shadow-sm ring-1 ring-slate-100"
+        className="mx-auto mt-5 flex items-center gap-2 rounded-full bg-white px-4 py-2 fs-11 font-bold text-slate-500 shadow-sm ring-1 ring-slate-100"
       >
         <span className="relative h-5 w-5 overflow-hidden rounded-md">
           <Image src="/images/input-cepat-192.png" alt="" fill sizes="20px" className="object-cover" />

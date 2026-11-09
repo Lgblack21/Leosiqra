@@ -186,12 +186,12 @@ export function SellFlow({
     }
   };
 
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-emerald-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-emerald-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   const chip = (on: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
       on
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
@@ -218,28 +218,28 @@ export function SellFlow({
         <button
           type="button"
           onClick={() => setStep('form')}
-          className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+          className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
         >
           <ArrowLeft size={15} /> Ubah detail
         </button>
         {error && (
           <div
             role="alert"
-            className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+            className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
           >
             {error}
           </div>
         )}
         {listingId && (
-          <p className="flex items-center gap-1.5 rounded-2xl bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <p className="flex items-center gap-1.5 rounded-2xl bg-emerald-50 px-3 py-2 fs-12 font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CloudCheck size={15} /> Tersimpan di &ldquo;Sedang dijual&rdquo; — perubahan harga & iklan ikut tersimpan.
           </p>
         )}
 
         <section className="web-keep relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_140%_at_0%_0%,#065f46_0%,#0b1220_65%)] p-5 text-white">
-          <p className="text-[12px] font-semibold text-white/60">Pasaran bekas {name.trim()}</p>
-          <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums">{formatIDR(result.price_fair)}</p>
-          <p className="mt-1 text-[12px] text-white/60 tabular-nums">
+          <p className="fs-12 font-semibold text-white/60">Pasaran bekas {name.trim()}</p>
+          <p className="mt-1 fsh-30 font-extrabold leading-none tabular-nums">{formatIDR(result.price_fair)}</p>
+          <p className="mt-1 fs-12 text-white/60 tabular-nums">
             rentang {formatIDR(result.price_low)} – {formatIDR(result.price_high)}
           </p>
           <div className="relative mt-5 h-2 rounded-full bg-gradient-to-r from-amber-300 via-emerald-400 to-sky-400">
@@ -254,15 +254,15 @@ export function SellFlow({
               />
             ))}
           </div>
-          {result.basis && <p className="mt-4 text-[12px] leading-relaxed text-white/70">{result.basis}</p>}
+          {result.basis && <p className="mt-4 fs-12 leading-relaxed text-white/70">{result.basis}</p>}
           {result.seen && (
-            <p className="mt-2 flex gap-1.5 text-[12px] leading-relaxed text-emerald-200">
+            <p className="mt-2 flex gap-1.5 fs-12 leading-relaxed text-emerald-200">
               <Camera size={13} className="mt-0.5 shrink-0" />
               {result.seen}
             </p>
           )}
           {!result.web && (
-            <p className="mt-2 text-[11px] text-amber-300">Pencarian iklan sedang mati — ini perkiraan kasar AI.</p>
+            <p className="mt-2 fs-11 text-amber-300">Pencarian iklan sedang mati — ini perkiraan kasar AI.</p>
           )}
         </section>
 
@@ -281,9 +281,9 @@ export function SellFlow({
                     : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800',
                 )}
               >
-                <span className="block text-[11px] font-bold opacity-80">{o.label}</span>
-                <span className="block text-[13px] font-extrabold tabular-nums">{formatIDR(result[o.key])}</span>
-                <span className="block text-[10px] opacity-70">{o.hint}</span>
+                <span className="block fs-11 font-bold opacity-80">{o.label}</span>
+                <span className="block fs-13 font-extrabold tabular-nums">{formatIDR(result[o.key])}</span>
+                <span className="block fs-10 opacity-70">{o.hint}</span>
               </button>
             ))}
           </div>
@@ -302,15 +302,11 @@ export function SellFlow({
                     className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">
-                        {c.title}
-                      </span>
-                      <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {host(c.url)}
-                      </span>
+                      <span className="block truncate fs-13 font-bold text-slate-900 dark:text-white">{c.title}</span>
+                      <span className="block truncate fs-11 text-slate-500 dark:text-slate-400">{host(c.url)}</span>
                     </span>
                     {c.price != null && (
-                      <span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+                      <span className="shrink-0 fs-13 font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
                         {formatIDR(c.price)}
                       </span>
                     )}
@@ -337,10 +333,10 @@ export function SellFlow({
             rows={7}
             maxLength={1500}
             aria-label="Deskripsi iklan"
-            className={cn(input, 'resize-y text-[14px] font-medium leading-relaxed')}
+            className={cn(input, 'resize-y fs-14 font-medium leading-relaxed')}
           />
           {result.tips && (
-            <p className="flex gap-1.5 px-1 text-[12px] text-slate-500 dark:text-slate-400">
+            <p className="flex gap-1.5 px-1 fs-12 text-slate-500 dark:text-slate-400">
               <Sparkles size={13} className="mt-0.5 shrink-0 text-amber-500" />
               {result.tips}
             </p>
@@ -349,7 +345,7 @@ export function SellFlow({
             <button
               type="button"
               onClick={copy}
-              className="flex items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
+              className="flex items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white hover:bg-slate-800 dark:bg-emerald-600"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Tersalin' : 'Salin iklan'}
             </button>
@@ -357,7 +353,7 @@ export function SellFlow({
               <button
                 type="button"
                 onClick={share}
-                className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 text-[14px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 fs-14 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <Share2 size={16} /> Bagikan
               </button>
@@ -366,7 +362,7 @@ export function SellFlow({
                 href={`https://www.olx.co.id/post`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 text-[14px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-3 fs-14 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <ExternalLink size={16} /> Pasang di OLX
               </a>
@@ -377,11 +373,11 @@ export function SellFlow({
         <button
           type="button"
           onClick={() => setStep('sold')}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-50 py-3.5 text-[14px] font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-50 py-3.5 fs-14 font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           <Wallet size={16} /> Sudah laku? Catat hasilnya
         </button>
-        <p className="text-center text-[11px] text-slate-400">
+        <p className="text-center fs-11 text-slate-400">
           Taksiran AI dari iklan publik — bukan jaminan laku.
           {result.remaining != null ? ` Sisa taksir hari ini: ${result.remaining}×` : ''}
         </p>
@@ -394,7 +390,7 @@ export function SellFlow({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -427,21 +423,21 @@ export function SellFlow({
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-bold text-slate-900 dark:text-white">
+          <span className="block fs-13 font-bold text-slate-900 dark:text-white">
             {scanning ? 'AI melihat fotomu…' : scanNote || 'Foto barangnya biar AI menilai kondisinya'}
           </span>
           <span className="mt-1.5 flex gap-1.5">
             <button
               type="button"
               onClick={() => camRef.current?.click()}
-              className="flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[12px] font-bold text-white dark:bg-emerald-600"
+              className="flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 fs-12 font-bold text-white dark:bg-emerald-600"
             >
               <Camera size={13} /> Foto
             </button>
             <button
               type="button"
               onClick={() => galRef.current?.click()}
-              className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
+              className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
             >
               <ImagePlus size={13} /> Galeri
             </button>
@@ -534,11 +530,11 @@ export function SellFlow({
         type="button"
         onClick={run}
         disabled={name.trim().length < 2 || scanning}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
       >
         <Search size={17} /> Taksir harga & tulis iklan
       </button>
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center fs-11 text-slate-400">
         AI mencari iklan barang yang sama di OLX, Tokopedia, Shopee, dll. Maks 5× per hari.
       </p>
     </div>
@@ -560,8 +556,8 @@ function Searching({ name }: { name: string }) {
           <Search size={38} className="animate-bounce" />
         </span>
       </div>
-      <p className="mt-5 text-[16px] font-extrabold text-slate-900 dark:text-white">Mencari harga {name}…</p>
-      <p className="mt-1 h-5 text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">
+      <p className="mt-5 fs-16 font-extrabold text-slate-900 dark:text-white">Mencari harga {name}…</p>
+      <p className="mt-1 h-5 fs-13 font-semibold text-emerald-600 dark:text-emerald-400">
         Cek iklan di {SOURCES[i % SOURCES.length]}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-1.5">
@@ -569,7 +565,7 @@ function Searching({ name }: { name: string }) {
           <span
             key={s}
             className={cn(
-              'rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors',
+              'rounded-full px-2.5 py-1 fs-11 font-bold transition-colors',
               k <= i % SOURCES.length || i >= SOURCES.length
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                 : 'bg-slate-100 text-slate-400 dark:bg-slate-800',
@@ -579,7 +575,7 @@ function Searching({ name }: { name: string }) {
           </span>
         ))}
       </div>
-      <p className="mt-4 text-[11px] text-slate-400">Biasanya 10–30 detik.</p>
+      <p className="mt-4 fs-11 text-slate-400">Biasanya 10–30 detik.</p>
     </div>
   );
 }
@@ -656,23 +652,23 @@ function SoldForm({
       setBusy(false);
     }
   };
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent focus:bg-white focus:ring-emerald-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent focus:bg-white focus:ring-emerald-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   return (
     <div className="space-y-4">
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+        className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
       >
         <ArrowLeft size={15} /> Kembali ke iklan
       </button>
-      <p className="text-[18px] font-extrabold text-slate-900 dark:text-white">🎉 {name} laku!</p>
+      <p className="fs-18 font-extrabold text-slate-900 dark:text-white">🎉 {name} laku!</p>
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -727,11 +723,11 @@ function SoldForm({
         type="button"
         onClick={save}
         disabled={busy || (!item && !listingId && !accountId)}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Catat hasil jual
       </button>
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center fs-11 text-slate-400">
         {item
           ? 'Barang pindah ke "terjual" di Barangku (tidak dihitung lagi di kekayaan).'
           : 'Tercatat sebagai pemasukan kategori Pemasukan › Jual Barang.'}

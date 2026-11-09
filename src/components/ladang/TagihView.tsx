@@ -124,30 +124,30 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
       )}
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#0e7490_0%,#164e63_35%,#0b1220_80%)] p-5 text-white md:p-6">
-        <p className="text-[13px] font-semibold text-white/60">Belum kembali</p>
-        <p className="mt-1 text-[32px] font-extrabold leading-none tracking-tight tabular-nums md:text-[40px]">
+        <p className="fs-13 font-semibold text-white/60">Belum kembali</p>
+        <p className="mt-1 fsh-32 font-extrabold leading-none tracking-tight tabular-nums md:fsh-40">
           {formatIDR(Math.round(total))}
         </p>
-        <p className="mt-2 text-[13px] text-white/60">
+        <p className="mt-2 fs-13 text-white/60">
           {people ? `${people} orang berutang padamu` : 'Belum ada yang berutang padamu'}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setSplit(true)}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Users size={15} /> Patungan
           </button>
           <Link
             href={isApp ? '/app/debts' : '/membership/kekayaan#hutang'}
-            className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-white/20"
+            className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2.5 fs-13 font-bold text-white hover:bg-white/20"
           >
             <Plus size={15} /> Catat piutang
           </Link>
@@ -159,17 +159,15 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
             <Check size={24} />
           </span>
-          <p className="mt-3 text-[14px] font-bold text-slate-900 dark:text-white">
-            Semua piutang sudah kembali. Mantap!
-          </p>
-          <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+          <p className="mt-3 fs-14 font-bold text-slate-900 dark:text-white">Semua piutang sudah kembali. Mantap!</p>
+          <p className="mt-1 fs-12 text-slate-500 dark:text-slate-400">
             Habis bayarin teman? Pakai Patungan biar langsung terbagi rata.
           </p>
         </section>
       ) : (
         <section className={cn(card, 'p-4')}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Ingatkan via WhatsApp</h3>
+            <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Ingatkan via WhatsApp</h3>
             <div
               className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800"
               role="radiogroup"
@@ -183,7 +181,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                   aria-checked={tone === t.id}
                   onClick={() => setTone(t.id)}
                   className={cn(
-                    'rounded-full px-2.5 py-1 text-[11px] font-bold',
+                    'rounded-full px-2.5 py-1 fs-11 font-bold',
                     tone === t.id
                       ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
                       : 'text-slate-500 dark:text-slate-400',
@@ -199,16 +197,16 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               const due = t.due ? dueLabel(t.due) : null;
               return (
                 <li key={t.id} className="flex flex-wrap items-center gap-3 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-[15px] font-extrabold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-50 fs-15 font-extrabold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
                     {(t.lenderName || '?').charAt(0).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+                    <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
                       {t.lenderName || 'Tanpa nama'}
                     </span>
                     <span
                       className={cn(
-                        'block truncate text-[12px]',
+                        'block truncate fs-12',
                         due?.urgent
                           ? 'font-semibold text-rose-600 dark:text-rose-400'
                           : 'text-slate-500 dark:text-slate-400',
@@ -217,7 +215,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       {[cleanNote(t.note), due?.text].filter(Boolean).join(' · ') || 'Piutang'}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+                  <span className="shrink-0 fs-14 font-extrabold tabular-nums text-slate-900 dark:text-white">
                     {formatIDR(Math.round(left))}
                   </span>
                   <span className="flex w-full gap-2 sm:w-auto">
@@ -225,7 +223,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       href={waUrl(reminderText(tone, t.lenderName || '', left, t.note))}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 sm:flex-none"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 fs-12 font-bold text-white hover:bg-emerald-700 sm:flex-none"
                     >
                       <MessageCircle size={14} /> Ingatkan
                     </a>
@@ -234,7 +232,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       onClick={() => setCicil(cicil?.id === t.id ? null : { id: t.id!, value: '' })}
                       aria-expanded={cicil?.id === t.id}
                       className={cn(
-                        'flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold sm:flex-none',
+                        'flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 fs-12 font-bold sm:flex-none',
                         cicil?.id === t.id
                           ? 'bg-cyan-600 text-white'
                           : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-500/15 dark:text-cyan-300',
@@ -246,7 +244,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       type="button"
                       onClick={() => settle(t, left)}
                       disabled={busyId === t.id}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 sm:flex-none dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 fs-12 font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 sm:flex-none dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       {busyId === t.id && !cicil ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}{' '}
                       Sudah bayar
@@ -260,7 +258,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                           style={{ width: `${Math.min(100, ((t.amount - left) / t.amount) * 100)}%` }}
                         />
                       </span>
-                      <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="mt-1 block fs-11 text-slate-500 dark:text-slate-400">
                         Sudah kembali {formatIDR(Math.round(t.amount - left))} dari {formatIDR(Math.round(t.amount))}
                       </span>
                     </span>
@@ -278,7 +276,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               );
             })}
           </ul>
-          <p className="mt-2 text-[11px] text-slate-400">
+          <p className="mt-2 fs-11 text-slate-400">
             WhatsApp terbuka dengan pesan siap kirim — kamu pilih kontaknya sendiri. &ldquo;Nyicil&rdquo; = bayar
             sebagian, &ldquo;Sudah bayar&rdquo; = lunas penuh — uang masuk ke rekening asal piutang & tercatat di
             Kekayaan.
@@ -380,12 +378,12 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
     }
   };
 
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-cyan-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-cyan-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   const chip = (on: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
       on
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
@@ -396,24 +394,22 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
     const group = `Patungan ${what} 🧾\nTotal ${formatIDR(amount)} dibagi ${parts} orang:\n${done.shares.map((s) => `• ${s.name}: ${formatIDR(s.amount)}`).join('\n')}${done.myShare ? `\n• Aku: ${formatIDR(done.myShare)}` : ''}\n\nTransfer ke aku ya, makasih! 🙏`;
     return (
       <div className="space-y-4">
-        <p className="text-[18px] font-extrabold text-slate-900 dark:text-white">
+        <p className="fs-18 font-extrabold text-slate-900 dark:text-white">
           ✅ Tercatat — {done.shares.length} piutang
         </p>
         <a
           href={waUrl(group)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-bold text-white hover:bg-emerald-700"
         >
           <Share2 size={17} /> Kirim rincian ke grup WA
         </a>
         <ul className="divide-y divide-slate-100 rounded-2xl ring-1 ring-slate-100 dark:divide-slate-800 dark:ring-slate-800">
           {done.shares.map((s) => (
             <li key={s.name} className="flex items-center gap-3 px-3 py-2.5">
-              <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-slate-900 dark:text-white">
-                {s.name}
-              </span>
-              <span className="text-[13px] font-extrabold tabular-nums text-slate-700 dark:text-slate-200">
+              <span className="min-w-0 flex-1 truncate fs-14 font-bold text-slate-900 dark:text-white">{s.name}</span>
+              <span className="fs-13 font-extrabold tabular-nums text-slate-700 dark:text-slate-200">
                 {formatIDR(s.amount)}
               </span>
               <a
@@ -431,7 +427,7 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
         <button
           type="button"
           onClick={() => onDone(`Patungan ${what} tercatat.`)}
-          className="w-full rounded-full bg-slate-100 py-3 text-[14px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="w-full rounded-full bg-slate-100 py-3 fs-14 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           Selesai
         </button>
@@ -444,7 +440,7 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -465,7 +461,7 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
             placeholder="0"
             aria-label="Total tagihan"
             autoFocus
-            className="min-w-0 flex-1 bg-transparent text-[18px] font-extrabold tabular-nums outline-none"
+            className="min-w-0 flex-1 bg-transparent fs-18 font-extrabold tabular-nums outline-none"
           />
         </span>
       </label>
@@ -488,7 +484,7 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
           placeholder="Andi, Budi, Citra"
           className={cn(input, 'resize-none')}
         />
-        <span className="mt-1 block px-1 text-[11px] text-slate-400">
+        <span className="mt-1 block px-1 fs-11 text-slate-400">
           Pisahkan dengan koma atau baris baru. Maks 20 orang.
         </span>
       </label>
@@ -501,7 +497,7 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
         </button>
       </div>
       {amount > 0 && names.length > 0 && (
-        <div className="rounded-2xl bg-cyan-50 px-4 py-3 text-[13px] text-cyan-900 dark:bg-cyan-500/10 dark:text-cyan-200">
+        <div className="rounded-2xl bg-cyan-50 px-4 py-3 fs-13 text-cyan-900 dark:bg-cyan-500/10 dark:text-cyan-200">
           <b className="tabular-nums">{formatIDR(per)}</b> per orang × {parts}
           {first !== per ? ` (${names[0]} ${formatIDR(first)} — sisa pembulatan)` : ''}
         </div>
@@ -528,10 +524,10 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
           onChange={(e) => setApplyBalance(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-cyan-600"
         />
-        <span className="text-[13px] text-slate-700 dark:text-slate-200">
+        <span className="fs-13 text-slate-700 dark:text-slate-200">
           <b>Potong saldo sekarang</b> — total {amount ? formatIDR(amount) : ''} keluar dari rekening ini
           {includeMe ? ', bagianku dicatat sebagai pengeluaran' : ''}.
-          <span className="block text-[11px] text-slate-400">Matikan kalau tagihannya sudah kamu catat sendiri.</span>
+          <span className="block fs-11 text-slate-400">Matikan kalau tagihannya sudah kamu catat sendiri.</span>
         </span>
       </label>
       {applyBalance && includeMe && (
@@ -560,11 +556,11 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
         type="button"
         onClick={save}
         disabled={busy || amount < 1 || !names.length || !accountId}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-cyan-600 py-3.5 text-[15px] font-bold text-white hover:bg-cyan-700 disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-cyan-600 py-3.5 fs-15 font-bold text-white hover:bg-cyan-700 disabled:opacity-40"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Tagih mereka
       </button>
-      {due && <p className="text-center text-[11px] text-slate-400">Kamu diingatkan H-3 & H-1 sebelum tanggal itu.</p>}
+      {due && <p className="text-center fs-11 text-slate-400">Kamu diingatkan H-3 & H-1 sebelum tanggal itu.</p>}
     </div>
   );
 }
@@ -586,12 +582,12 @@ function CicilForm({
   const n = Number(value || '0');
   return (
     <span className="block w-full rounded-2xl bg-cyan-50/70 p-3 dark:bg-cyan-500/10">
-      <span className="mb-1.5 block text-[12px] font-semibold text-cyan-900/70 dark:text-cyan-200/70">
+      <span className="mb-1.5 block fs-12 font-semibold text-cyan-900/70 dark:text-cyan-200/70">
         Berapa yang dibayar sekarang?
       </span>
       <span className="flex gap-2">
         <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-2xl bg-white px-3 py-2.5 ring-2 ring-transparent focus-within:ring-cyan-500 dark:bg-slate-900">
-          <span className="text-[13px] text-slate-400">Rp</span>
+          <span className="fs-13 text-slate-400">Rp</span>
           <input
             value={n ? n.toLocaleString('id-ID') : ''}
             onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 11))}
@@ -599,14 +595,14 @@ function CicilForm({
             autoFocus
             aria-label="Nominal cicilan"
             placeholder="0"
-            className="min-w-0 flex-1 bg-transparent text-[15px] font-bold tabular-nums text-slate-900 outline-none dark:text-white"
+            className="min-w-0 flex-1 bg-transparent fs-15 font-bold tabular-nums text-slate-900 outline-none dark:text-white"
           />
         </span>
         <button
           type="button"
           onClick={() => onSave(n)}
           disabled={!n || busy}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-cyan-600 px-4 text-[13px] font-bold text-white hover:bg-cyan-700 disabled:opacity-40"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-cyan-600 px-4 fs-13 font-bold text-white hover:bg-cyan-700 disabled:opacity-40"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Catat
         </button>
@@ -617,14 +613,14 @@ function CicilForm({
             key={f}
             type="button"
             onClick={() => onChange(String(Math.round(left * f)))}
-            className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-cyan-700 dark:bg-slate-900 dark:text-cyan-300"
+            className="rounded-full bg-white px-3 py-1 fs-11 font-bold text-cyan-700 dark:bg-slate-900 dark:text-cyan-300"
           >
             {f * 100}% · {formatIDR(Math.round(left * f))}
           </button>
         ))}
       </span>
       {n > left && (
-        <span className="mt-1.5 block text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+        <span className="mt-1.5 block fs-11 font-semibold text-amber-700 dark:text-amber-300">
           Lebih dari sisa — yang dicatat cukup {formatIDR(Math.round(left))} (lunas).
         </span>
       )}

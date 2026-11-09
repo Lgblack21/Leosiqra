@@ -217,12 +217,12 @@ export function useReplay(trip: DayTrip | null, map: { m: MlMap; ml: MapLib } | 
         <div className="flex items-center gap-3 px-3.5 py-3">
           {live.kind === 'done' ? (
             <>
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-[22px]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 fsh-22">
                 🏁
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-black">Selesai · {trip.stops.length} tempat</p>
-                <p className="truncate text-[12.5px] text-white/70">
+                <p className="truncate fs-15 font-black">Selesai · {trip.stops.length} tempat</p>
+                <p className="truncate fs-12.5 text-white/70">
                   {rp(trip.total)} · ±{fmtKm(trip.km)} ditempuh
                 </p>
               </div>
@@ -235,7 +235,7 @@ export function useReplay(trip: DayTrip | null, map: { m: MlMap; ml: MapLib } | 
             </>
           ) : current ? (
             <>
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[22px]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 fsh-22">
                 {current.kind === 'move'
                   ? MODE[trip.legs[current.i].mode].icon
                   : categoryVisual(trip.stops[current.i].category, 'pengeluaran').emoji}
@@ -243,24 +243,22 @@ export function useReplay(trip: DayTrip | null, map: { m: MlMap; ml: MapLib } | 
               <div className="min-w-0 flex-1">
                 {current.kind === 'move' ? (
                   <>
-                    <p className="truncate text-[15px] font-black">Menuju {trip.stops[current.i + 1].label}</p>
-                    <p className="truncate text-[12.5px] text-white/70">
+                    <p className="truncate fs-15 font-black">Menuju {trip.stops[current.i + 1].label}</p>
+                    <p className="truncate fs-12.5 text-white/70">
                       {MODE[trip.legs[current.i].mode].label} ±{trip.legs[current.i].minutes} mnt ·{' '}
                       {fmtKm(trip.legs[current.i].km)}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="truncate text-[15px] font-black">{trip.stops[current.i].label}</p>
-                    <p className="truncate text-[12.5px] font-bold text-rose-300">
-                      −{rp(idrOf(trip.stops[current.i]))}
-                    </p>
+                    <p className="truncate fs-15 font-black">{trip.stops[current.i].label}</p>
+                    <p className="truncate fs-12.5 font-bold text-rose-300">−{rp(idrOf(trip.stops[current.i]))}</p>
                   </>
                 )}
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Terpakai</p>
-                <p className="text-[14px] font-black tabular-nums">{short(live.spent)}</p>
+                <p className="fs-10 font-bold uppercase tracking-wider text-white/50">Terpakai</p>
+                <p className="fs-14 font-black tabular-nums">{short(live.spent)}</p>
               </div>
               {live.kind === 'run' ? (
                 <HudBtn label="Jeda" onClick={pause}>
@@ -324,9 +322,9 @@ export function JejakPanel({
   if (!trips.length || !trip)
     return (
       <div className="rounded-[22px] bg-white p-5 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-        <p className="text-[30px]">🧭</p>
-        <p className="mt-1 text-[15px] font-black">Belum ada jejak</p>
-        <p className="mx-auto mt-1 max-w-xs text-[12.5px] text-slate-500">
+        <p className="fsh-30">🧭</p>
+        <p className="mt-1 fs-15 font-black">Belum ada jejak</p>
+        <p className="mx-auto mt-1 max-w-xs fs-12.5 text-slate-500">
           Jejak terbentuk dari pengeluaran berlokasi di hari yang sama. Nyalakan <b>lokasi otomatis</b> di ⚙️ Lokasi
           &amp; privasi, atau tandai lokasi saat mencatat.
         </p>
@@ -353,8 +351,8 @@ export function JejakPanel({
                 : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
             )}
           >
-            <span className="text-[13px] font-bold">{dayLabel(d.day)}</span>
-            <span className="text-[11px] opacity-70">{d.stops.length + d.extra.length} tempat</span>
+            <span className="fs-13 font-bold">{dayLabel(d.day)}</span>
+            <span className="fs-11 opacity-70">{d.stops.length + d.extra.length} tempat</span>
           </button>
         ))}
       </div>
@@ -369,8 +367,8 @@ export function JejakPanel({
             key={k}
             className="rounded-2xl bg-white px-3 py-2.5 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
           >
-            <p className="text-[11px] font-bold text-slate-400">{k}</p>
-            <p className="text-[17px] font-black tabular-nums">{v}</p>
+            <p className="fs-11 font-bold text-slate-400">{k}</p>
+            <p className="fs-17 font-black tabular-nums">{v}</p>
           </div>
         ))}
       </div>
@@ -381,7 +379,7 @@ export function JejakPanel({
             <div className="bg-emerald-500" style={{ width: `${(walk / trip.km) * 100}%` }} />
             <div className="bg-indigo-500" style={{ width: `${(ride / trip.km) * 100}%` }} />
           </div>
-          <p className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] text-slate-500">
+          <p className="mt-1.5 flex flex-wrap gap-x-3 fs-12 text-slate-500">
             <span>🚶 Jalan kaki ±{fmtKm(walk)}</span>
             <span>🛵 Kendaraan ±{fmtKm(ride)}</span>
             <span className="text-slate-400">perkiraan dari jarak antar tempat</span>
@@ -400,8 +398,8 @@ export function JejakPanel({
           <Play size={20} className="ml-0.5" fill="currentColor" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-black">Putar ulang perjalanan</p>
-          <p className="truncate text-[12px] text-white/80">
+          <p className="fs-15 font-black">Putar ulang perjalanan</p>
+          <p className="truncate fs-12 text-white/80">
             {trip.stops.length < 2
               ? 'Perlu minimal 2 tempat di hari ini'
               : `${trip.stops[0].time ?? ''}${trip.stops[0].time && trip.stops.at(-1)?.time ? ` – ${trip.stops.at(-1)?.time}` : ''} · ±${secs} detik`}
@@ -414,7 +412,7 @@ export function JejakPanel({
               type="button"
               onClick={() => replay.setSpeed(s)}
               className={cn(
-                'h-7 w-8 rounded-full text-[12px] font-black',
+                'h-7 w-8 rounded-full fs-12 font-black',
                 replay.speed === s ? 'bg-white text-indigo-700' : 'text-white/80',
               )}
             >
@@ -435,21 +433,21 @@ export function JejakPanel({
                 activeStop === i ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-900',
               )}
             >
-              <span className="w-11 shrink-0 text-[12.5px] font-bold tabular-nums text-slate-400">{s.time ?? '—'}</span>
-              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[20px] ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+              <span className="w-11 shrink-0 fs-12.5 font-bold tabular-nums text-slate-400">{s.time ?? '—'}</span>
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white fsh-20 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
                 {categoryVisual(s.category, 'pengeluaran').emoji}
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10.5px] font-black text-white">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 fs-10.5 font-black text-white">
                   {i + 1}
                 </span>
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-bold">{s.label}</span>
-                <span className="block truncate text-[12px] text-slate-500">
+                <span className="block truncate fs-14 font-bold">{s.label}</span>
+                <span className="block truncate fs-12 text-slate-500">
                   {s.source === 'struk' ? '🧾 dari struk · ' : ''}
                   {s.address || s.category}
                 </span>
               </span>
-              <span className="shrink-0 text-[14px] font-black tabular-nums">{short(idrOf(s))}</span>
+              <span className="shrink-0 fs-14 font-black tabular-nums">{short(idrOf(s))}</span>
             </button>
             {i < trip.legs.length ? (
               <div className="flex items-center gap-3 py-0.5 pl-2">
@@ -462,7 +460,7 @@ export function JejakPanel({
                     )}
                   />
                 </span>
-                <span className="text-[12px] text-slate-500">
+                <span className="fs-12 text-slate-500">
                   {MODE[trip.legs[i].mode].icon} {MODE[trip.legs[i].mode].label} ±{trip.legs[i].minutes} mnt ·{' '}
                   {fmtKm(trip.legs[i].km)}
                 </span>
@@ -473,8 +471,8 @@ export function JejakPanel({
       </ol>
       {trip.extra.length ? (
         <section className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
-          <p className="text-[12.5px] font-bold text-slate-600 dark:text-slate-300">Tanpa jam · tidak masuk rute</p>
-          <p className="mb-1.5 text-[11.5px] text-slate-400">Dicatat di hari lain, jadi urutannya tidak diketahui.</p>
+          <p className="fs-12.5 font-bold text-slate-600 dark:text-slate-300">Tanpa jam · tidak masuk rute</p>
+          <p className="mb-1.5 fs-11.5 text-slate-400">Dicatat di hari lain, jadi urutannya tidak diketahui.</p>
           {trip.extra.map((s) => (
             <button
               key={s.tx_id}
@@ -482,9 +480,9 @@ export function JejakPanel({
               onClick={() => onFocus(s.tx_id)}
               className="flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left hover:bg-white dark:hover:bg-slate-800"
             >
-              <span className="text-[18px]">{categoryVisual(s.category, 'pengeluaran').emoji}</span>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{s.label}</span>
-              <span className="shrink-0 text-[13px] font-bold tabular-nums">{short(idrOf(s))}</span>
+              <span className="fs-18">{categoryVisual(s.category, 'pengeluaran').emoji}</span>
+              <span className="min-w-0 flex-1 truncate fs-13 font-semibold">{s.label}</span>
+              <span className="shrink-0 fs-13 font-bold tabular-nums">{short(idrOf(s))}</span>
             </button>
           ))}
         </section>

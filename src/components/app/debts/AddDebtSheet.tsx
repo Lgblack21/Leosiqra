@@ -178,7 +178,7 @@ export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
           aria-label="Catatan"
         />
         <DueDateField value={due} onChange={setDue} />
-        <p className="text-[11px] text-slate-400 px-1">
+        <p className="fs-11 text-slate-400 px-1">
           {!isHutang
             ? 'Saldo rekening langsung berkurang. Saat dibayar kembali, saldo bertambah lagi.'
             : noCash

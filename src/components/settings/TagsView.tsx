@@ -101,8 +101,8 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
           <Hash size={22} strokeWidth={2.6} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] font-bold">{tags.enabled ? 'Tag aktif' : 'Pakai tag'}</span>
-          <span className={cn('block text-[13px]', tags.enabled ? 'text-white/80' : 'text-slate-500')}>
+          <span className="block fs-16 font-bold">{tags.enabled ? 'Tag aktif' : 'Pakai tag'}</span>
+          <span className={cn('block fs-13', tags.enabled ? 'text-white/80' : 'text-slate-500')}>
             Label bebas di luar kategori — mis. liburan Bali, klien A, kantor.
           </span>
         </span>
@@ -123,7 +123,7 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
 
       {!tags.enabled ? (
         <div className="rounded-[22px] border-2 border-dashed border-slate-200 p-5">
-          <p className="text-[14px] font-semibold text-slate-800">Contoh pemakaian</p>
+          <p className="fs-14 font-semibold text-slate-800">Contoh pemakaian</p>
           <div className="mt-3 space-y-2">
             {[
               { t: 'Tiket pesawat', c: 'Transportasi', tags: [{ n: 'liburan bali', c: 'teal' }] },
@@ -141,8 +141,8 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
                 className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200/70"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[14px] font-semibold text-slate-900">{x.t}</span>
-                  <span className="block text-[12px] text-slate-500">{x.c}</span>
+                  <span className="block truncate fs-14 font-semibold text-slate-900">{x.t}</span>
+                  <span className="block fs-12 text-slate-500">{x.c}</span>
                 </span>
                 <span className="flex flex-wrap justify-end gap-1">
                   {x.tags.map((g) => (
@@ -152,7 +152,7 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[12px] text-slate-500">
+          <p className="mt-3 fs-12 text-slate-500">
             Lalu saring Riwayat per tag untuk melihat total satu acara atau satu klien.
           </p>
         </div>
@@ -172,7 +172,7 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
                     if (e.key === 'Enter') void add();
                   }}
                   placeholder="nama tag, mis. liburan bali"
-                  className="w-full rounded-full border border-slate-200 bg-white py-3 pl-9 pr-4 text-[15px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+                  className="w-full rounded-full border border-slate-200 bg-white py-3 pl-9 pr-4 fs-15 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
                 />
               </div>
               <button
@@ -203,7 +203,7 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
           </div>
 
           {tags.list.length === 0 ? (
-            <p className="px-1 py-4 text-center text-[14px] text-slate-500">
+            <p className="px-1 py-4 text-center fs-14 text-slate-500">
               Belum ada tag. Buat yang pertama di atas, atau langsung dari form transaksi.
             </p>
           ) : (
@@ -223,14 +223,14 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
                       )}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-semibold text-slate-900">#{t.name}</span>
-                      <span className="block text-[12px] text-slate-500">{n ? `${n} transaksi` : 'Belum dipakai'}</span>
+                      <span className="block truncate fs-15 font-semibold text-slate-900">#{t.name}</span>
+                      <span className="block fs-12 text-slate-500">{n ? `${n} transaksi` : 'Belum dipakai'}</span>
                     </span>
                     {n > 0 && (
                       <button
                         type="button"
                         onClick={() => openHref(`/membership/transactions/daily?tag=${encodeURIComponent(t.name)}`)}
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50"
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 fs-12 font-semibold text-indigo-600 hover:bg-indigo-50"
                       >
                         Lihat <ArrowRight size={13} />
                       </button>
@@ -248,7 +248,7 @@ export function TagsView({ openHref }: { openHref: (href: string) => void }) {
               })}
             </ul>
           )}
-          <p className="px-1 text-[12px] text-slate-500">
+          <p className="px-1 fs-12 text-slate-500">
             Maks 5 tag per transaksi, 40 tag per akun. Ketuk titik warna untuk mengganti warnanya.
           </p>
         </>

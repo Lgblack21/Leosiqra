@@ -145,27 +145,27 @@ export function EmoneyScanner() {
               <Nfc size={30} />
             </span>
           </div>
-          <p className="mt-2 text-[18px] font-bold text-slate-900 dark:text-white">
+          <p className="mt-2 fs-18 font-bold text-slate-900 dark:text-white">
             {scanning ? 'Tempelkan kartu sekarang…' : 'Cek saldo kartu e-money'}
           </p>
-          <p className="mx-auto mt-1 max-w-sm text-[14px] leading-snug text-slate-500 dark:text-slate-400">
+          <p className="mx-auto mt-1 max-w-sm fs-14 leading-snug text-slate-500 dark:text-slate-400">
             {scanning
               ? 'Tahan kartu di belakang HP (iPhone: bagian atas) sampai terbaca.'
               : 'Tempelkan kartu ke belakang HP. Saldonya dibaca langsung dari chip, lalu kamu pilih rekening yang mau disamakan.'}
           </p>
           {notReady ? (
             <div className="mt-4 rounded-2xl bg-white p-3 text-left ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-              <p className="flex items-center gap-2 text-[14px] font-semibold text-slate-800 dark:text-slate-100">
+              <p className="flex items-center gap-2 fs-14 font-semibold text-slate-800 dark:text-slate-100">
                 <Smartphone size={16} className="text-indigo-600" /> {notReady.title}
               </p>
-              <p className="mt-0.5 text-[13px] leading-snug text-slate-500 dark:text-slate-400">{notReady.desc}</p>
+              <p className="mt-0.5 fs-13 leading-snug text-slate-500 dark:text-slate-400">{notReady.desc}</p>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => void scan()}
               disabled={!support || scanning}
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-7 py-3 text-[15px] font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-7 py-3 fs-15 font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
             >
               {scanning ? <Loader2 size={17} className="animate-spin" /> : <Nfc size={17} />}{' '}
               {scanning ? 'Menunggu kartu…' : 'Pindai kartu'}
@@ -175,7 +175,7 @@ export function EmoneyScanner() {
       )}
 
       {error && (
-        <p className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-[14px] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 fs-14 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {error}
         </p>
       )}
@@ -189,22 +189,20 @@ export function EmoneyScanner() {
             )}
           >
             <span className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
-            <div className="flex items-center justify-between text-[13px] font-semibold text-white/80">
+            <div className="flex items-center justify-between fs-13 font-semibold text-white/80">
               <span>{result.cardName}</span>
               <Nfc size={18} />
             </div>
-            <p className="mt-5 text-[12px] uppercase tracking-wider text-white/70">Saldo di kartu</p>
-            <p className="text-[32px] font-extrabold tabular-nums leading-tight">
-              {formatMoney(result.balance, 'IDR')}
-            </p>
+            <p className="mt-5 fs-12 uppercase tracking-wider text-white/70">Saldo di kartu</p>
+            <p className="fsh-32 font-extrabold tabular-nums leading-tight">{formatMoney(result.balance, 'IDR')}</p>
             {maskCardNumber(result.cardNumber) && (
-              <p className="mt-2 font-mono text-[13px] text-white/80">{maskCardNumber(result.cardNumber)}</p>
+              <p className="mt-2 font-mono fs-13 text-white/80">{maskCardNumber(result.cardNumber)}</p>
             )}
           </div>
 
           {saved ? (
             <div className="space-y-3">
-              <p className="flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-[14px] text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <p className="flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 fs-14 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
                 <Check size={16} className="mt-0.5 shrink-0" /> {saved}
               </p>
               <button
@@ -213,7 +211,7 @@ export function EmoneyScanner() {
                   setResult(null);
                   setSaved(null);
                 }}
-                className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-indigo-600"
+                className="inline-flex items-center gap-1.5 fs-14 font-semibold text-indigo-600"
               >
                 <RotateCcw size={15} /> Pindai kartu lain
               </button>
@@ -221,9 +219,7 @@ export function EmoneyScanner() {
           ) : (
             <>
               <div>
-                <p className="px-1 text-[14px] font-semibold text-slate-700 dark:text-slate-200">
-                  Samakan dengan rekening
-                </p>
+                <p className="px-1 fs-14 font-semibold text-slate-700 dark:text-slate-200">Samakan dengan rekening</p>
                 <div className="mt-2 space-y-2">
                   {choices.map((a) => (
                     <button
@@ -238,12 +234,10 @@ export function EmoneyScanner() {
                       )}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-semibold text-slate-900 dark:text-white">
+                        <span className="block truncate fs-15 font-semibold text-slate-900 dark:text-white">
                           {a.name}
                         </span>
-                        <span className="text-[12px] text-slate-500">
-                          Saldo sekarang {formatMoney(a.balance, 'IDR')}
-                        </span>
+                        <span className="fs-12 text-slate-500">Saldo sekarang {formatMoney(a.balance, 'IDR')}</span>
                       </span>
                       {target === a.id && <Check size={18} className="text-indigo-600" />}
                     </button>
@@ -259,7 +253,7 @@ export function EmoneyScanner() {
                     )}
                   >
                     <Plus size={18} className="text-slate-500" />
-                    <span className="flex-1 text-[15px] font-semibold text-slate-900 dark:text-white">
+                    <span className="flex-1 fs-15 font-semibold text-slate-900 dark:text-white">
                       Rekening baru &quot;{result.cardName}&quot;
                     </span>
                     {target === NEW && <Check size={18} className="text-indigo-600" />}
@@ -267,7 +261,7 @@ export function EmoneyScanner() {
                 </div>
               </div>
               {current && (
-                <p className="px-1 text-[13px] text-slate-500 dark:text-slate-400">
+                <p className="px-1 fs-13 text-slate-500 dark:text-slate-400">
                   {diff === 0
                     ? 'Saldo sudah sama — tidak ada yang berubah.'
                     : `${formatMoney(current.balance, 'IDR')} → ${formatMoney(result.balance, 'IDR')} (${diff > 0 ? '+' : '−'}${formatMoney(Math.abs(diff), 'IDR')}).`}
@@ -278,7 +272,7 @@ export function EmoneyScanner() {
                 <button
                   type="button"
                   onClick={() => setResult(null)}
-                  className="rounded-full bg-slate-100 px-5 py-3 text-[14px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="rounded-full bg-slate-100 px-5 py-3 fs-14 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   Batal
                 </button>
@@ -286,7 +280,7 @@ export function EmoneyScanner() {
                   type="button"
                   onClick={() => void save()}
                   disabled={saving || (!!current && diff === 0)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-15 font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{' '}
                   {target === NEW ? 'Buat rekening' : 'Samakan saldo'}
@@ -299,7 +293,7 @@ export function EmoneyScanner() {
 
       {!result && (
         <div>
-          <p className="px-1 text-[14px] text-slate-500">Kartu yang bisa dibaca</p>
+          <p className="px-1 fs-14 text-slate-500">Kartu yang bisa dibaca</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {EMONEY_CARDS.map((c) => (
               <div
@@ -310,11 +304,11 @@ export function EmoneyScanner() {
                 )}
               >
                 <span className="h-3 w-5 rounded-sm bg-white/40" />
-                <span className="text-[13px] font-bold">{c.name}</span>
+                <span className="fs-13 font-bold">{c.name}</span>
               </div>
             ))}
           </div>
-          <p className="mt-3 flex items-start gap-2 px-1 text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
+          <p className="mt-3 flex items-start gap-2 px-1 fs-12 leading-relaxed text-slate-500 dark:text-slate-400">
             <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-600" /> Hanya membaca saldo — Leosiqra tidak
             pernah menulis ke kartu atau memindahkan uang. Nomor kartu tidak disimpan.
           </p>

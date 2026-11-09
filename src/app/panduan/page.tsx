@@ -172,7 +172,7 @@ export default function PanduanIndexPage() {
         <div aria-hidden className="hero-aurora" />
         <div aria-hidden className="dot-grid" />
         <div className="relative mx-auto max-w-3xl text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Panduan</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Panduan</p>
           <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">Belajar mengatur keuangan pribadi</h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
             Panduan singkat dan praktis — dari mencatat pengeluaran harian sampai melunasi utang.

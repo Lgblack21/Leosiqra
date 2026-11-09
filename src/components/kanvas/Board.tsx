@@ -372,7 +372,7 @@ export function Board({
           >
             <Minus size={17} />
           </button>
-          <span className="w-11 text-center text-[12px] font-bold tabular-nums text-slate-500">
+          <span className="w-11 text-center fs-12 font-bold tabular-nums text-slate-500">
             {Math.round(cam.k * 100)}%
           </span>
           <button

@@ -230,10 +230,10 @@ export function TulisView({
             <ChevronLeft size={18} />
           </button>
           <div className="min-w-0 text-center">
-            <p className="truncate text-[15px] font-extrabold text-slate-900 dark:text-white">
+            <p className="truncate fs-15 font-extrabold text-slate-900 dark:text-white">
               {date === today ? 'Hari ini' : longDate(date)}
             </p>
-            <p className="text-[11px] text-slate-400">
+            <p className="fs-11 text-slate-400">
               {date === today ? longDate(date, true) : new Date(`${date}T00:00:00Z`).getUTCFullYear()}
             </p>
           </div>
@@ -273,7 +273,7 @@ export function TulisView({
             </div>
           )}
           {(busy === 'ai' || busy === 'photo') && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/70 text-[13px] font-semibold text-indigo-700 backdrop-blur-sm dark:bg-slate-900/70 dark:text-indigo-200">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/70 fs-13 font-semibold text-indigo-700 backdrop-blur-sm dark:bg-slate-900/70 dark:text-indigo-200">
               <Loader2 size={22} className="animate-spin" />{' '}
               {busy === 'ai'
                 ? s?.has_photo
@@ -283,12 +283,12 @@ export function TulisView({
             </div>
           )}
           {m && (
-            <span className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 text-[12px] font-bold text-slate-700 backdrop-blur">
+            <span className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 fs-12 font-bold text-slate-700 backdrop-blur">
               {m.emoji} {m.label}
             </span>
           )}
           {both && (
-            <span className="absolute right-3 top-3 flex rounded-full bg-black/45 p-0.5 text-[11px] font-bold backdrop-blur">
+            <span className="absolute right-3 top-3 flex rounded-full bg-black/45 p-0.5 fs-11 font-bold backdrop-blur">
               {[
                 ['Ilustrasi', false],
                 ['Asli', true],
@@ -322,7 +322,7 @@ export function TulisView({
                 aria-checked={style === x.id}
                 onClick={() => setStyle(x.id)}
                 className={cn(
-                  'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+                  'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
                   style === x.id
                     ? 'bg-violet-600 text-white'
                     : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
@@ -346,7 +346,7 @@ export function TulisView({
             type="button"
             disabled={Boolean(busy) || !day}
             onClick={() => fileRef.current?.click()}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white py-2.5 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
           >
             <Camera size={15} /> Foto
           </button>
@@ -355,7 +355,7 @@ export function TulisView({
             disabled={Boolean(busy) || !day || !canAi}
             onClick={makeAi}
             title={!canAi ? 'Tambahkan foto atau tulis ceritanya dulu' : undefined}
-            className="flex flex-[1.6] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-2.5 text-[13px] font-bold text-white shadow-md shadow-violet-600/25 disabled:opacity-50"
+            className="flex flex-[1.6] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-2.5 fs-13 font-bold text-white shadow-md shadow-violet-600/25 disabled:opacity-50"
           >
             <Sparkles size={15} /> {aiLabel}
           </button>
@@ -375,7 +375,7 @@ export function TulisView({
 
       <section className="flex flex-col gap-3 rounded-[28px] bg-white p-3.5 md:min-h-0 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-5">
         <div>
-          <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Cuaca hatimu hari ini?</p>
+          <p className="fs-13 font-bold text-slate-800 dark:text-slate-100">Cuaca hatimu hari ini?</p>
           <div className="mt-2 grid grid-cols-5 gap-1.5">
             {MOODS.map((x) => (
               <button
@@ -385,14 +385,14 @@ export function TulisView({
                 onClick={() => pickMood(x.id)}
                 aria-pressed={mood === x.id}
                 className={cn(
-                  'flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-bold transition-all disabled:opacity-50',
+                  'flex flex-col items-center gap-0.5 rounded-2xl py-2 fs-11 font-bold transition-all disabled:opacity-50',
                   mood === x.id
                     ? 'scale-[1.04] text-slate-900 shadow-md ring-2 dark:text-white'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400',
                 )}
                 style={mood === x.id ? { background: `${x.color}22`, boxShadow: `0 0 0 2px ${x.color}` } : undefined}
               >
-                <span className="text-[22px] leading-none" aria-hidden>
+                <span className="fsh-22 leading-none" aria-hidden>
                   {x.emoji}
                 </span>
                 {x.label}
@@ -407,12 +407,12 @@ export function TulisView({
             onChange={(e) => setText(e.target.value.slice(0, 500))}
             disabled={!day}
             placeholder="Satu-dua kalimat tentang hari ini… (apa yang bikin senang, capek, atau kepikiran?)"
-            className="h-full min-h-[90px] w-full flex-1 resize-none rounded-2xl bg-slate-50 p-3.5 text-[14px] leading-relaxed text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+            className="h-full min-h-[90px] w-full flex-1 resize-none rounded-2xl bg-slate-50 p-3.5 fs-14 leading-relaxed text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
           />
-          <span className="mt-1 self-end text-[11px] tabular-nums text-slate-400">{text.length}/500</span>
+          <span className="mt-1 self-end fs-11 tabular-nums text-slate-400">{text.length}/500</span>
         </label>
         {day && (
-          <div className="flex flex-wrap gap-1.5 text-[12px] font-semibold">
+          <div className="flex flex-wrap gap-1.5 fs-12 font-semibold">
             <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
               <Wallet size={12} /> Keluar {rb(day.summary.out)}
             </span>
@@ -432,7 +432,7 @@ export function TulisView({
           </div>
         )}
         {error && (
-          <p role="alert" className="text-[12px] font-semibold text-rose-600">
+          <p role="alert" className="fs-12 font-semibold text-rose-600">
             {error}
           </p>
         )}
@@ -441,7 +441,7 @@ export function TulisView({
             type="button"
             disabled={!day || busy === 'save' || !dirty}
             onClick={saveText}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 fs-15 font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
           >
             {busy === 'save' ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : null}{' '}
             {saved ? 'Tersimpan' : dirty ? 'Simpan' : 'Tersimpan'}
@@ -450,7 +450,7 @@ export function TulisView({
             type="button"
             disabled={!day}
             onClick={share}
-            className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 px-4 text-[13px] font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
+            className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 px-4 fs-13 font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
             aria-label="Bagikan"
           >
             <Share2 size={15} />
@@ -461,7 +461,7 @@ export function TulisView({
                 <button
                   type="button"
                   onClick={() => setAskDelete(false)}
-                  className="rounded-2xl bg-slate-100 px-3 py-3 text-[12px] font-bold text-slate-600 dark:bg-slate-800"
+                  className="rounded-2xl bg-slate-100 px-3 py-3 fs-12 font-bold text-slate-600 dark:bg-slate-800"
                 >
                   Batal
                 </button>
@@ -469,7 +469,7 @@ export function TulisView({
                   type="button"
                   disabled={busy === 'del'}
                   onClick={removeStory}
-                  className="rounded-2xl bg-rose-600 px-3 py-3 text-[12px] font-bold text-white"
+                  className="rounded-2xl bg-rose-600 px-3 py-3 fs-12 font-bold text-white"
                 >
                   Hapus
                 </button>

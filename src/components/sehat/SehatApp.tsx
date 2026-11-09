@@ -43,8 +43,8 @@ function Segera({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center rounded-[28px] border-2 border-dashed border-slate-200 px-6 py-16 text-center dark:border-slate-800">
       <LeoBadge topic="kesehatan" size={76} />
-      <p className="mt-4 text-[17px] font-black text-slate-800 dark:text-slate-100">{label} segera hadir</p>
-      <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+      <p className="mt-4 fs-17 font-black text-slate-800 dark:text-slate-100">{label} segera hadir</p>
+      <p className="mt-1 max-w-sm fs-13 leading-relaxed text-slate-500 dark:text-slate-400">
         Leo lagi menyiapkan bagian ini. Sementara itu, catat makanmu di tab Makan — belanja makannya langsung masuk ke
         keuanganmu.
       </p>
@@ -91,7 +91,7 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
         <Link
           href={app ? '/app/more' : '/membership/dashboard'}
           aria-label={app ? 'Kembali' : 'Kembali ke Ringkasan'}
-          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-2 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
+          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-2 fs-13 font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5">
             <ArrowLeft size={16} />
@@ -99,10 +99,10 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
           <span className="hidden sm:inline">{app ? 'Kembali' : 'Ringkasan'}</span>
         </Link>
         <div className="min-w-0 text-center">
-          <h1 className="truncate text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[24px] dark:text-white">
+          <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24 dark:text-white">
             {current.title}
           </h1>
-          <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{current.sub}</p>
+          <p className="truncate fs-12 text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
         <LeoGuide key={tab} topic={tab === 'asuransi' ? 'asuransi' : tab === 'cek' ? 'kesehatan' : 'makan'} />
       </header>
@@ -121,7 +121,7 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
 
       {toast ? (
         <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[90] flex justify-center px-4">
-          <div className="rounded-full bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white shadow-xl dark:bg-white dark:text-slate-900">
+          <div className="rounded-full bg-slate-900 px-4 py-2.5 fs-13 font-semibold text-white shadow-xl dark:bg-white dark:text-slate-900">
             {toast}
           </div>
         </div>
@@ -141,7 +141,7 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
                 aria-current={active ? 'page' : undefined}
                 aria-label={t.ready ? t.label : `${t.label} (segera)`}
                 className={cn(
-                  'relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold transition-all',
+                  'relative flex h-12 items-center justify-center gap-2 rounded-full fs-13 font-bold transition-all',
                   active
                     ? 'bg-gradient-to-r from-orange-400 to-rose-400 px-4 text-slate-950'
                     : 'w-12 text-white/70 hover:bg-white/10',

@@ -221,20 +221,20 @@ export default function LaporanPage() {
     <div className="laporan-print mx-auto max-w-5xl space-y-7 pb-12">
       <div className="hidden items-end justify-between border-b-2 border-slate-900 pb-4 print:flex">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Leosiqra</p>
-          <p className="text-[22px] font-extrabold text-slate-900">
+          <p className="fs-11 font-bold uppercase tracking-[0.2em] text-slate-500">Leosiqra</p>
+          <p className="fsh-22 font-extrabold text-slate-900">
             Laporan Keuangan {mode === 'tahunan' ? `Tahun ${year}` : `${MONTHS_LONG[month]} ${year}`}
           </p>
         </div>
-        <p className="text-right text-[11px] text-slate-500">
+        <p className="text-right fs-11 text-slate-500">
           Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
       <div className="space-y-5 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Laporan</h1>
-            <p className="text-[13px] text-slate-500">{periodLabel}</p>
+            <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Laporan</h1>
+            <p className="fs-13 text-slate-500">{periodLabel}</p>
           </div>
           <div className="flex items-center gap-2">
             <HeaderSlot />
@@ -251,7 +251,7 @@ export default function LaporanPage() {
                   setFocus(null);
                 }}
                 className={cn(
-                  'rounded-full px-4 py-1 text-[13px] font-semibold capitalize transition-colors',
+                  'rounded-full px-4 py-1 fs-13 font-semibold capitalize transition-colors',
                   mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
                 )}
               >
@@ -268,7 +268,7 @@ export default function LaporanPage() {
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[90px] text-center text-[13px] font-bold text-slate-900">
+            <span className="min-w-[90px] text-center fs-13 font-bold text-slate-900">
               {mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}
             </span>
             <button
@@ -284,7 +284,7 @@ export default function LaporanPage() {
           <Link
             href="/membership/budget"
             aria-label="Anggaran"
-            className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 fs-13 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <Gauge size={15} /> <span className="hidden sm:inline">Anggaran</span>
           </Link>
@@ -293,7 +293,7 @@ export default function LaporanPage() {
             onClick={() => window.print()}
             disabled={loading}
             aria-label="Cetak atau simpan PDF"
-            className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 fs-13 font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
           >
             <Printer size={15} /> <span className="hidden sm:inline">Cetak / PDF</span>
           </button>
@@ -321,18 +321,15 @@ export default function LaporanPage() {
                 },
               ].map((x) => (
                 <div key={x.label} className="min-w-0 px-3 md:px-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
-                  <p
-                    className={cn('truncate text-[15px] font-bold tabular-nums md:text-[19px]', x.cls)}
-                    title={formatIDR(x.v)}
-                  >
+                  <p className="fs-11 font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
+                  <p className={cn('truncate fs-15 font-bold tabular-nums md:fs-19', x.cls)} title={formatIDR(x.v)}>
                     <span className="md:hidden">{short(x.v)}</span>
                     <span className="hidden md:inline">{formatIDR(x.v)}</span>
                   </p>
                 </div>
               ))}
             </div>
-            <p className="mt-1.5 flex flex-wrap gap-x-3 px-1 text-[12px] text-slate-500">
+            <p className="mt-1.5 flex flex-wrap gap-x-3 px-1 fs-12 text-slate-500">
               {prevTotal > 0 && (
                 <span className={cn('font-semibold', total > prevTotal ? 'text-rose-600' : 'text-emerald-600')}>
                   {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs{' '}
@@ -362,8 +359,8 @@ export default function LaporanPage() {
           )}
 
           <section>
-            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tren pengeluaran</h2>
-            <p className="text-[12px] text-slate-500">
+            <h2 className="fs-17 font-bold tracking-tight text-slate-900">Tren pengeluaran</h2>
+            <p className="fs-12 text-slate-500">
               Kumulatif, dibandingkan {mode === 'tahunan' ? `tahun ${year - 1}` : `${MONTHS_LONG[prev.m ?? 0]}`}
               {prevTotal > 0 && ` (total ${short(prevTotal)})`}
             </p>
@@ -420,7 +417,7 @@ export default function LaporanPage() {
                   );
                 })()}
               </svg>
-              <div className="mt-2 flex items-center justify-between text-[12px] text-slate-400">
+              <div className="mt-2 flex items-center justify-between fs-12 text-slate-400">
                 <span>{mode === 'tahunan' ? 'Jan' : '1'}</span>
                 <span className="flex gap-4">
                   <span className="flex items-center gap-1.5">
@@ -438,10 +435,10 @@ export default function LaporanPage() {
           </section>
 
           <section>
-            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Ke mana uangnya</h2>
-            <p className="text-[12px] text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
+            <h2 className="fs-17 font-bold tracking-tight text-slate-900">Ke mana uangnya</h2>
+            <p className="fs-12 text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
             {cats.length === 0 ? (
-              <p className="mt-4 rounded-[20px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">
+              <p className="mt-4 rounded-[20px] bg-white p-8 text-center fs-14 text-slate-500 ring-1 ring-slate-100">
                 Belum ada pengeluaran di periode ini.
               </p>
             ) : (
@@ -471,11 +468,11 @@ export default function LaporanPage() {
                       })}
                     </svg>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <span className="text-[13px] text-slate-500">{focused ? focused.name : 'Pengeluaran'}</span>
-                      <span className="text-[17px] font-extrabold tracking-tight text-slate-900">
+                      <span className="fs-13 text-slate-500">{focused ? focused.name : 'Pengeluaran'}</span>
+                      <span className="fs-17 font-extrabold tracking-tight text-slate-900">
                         {short(focused ? focused.value : total)}
                       </span>
-                      <span className="text-[13px] text-slate-500">
+                      <span className="fs-13 text-slate-500">
                         {focused ? `${Math.round((focused.value / total) * 100)}%` : `${cats.length} kategori`}
                       </span>
                     </div>
@@ -494,7 +491,7 @@ export default function LaporanPage() {
                         >
                           <span
                             className={cn(
-                              'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px]',
+                              'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full fs-17',
                               v.tile,
                             )}
                             aria-hidden
@@ -506,14 +503,14 @@ export default function LaporanPage() {
                             />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-semibold text-slate-900">{c.name}</p>
-                            <p className="text-[12px] text-slate-500">
+                            <p className="truncate fs-14 font-semibold text-slate-900">{c.name}</p>
+                            <p className="fs-12 text-slate-500">
                               {Math.round((c.value / total) * 100)}% ·{' '}
                               {short(c.value / Math.max(1, mode === 'tahunan' ? passed.length : elapsed))}
                               {perUnit}
                             </p>
                           </div>
-                          <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(c.value)}</p>
+                          <p className="fs-14 font-bold tabular-nums text-slate-900">{formatIDR(c.value)}</p>
                           <ChevronRight size={17} className="text-slate-300" />
                         </Link>
                       </li>
@@ -526,13 +523,13 @@ export default function LaporanPage() {
 
           {mode === 'tahunan' && heat.length > 0 && (
             <section>
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
-              <p className="text-[12px] text-slate-500">
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
+              <p className="fs-12 text-slate-500">
                 Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut
               </p>
               <div className="mt-4 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
                 <div>
-                  <div className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] gap-1.5 pb-2 text-center text-[12px] text-slate-400">
+                  <div className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] gap-1.5 pb-2 text-center fs-12 text-slate-400">
                     <span />
                     {MONTHS.map((m, i) => (
                       <span key={m} className={heatCell(i)}>
@@ -551,14 +548,14 @@ export default function LaporanPage() {
                         <span className="flex min-w-0 items-center gap-2">
                           <span
                             className={cn(
-                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]',
+                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full fs-15',
                               v.tile,
                             )}
                             aria-hidden
                           >
                             {v.emoji}
                           </span>
-                          <span className="truncate text-[13px] font-medium text-slate-700">{row.name}</span>
+                          <span className="truncate fs-13 font-medium text-slate-700">{row.name}</span>
                         </span>
                         {row.per.map((val, i) => (
                           <span key={i} title={`${MONTHS_LONG[i]}: ${formatIDR(val)}`} className={heatCell(i)}>
@@ -579,7 +576,7 @@ export default function LaporanPage() {
                             </span>
                           </span>
                         ))}
-                        <span className="whitespace-nowrap text-right text-[12px] font-bold tabular-nums text-slate-900 md:text-[14px]">
+                        <span className="whitespace-nowrap text-right fs-12 font-bold tabular-nums text-slate-900 md:fs-14">
                           {short(row.value)}
                         </span>
                       </div>
@@ -594,30 +591,27 @@ export default function LaporanPage() {
 
           {places.length > 0 && (
             <section>
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tempat teratas</h2>
-              <p className="text-[12px] text-slate-500">Total per tempat, menurut judul transaksi</p>
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Tempat teratas</h2>
+              <p className="fs-12 text-slate-500">Total per tempat, menurut judul transaksi</p>
               <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white ring-1 ring-slate-100">
                 {places.map(([name, p], i) => {
                   const v = categoryVisual(p.category, 'pengeluaran');
                   return (
                     <li key={name} className="flex items-center gap-3 px-4 py-2.5 md:px-5">
-                      <span className="w-5 text-center text-[13px] font-bold text-slate-400">{i + 1}</span>
+                      <span className="w-5 text-center fs-13 font-bold text-slate-400">{i + 1}</span>
                       <span
-                        className={cn(
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]',
-                          v.tile,
-                        )}
+                        className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full fs-16', v.tile)}
                         aria-hidden
                       >
                         {v.emoji}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-slate-900">{name}</p>
-                        <p className="text-[12px] text-slate-500">
+                        <p className="truncate fs-14 font-semibold text-slate-900">{name}</p>
+                        <p className="fs-12 text-slate-500">
                           {p.n}× · {p.category}
                         </p>
                       </div>
-                      <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(p.total)}</p>
+                      <p className="fs-14 font-bold tabular-nums text-slate-900">{formatIDR(p.total)}</p>
                     </li>
                   );
                 })}

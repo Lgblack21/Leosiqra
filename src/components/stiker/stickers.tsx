@@ -66,7 +66,7 @@ export const STICKERS: StickerDef[] = [
       const fs = Math.min(64, 300 / Math.max(3, text.length * 0.62));
       return (
         <div className="text-center" style={{ filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.35))' }}>
-          <div className="text-[13px] font-extrabold tracking-[0.3em] text-white">{range(c.s)}</div>
+          <div className="fs-13 font-extrabold tracking-[0.3em] text-white">{range(c.s)}</div>
           <svg viewBox="0 0 300 76" className="mt-1 w-full">
             <defs>
               <linearGradient id="besar-g" x1="0" x2="1" y1="0" y2="1">
@@ -90,7 +90,7 @@ export const STICKERS: StickerDef[] = [
               {text}
             </text>
           </svg>
-          <div className="text-[12px] font-bold text-white">{c.hide ? 'kali bayar' : `${c.s.count} pembayaran`}</div>
+          <div className="fs-12 font-bold text-white">{c.hide ? 'kali bayar' : `${c.s.count} pembayaran`}</div>
         </div>
       );
     },
@@ -106,13 +106,13 @@ export const STICKERS: StickerDef[] = [
         style={{ boxShadow: '0 0 18px #e879f9, inset 0 0 14px #e879f988' }}
       >
         <div
-          className="text-[11px] font-bold uppercase tracking-[0.35em] text-cyan-200"
+          className="fs-11 font-bold uppercase tracking-[0.35em] text-cyan-200"
           style={{ textShadow: '0 0 8px #22d3ee' }}
         >
           keluar {c.s.shortLabel}
         </div>
         <div
-          className="mt-1 text-[40px] font-black leading-none text-fuchsia-100"
+          className="mt-1 fsh-40 font-black leading-none text-fuchsia-100"
           style={{ textShadow: '0 0 6px #f0abfc, 0 0 18px #e879f9, 0 0 34px #c026d3' }}
         >
           {c.hide ? `${c.s.count}x` : money(c, c.s.total, true)}
@@ -129,7 +129,7 @@ export const STICKERS: StickerDef[] = [
       const txt = (c.hide ? String(c.s.count).padStart(3, '0') : short(c.s.total)).toUpperCase().slice(0, 6);
       return (
         <div className="rounded-2xl bg-[#111827] p-3 shadow-xl ring-4 ring-[#374151]">
-          <div className="mb-2 flex justify-between text-[9px] font-bold tracking-[0.25em] text-amber-300">
+          <div className="mb-2 flex justify-between fs-9 font-bold tracking-[0.25em] text-amber-300">
             <span>LEO·SKOR</span>
             <span>{range(c.s)}</span>
           </div>
@@ -140,14 +140,14 @@ export const STICKERS: StickerDef[] = [
               .map((ch, i) => (
                 <span
                   key={i}
-                  className="relative flex h-12 w-8 items-center justify-center overflow-hidden rounded-md bg-[#1f2937] font-mono text-[28px] font-black text-amber-200"
+                  className="relative flex h-12 w-8 items-center justify-center overflow-hidden rounded-md bg-[#1f2937] font-mono fsh-28 font-black text-amber-200"
                 >
                   {ch}
                   <span className="absolute inset-x-0 top-1/2 h-px bg-black/70" />
                 </span>
               ))}
           </div>
-          <div className="mt-2 text-center text-[9px] font-bold tracking-[0.2em] text-white/50">
+          <div className="mt-2 text-center fs-9 font-bold tracking-[0.2em] text-white/50">
             {c.hide ? 'JUMLAH BAYAR' : `${c.s.count} PEMBAYARAN`}
           </div>
         </div>
@@ -162,14 +162,14 @@ export const STICKERS: StickerDef[] = [
     render: (c) => (
       <div className="flex overflow-hidden rounded-xl shadow-xl" style={{ background: '#FFF7ED' }}>
         <div className="flex-1 border-r-2 border-dashed border-orange-300 p-3.5">
-          <div className="text-[9px] font-black tracking-[0.3em] text-orange-500">LEOSIQRA · TIKET {range(c.s)}</div>
-          <div className="mt-1 font-serif text-[30px] leading-none text-slate-900">{money(c, c.s.total, true)}</div>
-          <div className="mt-1.5 text-[10px] font-semibold text-slate-500">{c.s.label}</div>
+          <div className="fs-9 font-black tracking-[0.3em] text-orange-500">LEOSIQRA · TIKET {range(c.s)}</div>
+          <div className="mt-1 font-serif fsh-30 leading-none text-slate-900">{money(c, c.s.total, true)}</div>
+          <div className="mt-1.5 fs-10 font-semibold text-slate-500">{c.s.label}</div>
         </div>
         <div className="flex w-[78px] flex-col items-center justify-center bg-orange-500 text-white">
-          <div className="text-[9px] font-bold tracking-widest">ADMIT</div>
-          <div className="text-[30px] font-black leading-none">{c.s.count}</div>
-          <div className="text-[9px] font-bold tracking-widest">TRANSAKSI</div>
+          <div className="fs-9 font-bold tracking-widest">ADMIT</div>
+          <div className="fsh-30 font-black leading-none">{c.s.count}</div>
+          <div className="fs-9 font-bold tracking-widest">TRANSAKSI</div>
         </div>
       </div>
     ),
@@ -181,14 +181,14 @@ export const STICKERS: StickerDef[] = [
     w: 170,
     render: (c) => (
       <div className="overflow-hidden rounded-2xl bg-white text-center shadow-xl">
-        <div className="bg-rose-500 py-1.5 text-[11px] font-black uppercase tracking-[0.25em] text-white">
+        <div className="bg-rose-500 py-1.5 fs-11 font-black uppercase tracking-[0.25em] text-white">
           {c.s.now.toLocaleDateString('id-ID', { month: 'short' })}
         </div>
-        <div className="pt-1 font-serif text-[64px] leading-none text-slate-900">{c.s.now.getDate()}</div>
-        <div className="pb-2 text-[11px] font-bold text-slate-500">
+        <div className="pt-1 font-serif fsh-64 leading-none text-slate-900">{c.s.now.getDate()}</div>
+        <div className="pb-2 fs-11 font-bold text-slate-500">
           {c.s.now.toLocaleDateString('id-ID', { weekday: 'long' })}
         </div>
-        <div className="border-t-2 border-dotted border-slate-200 py-2 text-[15px] font-black text-rose-600">
+        <div className="border-t-2 border-dotted border-slate-200 py-2 fs-15 font-black text-rose-600">
           {money(c, c.s.total, true)}
         </div>
       </div>
@@ -202,10 +202,10 @@ export const STICKERS: StickerDef[] = [
     render: (c) => (
       <div className="bg-[#F5F0E6] p-3.5 text-[#1c1917] shadow-xl" style={{ transform: 'rotate(-1.5deg)' }}>
         <div className="flex items-end justify-between border-b-4 border-double border-[#1c1917] pb-1">
-          <span className="font-serif text-[22px] leading-none">Harian Leo</span>
-          <span className="text-[8px] font-bold">{c.s.label}</span>
+          <span className="font-serif fsh-22 leading-none">Harian Leo</span>
+          <span className="fs-8 font-bold">{c.s.label}</span>
         </div>
-        <div className="mt-2 font-serif text-[21px] leading-tight">
+        <div className="mt-2 font-serif fsh-21 leading-tight">
           {c.s.verdict === 'kosong'
             ? 'GEMPAR! Dompet Utuh Seharian Penuh'
             : c.s.verdict === 'hemat'
@@ -214,7 +214,7 @@ export const STICKERS: StickerDef[] = [
                 ? `Belanja ${c.s.shortLabel} Melonjak, Leo Angkat Bicara`
                 : `${c.s.count} Transaksi Tercatat Rapi ${c.s.shortLabel}`}
         </div>
-        <div className="mt-1.5 text-[10px] leading-snug text-[#44403c]">
+        <div className="mt-1.5 fs-10 leading-snug text-[#44403c]">
           Total {money(c, c.s.total)}
           {topCat(c.s) ? `, terbanyak untuk ${topCat(c.s).name.toLowerCase()} (${topCat(c.s).pct}%)` : ''}.{' '}
           {changeText(c.s)} dibanding {prevName(c.s)}.
@@ -233,10 +233,10 @@ export const STICKERS: StickerDef[] = [
       return (
         <div className="rounded-[22px] bg-white/90 p-4 shadow-xl backdrop-blur">
           <div className="flex items-baseline justify-between">
-            <span className="text-[11px] font-black tracking-[0.2em] text-slate-500">
+            <span className="fs-11 font-black tracking-[0.2em] text-slate-500">
               {c.s.range === 'bulan' ? 'PER MINGGU' : '7 HARI'}
             </span>
-            <span className="text-[14px] font-black text-slate-900">{money(c, c.s.total, true)}</span>
+            <span className="fs-14 font-black text-slate-900">{money(c, c.s.total, true)}</span>
           </div>
           <div className="mt-3 flex h-24 items-end gap-2">
             {c.s.bars.map((b, i) => (
@@ -245,9 +245,7 @@ export const STICKERS: StickerDef[] = [
                   className="w-full rounded-t-lg rounded-b-sm"
                   style={{ height: `${Math.max(6, (b.total / max) * 80)}px`, background: b.current ? GRAD : '#E2E8F0' }}
                 />
-                <span className={`text-[9px] font-bold ${b.current ? 'text-pink-600' : 'text-slate-400'}`}>
-                  {b.label}
-                </span>
+                <span className={`fs-9 font-bold ${b.current ? 'text-pink-600' : 'text-slate-400'}`}>{b.label}</span>
               </div>
             ))}
           </div>
@@ -274,14 +272,14 @@ export const STICKERS: StickerDef[] = [
             style={{ background: parts.length ? `conic-gradient(${stops},#334155 ${acc}% 100%)` : '#334155' }}
           >
             <div className="absolute inset-[18px] flex flex-col items-center justify-center rounded-full bg-slate-950 text-center">
-              <span className="text-[16px] font-black leading-none">{c.s.categories.length}</span>
-              <span className="text-[8px] font-bold text-white/60">kategori</span>
+              <span className="fs-16 font-black leading-none">{c.s.categories.length}</span>
+              <span className="fs-8 font-bold text-white/60">kategori</span>
             </div>
           </div>
           <div className="min-w-0 flex-1 space-y-1">
-            {parts.length === 0 && <div className="text-[12px] text-white/70">Belum ada belanja</div>}
+            {parts.length === 0 && <div className="fs-12 text-white/70">Belum ada belanja</div>}
             {parts.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-1.5 text-[11px]">
+              <div key={p.name} className="flex items-center gap-1.5 fs-11">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: cols[i] }} />
                 <span className="truncate font-semibold">{p.name}</span>
                 <span className="ml-auto font-black">{p.pct}%</span>
@@ -305,16 +303,14 @@ export const STICKERS: StickerDef[] = [
       const rank = [2, 1, 3];
       return (
         <div className="rounded-[22px] bg-white/90 px-4 pb-3 pt-3 shadow-xl">
-          <div className="text-center text-[11px] font-black tracking-[0.2em] text-slate-500">JUARA BELANJA</div>
+          <div className="text-center fs-11 font-black tracking-[0.2em] text-slate-500">JUARA BELANJA</div>
           <div className="mt-2 flex items-end justify-center gap-2">
             {order.map((t, i) => (
               <div key={i} className="flex w-20 flex-col items-center">
-                <span className="text-[24px]">{t ? emoji(t.name) : '·'}</span>
-                <span className="w-full truncate text-center text-[9px] font-bold text-slate-600">
-                  {t?.name ?? '-'}
-                </span>
+                <span className="fsh-24">{t ? emoji(t.name) : '·'}</span>
+                <span className="w-full truncate text-center fs-9 font-bold text-slate-600">{t?.name ?? '-'}</span>
                 <div
-                  className="mt-1 flex w-full items-start justify-center rounded-t-lg pt-1 text-[18px] font-black text-white"
+                  className="mt-1 flex w-full items-start justify-center rounded-t-lg pt-1 fs-18 font-black text-white"
                   style={{ height: h[i], background: col[i] }}
                 >
                   {rank[i]}
@@ -356,8 +352,8 @@ export const STICKERS: StickerDef[] = [
             </g>
             <circle cx="100" cy="100" r="9" fill="white" />
           </svg>
-          <div className="-mt-1 text-[22px] font-black">{changeText(c.s)}</div>
-          <div className="text-[10px] font-semibold text-white/60">dibanding {prevName(c.s)}</div>
+          <div className="-mt-1 fsh-22 font-black">{changeText(c.s)}</div>
+          <div className="fs-10 font-semibold text-white/60">dibanding {prevName(c.s)}</div>
         </div>
       );
     },
@@ -369,10 +365,10 @@ export const STICKERS: StickerDef[] = [
     w: 280,
     render: (c) => (
       <div className="rounded-[22px] bg-emerald-500 p-4 text-white shadow-xl">
-        <div className="text-[11px] font-black tracking-[0.2em] text-white/80">HARI TANPA BELANJA</div>
+        <div className="fs-11 font-black tracking-[0.2em] text-white/80">HARI TANPA BELANJA</div>
         <div className="mt-1 flex items-baseline gap-1.5">
-          <span className="text-[40px] font-black leading-none">{c.s.noSpendDays}</span>
-          <span className="text-[13px] font-bold">dari {c.s.daysInRange} hari</span>
+          <span className="fsh-40 font-black leading-none">{c.s.noSpendDays}</span>
+          <span className="fs-13 font-bold">dari {c.s.daysInRange} hari</span>
         </div>
         <div className="mt-2 flex gap-1">
           {Array.from({ length: Math.min(c.s.daysInRange, 31) }, (_, i) => (
@@ -391,7 +387,7 @@ export const STICKERS: StickerDef[] = [
     render: (c) => (
       <div className="flex items-end gap-1">
         <LeoFace mood={verdictMood[c.s.verdict]} className="h-20 w-20 shrink-0 drop-shadow-lg" />
-        <div className="relative mb-6 rounded-[20px] rounded-bl-md bg-white px-3.5 py-2.5 text-[13px] font-bold leading-snug text-slate-900 shadow-xl">
+        <div className="relative mb-6 rounded-[20px] rounded-bl-md bg-white px-3.5 py-2.5 fs-13 font-bold leading-snug text-slate-900 shadow-xl">
           {leoLine(c.s)}
         </div>
       </div>
@@ -409,8 +405,8 @@ export const STICKERS: StickerDef[] = [
           className="w-full rounded-xl border-4 border-amber-700 bg-amber-100 px-3 py-2 text-center shadow-xl"
           style={{ transform: 'rotate(-3deg)' }}
         >
-          <div className="text-[10px] font-black tracking-[0.2em] text-amber-800">{range(c.s)}</div>
-          <div className="text-[26px] font-black leading-tight text-amber-950">{money(c, c.s.total, true)}</div>
+          <div className="fs-10 font-black tracking-[0.2em] text-amber-800">{range(c.s)}</div>
+          <div className="fsh-26 font-black leading-tight text-amber-950">{money(c, c.s.total, true)}</div>
         </div>
       </div>
     ),
@@ -445,9 +441,7 @@ export const STICKERS: StickerDef[] = [
       const pick = c.s.verdict === 'boros' ? 1 : c.s.verdict === 'pas' ? 3 : 4;
       return (
         <div className="rounded-[22px] bg-white/90 p-3 shadow-xl">
-          <div className="text-center text-[11px] font-black tracking-[0.2em] text-slate-500">
-            MOOD DOMPET {range(c.s)}
-          </div>
+          <div className="text-center fs-11 font-black tracking-[0.2em] text-slate-500">MOOD DOMPET {range(c.s)}</div>
           <div className="mt-1.5 flex justify-between">
             {[1, 2, 3, 4, 5].map((m, i) => (
               <div
@@ -472,10 +466,10 @@ export const STICKERS: StickerDef[] = [
         <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-amber-100 to-pink-100">
           <LeoFace mood={verdictMood[c.s.verdict]} className="h-24 w-24" />
         </div>
-        <div className="mt-2 text-center font-serif text-[15px] text-slate-800">
+        <div className="mt-2 text-center font-serif fs-15 text-slate-800">
           {c.hide ? `${c.s.count} catatan` : money(c, c.s.total, true)}
         </div>
-        <div className="text-center text-[9px] text-slate-500">{c.s.label}</div>
+        <div className="text-center fs-9 text-slate-500">{c.s.label}</div>
       </div>
     ),
   },
@@ -504,15 +498,15 @@ export const STICKERS: StickerDef[] = [
       const now = c.s.now;
       return (
         <div
-          className="relative font-mono text-[10.5px] text-slate-800"
+          className="relative font-mono fs-10.5 text-slate-800"
           style={{ filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.3))', transform: 'rotate(-2deg)' }}
         >
           {teeth(false)}
           <div className="bg-[#FFFDF7] px-4 pb-2 pt-1">
             <div className="text-center">
-              <div className="text-[15px] font-black tracking-[0.25em]">LEOSIQRA</div>
-              <div className="text-[9px] tracking-widest text-slate-500">STRUK {range(c.s)}</div>
-              <div className="text-[9px] text-slate-500">
+              <div className="fs-15 font-black tracking-[0.25em]">LEOSIQRA</div>
+              <div className="fs-9 tracking-widest text-slate-500">STRUK {range(c.s)}</div>
+              <div className="fs-9 text-slate-500">
                 {c.s.label}
                 {c.s.range === 'hari'
                   ? ` · ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
@@ -535,7 +529,7 @@ export const STICKERS: StickerDef[] = [
               <span>JUMLAH</span>
               <span>{c.s.count} trx</span>
             </div>
-            <div className="flex justify-between text-[14px] font-black">
+            <div className="flex justify-between fs-14 font-black">
               <span>TOTAL</span>
               <span>{money(c, c.s.total)}</span>
             </div>
@@ -551,12 +545,10 @@ export const STICKERS: StickerDef[] = [
                 <span key={i} className="bg-slate-900" style={{ width: [1, 2, 1, 3, 1, 2][(i * 7 + c.s.count) % 6] }} />
               ))}
             </div>
-            <div className="mt-1 text-center text-[9px] tracking-widest text-slate-500">
-              TERIMA KASIH SUDAH MENCATAT
-            </div>
+            <div className="mt-1 text-center fs-9 tracking-widest text-slate-500">TERIMA KASIH SUDAH MENCATAT</div>
             <div className="absolute -right-5 top-5 flex h-[58px] w-[58px] rotate-[14deg] bg-[#FFFDF7]/70 flex-col items-center justify-center rounded-full border-[3px] border-pink-500/80 text-pink-600/90">
               <LeoFace mood={verdictMood[c.s.verdict]} className="h-6 w-6" />
-              <span className="text-[8px] font-black tracking-wider">TERCATAT</span>
+              <span className="fs-8 font-black tracking-wider">TERCATAT</span>
             </div>
           </div>
           {teeth(true)}
@@ -578,7 +570,7 @@ export const STICKERS: StickerDef[] = [
         }}
       >
         <div className="absolute inset-y-0 left-6 w-px bg-rose-300" />
-        <div className="pl-4 font-serif text-[16px] italic leading-[22px] text-slate-800">
+        <div className="pl-4 font-serif fs-16 italic leading-[22px] text-slate-800">
           <div className="font-bold not-italic">Nota {c.s.shortLabel}</div>
           {c.s.items.slice(0, 4).map((it, i) => (
             <div key={i} className="flex justify-between gap-2">
@@ -603,16 +595,16 @@ export const STICKERS: StickerDef[] = [
     render: (c) => (
       <div className="space-y-1.5">
         <div
-          className="flex items-center gap-1.5 text-[10px] font-bold text-white/90"
+          className="flex items-center gap-1.5 fs-10 font-bold text-white/90"
           style={{ textShadow: '0 1px 4px rgba(0,0,0,.5)' }}
         >
           <LeoFace mood={4} className="h-5 w-5" /> Leo · baru saja
         </div>
-        <div className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-[13px] text-slate-900 shadow-lg">
+        <div className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-white px-3 py-2 fs-13 text-slate-900 shadow-lg">
           Bos, keluar {c.s.shortLabel} {money(c, c.s.total)} dari {c.s.count} transaksi.
         </div>
-        <div className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-[13px] text-slate-900 shadow-lg">
-          {leoLine(c.s)} <span className="text-[10px] text-sky-500">✓✓</span>
+        <div className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-white px-3 py-2 fs-13 text-slate-900 shadow-lg">
+          {leoLine(c.s)} <span className="fs-10 text-sky-500">✓✓</span>
         </div>
       </div>
     ),
@@ -631,32 +623,32 @@ export const STICKERS: StickerDef[] = [
           .toUpperCase() || 'NOL';
       return (
         <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
-          <div className="flex items-center justify-between bg-sky-600 px-3.5 py-1.5 text-[10px] font-black tracking-[0.2em] text-white">
+          <div className="flex items-center justify-between bg-sky-600 px-3.5 py-1.5 fs-10 font-black tracking-[0.2em] text-white">
             <span>LEO AIR · BOARDING PASS</span>
             <span>✈</span>
           </div>
           <div className="flex items-center justify-between px-3.5 pt-2">
             <div>
-              <div className="text-[30px] font-black leading-none text-slate-900">DMP</div>
-              <div className="text-[9px] font-bold text-slate-500">Dompet</div>
+              <div className="fsh-30 font-black leading-none text-slate-900">DMP</div>
+              <div className="fs-9 font-bold text-slate-500">Dompet</div>
             </div>
-            <div className="text-[18px] text-sky-500">— ✈ —</div>
+            <div className="fs-18 text-sky-500">— ✈ —</div>
             <div className="text-right">
-              <div className="text-[30px] font-black leading-none text-slate-900">{code}</div>
-              <div className="max-w-[90px] truncate text-[9px] font-bold text-slate-500">
+              <div className="fsh-30 font-black leading-none text-slate-900">{code}</div>
+              <div className="max-w-[90px] truncate fs-9 font-bold text-slate-500">
                 {to?.name ?? 'Belum ke mana-mana'}
               </div>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1 border-t border-dashed border-slate-300 px-3.5 py-2 text-[9px] font-bold text-slate-500">
+          <div className="mt-2 grid grid-cols-3 gap-1 border-t border-dashed border-slate-300 px-3.5 py-2 fs-9 font-bold text-slate-500">
             <div>
-              TOTAL<div className="text-[12px] font-black text-slate-900">{money(c, c.s.total, true)}</div>
+              TOTAL<div className="fs-12 font-black text-slate-900">{money(c, c.s.total, true)}</div>
             </div>
             <div>
-              FLIGHT<div className="text-[12px] font-black text-slate-900">{c.s.count} trx</div>
+              FLIGHT<div className="fs-12 font-black text-slate-900">{c.s.count} trx</div>
             </div>
             <div>
-              GATE<div className="text-[12px] font-black text-slate-900">{c.s.range.toUpperCase()}</div>
+              GATE<div className="fs-12 font-black text-slate-900">{c.s.range.toUpperCase()}</div>
             </div>
           </div>
         </div>
@@ -672,7 +664,7 @@ export const STICKERS: StickerDef[] = [
       const hp = c.s.verdict === 'kosong' ? 100 : c.s.verdict === 'hemat' ? 82 : c.s.verdict === 'pas' ? 58 : 24;
       return (
         <div className="rounded-lg border-4 border-black bg-[#1E1B4B] p-3 font-mono text-white shadow-[6px_6px_0_#000]">
-          <div className="flex justify-between text-[12px] font-black">
+          <div className="flex justify-between fs-12 font-black">
             <span className="text-lime-300">DOMPET</span>
             <span>LV.{Math.min(99, c.s.count)}</span>
           </div>
@@ -682,11 +674,11 @@ export const STICKERS: StickerDef[] = [
               style={{ width: `${hp}%`, background: hp > 50 ? '#84CC16' : hp > 30 ? '#FACC15' : '#EF4444' }}
             />
           </div>
-          <div className="mt-1.5 flex justify-between text-[11px]">
+          <div className="mt-1.5 flex justify-between fs-11">
             <span>HP {hp}/100</span>
             <span className="text-amber-300">-{c.hide ? '???' : short(c.s.total)}</span>
           </div>
-          <div className="mt-1 text-[11px] text-pink-300">
+          <div className="mt-1 fs-11 text-pink-300">
             COMBO x{c.s.count} {c.s.verdict === 'boros' ? '· CRITICAL HIT!' : '· NICE!'}
           </div>
         </div>
@@ -705,21 +697,19 @@ export const STICKERS: StickerDef[] = [
       >
         <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-black tracking-widest">LEOSIQRA</span>
+          <span className="fs-13 font-black tracking-widest">LEOSIQRA</span>
           <LeoFace mood={5} className="h-8 w-8" />
         </div>
         <div className="mt-4 h-7 w-10 rounded-md bg-gradient-to-br from-amber-200 to-amber-500" />
-        <div className="mt-3 font-mono text-[17px] tracking-[0.18em]">
-          •••• •••• {String(c.s.count).padStart(4, '0')}
-        </div>
-        <div className="mt-2 flex justify-between text-[9px] font-bold text-white/70">
+        <div className="mt-3 font-mono fs-17 tracking-[0.18em]">•••• •••• {String(c.s.count).padStart(4, '0')}</div>
+        <div className="mt-2 flex justify-between fs-9 font-bold text-white/70">
           <span>
             KELUAR {range(c.s)}
-            <div className="text-[14px] text-white">{money(c, c.s.total, true)}</div>
+            <div className="fs-14 text-white">{money(c, c.s.total, true)}</div>
           </span>
           <span className="text-right">
             BERLAKU
-            <div className="text-[14px] text-white">
+            <div className="fs-14 text-white">
               {c.s.now.toLocaleDateString('id-ID', { month: '2-digit', year: '2-digit' })}
             </div>
           </span>
@@ -735,14 +725,14 @@ export const STICKERS: StickerDef[] = [
     render: (c) => (
       <div className="relative bg-[#FDE047] p-4 pt-5 shadow-xl" style={{ transform: 'rotate(3deg)' }}>
         <span className="absolute -top-2.5 left-1/2 h-5 w-14 -translate-x-1/2 rotate-[-4deg] bg-white/60" />
-        <div className="font-serif text-[17px] italic leading-snug text-slate-900">
+        <div className="font-serif fs-17 italic leading-snug text-slate-900">
           {c.s.verdict === 'boros'
             ? 'Pengingat buat diri sendiri: rem dikit ya!'
             : c.s.verdict === 'kosong'
               ? 'Hari ini: nol rupiah. Bangga!'
               : 'Catat terus, biar nggak kaget di akhir bulan.'}
         </div>
-        <div className="mt-2 text-right text-[13px] font-black text-slate-800">{money(c, c.s.total, true)}</div>
+        <div className="mt-2 text-right fs-13 font-black text-slate-800">{money(c, c.s.total, true)}</div>
       </div>
     ),
   },
@@ -783,7 +773,7 @@ export const STICKERS: StickerDef[] = [
     group: 'Label',
     w: 230,
     render: (c) => (
-      <div className="mx-auto flex w-fit items-center gap-2 whitespace-nowrap rounded-full bg-black/55 px-3.5 py-2 text-[13px] font-bold text-white">
+      <div className="mx-auto flex w-fit items-center gap-2 whitespace-nowrap rounded-full bg-black/55 px-3.5 py-2 fs-13 font-bold text-white">
         <span className="h-2 w-2 rounded-full bg-rose-400" />
         {c.s.range === 'hari'
           ? `${c.s.label} · ${c.s.now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
@@ -798,7 +788,7 @@ export const STICKERS: StickerDef[] = [
     w: 200,
     render: (c) => (
       <div
-        className="flex w-fit items-center gap-2 rounded-full px-4 py-2 text-[14px] font-black text-slate-950 shadow-lg"
+        className="flex w-fit items-center gap-2 rounded-full px-4 py-2 fs-14 font-black text-slate-950 shadow-lg"
         style={{ background: GRAD }}
       >
         🧾 {c.s.count} transaksi {c.s.shortLabel}
@@ -814,10 +804,10 @@ export const STICKERS: StickerDef[] = [
       const t = topCat(c.s);
       return (
         <div className="flex w-fit items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-lg">
-          <span className="text-[26px]">{t ? emoji(t.name) : '✨'}</span>
+          <span className="fsh-26">{t ? emoji(t.name) : '✨'}</span>
           <div>
-            <div className="text-[9px] font-black tracking-[0.2em] text-slate-400">PALING BANYAK</div>
-            <div className="text-[14px] font-black text-slate-900">{t ? `${t.name} · ${t.pct}%` : 'Belum ada'}</div>
+            <div className="fs-9 font-black tracking-[0.2em] text-slate-400">PALING BANYAK</div>
+            <div className="fs-14 font-black text-slate-900">{t ? `${t.name} · ${t.pct}%` : 'Belum ada'}</div>
           </div>
         </div>
       );
@@ -830,8 +820,8 @@ export const STICKERS: StickerDef[] = [
     w: 260,
     render: (c) => (
       <div className="w-fit rounded-2xl bg-slate-950/80 px-3.5 py-2 text-white shadow-lg">
-        <div className="text-[9px] font-black tracking-[0.2em] text-amber-300">BELANJA TERBESAR</div>
-        <div className="text-[14px] font-black">
+        <div className="fs-9 font-black tracking-[0.2em] text-amber-300">BELANJA TERBESAR</div>
+        <div className="fs-14 font-black">
           {c.s.biggest
             ? `${emoji(c.s.biggest.category)} ${c.s.biggest.note}${c.hide ? '' : ` · ${short(c.s.biggest.amount)}`}`
             : 'Belum ada'}

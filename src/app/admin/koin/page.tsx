@@ -155,10 +155,7 @@ function LedgerList({ rows, showUser = true }: { rows: LedgerRow[]; showUser?: b
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide',
-                  groupTone(r.kind),
-                )}
+                className={cn('rounded-full px-2 py-0.5 fs-10 font-black uppercase tracking-wide', groupTone(r.kind))}
               >
                 {kindLabel(r.kind)}
               </span>
@@ -205,7 +202,7 @@ function SummaryTab({ s, goTab }: { s: Summary; goTab: (t: Tab) => void }) {
         <p className="mt-1 text-sm font-semibold text-white/85">
           ≈ {rp(s.circulating)} nilai pakai · dipegang {num(s.holders)} pengguna
         </p>
-        <p className="mt-4 inline-flex rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold">
+        <p className="mt-4 inline-flex rounded-full bg-white/20 px-3 py-1 fs-11 font-bold">
           1 koin = Rp 1 · tidak bisa dicairkan
         </p>
       </div>
@@ -306,7 +303,7 @@ function SummaryTab({ s, goTab }: { s: Summary; goTab: (t: Tab) => void }) {
                 <div key={k.kind} className="flex items-center gap-2 py-2.5 text-sm">
                   <span
                     className={cn(
-                      'rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide',
+                      'rounded-full px-2 py-0.5 fs-10 font-black uppercase tracking-wide',
                       groupTone(k.kind),
                     )}
                   >
@@ -446,7 +443,7 @@ function UsersTab({ onChanged }: { onChanged: () => void }) {
                   <p className="flex items-center gap-1.5 truncate text-sm font-bold text-slate-900">
                     {u.name || '—'}
                     {isPro(u) && (
-                      <span className="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-black text-indigo-600">
+                      <span className="rounded-full bg-indigo-50 px-1.5 py-0.5 fs-9 font-black text-indigo-600">
                         PRO
                       </span>
                     )}
@@ -455,7 +452,7 @@ function UsersTab({ onChanged }: { onChanged: () => void }) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black tabular-nums text-slate-900">{num(u.balance)}</p>
-                  <p className="text-[10px] text-slate-400">{u.last_at ? when(u.last_at) : 'belum ada'}</p>
+                  <p className="fs-10 text-slate-400">{u.last_at ? when(u.last_at) : 'belum ada'}</p>
                 </div>
               </button>
             ))}
@@ -491,7 +488,7 @@ function UsersTab({ onChanged }: { onChanged: () => void }) {
               </button>
             </div>
             <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-              <p className="text-[11px] font-black uppercase tracking-widest text-orange-500">Saldo</p>
+              <p className="fs-11 font-black uppercase tracking-widest text-orange-500">Saldo</p>
               <p className="text-3xl font-black tabular-nums text-slate-900">
                 {num(sel.balance)} <span className="text-sm font-bold text-slate-400">koin</span>
               </p>
@@ -694,7 +691,7 @@ function RulesTab({ s }: { s: Summary }) {
         <Card>
           <p className="text-sm font-black text-slate-900">Kuota AI harian</p>
           <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
-            <div className="grid grid-cols-3 bg-slate-50 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
+            <div className="grid grid-cols-3 bg-slate-50 px-3 py-2 fs-11 font-black uppercase tracking-widest text-slate-400">
               <span>Fitur</span>
               <span className="text-right">FREE</span>
               <span className="text-right">PRO</span>
@@ -894,7 +891,7 @@ function AdminKoinContent() {
               <Icon size={15} />
               {t.label}
               {t.id === 'tarik' && (summary?.pendingWithdrawals ?? 0) > 0 && (
-                <span className="rounded-full bg-orange-500 px-1.5 text-[10px] text-white">
+                <span className="rounded-full bg-orange-500 px-1.5 fs-10 text-white">
                   {summary?.pendingWithdrawals}
                 </span>
               )}

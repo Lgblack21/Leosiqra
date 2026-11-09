@@ -45,7 +45,7 @@ export function AuthCard({
               <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">
                 {badge}
               </span>
-              <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900">{title}</h1>
+              <h1 className="fsh-26 font-extrabold leading-tight tracking-tight text-slate-900">{title}</h1>
               <p className="text-sm text-slate-500">{subtitle}</p>
             </div>
             {children}

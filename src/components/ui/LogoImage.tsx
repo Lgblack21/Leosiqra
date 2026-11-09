@@ -62,7 +62,7 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
   if (!resolvedSrc || hasError) {
     return (
       <div
-        className={`${className} bg-slate-50 text-slate-400 flex items-center justify-center text-[8px] font-black overflow-hidden`}
+        className={`${className} bg-slate-50 text-slate-400 flex items-center justify-center fs-8 font-black overflow-hidden`}
       >
         {fallbackIcon || fallbackText}
       </div>

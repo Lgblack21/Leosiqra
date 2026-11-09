@@ -77,12 +77,8 @@ function CategoryPicker({
       className="overflow-hidden"
     >
       <div className="flex items-center justify-between px-1 pb-2 pt-1">
-        <p className="text-[12px] font-semibold text-slate-500">Ganti kategori ke…</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-[12px] font-semibold text-slate-400 hover:text-slate-700"
-        >
+        <p className="fs-12 font-semibold text-slate-500">Ganti kategori ke…</p>
+        <button type="button" onClick={onClose} className="fs-12 font-semibold text-slate-400 hover:text-slate-700">
           Batal
         </button>
       </div>
@@ -101,7 +97,7 @@ function CategoryPicker({
                 type="button"
                 onClick={() => onPick(r.name)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[12px] font-semibold ring-1 transition-colors',
+                  'flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 fs-12 font-semibold ring-1 transition-colors',
                   cur
                     ? 'bg-indigo-600 text-white ring-indigo-600'
                     : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50',
@@ -109,7 +105,7 @@ function CategoryPicker({
               >
                 <span
                   className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-full text-[13px]',
+                    'flex h-6 w-6 items-center justify-center rounded-full fs-13',
                     cur ? 'bg-white/20' : v.tile,
                   )}
                   aria-hidden
@@ -285,23 +281,23 @@ export function DayReview({
             className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
           >
             <span
-              className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px]', v.tile)}
+              className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full fs-18', v.tile)}
               aria-hidden
             >
               {v.emoji}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[14px] font-semibold text-slate-900">
+              <span className="block truncate fs-14 font-semibold text-slate-900">
                 {t.note || t.subCategory || t.category}
               </span>
-              <span className="block truncate text-[12px] text-slate-500">
+              <span className="block truncate fs-12 text-slate-500">
                 <span className={cn(editable && 'underline decoration-dotted underline-offset-2')}>{t.category}</span>
                 {accName.get(t.accountId) ? ` · ${accName.get(t.accountId)}` : ''}
               </span>
             </span>
             <span
               className={cn(
-                'shrink-0 text-[14px] font-bold tabular-nums',
+                'shrink-0 fs-14 font-bold tabular-nums',
                 incoming ? 'text-emerald-600' : move ? 'text-slate-400' : 'text-slate-900',
               )}
             >
@@ -376,8 +372,8 @@ export function DayReview({
 
             <div className="flex items-center gap-2 px-5 pb-2 pt-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">Cek hari</p>
-                <h2 className="truncate text-[19px] font-extrabold tracking-tight text-slate-900">
+                <p className="fs-12 font-semibold uppercase tracking-[0.12em] text-slate-400">Cek hari</p>
+                <h2 className="truncate fs-19 font-extrabold tracking-tight text-slate-900">
                   {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}
                 </h2>
               </div>
@@ -425,12 +421,12 @@ export function DayReview({
                     transition={{ type: 'spring', stiffness: 120, damping: 20 }}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[13px] font-extrabold text-slate-900 tabular-nums">
+                <span className="absolute inset-0 flex items-center justify-center fs-13 font-extrabold text-slate-900 tabular-nums">
                   {done.length}/{dayTx.length}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-bold text-slate-900">
+                <p className="fs-14 font-bold text-slate-900">
                   {loading
                     ? 'Memuat…'
                     : dayTx.length === 0
@@ -439,7 +435,7 @@ export function DayReview({
                         ? 'Beres! Semua kategori sudah benar ✨'
                         : `${todo.length} lagi perlu dicek`}
                 </p>
-                <p className="text-[12px] text-slate-500">
+                <p className="fs-12 text-slate-500">
                   {out > 0 && (
                     <>
                       keluar <b className="text-slate-700">{formatMoney(out, 'IDR')}</b>
@@ -473,7 +469,7 @@ export function DayReview({
               ) : dayTx.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <LeoMascot mood="happy" size={90} />
-                  <p className="text-[14px] font-semibold text-slate-700">Hari tanpa transaksi — hari hemat! 🌿</p>
+                  <p className="fs-14 font-semibold text-slate-700">Hari tanpa transaksi — hari hemat! 🌿</p>
                 </div>
               ) : (
                 <>
@@ -484,7 +480,7 @@ export function DayReview({
                   )}
                   {done.length > 0 && (
                     <>
-                      <p className="mb-1 mt-4 px-2 text-[12px] font-bold uppercase tracking-[0.1em] text-emerald-600">
+                      <p className="mb-1 mt-4 px-2 fs-12 font-bold uppercase tracking-[0.1em] text-emerald-600">
                         Sudah dicek · {done.length}
                       </p>
                       <ul className="divide-y divide-slate-100 rounded-[20px] ring-1 ring-emerald-100">
@@ -501,7 +497,7 @@ export function DayReview({
                 <div className="flex gap-2">
                   <Link
                     href={`/membership/transactions/daily?tanggal=${key}`}
-                    className="flex flex-1 items-center justify-center rounded-full bg-slate-100 py-3 text-[14px] font-bold text-slate-700 hover:bg-slate-200"
+                    className="flex flex-1 items-center justify-center rounded-full bg-slate-100 py-3 fs-14 font-bold text-slate-700 hover:bg-slate-200"
                   >
                     Buka di Transaksi
                   </Link>
@@ -509,7 +505,7 @@ export function DayReview({
                     type="button"
                     onClick={() => step(1)}
                     disabled={isLastDay}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-40"
                   >
                     Hari berikutnya <ChevronRight size={16} />
                   </button>
@@ -519,7 +515,7 @@ export function DayReview({
                   type="button"
                   onClick={() => void markAll()}
                   whileTap={reduce ? undefined : { scale: 0.97 }}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.8)]"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-15 font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.8)]"
                 >
                   <Check size={18} strokeWidth={3} /> Semua sudah benar ({todo.length})
                 </motion.button>

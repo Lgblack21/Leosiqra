@@ -67,8 +67,8 @@ export function InboxButton({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           className={cn(
             'absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-indigo-500 px-1 font-bold text-white',
             variant === 'app'
-              ? 'h-[16px] min-w-[16px] text-[9px] ring-2 ring-slate-50 dark:ring-slate-950'
-              : 'h-[18px] min-w-[18px] text-[10px] ring-2 ring-white',
+              ? 'h-[16px] min-w-[16px] fs-9 ring-2 ring-slate-50 dark:ring-slate-950'
+              : 'h-[18px] min-w-[18px] fs-10 ring-2 ring-white',
           )}
         >
           {count > 99 ? '99+' : count}

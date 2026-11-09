@@ -3,6 +3,7 @@ import {
   Footprints,
   Gauge,
   Map as MapIcon,
+  Leaf,
   HeartPulse,
   NotebookPen,
   PieChart,
@@ -45,7 +46,8 @@ export type FeatureId =
   | 'stiker'
   | 'kanvas'
   | 'cek'
-  | 'peta';
+  | 'peta'
+  | 'teduh';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -129,6 +131,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-sky-50 to-indigo-100 text-indigo-600',
   },
   {
+    id: 'teduh',
+    label: 'Teduh',
+    href: '/membership/teduh',
+    icon: Leaf,
+    tint: 'from-emerald-50 to-teal-100 text-emerald-700',
+  },
+  {
     id: 'cek',
     label: 'Rapor Keuangan',
     href: '/membership/cek-keuangan',
@@ -174,6 +183,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'stiker',
   'kanvas',
   'peta',
+  'teduh',
   'cek',
   'sehat',
 ];

@@ -149,7 +149,7 @@ export function CategoryGrid({
                 setExpanded(false);
               }}
               className={cn(
-                'shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold',
+                'shrink-0 rounded-full border px-3 py-1.5 fs-12 font-bold',
                 value === subFor && subValue === s
                   ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
                   : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
@@ -185,7 +185,7 @@ export function CategoryGrid({
         >
           <span
             className={cn(
-              'flex h-[50px] w-[50px] items-center justify-center rounded-full text-[23px] transition-all duration-200 dark:bg-slate-800',
+              'flex h-[50px] w-[50px] items-center justify-center rounded-full fsh-23 transition-all duration-200 dark:bg-slate-800',
               tile,
               active &&
                 cn('ring-2 ring-offset-[3px] ring-offset-white dark:ring-offset-slate-900 scale-110', activeRing),
@@ -195,7 +195,7 @@ export function CategoryGrid({
           </span>
           <span
             className={cn(
-              'w-full truncate px-0.5 text-center text-[11.5px] leading-tight',
+              'w-full truncate px-0.5 text-center fs-11.5 leading-tight',
               active ? 'font-black text-slate-900 dark:text-white' : 'font-semibold text-slate-500 dark:text-slate-400',
             )}
           >
@@ -219,7 +219,7 @@ export function CategoryGrid({
         <span className="flex h-[50px] w-[50px] items-center justify-center rounded-full bg-slate-100 text-lg font-black text-slate-400 dark:bg-slate-800 dark:text-slate-500">
           {expanded ? '−' : '•••'}
         </span>
-        <span className="text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">
+        <span className="fs-11.5 font-semibold text-slate-500 dark:text-slate-400">
           {expanded ? 'Ringkas' : 'Lainnya'}
         </span>
       </button>
@@ -257,7 +257,7 @@ export function CategoryGrid({
             >
               <span
                 className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-2xl text-[22px] transition-all dark:bg-slate-800',
+                  'flex h-12 w-12 items-center justify-center rounded-2xl fsh-22 transition-all dark:bg-slate-800',
                   tile,
                   active
                     ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 scale-105'
@@ -268,7 +268,7 @@ export function CategoryGrid({
               </span>
               <span
                 className={cn(
-                  'w-full truncate px-0.5 text-center text-[11px] leading-tight',
+                  'w-full truncate px-0.5 text-center fs-11 leading-tight',
                   active
                     ? 'font-black text-indigo-600 dark:text-indigo-400'
                     : 'font-semibold text-slate-600 dark:text-slate-300',
@@ -291,7 +291,7 @@ export function CategoryGrid({
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-lg font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
               {expanded ? '−' : '⋯'}
             </span>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <span className="fs-11 font-semibold text-slate-500 dark:text-slate-400">
               {expanded ? 'Ringkas' : 'Lainnya'}
             </span>
           </button>
@@ -311,7 +311,7 @@ export function CategoryGrid({
                 setExpanded(false);
               }}
               className={cn(
-                'shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold',
+                'shrink-0 rounded-full border px-3 py-1.5 fs-12 font-bold',
                 value === subFor && subValue === s
                   ? 'border-indigo-600 bg-indigo-600 text-white'
                   : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
@@ -323,7 +323,7 @@ export function CategoryGrid({
         </div>
       )}
       {value && subValue && !subFor && (
-        <p className="text-center text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+        <p className="text-center fs-11 font-bold text-indigo-600 dark:text-indigo-400">
           {value} › {subValue}
         </p>
       )}

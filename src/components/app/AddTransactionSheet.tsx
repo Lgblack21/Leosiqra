@@ -70,7 +70,7 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
           }}
           aria-pressed={value === mode}
           className={cn(
-            'relative rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors duration-300',
+            'relative rounded-full px-3.5 py-1.5 fs-13 font-bold transition-colors duration-300',
             value === mode ? MODE_STYLE[mode].text : 'text-white/80',
           )}
         >
@@ -112,7 +112,7 @@ function AccountLogo({ account, className }: { account: Account; className?: str
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center overflow-hidden bg-white text-[16px] dark:bg-slate-700',
+        'flex shrink-0 items-center justify-center overflow-hidden bg-white fs-16 dark:bg-slate-700',
         className,
       )}
     >
@@ -170,10 +170,10 @@ function AccountRow({
           >
             <AccountLogo account={a} className="h-10 w-10 rounded-xl shadow-sm" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">
+              <span className="block truncate fs-13 font-bold text-slate-900 dark:text-white">
                 {external ? 'E-Wallet luar' : a.name}
               </span>
-              <span className="block truncate text-[12px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+              <span className="block truncate fs-12 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
                 {external ? 'OVO/GoPay/DANA' : hidden ? `${a.currency} ••••` : balanceText(a.balance || 0, a.currency)}
               </span>
             </span>
@@ -439,7 +439,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   const toAccount = transferTargets.find((a) => a.id === toAccountId);
   const canSwap = isTransfer && Boolean(toAccountId) && toAccountId !== EXTERNAL_WALLET_ID;
   const heroChip =
-    'inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-bold text-white active:bg-white/30';
+    'inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 fs-13 font-bold text-white active:bg-white/30';
   const openPicker = (p: 'acc' | 'to' | 'date') => {
     lightTap();
     setCatsOpen(false);
@@ -447,7 +447,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   };
   const dateOpt = (active: boolean) =>
     cn(
-      'flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-bold transition-colors',
+      'flex w-full items-center justify-between rounded-2xl px-4 py-3.5 fs-15 font-bold transition-colors',
       active
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100',
@@ -558,7 +558,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               transition={{ duration: 0.16 }}
               className={cn(
                 'truncate font-extrabold leading-none tracking-tight tabular-nums',
-                shown.length > 11 ? 'text-[36px]' : 'text-[50px]',
+                shown.length > 11 ? 'fsh-36' : 'fsh-50',
                 amountNumber <= 0 && 'text-white/50',
               )}
             >
@@ -566,9 +566,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             </motion.span>
           </button>
           {(catsOpen || showSmart) && (
-            <p className="relative -mt-0.5 text-center text-[11px] font-bold text-white/70">
-              Ketuk nominal untuk mengetik
-            </p>
+            <p className="relative -mt-0.5 text-center fs-11 font-bold text-white/70">Ketuk nominal untuk mengetik</p>
           )}
 
           <div className="relative mt-3.5 flex flex-wrap justify-center gap-2">
@@ -621,13 +619,13 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               />
             )}
             {fromReminder && !hint && (
-              <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 fs-11 font-bold text-indigo-700 dark:text-indigo-300">
                 <Sparkles size={13} className="mt-0.5 shrink-0" />
                 <span>Dari pengingat &ldquo;{fromReminder}&rdquo; — pilih kategori, cek rekening, lalu simpan.</span>
               </div>
             )}
             {hint && (
-              <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 fs-11 font-bold text-indigo-700 dark:text-indigo-300">
                 <Sparkles size={13} className="mt-0.5 shrink-0" />
                 <span>
                   Terisi dari {hint.source === 'voice' ? 'suara' : hint.source === 'scan' ? 'foto struk' : 'teks'} — cek
@@ -651,8 +649,8 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               >
                 {selectedAccount && <AccountLogo account={selectedAccount} className="h-9 w-9 rounded-xl" />}
                 <span className="min-w-0">
-                  <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Dari</span>
-                  <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">
+                  <span className="block fs-11 font-bold text-slate-400 dark:text-slate-500">Dari</span>
+                  <span className="block truncate fs-14 font-extrabold text-slate-900 dark:text-white">
                     {selectedAccount?.name ?? '—'}
                   </span>
                 </span>
@@ -678,8 +676,8 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                 className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right"
               >
                 <span className="min-w-0">
-                  <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Ke</span>
-                  <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">
+                  <span className="block fs-11 font-bold text-slate-400 dark:text-slate-500">Ke</span>
+                  <span className="block truncate fs-14 font-extrabold text-slate-900 dark:text-white">
                     {toAccount?.name ?? '—'}
                   </span>
                 </span>
@@ -690,7 +688,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               toAccount &&
               toAccount.currency !== selectedAccount.currency &&
               toAccountId !== EXTERNAL_WALLET_ID && (
-                <p className="mt-2 px-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <p className="mt-2 px-1 fs-11 font-medium text-slate-500 dark:text-slate-400">
                   Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
                 </p>
               )}
@@ -723,7 +721,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               onChange={(e) => setNote(e.target.value)}
               placeholder="Tambah catatan (opsional)"
               aria-label="Catatan"
-              className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white"
+              className="min-w-0 flex-1 bg-transparent fs-13 font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white"
             />
           </label>
         )}
@@ -760,9 +758,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                 <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
                 {picker === 'date' ? (
                   <>
-                    <p className="mb-3 px-1 text-[15px] font-extrabold text-slate-900 dark:text-white">
-                      Tanggal transaksi
-                    </p>
+                    <p className="mb-3 px-1 fs-15 font-extrabold text-slate-900 dark:text-white">Tanggal transaksi</p>
                     <div className="space-y-2">
                       <button
                         type="button"
@@ -774,7 +770,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                         className={dateOpt(date === null)}
                       >
                         Hari ini{' '}
-                        <span className="text-[13px] font-semibold opacity-60">{shortDate(toISODate(new Date()))}</span>
+                        <span className="fs-13 font-semibold opacity-60">{shortDate(toISODate(new Date()))}</span>
                       </button>
                       <button
                         type="button"
@@ -785,8 +781,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                         }}
                         className={dateOpt(date === yesterdayISO())}
                       >
-                        Kemarin{' '}
-                        <span className="text-[13px] font-semibold opacity-60">{shortDate(yesterdayISO())}</span>
+                        Kemarin <span className="fs-13 font-semibold opacity-60">{shortDate(yesterdayISO())}</span>
                       </button>
                       <label
                         className={cn(dateOpt(date !== null && date !== yesterdayISO()), 'relative cursor-pointer')}
@@ -794,7 +789,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                         <span className="flex items-center gap-2">
                           <CalendarDays size={16} /> Tanggal lain
                         </span>
-                        <span className="text-[13px] font-semibold opacity-60">
+                        <span className="fs-13 font-semibold opacity-60">
                           {date !== null && date !== yesterdayISO() ? shortDate(date) : 'Pilih'}
                         </span>
                         <input
@@ -813,7 +808,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
                   </>
                 ) : (
                   <>
-                    <p className="mb-3 px-1 text-[15px] font-extrabold text-slate-900 dark:text-white">
+                    <p className="mb-3 px-1 fs-15 font-extrabold text-slate-900 dark:text-white">
                       {picker === 'to' ? 'Transfer ke' : isTransfer ? 'Transfer dari' : 'Pakai rekening'}
                     </p>
                     <AccountRow

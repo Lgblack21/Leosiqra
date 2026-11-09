@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 // kartu supaya keduanya selalu sama persis.
 
 export function NetworkMark({ network }: { network?: string }) {
-  if (network === 'visa') return <span className="text-[20px] font-black italic tracking-tight">VISA</span>;
+  if (network === 'visa') return <span className="fsh-20 font-black italic tracking-tight">VISA</span>;
   if (network === 'mastercard')
     return (
       <span className="flex" aria-label="Mastercard">
@@ -18,10 +18,10 @@ export function NetworkMark({ network }: { network?: string }) {
         <span className="-ml-2.5 h-6 w-6 rounded-full bg-[#f79e1b]/90" />
       </span>
     );
-  if (network === 'jcb') return <span className="text-[16px] font-black tracking-wide">JCB</span>;
+  if (network === 'jcb') return <span className="fs-16 font-black tracking-wide">JCB</span>;
   if (network === 'amex')
-    return <span className="rounded bg-white/20 px-1.5 text-[13px] font-black tracking-wider">AMEX</span>;
-  if (network === 'gpn') return <span className="text-[14px] font-black tracking-wider">GPN</span>;
+    return <span className="rounded bg-white/20 px-1.5 fs-13 font-black tracking-wider">AMEX</span>;
+  if (network === 'gpn') return <span className="fs-14 font-black tracking-wider">GPN</span>;
   return null;
 }
 
@@ -73,10 +73,10 @@ export function CardFace({
             className="h-full w-full object-cover"
           />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{name || 'Kartu kredit'}</span>
+        <span className="min-w-0 flex-1 truncate fs-15 font-bold">{name || 'Kartu kredit'}</span>
         <span
           className={cn(
-            'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+            'shrink-0 rounded-full px-2 py-0.5 fs-11 font-semibold',
             urgent ? 'bg-white text-rose-600' : 'bg-white/20',
           )}
         >
@@ -93,12 +93,12 @@ export function CardFace({
             fill="none"
           />
         </svg>
-        <span className="font-mono text-[15px] tracking-[0.22em] text-white/90">•••• {last4 || '····'}</span>
+        <span className="font-mono fs-15 tracking-[0.22em] text-white/90">•••• {last4 || '····'}</span>
       </div>
       <div className="relative flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">{amountLabel}</p>
-          <p className="truncate text-[19px] font-extrabold leading-tight tabular-nums">{amount}</p>
+          <p className="fs-10 font-semibold uppercase tracking-[0.12em] text-white/70">{amountLabel}</p>
+          <p className="truncate fs-19 font-extrabold leading-tight tabular-nums">{amount}</p>
         </div>
         <NetworkMark network={network} />
       </div>

@@ -22,7 +22,7 @@ export function MobileTabBar() {
         href={item.href}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold',
+          'flex flex-1 flex-col items-center gap-1 py-2 fs-11 font-semibold',
           active ? 'text-indigo-600' : 'text-slate-400',
         )}
       >

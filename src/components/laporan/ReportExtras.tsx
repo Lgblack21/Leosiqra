@@ -66,11 +66,11 @@ export function BubbleCalendar({
     <section>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kalender belanja</h2>
-          <p className="text-[12px] text-slate-500">Makin besar gelembung, makin besar belanja hari itu.</p>
+          <h2 className="fs-17 font-bold tracking-tight text-slate-900">Kalender belanja</h2>
+          <p className="fs-12 text-slate-500">Makin besar gelembung, makin besar belanja hari itu.</p>
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap gap-1.5 text-[12px] font-semibold">
+      <div className="mt-2 flex flex-wrap gap-1.5 fs-12 font-semibold">
         <span className="rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200">
           Rata-rata {rp(avg)}/hari
         </span>
@@ -94,7 +94,7 @@ export function BubbleCalendar({
       </div>
 
       <div className="mt-3 rounded-[20px] bg-white p-3 ring-1 ring-slate-100 md:p-4">
-        <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[11px] font-semibold text-slate-400">
+        <div className="grid grid-cols-7 gap-1 pb-1 text-center fs-11 font-semibold text-slate-400">
           {DOW.map((d, i) => (
             <span key={d} className={cn(i >= 5 && 'text-indigo-400')}>
               {d}
@@ -124,7 +124,7 @@ export function BubbleCalendar({
               >
                 <span
                   className={cn(
-                    'absolute left-1.5 top-1 text-[10px] font-bold md:left-2 md:text-[11px]',
+                    'absolute left-1.5 top-1 fs-10 font-bold md:left-2 md:fs-11',
                     today ? 'text-indigo-600' : 'text-slate-400',
                   )}
                 >
@@ -155,9 +155,7 @@ export function BubbleCalendar({
                     )}
                     style={{ width: `min(${size}px, 62%)`, aspectRatio: '1 / 1' }}
                   >
-                    {size >= 32 && (
-                      <span className="hidden text-[9px] font-bold tabular-nums md:inline">{short(v)}</span>
-                    )}
+                    {size >= 32 && <span className="hidden fs-9 font-bold tabular-nums md:inline">{short(v)}</span>}
                   </span>
                 )}
                 {today && (
@@ -177,7 +175,7 @@ export function BubbleCalendar({
           })}
         </div>
 
-        <p className="mt-3 px-1 text-[12px] text-slate-400">
+        <p className="mt-3 px-1 fs-12 text-slate-400">
           Ketuk satu hari untuk <b className="text-slate-600">Cek hari</b>: centang transaksi yang kategorinya sudah
           benar. Lencana ✓ hijau = hari sudah dicek.
         </p>
@@ -216,8 +214,8 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
 
   return (
     <section>
-      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Pola mingguan</h2>
-      <p className="text-[12px] text-slate-500">
+      <h2 className="fs-17 font-bold tracking-tight text-slate-900">Pola mingguan</h2>
+      <p className="fs-12 text-slate-500">
         Paling boros hari <b className="text-slate-700">{DOW_LONG[top]}</b>, paling hemat hari{' '}
         <b className="text-slate-700">{DOW_LONG[low]}</b>
         {weekday > 0 && weekend > weekday * 1.2
@@ -228,7 +226,7 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
       <div className="mt-3 flex h-36 items-end gap-2 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:gap-4 md:px-6">
         {data.map((v, i) => (
           <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-            <span className={cn('text-[11px] font-bold tabular-nums', i === top ? 'text-rose-600' : 'text-slate-400')}>
+            <span className={cn('fs-11 font-bold tabular-nums', i === top ? 'text-rose-600' : 'text-slate-400')}>
               {v > 0 ? short(v) : ''}
             </span>
             <div
@@ -238,9 +236,7 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
               )}
               style={{ height: `${Math.max(4, (v / max) * 100)}%` }}
             />
-            <span className={cn('text-[12px] font-semibold', i === top ? 'text-slate-900' : 'text-slate-500')}>
-              {DOW[i]}
-            </span>
+            <span className={cn('fs-12 font-semibold', i === top ? 'text-slate-900' : 'text-slate-500')}>{DOW[i]}</span>
           </div>
         ))}
       </div>
@@ -259,8 +255,8 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
 
   return (
     <section>
-      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Pengeluaran terbesar</h2>
-      <p className="text-[12px] text-slate-500">Pembayaran tunggal paling besar di periode ini</p>
+      <h2 className="fs-17 font-bold tracking-tight text-slate-900">Pengeluaran terbesar</h2>
+      <p className="fs-12 text-slate-500">Pembayaran tunggal paling besar di periode ini</p>
       <div className="mt-3 grid grid-cols-3 items-end gap-2 md:gap-3">
         {podium.map((t) => {
           const rank = top.indexOf(t);
@@ -275,25 +271,25 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
                   : 'bg-white pt-3 ring-slate-100',
               )}
             >
-              <span className="text-[22px] leading-none" aria-label={`Peringkat ${rank + 1}`}>
+              <span className="fsh-22 leading-none" aria-label={`Peringkat ${rank + 1}`}>
                 {medal[rank]}
               </span>
               <span
-                className={cn('mt-1.5 flex h-9 w-9 items-center justify-center rounded-xl text-[17px]', v.tile)}
+                className={cn('mt-1.5 flex h-9 w-9 items-center justify-center rounded-xl fs-17', v.tile)}
                 aria-hidden
               >
                 {v.emoji}
               </span>
-              <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900">
+              <p className="mt-1.5 line-clamp-2 fs-13 font-semibold leading-tight text-slate-900">
                 {t.note || t.category}
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="fs-11 text-slate-500">
                 {when(t)} · {t.category}
               </p>
               <p
                 className={cn(
                   'mt-1.5 font-extrabold tabular-nums text-slate-900',
-                  rank === 0 ? 'text-[15px] md:text-[17px]' : 'text-[13px] md:text-[15px]',
+                  rank === 0 ? 'fs-15 md:fs-17' : 'fs-13 md:fs-15',
                 )}
               >
                 {formatIDR(idr(t))}
@@ -317,22 +313,20 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
                   style={{ width: `${(idr(t) / max) * 100}%` }}
                 />
                 <div className="relative flex items-center gap-3">
-                  <span className="w-5 text-center text-[12px] font-bold text-slate-400">{i + 4}</span>
+                  <span className="w-5 text-center fs-12 font-bold text-slate-400">{i + 4}</span>
                   <span
-                    className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)}
+                    className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full fs-15', v.tile)}
                     aria-hidden
                   >
                     {v.emoji}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold text-slate-900">
-                      {t.note || t.category}
-                    </span>
-                    <span className="block text-[12px] text-slate-500">
+                    <span className="block truncate fs-14 font-semibold text-slate-900">{t.note || t.category}</span>
+                    <span className="block fs-12 text-slate-500">
                       {when(t)} · {t.category}
                     </span>
                   </span>
-                  <span className="text-[13px] font-bold tabular-nums text-slate-900">{formatIDR(idr(t))}</span>
+                  <span className="fs-13 font-bold tabular-nums text-slate-900">{formatIDR(idr(t))}</span>
                 </div>
               </li>
             );
@@ -406,28 +400,28 @@ export function YearMonths({
 
   return (
     <section>
-      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Bulan demi bulan</h2>
-      <p className="text-[12px] text-slate-500">
+      <h2 className="fs-17 font-bold tracking-tight text-slate-900">Bulan demi bulan</h2>
+      <p className="fs-12 text-slate-500">
         Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.
         {firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
       </p>
 
       <div className="no-scrollbar -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
         <span className="shrink-0 rounded-2xl bg-white px-3 py-1.5 ring-1 ring-slate-200">
-          <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
-          <span className="text-[13px] font-bold text-slate-900">{rp(avg)}/bln</span>
+          <span className="block fs-10 font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
+          <span className="fs-13 font-bold text-slate-900">{rp(avg)}/bln</span>
         </span>
         {savedPct !== null && (
           <span className={cn('shrink-0 rounded-2xl px-3 py-1.5', savedPct >= 0 ? 'bg-emerald-50' : 'bg-rose-50')}>
             <span
               className={cn(
-                'block text-[11px] font-semibold uppercase tracking-wide',
+                'block fs-11 font-semibold uppercase tracking-wide',
                 savedPct >= 0 ? 'text-emerald-600' : 'text-rose-600',
               )}
             >
               Ditabung
             </span>
-            <span className={cn('text-[14px] font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
+            <span className={cn('fs-14 font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
               {savedPct}% pemasukan
             </span>
           </span>
@@ -438,8 +432,8 @@ export function YearMonths({
             onClick={() => onPick(best.i)}
             className="shrink-0 rounded-2xl bg-amber-50 px-3 py-1.5 text-left hover:bg-amber-100"
           >
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-amber-600">👑 Terhemat</span>
-            <span className="text-[13px] font-bold text-amber-800">
+            <span className="block fs-10 font-semibold uppercase tracking-wide text-amber-600">👑 Terhemat</span>
+            <span className="fs-13 font-bold text-amber-800">
               {MONTHS_SHORT[best.i]} · {rp(best.spend)}
             </span>
           </button>
@@ -450,18 +444,16 @@ export function YearMonths({
             onClick={() => onPick(worst.i)}
             className="shrink-0 rounded-2xl bg-rose-50 px-3 py-1.5 text-left hover:bg-rose-100"
           >
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-rose-600">🔥 Terboros</span>
-            <span className="text-[13px] font-bold text-rose-800">
+            <span className="block fs-10 font-semibold uppercase tracking-wide text-rose-600">🔥 Terboros</span>
+            <span className="fs-13 font-bold text-rose-800">
               {MONTHS_SHORT[worst.i]} · {rp(worst.spend)}
             </span>
           </button>
         )}
         {riser && (
           <span className="shrink-0 rounded-2xl bg-indigo-50 px-3 py-1.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
-              📈 Paling naik
-            </span>
-            <span className="text-[13px] font-bold text-indigo-800">
+            <span className="block fs-10 font-semibold uppercase tracking-wide text-indigo-500">📈 Paling naik</span>
+            <span className="fs-13 font-bold text-indigo-800">
               {riser.name} +{rp(riser.diff)} di {MONTHS_SHORT[riser.month]}
             </span>
           </span>
@@ -497,13 +489,13 @@ export function YearMonths({
               <div className="flex items-start justify-between gap-1">
                 <span
                   className={cn(
-                    'flex items-center gap-1 text-[12px] font-bold',
+                    'flex items-center gap-1 fs-12 font-bold',
                     isCur ? 'text-indigo-600' : 'text-slate-500',
                   )}
                 >
                   {MONTHS_SHORT[i]}
                   {(crown || fire) && (
-                    <span className="text-[12px]" aria-label={crown ? 'Terhemat' : 'Terboros'}>
+                    <span className="fs-12" aria-label={crown ? 'Terhemat' : 'Terboros'}>
                       {crown ? '👑' : '🔥'}
                     </span>
                   )}
@@ -531,7 +523,7 @@ export function YearMonths({
                     </svg>
                     <span
                       className={cn(
-                        'absolute inset-0 flex items-center justify-center text-[9px] font-extrabold tabular-nums',
+                        'absolute inset-0 flex items-center justify-center fs-9 font-extrabold tabular-nums',
                         saved === null ? 'text-slate-300' : saved < 0 ? 'text-rose-600' : 'text-slate-700',
                       )}
                     >
@@ -542,7 +534,7 @@ export function YearMonths({
               </div>
               <p
                 className={cn(
-                  'mt-0.5 truncate text-[15px] font-extrabold tracking-tight tabular-nums',
+                  'mt-0.5 truncate fs-15 font-extrabold tracking-tight tabular-nums',
                   future || empty ? 'text-slate-300' : 'text-slate-900',
                 )}
               >
@@ -554,7 +546,7 @@ export function YearMonths({
                   style={{ width: `${(m.spend / max) * 100}%` }}
                 />
               </div>
-              <p className="mt-1.5 truncate text-[11px] text-slate-400">
+              <p className="mt-1.5 truncate fs-11 text-slate-400">
                 {future ? 'belum lewat' : m.income > 0 ? `masuk ${rp(m.income)}` : 'tanpa pemasukan'}
               </p>
             </button>

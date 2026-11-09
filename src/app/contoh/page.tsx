@@ -110,16 +110,16 @@ export default function ContohPage() {
       <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col border-r border-slate-200/70 bg-white px-4 py-6 lg:flex">
         <Link href="/" className="flex items-center gap-2.5 px-2">
           <Image src="/images/Logo-new.png" alt="Leosiqra" width={30} height={30} />
-          <span className="text-[19px] font-extrabold tracking-tight">Leosiqra</span>
+          <span className="fs-19 font-extrabold tracking-tight">Leosiqra</span>
         </Link>
-        <span className="mx-2 mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+        <span className="mx-2 mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 fs-11 font-bold text-amber-700">
           <Sparkles size={12} /> Mode contoh
         </span>
-        <p className="mx-2 mt-2 text-[11px] text-slate-400">Tersimpan di perangkat ini · bebas diotak-atik</p>
+        <p className="mx-2 mt-2 fs-11 text-slate-400">Tersimpan di perangkat ini · bebas diotak-atik</p>
         <button
           type="button"
           onClick={() => ask('Tanya Leo')}
-          className="mt-5 flex items-center gap-2.5 rounded-2xl bg-slate-50 px-4 py-3 text-left text-[14px] text-slate-400 ring-1 ring-slate-100 hover:bg-slate-100"
+          className="mt-5 flex items-center gap-2.5 rounded-2xl bg-slate-50 px-4 py-3 text-left fs-14 text-slate-400 ring-1 ring-slate-100 hover:bg-slate-100"
         >
           <Sparkles size={16} className="text-indigo-500" /> Tanya Leo…
         </button>
@@ -131,7 +131,7 @@ export default function ContohPage() {
               onClick={() => go(t.id)}
               aria-current={tab === t.id ? 'page' : undefined}
               className={cn(
-                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors',
+                'flex w-full items-center gap-3 rounded-xl px-4 py-3 fs-15 font-semibold transition-colors',
                 tab === t.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
               )}
             >
@@ -143,25 +143,25 @@ export default function ContohPage() {
           <button
             type="button"
             onClick={() => ask('Tambah transaksi')}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_14px_30px_-14px_rgba(79,70,229,0.8)]"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-15 font-bold text-white shadow-[0_14px_30px_-14px_rgba(79,70,229,0.8)]"
           >
             <Plus size={18} /> Tambah transaksi
           </button>
           <div className="rounded-2xl bg-indigo-50 p-4">
-            <p className="text-[13px] font-bold text-indigo-900">Ini data rekaan</p>
-            <p className="mt-0.5 text-[12px] text-indigo-700/80">
+            <p className="fs-13 font-bold text-indigo-900">Ini data rekaan</p>
+            <p className="mt-0.5 fs-12 text-indigo-700/80">
               Ubah sesukamu — hanya di perangkat ini. Catat uangmu sendiri, gratis 14 hari.
             </p>
             <Link
               href="/mulai"
-              className="mt-2.5 inline-flex items-center gap-1 text-[13px] font-bold text-indigo-700 hover:underline"
+              className="mt-2.5 inline-flex items-center gap-1 fs-13 font-bold text-indigo-700 hover:underline"
             >
               Mulai punyamu <ArrowRight size={14} />
             </Link>
             <button
               type="button"
               onClick={reset}
-              className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-indigo-500 hover:text-indigo-700"
+              className="mt-2 flex items-center gap-1.5 fs-12 font-semibold text-indigo-500 hover:text-indigo-700"
             >
               <RotateCcw size={12} /> Kembalikan data contoh
             </button>
@@ -171,16 +171,14 @@ export default function ContohPage() {
 
       <main className="min-w-0 flex-1 pb-28 lg:pb-12">
         <div className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-slate-900 px-4 py-2.5 text-white sm:px-8">
-          <p className="truncate text-[13px] font-medium">
-            <span className="mr-1.5 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-slate-900">
-              CONTOH
-            </span>
+          <p className="truncate fs-13 font-medium">
+            <span className="mr-1.5 rounded-full bg-amber-400 px-2 py-0.5 fs-11 font-bold text-slate-900">CONTOH</span>
             <span className="hidden sm:inline">Data rekaan, bebas diubah — tersimpan di perangkat ini saja.</span>
             <span className="sm:hidden">Data rekaan, bebas diubah</span>
           </p>
           <Link
             href="/mulai"
-            className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-slate-900 hover:bg-indigo-50"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3.5 py-1.5 fs-13 font-bold text-slate-900 hover:bg-indigo-50"
           >
             Mulai punyamu <ArrowRight size={14} />
           </Link>
@@ -262,20 +260,20 @@ export default function ContohPage() {
             <div className="flex justify-center">
               <LeoMascot mood="happy" size={110} />
             </div>
-            <p className="text-[20px] font-extrabold tracking-tight">“{cta}” butuh ruangmu sendiri</p>
-            <p className="mt-2 text-[14px] text-slate-500">
+            <p className="fsh-20 font-extrabold tracking-tight">“{cta}” butuh ruangmu sendiri</p>
+            <p className="mt-2 fs-14 text-slate-500">
               Di mode contoh semuanya rekaan. Buat ruangmu — 2 menit, gratis 14 hari, tanpa kartu kredit.
             </p>
             <Link
               href="/mulai"
-              className="mt-5 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white"
+              className="mt-5 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-15 font-bold text-white"
             >
               Mulai sekarang <ArrowRight size={17} />
             </Link>
             <button
               type="button"
               onClick={() => setCta(null)}
-              className="mt-2 w-full py-2.5 text-[14px] font-semibold text-slate-500"
+              className="mt-2 w-full py-2.5 fs-14 font-semibold text-slate-500"
             >
               Lanjut lihat-lihat
             </button>
@@ -293,7 +291,7 @@ function TabButton({ t, active, onClick }: { t: (typeof TABS)[number]; active: b
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex flex-col items-center gap-1 py-2.5 text-[11px] font-bold',
+        'flex flex-col items-center gap-1 py-2.5 fs-11 font-bold',
         active ? 'text-indigo-600' : 'text-slate-400',
       )}
     >
@@ -312,15 +310,15 @@ function TxRow({ t, open }: { t: DemoTx; open: (t: DemoTx) => void }) {
     >
       <span
         className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[20px]',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fsh-20',
           t.type === 'pemasukan' ? 'bg-emerald-50' : t.type === 'transfer' ? 'bg-slate-100' : 'bg-indigo-50',
         )}
       >
         {t.emoji}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold">{t.title}</p>
-        <p className="truncate text-[12px] text-slate-500">
+        <p className="truncate fs-15 font-semibold">{t.title}</p>
+        <p className="truncate fs-12 text-slate-500">
           {t.time} ·{' '}
           {t.type === 'transfer'
             ? `${accName(t.account)} → ${accName(t.toAccount)}`
@@ -329,7 +327,7 @@ function TxRow({ t, open }: { t: DemoTx; open: (t: DemoTx) => void }) {
       </div>
       <p
         className={cn(
-          'shrink-0 text-[15px] font-bold tabular-nums',
+          'shrink-0 fs-15 font-bold tabular-nums',
           t.type === 'pemasukan' ? 'text-emerald-600' : t.type === 'transfer' ? 'text-slate-500' : 'text-slate-900',
         )}
       >
@@ -378,19 +376,19 @@ function Ringkasan({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[30px] font-extrabold tracking-tight sm:text-[38px]">Ringkasan</h1>
+        <h1 className="fsh-30 font-extrabold tracking-tight sm:fsh-38">Ringkasan</h1>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => ask('Scan struk')}
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 fs-14 font-semibold ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <ScanLine size={16} /> <span className="hidden sm:inline">Struk</span>
           </button>
           <button
             type="button"
             onClick={() => ask('Catat lewat suara')}
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold ring-1 ring-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 fs-14 font-semibold ring-1 ring-slate-200 hover:bg-slate-50"
           >
             <Mic size={16} /> <span className="hidden sm:inline">Suara</span>
           </button>
@@ -407,14 +405,12 @@ function Ringkasan({
           <LeoMascot mood="idle" size={170} />
         </div>
         <div className="relative max-w-xl">
-          <p className="text-[28px] font-extrabold tracking-tight sm:text-[34px]">{greeting(hour)}.</p>
-          <p className="mt-1 text-[14px] text-white/80">
+          <p className="fsh-28 font-extrabold tracking-tight sm:fsh-34">{greeting(hour)}.</p>
+          <p className="mt-1 fs-14 text-white/80">
             Hari ini · {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-          <p className="mt-4 text-[44px] font-extrabold leading-none tracking-tight sm:text-[56px]">
-            {formatIDR(spentToday)}
-          </p>
-          <p className="mt-2 text-[14px] text-white/80">
+          <p className="mt-4 fsh-44 font-extrabold leading-none tracking-tight sm:fsh-56">{formatIDR(spentToday)}</p>
+          <p className="mt-2 fs-14 text-white/80">
             keluar dari {todays.filter((t) => t.type === 'pengeluaran').length} pembayaran
           </p>
           <button
@@ -423,20 +419,20 @@ function Ringkasan({
             className="mt-6 flex w-full items-center gap-3 rounded-full bg-white/95 py-2 pl-5 pr-2 text-left text-slate-400 shadow-lg"
           >
             <Sparkles size={17} className="text-indigo-500" />
-            <span className="flex-1 truncate text-[15px]">Tanya Leo: bulan ini boros di mana?</span>
+            <span className="flex-1 truncate fs-15">Tanya Leo: bulan ini boros di mana?</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white">
               <Send size={16} />
             </span>
           </button>
           {usual.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-white/85">Biasanya jam segini</span>
+              <span className="fs-13 font-semibold text-white/85">Biasanya jam segini</span>
               {usual.map((u) => (
                 <button
                   key={u.title}
                   type="button"
                   onClick={() => ask(`Catat ${u.title}`)}
-                  className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30"
+                  className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 fs-13 font-semibold backdrop-blur hover:bg-white/30"
                 >
                   {u.emoji} {u.title} · {short(u.avg)} <Plus size={13} />
                 </button>
@@ -448,19 +444,19 @@ function Ringkasan({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <button type="button" onClick={() => go('dompet')} className={cn(card, 'text-left hover:ring-indigo-200')}>
-          <p className="text-[13px] font-semibold text-slate-500">Total saldo</p>
-          <p className="mt-1 text-[24px] font-extrabold tracking-tight">{short(total)}</p>
-          <p className="mt-1 text-[12px] text-slate-400">{DEMO_ACCOUNTS.length} rekening & dompet</p>
+          <p className="fs-13 font-semibold text-slate-500">Total saldo</p>
+          <p className="mt-1 fsh-24 font-extrabold tracking-tight">{short(total)}</p>
+          <p className="mt-1 fs-12 text-slate-400">{DEMO_ACCOUNTS.length} rekening & dompet</p>
         </button>
         <button type="button" onClick={() => go('laporan')} className={cn(card, 'text-left hover:ring-indigo-200')}>
-          <p className="text-[13px] font-semibold text-slate-500">Bulan ini</p>
-          <p className="mt-1 text-[24px] font-extrabold tracking-tight">{short(out)}</p>
-          <p className="mt-1 text-[12px] text-slate-400">
+          <p className="fs-13 font-semibold text-slate-500">Bulan ini</p>
+          <p className="mt-1 fsh-24 font-extrabold tracking-tight">{short(out)}</p>
+          <p className="mt-1 fs-12 text-slate-400">
             keluar · masuk <span className="font-bold text-emerald-600">{short(inc)}</span>
           </p>
         </button>
         <button type="button" onClick={() => go('laporan')} className={cn(card, 'text-left hover:ring-indigo-200')}>
-          <p className="text-[13px] font-semibold text-slate-500">Budget makan</p>
+          <p className="fs-13 font-semibold text-slate-500">Budget makan</p>
           {(() => {
             const b = DEMO_BUDGETS[0];
             const used = monthTx
@@ -469,7 +465,7 @@ function Ringkasan({
             const pct = Math.min(100, Math.round((used / b.limit) * 100));
             return (
               <>
-                <p className="mt-1 text-[24px] font-extrabold tracking-tight">{pct}%</p>
+                <p className="mt-1 fsh-24 font-extrabold tracking-tight">{pct}%</p>
                 <div className="mt-2 h-2 rounded-full bg-slate-100">
                   <div
                     className={cn(
@@ -487,17 +483,17 @@ function Ringkasan({
 
       <section className={card}>
         <div className="flex items-baseline justify-between">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-slate-400">Hari ini</p>
+          <p className="fs-12 font-bold uppercase tracking-[0.12em] text-slate-400">Hari ini</p>
           <button
             type="button"
             onClick={() => go('transaksi')}
-            className="text-[13px] font-bold text-indigo-600 hover:underline"
+            className="fs-13 font-bold text-indigo-600 hover:underline"
           >
             Semua transaksi
           </button>
         </div>
         {todays.length === 0 ? (
-          <p className="py-6 text-center text-[14px] text-slate-500">Belum ada catatan hari ini.</p>
+          <p className="py-6 text-center fs-14 text-slate-500">Belum ada catatan hari ini.</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {todays.map((t) => (
@@ -557,18 +553,18 @@ function Transaksi({
   const yesterday = ymd(new Date(now.getTime() - 86400e3));
   const chip = (on: boolean) =>
     cn(
-      'shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition-colors',
+      'shrink-0 rounded-full px-4 py-2 fs-13 font-bold transition-colors',
       on ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
     );
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-tight sm:text-[38px]">Transaksi</h1>
-          <p className="text-[14px] text-slate-500">
+          <h1 className="fsh-30 font-extrabold tracking-tight sm:fsh-38">Transaksi</h1>
+          <p className="fs-14 text-slate-500">
             {list.length} transaksi · keluar {formatIDR(sumBy(list, 'pengeluaran'))}
           </p>
-          <p className="mt-0.5 text-[12px] text-slate-400">
+          <p className="mt-0.5 fs-12 text-slate-400">
             Ketuk transaksi untuk mengubah atau menghapus.{' '}
             <button type="button" onClick={reset} className="font-semibold text-indigo-600 hover:underline">
               Kembalikan data contoh
@@ -578,7 +574,7 @@ function Transaksi({
         <button
           type="button"
           onClick={() => ask('Tambah transaksi')}
-          className="hidden items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-[14px] font-bold text-white sm:flex"
+          className="hidden items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 fs-14 font-bold text-white sm:flex"
         >
           <Plus size={17} /> Tambah transaksi
         </button>
@@ -589,7 +585,7 @@ function Transaksi({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cari judul, kategori, dompet, atau jumlah"
-          className="w-full bg-transparent text-[15px] outline-none placeholder:text-slate-400"
+          className="w-full bg-transparent fs-15 outline-none placeholder:text-slate-400"
         />
       </label>
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
@@ -606,12 +602,12 @@ function Transaksi({
         ))}
       </div>
       {groups.length === 0 ? (
-        <p className="py-16 text-center text-[14px] text-slate-500">Tidak ada transaksi yang cocok.</p>
+        <p className="py-16 text-center fs-14 text-slate-500">Tidak ada transaksi yang cocok.</p>
       ) : (
         groups.slice(0, 40).map(([date, rows]) => (
           <section key={date}>
             <div className="mb-1 flex items-baseline justify-between px-1">
-              <p className="text-[13px] font-bold text-slate-500">
+              <p className="fs-13 font-bold text-slate-500">
                 {date === today
                   ? 'Hari ini'
                   : date === yesterday
@@ -622,7 +618,7 @@ function Transaksi({
                         month: 'short',
                       })}
               </p>
-              <p className="text-[13px] font-semibold text-slate-400">−{formatIDR(sumBy(rows, 'pengeluaran'))}</p>
+              <p className="fs-13 font-semibold text-slate-400">−{formatIDR(sumBy(rows, 'pengeluaran'))}</p>
             </div>
             <div className={cn(card, 'divide-y divide-slate-100 py-1')}>
               {rows.map((t) => (
@@ -675,7 +671,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[30px] font-extrabold tracking-tight sm:text-[38px]">Laporan</h1>
+        <h1 className="fsh-30 font-extrabold tracking-tight sm:fsh-38">Laporan</h1>
         <div className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200">
           <button
             type="button"
@@ -686,7 +682,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="min-w-[7.5rem] text-center text-[14px] font-bold">
+          <span className="min-w-[7.5rem] text-center fs-14 font-bold">
             {ref.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
           </span>
           <button
@@ -702,9 +698,9 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
       </div>
 
       <section className={card}>
-        <p className="text-[13px] font-semibold text-slate-500">Pengeluaran</p>
-        <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight sm:text-[52px]">{formatIDR(out)}</p>
-        <p className="mt-3 text-[14px] text-slate-500">
+        <p className="fs-13 font-semibold text-slate-500">Pengeluaran</p>
+        <p className="mt-1 fsh-40 font-extrabold leading-none tracking-tight sm:fsh-52">{formatIDR(out)}</p>
+        <p className="mt-3 fs-14 text-slate-500">
           dari pemasukan <span className="font-bold text-emerald-600">{short(inc)}</span> ·{' '}
           {inc >= out ? (
             <>
@@ -717,8 +713,8 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
           )}
         </p>
         <div className="mt-6 flex items-baseline justify-between">
-          <p className="text-[15px] font-bold">Pengeluaran harian</p>
-          <p className="text-[12px] text-slate-400">rata-rata {short(avg)}/hari · tanpa tagihan besar</p>
+          <p className="fs-15 font-bold">Pengeluaran harian</p>
+          <p className="fs-12 text-slate-400">rata-rata {short(avg)}/hari · tanpa tagihan besar</p>
         </div>
         <div className="mt-3 flex h-36 items-end gap-[3px] sm:gap-1">
           {daily.map((v, i) => {
@@ -736,14 +732,14 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
                   )}
                   style={{ height: `${Math.max(4, (v / maxDaily) * 100)}%` }}
                 />
-                <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white group-hover:block">
+                <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-1.5 py-0.5 fs-10 font-bold text-white group-hover:block">
                   {i + 1}: {short(v)}
                 </span>
               </div>
             );
           })}
         </div>
-        <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
+        <div className="mt-1.5 flex justify-between fs-11 text-slate-400">
           <span>1</span>
           <span>{Math.ceil(daysInMonth / 2)}</span>
           <span>{daysInMonth}</span>
@@ -752,7 +748,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section className={card}>
-          <p className="text-[15px] font-bold">Ke mana uangnya?</p>
+          <p className="fs-15 font-bold">Ke mana uangnya?</p>
           <div className="mt-4 flex h-3 overflow-hidden rounded-full">
             {cats.map(([c, v], i) => (
               <span
@@ -764,7 +760,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
           </div>
           <ul className="mt-4 space-y-2.5">
             {cats.slice(0, 6).map(([c, v], i) => (
-              <li key={c} className="flex items-center gap-3 text-[14px]">
+              <li key={c} className="flex items-center gap-3 fs-14">
                 <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', COLORS[i % COLORS.length])} />
                 <span className="flex-1 truncate">{c}</span>
                 <span className="text-slate-400">{Math.round((v / Math.max(1, out)) * 100)}%</span>
@@ -774,7 +770,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
           </ul>
         </section>
         <section className={card}>
-          <p className="text-[15px] font-bold">Budget</p>
+          <p className="fs-15 font-bold">Budget</p>
           <ul className="mt-4 space-y-4">
             {DEMO_BUDGETS.map((b) => {
               const used = monthTx
@@ -783,7 +779,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
               const pct = Math.round((used / b.limit) * 100);
               return (
                 <li key={b.category}>
-                  <div className="flex justify-between text-[14px]">
+                  <div className="flex justify-between fs-14">
                     <span className="font-semibold">{b.category}</span>
                     <span className={cn('font-bold', pct > 100 ? 'text-rose-600' : 'text-slate-500')}>
                       {short(used)} / {short(b.limit)}
@@ -813,11 +809,11 @@ function Dompet({ txs }: { txs: DemoTx[] }) {
   const total = [...bal.values()].reduce((s, v) => s + v, 0);
   return (
     <div className="space-y-5">
-      <h1 className="text-[30px] font-extrabold tracking-tight sm:text-[38px]">Dompet</h1>
+      <h1 className="fsh-30 font-extrabold tracking-tight sm:fsh-38">Dompet</h1>
       <section className="rounded-[28px] bg-slate-900 p-6 text-white sm:p-8">
-        <p className="text-[13px] font-semibold text-white/60">Total saldo</p>
-        <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight sm:text-[52px]">{formatIDR(total)}</p>
-        <p className="mt-3 text-[13px] text-white/60">
+        <p className="fs-13 font-semibold text-white/60">Total saldo</p>
+        <p className="mt-1 fsh-40 font-extrabold leading-none tracking-tight sm:fsh-52">{formatIDR(total)}</p>
+        <p className="mt-3 fs-13 text-white/60">
           Pindah uang antar rekening sendiri dicatat sebagai transfer — tidak dihitung pengeluaran.
         </p>
       </section>
@@ -828,10 +824,10 @@ function Dompet({ txs }: { txs: DemoTx[] }) {
               <Wallet size={20} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-bold">{a.name}</p>
-              <p className="text-[12px] text-slate-500">{a.kind}</p>
+              <p className="truncate fs-15 font-bold">{a.name}</p>
+              <p className="fs-12 text-slate-500">{a.kind}</p>
             </div>
-            <p className="text-[16px] font-extrabold tabular-nums">{formatIDR(bal.get(a.id) ?? 0)}</p>
+            <p className="fs-16 font-extrabold tabular-nums">{formatIDR(bal.get(a.id) ?? 0)}</p>
           </div>
         ))}
       </div>
@@ -907,8 +903,8 @@ function TxEditor({
   };
 
   const field =
-    'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-[15px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10';
-  const label = 'block text-[13px] font-semibold text-slate-600';
+    'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 fs-15 font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10';
+  const label = 'block fs-13 font-semibold text-slate-600';
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center sm:p-4"
@@ -922,7 +918,7 @@ function TxEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <p className="text-[20px] font-extrabold tracking-tight">{tx ? 'Ubah transaksi' : 'Tambah transaksi'}</p>
+          <p className="fsh-20 font-extrabold tracking-tight">{tx ? 'Ubah transaksi' : 'Tambah transaksi'}</p>
           <button
             type="button"
             onClick={onClose}
@@ -932,18 +928,18 @@ function TxEditor({
             <X size={16} />
           </button>
         </div>
-        <p className="mt-1 text-[12px] text-slate-400">Mode contoh — tersimpan di perangkat ini saja.</p>
+        <p className="mt-1 fs-12 text-slate-400">Mode contoh — tersimpan di perangkat ini saja.</p>
 
         {!tx && (
           <label className="mt-4 block rounded-2xl bg-indigo-50 p-3.5">
-            <span className="flex items-center gap-1.5 text-[12px] font-bold text-indigo-700">
+            <span className="flex items-center gap-1.5 fs-12 font-bold text-indigo-700">
               <Sparkles size={13} /> Ketik pintar
             </span>
             <input
               value={smart}
               onChange={(e) => applySmart(e.target.value.slice(0, 120))}
               placeholder="mis. bakso 25rb tunai kemarin"
-              className="mt-1 w-full bg-transparent text-[16px] font-medium outline-none placeholder:text-indigo-300"
+              className="mt-1 w-full bg-transparent fs-16 font-medium outline-none placeholder:text-indigo-300"
             />
           </label>
         )}
@@ -958,7 +954,7 @@ function TxEditor({
                 if (t !== 'transfer') setCategory(DEMO_CATEGORIES[t][0]);
               }}
               className={cn(
-                'rounded-xl py-2 text-[13px] font-bold',
+                'rounded-xl py-2 fs-13 font-bold',
                 type === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
               )}
             >
@@ -975,7 +971,7 @@ function TxEditor({
               onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))}
               inputMode="numeric"
               placeholder="25000"
-              className={cn(field, 'text-[20px] font-extrabold')}
+              className={cn(field, 'fsh-20 font-extrabold')}
             />
           </label>
           <label className={label}>
@@ -1042,7 +1038,7 @@ function TxEditor({
           )}
         </div>
 
-        {error && <p className="mt-3 text-[13px] font-semibold text-rose-600">{error}</p>}
+        {error && <p className="mt-3 fs-13 font-semibold text-rose-600">{error}</p>}
 
         <div className="mt-5 flex items-center gap-2">
           {tx && (
@@ -1058,7 +1054,7 @@ function TxEditor({
           <button
             type="button"
             onClick={save}
-            className="h-12 flex-1 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 text-[15px] font-bold text-white"
+            className="h-12 flex-1 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 fs-15 font-bold text-white"
           >
             Simpan
           </button>

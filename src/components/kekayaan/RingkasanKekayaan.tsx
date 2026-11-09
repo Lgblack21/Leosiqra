@@ -249,7 +249,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
         />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-white/60">
+            <p className="flex items-center gap-2 fs-13 font-semibold text-white/60">
               Kekayaan bersih
               <button
                 type="button"
@@ -262,7 +262,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             </p>
             <p
               className={cn(
-                'mt-1 text-[36px] font-extrabold leading-none tracking-tight tabular-nums md:text-[52px]',
+                'mt-1 fsh-36 font-extrabold leading-none tracking-tight tabular-nums md:fsh-52',
                 t.net < 0 && 'text-rose-300',
               )}
             >
@@ -270,7 +270,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             </p>
             <p
               className={cn(
-                'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold',
+                'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 fs-13 font-semibold',
                 delta >= 0 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-rose-400/15 text-rose-300',
               )}
             >
@@ -288,7 +288,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 aria-selected={range === r.id}
                 onClick={() => setRange(r.id)}
                 className={cn(
-                  'rounded-full px-3.5 py-1.5 text-[12px] font-bold',
+                  'rounded-full px-3.5 py-1.5 fs-12 font-bold',
                   range === r.id ? 'bg-white text-slate-900' : 'text-white/70 hover:text-white',
                 )}
               >
@@ -298,7 +298,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
           </div>
         </div>
         <TrailChart points={trail} up={delta >= 0} hidden={hidden} reduce={Boolean(reduce)} />
-        <p className="relative mt-1 text-[11px] text-white/40">
+        <p className="relative mt-1 fs-11 text-white/40">
           Garis = perkiraan dari pemasukan & pengeluaran yang tercatat. Naik-turun harga investasi & saldo yang diubah
           manual tidak ikut.
         </p>
@@ -310,8 +310,8 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             <ArrowUpRight size={20} />
           </span>
           <div>
-            <p className="text-[12px] text-slate-500">Aset</p>
-            <p className="text-[19px] font-extrabold tabular-nums text-slate-900">{money(t.assets)}</p>
+            <p className="fs-12 text-slate-500">Aset</p>
+            <p className="fs-19 font-extrabold tabular-nums text-slate-900">{money(t.assets)}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -319,8 +319,8 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             <ArrowDownRight size={20} />
           </span>
           <div>
-            <p className="text-[12px] text-slate-500">Kewajiban</p>
-            <p className="text-[19px] font-extrabold tabular-nums text-slate-900">{money(t.liabilities)}</p>
+            <p className="fs-12 text-slate-500">Kewajiban</p>
+            <p className="fs-19 font-extrabold tabular-nums text-slate-900">{money(t.liabilities)}</p>
           </div>
         </div>
         <div>
@@ -342,7 +342,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               className="h-full bg-rose-400"
             />
           </div>
-          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-500">
+          <p className="mt-2 flex items-center gap-1.5 fs-12 text-slate-500">
             <Scale size={13} />
             {t.liabilities <= 0
               ? 'Bebas utang — mantap.'
@@ -360,7 +360,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             total={money(t.cash)}
             count={nw.cash.length}
             action={
-              <Link href="/membership/rekening" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">
+              <Link href="/membership/rekening" className="fs-12 font-bold text-slate-500 hover:text-slate-900">
                 Rekening
               </Link>
             }
@@ -378,7 +378,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                       alt={account.name}
                       fallbackText={account.name.slice(0, 3).toUpperCase()}
                       fallbackIcon={
-                        <span aria-hidden className="text-[18px]">
+                        <span aria-hidden className="fs-18">
                           {TYPE_EMOJI[account.type] ?? '🏦'}
                         </span>
                       }
@@ -405,7 +405,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 <button
                   type="button"
                   onClick={() => go('tabungan')}
-                  className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                  className="fs-12 font-bold text-slate-500 hover:text-slate-900"
                 >
                   Kelola
                 </button>
@@ -428,13 +428,13 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"
                       >
                         <span
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[18px]"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl fs-18"
                           style={{ background: `${targetColor(g)}1f` }}
                         >
                           {targetIcon(g)}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-semibold text-slate-900">{g.name}</span>
+                          <span className="block truncate fs-14 font-semibold text-slate-900">{g.name}</span>
                           {pct !== null ? (
                             <span className="mt-1 flex items-center gap-2">
                               <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
@@ -443,15 +443,15 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                                   style={{ width: `${pct}%`, background: targetColor(g) }}
                                 />
                               </span>
-                              <span className="text-[11px] font-semibold tabular-nums text-slate-500">
+                              <span className="fs-11 font-semibold tabular-nums text-slate-500">
                                 {Math.floor(pct)}%
                               </span>
                             </span>
                           ) : (
-                            <span className="block text-[12px] text-slate-500">Tanpa nominal target</span>
+                            <span className="block fs-12 text-slate-500">Tanpa nominal target</span>
                           )}
                         </span>
-                        <span className="whitespace-nowrap text-[14px] font-bold tabular-nums text-slate-900">
+                        <span className="whitespace-nowrap fs-14 font-bold tabular-nums text-slate-900">
                           {money(g.currentTotal)}
                         </span>
                       </button>
@@ -470,10 +470,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               total={money(t.investments)}
               count={nw.investments.length}
               action={
-                <Link
-                  href="/membership/investment"
-                  className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
-                >
+                <Link href="/membership/investment" className="fs-12 font-bold text-slate-500 hover:text-slate-900">
                   Investasiku
                 </Link>
               }
@@ -492,7 +489,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                         key={inv.id}
                         href="/membership/investment"
                         icon={
-                          <span aria-hidden className="text-[18px]">
+                          <span aria-hidden className="fs-18">
                             {INV_EMOJI[inv.type] ?? '🪙'}
                           </span>
                         }
@@ -529,7 +526,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 <button
                   type="button"
                   onClick={() => go('barangku')}
-                  className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                  className="fs-12 font-bold text-slate-500 hover:text-slate-900"
                 >
                   Kelola
                 </button>
@@ -570,7 +567,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 <button
                   type="button"
                   onClick={() => go('koleksi')}
-                  className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                  className="fs-12 font-bold text-slate-500 hover:text-slate-900"
                 >
                   Kelola
                 </button>
@@ -607,7 +604,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 <button
                   type="button"
                   onClick={() => go('hutang')}
-                  className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                  className="fs-12 font-bold text-slate-500 hover:text-slate-900"
                 >
                   Kelola
                 </button>
@@ -625,7 +622,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                     key={p.id}
                     onClick={() => go('hutang')}
                     icon={
-                      <span aria-hidden className="text-[18px]">
+                      <span aria-hidden className="fs-18">
                         🤝
                       </span>
                     }
@@ -648,7 +645,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               <button
                 type="button"
                 onClick={() => go('hutang')}
-                className="text-[12px] font-bold text-slate-500 hover:text-slate-900"
+                className="fs-12 font-bold text-slate-500 hover:text-slate-900"
               >
                 Kelola
               </button>
@@ -680,7 +677,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                     key={h.id}
                     onClick={() => go('hutang')}
                     icon={
-                      <span aria-hidden className="text-[18px]">
+                      <span aria-hidden className="fs-18">
                         🧾
                       </span>
                     }
@@ -731,7 +728,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             if (!empties.length) return null;
             return (
               <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100">
-                <p className="text-[13px] font-semibold text-slate-500">
+                <p className="fs-13 font-semibold text-slate-500">
                   Belum dicatat — tambahkan supaya kekayaanmu lengkap
                 </p>
                 <div className="mt-2.5 flex flex-wrap gap-2">
@@ -740,7 +737,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                       key={e.label}
                       type="button"
                       onClick={e.on}
-                      className="flex items-center gap-2 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-100 hover:bg-slate-100"
+                      className="flex items-center gap-2 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-3.5 fs-13 font-bold text-slate-700 ring-1 ring-slate-100 hover:bg-slate-100"
                     >
                       <span className={cn('flex h-7 w-7 items-center justify-center rounded-full', e.tone)}>
                         <e.icon size={14} />
@@ -757,9 +754,9 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
 
         <aside className="space-y-3 lg:sticky lg:top-4">
           <section className="rounded-[26px] bg-white p-5 ring-1 ring-slate-100">
-            <h3 className="text-[16px] font-bold text-slate-900">Komposisi aset</h3>
+            <h3 className="fs-16 font-bold text-slate-900">Komposisi aset</h3>
             {compTotal <= 0 ? (
-              <p className="py-6 text-center text-[13px] text-slate-500">Belum ada aset tercatat.</p>
+              <p className="py-6 text-center fs-13 text-slate-500">Belum ada aset tercatat.</p>
             ) : (
               <div className="mt-3 flex items-center gap-4">
                 <Donut
@@ -769,7 +766,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 />
                 <ul className="min-w-0 flex-1 space-y-2">
                   {comp.map((g) => (
-                    <li key={g.id} className="flex items-center gap-2 text-[13px]">
+                    <li key={g.id} className="flex items-center gap-2 fs-13">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: g.color }} />
                       <span className="min-w-0 flex-1 truncate text-slate-700">{g.label}</span>
                       <span className="font-bold tabular-nums text-slate-900">
@@ -785,8 +782,8 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
           {cycles.some((c) => c.cycle && c.cycle.amountDue > 0) && (
             <section className="rounded-[26px] bg-white p-5 ring-1 ring-slate-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-[16px] font-bold text-slate-900">Tagihan kartu</h3>
-                <Link href="/membership/rekening" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">
+                <h3 className="fs-16 font-bold text-slate-900">Tagihan kartu</h3>
+                <Link href="/membership/rekening" className="fs-12 font-bold text-slate-500 hover:text-slate-900">
                   Semua
                 </Link>
               </div>
@@ -803,12 +800,12 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                       )}
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-semibold text-slate-900">{account.name}</span>
-                        <span className="text-[11px] text-slate-500">
+                        <span className="block truncate fs-13 font-semibold text-slate-900">{account.name}</span>
+                        <span className="fs-11 text-slate-500">
                           {cycle && dueLabel(cycle.dueDate, cycle.daysUntilDue)}
                         </span>
                       </span>
-                      <span className="whitespace-nowrap text-[13px] font-bold tabular-nums text-slate-900">
+                      <span className="whitespace-nowrap fs-13 font-bold tabular-nums text-slate-900">
                         {money(
                           exchangeRateService.convert(cycle?.amountDue ?? 0, account.currency || 'IDR', 'IDR', fx),
                         )}
@@ -820,8 +817,8 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
           )}
 
           <section className="web-keep rounded-[26px] bg-slate-900 p-5 text-white">
-            <h3 className="text-[16px] font-bold">Tambah ke kekayaan</h3>
-            <p className="text-[12px] text-white/60">Yang belum dicatat belum ikut terhitung.</p>
+            <h3 className="fs-16 font-bold">Tambah ke kekayaan</h3>
+            <p className="fs-12 text-white/60">Yang belum dicatat belum ikut terhitung.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[
                 { label: 'Akun', emoji: '🏦', on: onAddAccount },
@@ -834,9 +831,9 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                   key={a.label}
                   type="button"
                   onClick={a.on}
-                  className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 text-left text-[12px] font-semibold hover:bg-white/15 last:odd:col-span-2"
+                  className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 text-left fs-12 font-semibold hover:bg-white/15 last:odd:col-span-2"
                 >
-                  <span aria-hidden className="text-[16px]">
+                  <span aria-hidden className="fs-16">
                     {a.emoji}
                   </span>
                   <span className="min-w-0 flex-1 leading-tight">{a.label}</span>
@@ -882,11 +879,11 @@ function Group({
             <Icon size={19} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-bold text-slate-900">
+            <span className="block fs-16 font-bold text-slate-900">
               {title}
-              {count > 0 && <span className="ml-1.5 text-[12px] font-semibold text-slate-400">{count}</span>}
+              {count > 0 && <span className="ml-1.5 fs-12 font-semibold text-slate-400">{count}</span>}
             </span>
-            <span className="block text-[13px] font-semibold tabular-nums text-slate-500">{total}</span>
+            <span className="block fs-13 font-semibold tabular-nums text-slate-500">{total}</span>
           </span>
           <ChevronDown
             size={18}
@@ -923,14 +920,11 @@ function Row({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-semibold text-slate-900">{title}</span>
-        <span className="block truncate text-[12px] text-slate-500">{sub}</span>
+        <span className="block truncate fs-14 font-semibold text-slate-900">{title}</span>
+        <span className="block truncate fs-12 text-slate-500">{sub}</span>
       </span>
       <span
-        className={cn(
-          'whitespace-nowrap text-[14px] font-bold tabular-nums',
-          negative ? 'text-rose-600' : 'text-slate-900',
-        )}
+        className={cn('whitespace-nowrap fs-14 font-bold tabular-nums', negative ? 'text-rose-600' : 'text-slate-900')}
       >
         {value}
       </span>
@@ -956,11 +950,11 @@ function Row({
 function Empty({ text, onAdd, label }: { text: string; onAdd: () => void; label: string }) {
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-4">
-      <span className="text-[13px] text-slate-500">{text}</span>
+      <span className="fs-13 text-slate-500">{text}</span>
       <button
         type="button"
         onClick={onAdd}
-        className="flex shrink-0 items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-slate-800"
+        className="flex shrink-0 items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 fs-12 font-semibold text-white hover:bg-slate-800"
       >
         <Plus size={13} /> {label}
       </button>
@@ -1009,8 +1003,8 @@ function Donut({
         ))}
       </svg>
       <span className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[10px] text-slate-400">Aset</span>
-        <span className="text-[13px] font-extrabold tabular-nums text-slate-900">{label}</span>
+        <span className="fs-10 text-slate-400">Aset</span>
+        <span className="fs-13 font-extrabold tabular-nums text-slate-900">{label}</span>
       </span>
     </div>
   );
@@ -1088,7 +1082,7 @@ function TrailChart({
           background: color,
         }}
       />
-      <div className="mt-2 flex items-center justify-between text-[11px] text-white/50">
+      <div className="mt-2 flex items-center justify-between fs-11 text-white/50">
         <span>{fmtDay(points[0].date)}</span>
         <span className="rounded-full bg-white/10 px-2.5 py-1 font-semibold text-white tabular-nums">
           {fmtDay(points[h].date)} · {hidden ? 'Rp ••••' : formatIDR(points[h].value)}

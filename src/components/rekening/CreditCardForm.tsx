@@ -355,12 +355,12 @@ export function CreditCardForm({
       : 'Ada di lembar tagihan atau aplikasi bankmu. Tanpa ini, tagihan & pengingat tidak dihitung.';
 
   const section = 'space-y-2.5 rounded-[18px] bg-slate-50 p-3.5';
-  const label = 'text-[11px] font-semibold uppercase tracking-wide text-slate-400';
+  const label = 'fs-11 font-semibold uppercase tracking-wide text-slate-400';
   const input =
-    'w-full rounded-xl bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 placeholder:font-normal placeholder:text-slate-400';
+    'w-full rounded-xl bg-white px-3 py-2 fs-14 font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 placeholder:font-normal placeholder:text-slate-400';
   const chip = (active: boolean) =>
     cn(
-      'shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition-colors',
+      'shrink-0 rounded-full px-2.5 py-1 fs-12 font-semibold ring-1 transition-colors',
       active ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100',
     );
 
@@ -398,7 +398,7 @@ export function CreditCardForm({
                       animate={{ top: ['12%', '88%', '12%'] }}
                       transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                     />
-                    <p className="relative text-[13px] font-semibold">Leo lagi baca kartumu…</p>
+                    <p className="relative fs-13 font-semibold">Leo lagi baca kartumu…</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -417,7 +417,7 @@ export function CreditCardForm({
             onClick={() => fileRef.current?.click()}
             disabled={scanning || saving}
             aria-label="Pindai kartu dari foto"
-            className="absolute -bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-900 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+            className="absolute -bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-900 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
           >
             {scanning ? (
               <Loader2 size={14} className="animate-spin" />
@@ -427,14 +427,14 @@ export function CreditCardForm({
             Pindai
           </button>
         </div>
-        <p className="pt-1 text-center text-[11px] text-slate-400">
+        <p className="pt-1 text-center fs-11 text-slate-400">
           {scanned.length
             ? `Terisi dari foto: ${scanned.join(' · ')}`
             : 'Pindai foto depan kartu untuk isi otomatis · foto tidak disimpan'}
         </p>
 
         {error && (
-          <p className="rounded-xl bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 ring-1 ring-rose-100">
+          <p className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-medium text-rose-600 ring-1 ring-rose-100">
             {error}
           </p>
         )}
@@ -461,7 +461,7 @@ export function CreditCardForm({
               </span>
               <span
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[14px] font-semibold',
+                  'min-w-0 flex-1 truncate fs-14 font-semibold',
                   f.bank ? 'text-slate-900' : 'font-normal text-slate-400',
                 )}
               >
@@ -489,7 +489,7 @@ export function CreditCardForm({
                         onChange={(e) => setBankQuery(e.target.value)}
                         placeholder="Cari bank…"
                         aria-label="Cari bank"
-                        className="w-full bg-transparent py-1.5 text-[13px] outline-none"
+                        className="w-full bg-transparent py-1.5 fs-13 outline-none"
                       />
                     </label>
                     <div className="mt-2 grid max-h-60 grid-cols-4 gap-1 overflow-y-auto sm:grid-cols-5">
@@ -513,7 +513,7 @@ export function CreditCardForm({
                             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 shadow-sm">
                               {b === OTHER_BANK ? <Plus size={16} className="text-slate-500" /> : <BankMark bank={b} />}
                             </span>
-                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">
+                            <span className="line-clamp-1 w-full text-center fs-10.5 font-semibold text-slate-700">
                               {b.replace(/^Bank\s+/, '')}
                             </span>
                             {active && (
@@ -555,7 +555,7 @@ export function CreditCardForm({
             </label>
           </div>
           {f.bank && f.name === autoName(f.bank) && (
-            <p className="-mt-1 text-[11px] text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>
+            <p className="-mt-1 fs-11 text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>
           )}
         </div>
 
@@ -577,7 +577,7 @@ export function CreditCardForm({
                 )}
               >
                 <span className={label}>{text}</span>
-                <span className="flex items-center justify-between text-[14px] font-bold text-slate-900">
+                <span className="flex items-center justify-between fs-14 font-bold text-slate-900">
                   {value ? `Tgl ${value}` : <span className="font-normal text-slate-400">Pilih</span>}
                   <ChevronDown
                     size={15}
@@ -610,7 +610,7 @@ export function CreditCardForm({
                           setPicker(picker === 'statement' && !f.dueDay ? 'due' : null);
                         }}
                         className={cn(
-                          'h-8 rounded-lg text-[12px] font-semibold transition-colors',
+                          'h-8 rounded-lg fs-12 font-semibold transition-colors',
                           active
                             ? 'bg-slate-900 text-white'
                             : other
@@ -626,9 +626,9 @@ export function CreditCardForm({
               </motion.div>
             )}
           </AnimatePresence>
-          <p className="text-[11px] text-slate-500">{dueHint}</p>
+          <p className="fs-11 text-slate-500">{dueHint}</p>
           <div className="flex items-center gap-2">
-            <span className="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-slate-500">
+            <span className="flex shrink-0 items-center gap-1 fs-12 font-semibold text-slate-500">
               {f.reminder ? <Bell size={13} /> : <BellOff size={13} />} Ingatkan
             </span>
             <div className="flex flex-1 rounded-full bg-slate-200/70 p-0.5">
@@ -638,7 +638,7 @@ export function CreditCardForm({
                   type="button"
                   onClick={() => set({ reminder: r.v })}
                   className={cn(
-                    'flex-1 rounded-full py-1 text-[12px] font-semibold transition-colors',
+                    'flex-1 rounded-full py-1 fs-12 font-semibold transition-colors',
                     f.reminder === r.v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                   )}
                 >
@@ -671,11 +671,11 @@ export function CreditCardForm({
             </label>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-400">Yang terpakai hari ini · 0 kalau lunas</p>
+            <p className="fs-11 text-slate-400">Yang terpakai hari ini · 0 kalau lunas</p>
             <button
               type="button"
               onClick={() => setShowMin((v) => !v)}
-              className="flex shrink-0 items-center gap-0.5 text-[12px] font-bold text-indigo-600"
+              className="flex shrink-0 items-center gap-0.5 fs-12 font-bold text-indigo-600"
             >
               Min. bayar <ChevronDown size={13} className={cn('transition-transform', showMin && 'rotate-180')} />
             </button>
@@ -744,7 +744,7 @@ export function CreditCardForm({
           type="button"
           onClick={() => void save()}
           disabled={saving || scanning}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-2.5 text-[14px] font-bold text-white disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-2.5 fs-14 font-bold text-white disabled:opacity-50"
         >
           {saving && <Loader2 size={16} className="animate-spin" />} {editing ? 'Simpan perubahan' : 'Simpan kartu'}
         </button>
@@ -753,7 +753,7 @@ export function CreditCardForm({
             type="button"
             onClick={() => void remove()}
             disabled={saving}
-            className="flex w-full items-center justify-center gap-1.5 py-1 text-[12px] font-semibold text-rose-600 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 py-1 fs-12 font-semibold text-rose-600 disabled:opacity-50"
           >
             <Trash2 size={13} /> Hapus kartu
           </button>

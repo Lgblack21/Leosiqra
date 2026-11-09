@@ -78,6 +78,24 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.15.1 | 9 Nov 2026 | AI Scan pakai tanggal & rekening dari struk |
 | 3.16.0 | 9 Nov 2026 | Rekap per wilayah & peta 3D |
 | 3.16.1 | 9 Nov 2026 | Tombol peta baru & 3D di tab Peta |
+| 3.17.0 | 9 Nov 2026 | Ukuran teks & tampilan lebih ramping |
+| 3.18.0 | 9 Nov 2026 | Teduh |
+| 3.19.0 | 9 Nov 2026 | Tanggal merah & jadwal sholat |
+| 3.20.0 | 9 Nov 2026 | Alkitab & data API Indonesia |
+| 3.20.1 | 9 Nov 2026 | Pelafalan Alkitab |
+| 3.21.0 | 9 Nov 2026 | Teduh baru: renungan harian, Pelajari, audio Al-Qur'an |
+| 3.21.1 | 9 Nov 2026 | Foto kamera & galeri di Stikerku bisa disimpan lagi |
+| 3.22.0 | 9 Nov 2026 | Menu samping baru |
+| 3.22.1 | 9 Nov 2026 | Halaman daftar tidak lagi langsung lompat ke langkah terakhir |
+| 3.23.0 | 9 Nov 2026 | Halaman daftar & masuk baru |
+| 3.23.1 | 9 Nov 2026 | Langit Teduh mengikuti jam |
+| 3.23.2 | 9 Nov 2026 | Halaman Mulai senada tampilan baru |
+| 3.23.3 | 9 Nov 2026 | Logo & tata letak halaman masuk/daftar di layar pendek |
+| 3.23.4 | 9 Nov 2026 | Panel halaman masuk/daftar tidak lagi berantakan |
+| 3.23.5 | 9 Nov 2026 | Panel halaman masuk/daftar diam, form yang bergulir |
+| 3.23.6 | 9 Nov 2026 | Masuk, Daftar & Mulai tampil terang dan lebih ringan |
+| 3.24.0 | 9 Nov 2026 | Laporan Usahaku + unduh PDF & Excel |
+| 3.25.0 | 9 Nov 2026 | Pajak Center baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -91,6 +109,176 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.25.0 — 2026-11-09 — Pajak Center baru
+
+- **PPh final UMKM 0,5%**: omzet otomatis dari Usahaku & pemasukan Usaha & Freelance, batas Rp500 jt/tahun bebas
+  pajak, PPh per bulan, tandai sudah setor, koreksi omzet per bulan, pengingat batas 7 tahun & Rp4,8 M.
+- **Asisten SPT Tahunan**: status PTKP, gaji (otomatis dari kategori Gaji atau isi dari bukti potong A1), biaya jabatan
+  5% (maks Rp6 jt), iuran pensiun/JHT, zakat resmi, laba usaha (pembukuan) — hasil kurang/lebih bayar per lapisan
+  tarif, plus tombol salin angka untuk diisi di Coretax.
+- **Kalender pajak**: tenggat setor bulanan & lapor SPT, otomatis digeser bila jatuh di akhir pekan/tanggal merah,
+  hitung mundur & tandai selesai.
+- Daftar dokumen SPT, harta/utang/piutang, dan unduh Excel (.xlsx).
+- Setelan pajak kini **tersimpan di akun** (bukan hanya di perangkat).
+- Perbaikan: penghasilan neto tidak lagi dihitung dari "semua pemasukan dikurangi semua pengeluaran" — belanja
+  harian bukan pengurang pajak.
+
+## 3.24.0 — 2026-11-09 — Laporan Usahaku + unduh PDF & Excel
+
+- Usahaku punya halaman **Laporan** per toko (tombol "Laporan & unduh" di samping Buka kasir): omzet, biaya,
+  laba & margin, grafik per hari/bulan, produk terlaris, biaya per jenis, penjualan per kasir, rincian penjualan &
+  biaya, dan stok bahan — memakai logo dan warna tema tokomu.
+- Pilih periode: bulan ini, bulan lalu, 3 bulan, tahun ini, atau tanggal bebas.
+- **Unduh PDF** (lewat dialog cetak → Simpan sebagai PDF) dan **Unduh Excel** (.xlsx: Ringkasan, Penjualan per
+  item, Produk, Biaya, Per hari/bulan, Stok — angka bisa langsung dihitung).
+
+## 3.23.6 — 2026-11-09 — Masuk, Daftar & Mulai tampil terang dan lebih ringan
+
+- Halaman Masuk, Daftar, dan Mulai kembali bertema terang yang bersih: latar putih dengan cahaya pastel lembut,
+  aksen emas, dan kartu fitur yang bergerak.
+- Animasi berjalan mulus tanpa kedip di tablet & HP — efek blur yang berat sudah tidak dipakai.
+
+## 3.23.5 — 2026-11-09 — Panel halaman masuk/daftar diam, form yang bergulir
+
+- Di tablet & laptop, panel biru-emas di halaman Masuk dan Daftar kini diam di tempat; hanya form yang bergulir,
+  jadi logo dan animasi selalu terlihat.
+
+## 3.23.4 — 2026-11-09 — Panel halaman masuk/daftar tidak lagi berantakan
+
+- Panel kiri halaman Masuk & Daftar kembali rapi di tablet/laptop: tidak ada celah kosong besar di bawah logo,
+  dan logo tidak hilang saat halaman digulir.
+- Animasi kembali dan selalu terlihat, juga di tablet: pita kartu fitur yang berjalan di bawah judul, ikon
+  keunggulan yang melayang, dan badge "Gratis 14 hari" yang berkilau.
+
+## 3.23.3 — 2026-11-09 — Logo & tata letak halaman masuk/daftar di layar pendek
+
+- Logo di halaman Masuk, Daftar, dan Mulai kini hanya lambang LS yang tajam (tanpa tulisan kecil yang terpotong),
+  dan nama Leosiqra ditulis polos.
+- Di tablet/laptop berlayar pendek, isi panel kiri tidak lagi saling bertumpuk; kartu dekorasi disembunyikan bila
+  ruangnya tidak cukup.
+
+## 3.23.2 — 2026-11-09 — Halaman Mulai senada tampilan baru
+
+- Halaman Mulai (pengenalan sebelum daftar) kini memakai panel biru-emas yang sama dengan halaman Daftar & Masuk,
+  dengan mockup HP yang bersinar dan logo baru di pojok kiri.
+
+## 3.23.1 — 2026-11-09 — Langit Teduh mengikuti jam
+
+- Langit di atas halaman Teduh kini berubah halus mengikuti jam: subuh, pagi, siang, golden hour, matahari
+  terbenam di balik bukit, sampai malam berbintang dengan bulan sabit.
+- Sapaan (pagi/siang/sore/malam) kini selaras dengan langitnya — tidak lagi "Selamat malam" dengan matahari masih
+  bersinar.
+
+## 3.23.0 — 2026-11-09 — Halaman daftar & masuk baru
+
+- Tampilan baru halaman Daftar dan Masuk: di laptop ada panel biru-emas khas Leosiqra berisi keunggulan
+  utama dan kartu fitur yang bergerak pelan, form di sisi kanan.
+- Di HP: bagian atas bergradien dengan judul dan ringkasan keunggulan, form menumpuk rapi di bawahnya.
+- Isi dan cara daftar/masuk tidak berubah (Google, email, password, WhatsApp opsional).
+
+## 3.22.1 — 2026-11-09 — Halaman daftar tidak lagi langsung lompat ke langkah terakhir
+
+- Tombol "Daftar Gratis" kini selalu membuka halaman sambutan. Kalau kamu pernah mengisi pilihan awal
+  sebelumnya, ada pilihan "Lanjutkan daftar" atau "Mulai dari awal" (sebelumnya langsung loncat ke langkah
+  terakhir tanpa penjelasan).
+- Di langkah terakhir ada tombol "Ulangi dari awal".
+
+## 3.22.0 — 2026-11-09 — Menu samping baru
+
+- Menu samping (web) lebih rapi: tiap menu punya ikon berwarna, menu yang sedang dibuka ditandai kartu
+  dan garis aksen, label grup lebih jelas.
+- Tombol "Cari fitur…" (Ctrl K) di atas menu untuk membuka fitur apa pun dengan cepat, plus tombol Tanya Leo.
+- Kartu profil baru dengan label paket Gratis/PRO.
+- Mode gelap: tombol "Catat transaksi" tidak lagi berubah putih tanpa tulisan.
+
+## 3.21.1 — 2026-11-09 — Foto kamera & galeri di Stikerku bisa disimpan lagi
+
+- Stikerku: gambar dengan latar foto dari Kamera atau Galeri kini bisa disimpan dan dibagikan lagi
+  (sebelumnya muncul "Gagal membuat gambar").
+- Foto besar diperkecil dulu di perangkat, jadi pembuatan gambar lebih ringan di HP. Foto tetap tidak diunggah.
+- Foto yang tidak bisa dibuka (mis. format HEIC di browser yang belum mendukung) sekarang diberi pesan yang jelas.
+
+## 3.21.0 — 2026-11-09 — Teduh baru: renungan harian, Pelajari, audio Al-Qur'an
+
+- **Teduh tampil baru, layar penuh** (seperti Ladangku) dengan menu melayang di bawah: Beranda · Renungan · Baca · Tema
+  · Simpan.
+  - **Langit yang hidup** di beranda: warnanya ikut waktu (fajar, pagi, siang, senja, malam), matahari/bulan bergerak
+    ke posisinya, bintang berkelip di malam hari, awan melayang pelan. Untuk Islam ada tanggal Hijriah.
+  - Kartu muncul berurutan, angka & cincin progres beranimasi, nomor ayat Al-Qur'an dalam bingkai bintang segi delapan.
+    Animasi otomatis mati bila HP-mu memakai "kurangi gerakan".
+- **Renungan harian (Islam & Kristen/Katolik)** — berganti setiap hari: ayat hari ini, tafsir ringkas (Islam) atau
+  konteks perikop (Alkitab), satu pertanyaan untuk direnungkan, satu langkah kecil untuk keuanganmu, dan **catatan
+  renunganmu** (hanya tersimpan di HP-mu).
+- **Pelajari** di setiap ayat:
+  - Al-Qur'an: **tafsir ringkas Al-Mukhtasar**, **kata per kata** (Arab, latin, arti), dan **catatanku**.
+  - Alkitab: **ayat terkait** (rujukan silang yang paling banyak dipakai), **konteks perikop**, dan **catatanku**.
+- **Jeda sejenak** — latihan napas tenang 1 menit dengan lingkaran yang mengembang & mengempis (dzikir untuk Islam).
+- **Audio murattal Al-Qur'an sudah bisa diputar** — 9 pilihan qari (Mishary al-Afasy, Abdul Basit, as-Sudais, dan
+  lainnya), per ayat atau satu surah. Juga tersedia tombol **Dengarkan** di renungan.
+
+## 3.20.1 — 2026-11-09 — Pelafalan Alkitab
+
+- **Alkitab — Dengarkan lebih enak didengar**: kata "Allah" kini diucapkan "Alah" (bukan "Alloh"), kata kapital
+  seperti TUHAN dibaca biasa (tidak dieja), dan aplikasi memilih suara bahasa Indonesia paling natural yang tersedia
+  di perangkatmu. Teks yang tampil tetap persis sesuai Alkitab TB.
+
+## 3.20.0 — 2026-11-09 — Alkitab & data API Indonesia
+
+- **Baru di Teduh: Alkitab untuk umat Kristen & Katolik** — Alkitab Terjemahan Baru (© Lembaga Alkitab Indonesia).
+  - **66 kitab**, baca per pasal lengkap dengan judul perikop. Pasal yang sudah dibaca ditandai.
+  - **Ayat hari ini**, **hari berturut-turut**, **progres menuju tamat Alkitab**, dan **lanjutkan** dari pasal
+    terakhir.
+  - **Tandai** dan **bagikan** ayat.
+  - **Dengarkan**: ayat dibacakan dengan suara bawaan perangkatmu dan ayat yang sedang dibaca disorot.
+  - **Firman untuk urusan uangmu**: persembahan & perpuluhan, utang, hidup cukup, rencana & menabung, jangan kuatir,
+    bekerja, harta & hati.
+  - **Persembahan bulan ini** dihitung dari catatan keuanganmu, dan bisa langsung dicatat.
+  - Untuk umat Katolik: kitab-kitab Deuterokanonika belum tersedia.
+- **Jadwal sholat resmi Kemenag per kab/kota**: cari dan pilih kab/kotamu (514 kab/kota). Pakai lokasi GPS tetap
+  bisa, dihitung di perangkatmu.
+- **Tanggal merah ter-update otomatis** mengikuti data terbaru, tanpa menunggu pembaruan aplikasi.
+
+## 3.19.0 — 2026-11-09 — Tanggal merah & jadwal sholat
+
+- **Baru: Tanggal merah** — libur nasional & cuti bersama 2026–2027 sesuai SKB 3 Menteri.
+  - Kartu **Libur berikutnya** di Ringkasan (web) dan Beranda (HP): kapan, berapa hari, dan tanda **libur panjang**.
+  - Saran keuangan: transfer & bayar tagihan sebelum bank tutup, dan ajakan **menyiapkan anggaran liburan**
+    menjelang libur panjang.
+  - **Kalender tanggal merah** setahun penuh, lengkap dengan daftar libur panjang.
+  - **Transaksi rutin** yang jatuh di tanggal merah atau akhir pekan kini diberi peringatan, beserta hari kerja
+    sebelumnya yang paling aman untuk bayar.
+- **Baru di Teduh: Jadwal sholat** hari ini dan hitung mundur ke sholat berikutnya (Imsak sampai Isya).
+  - Dihitung langsung di perangkatmu dengan metode Kemenag, tanpa koneksi ke layanan lain.
+  - Lokasi diambil sekali dari GPS atau pilih kota; hanya disimpan di perangkatmu.
+
+## 3.18.0 — 2026-11-09 — Teduh
+
+- **Baru: Teduh** — ruang tenang untuk hatimu, di tengah urusan uang. Dirancang untuk semua agama yang diakui di
+  Indonesia; tahap pertama: **Al-Qur'an lengkap**.
+  - Pilih agamamu saat pertama membuka. Pilihan ini **hanya disimpan di perangkatmu**, tidak dikirim ke server.
+    Kristen, Katolik, Hindu, Buddha, dan Konghucu segera hadir setelah teks kitab dari sumber resmi berizin siap.
+  - **114 surah** dengan teks Arab, terjemahan Kemenag RI, dan catatan kakinya. Cari nama surah atau langsung ke
+    ayat (mis. 2:255).
+  - **Ayat hari ini**, **hari berturut-turut membaca**, dan **progres menuju khatam**. Ayat tercatat dibaca saat
+    kamu membacanya.
+  - **Lanjutkan bacaan** dari ayat terakhir, **tandai ayat** favorit, dan **bagikan** ayat.
+  - **Ayat untuk urusan uangmu**: rezeki, syukur, sedekah & zakat, utang, tidak boros, tenang saat sulit, harta &
+    amanah — lengkap dengan tombol ke fitur keuangan terkait.
+  - **Sedekah bulan ini** dihitung dari catatan keuanganmu, dan bisa langsung dicatat.
+  - **Murattal per ayat**: ayat yang dibacakan tersorot dan layar ikut bergulir, ulangi ayat 3×/5× untuk hafalan,
+    atur kecepatan, dan pilih qari. Audio akan aktif setelah layanannya tersambung.
+  - Sumber: teks Al-Qur'an dari Tanzil Project (tanzil.net) dan terjemahan Kementerian Agama RI dari QuranEnc.com,
+    tanpa diubah.
+
+## 3.17.0 — 2026-11-09 — Ukuran teks & tampilan lebih ramping
+
+- **Tampilan lebih ramping**: teks dan judul di seluruh aplikasi (web & HP) sedikit diperkecil supaya lebih rapi
+  dan lebih banyak isi muat di layar. Judul diperkecil sedikit lebih banyak dari teks biasa.
+- **Baru: Ukuran teks Kecil / Sedang / Besar** — atur sesukamu:
+  - Web: Pengaturan › **Tampilan** (sebelumnya "Mode gelap").
+  - Aplikasi HP: Profil › Preferensi.
+  - Berlaku di semua halaman dan tersimpan di perangkat itu. Teks sekecil apa pun tetap terbaca (minimal 9px).
 
 ## 3.16.1 — 2026-11-09 — Tombol peta baru & 3D di tab Peta
 

@@ -49,7 +49,7 @@ export function GuideLayout({
         <div aria-hidden className="hero-aurora" />
         <div aria-hidden className="dot-grid" />
         <div className="relative mx-auto max-w-3xl">
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">{eyebrow}</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">{eyebrow}</p>
           <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">{title}</h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-600">{lead}</p>
           <p className="mt-5 flex items-center gap-2 text-sm text-slate-400">
@@ -60,7 +60,7 @@ export function GuideLayout({
 
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto max-w-3xl space-y-8">
-          <article className="guide-body lp-card rounded-[28px] p-7 text-[16px] leading-relaxed text-slate-600 sm:p-10">
+          <article className="guide-body lp-card rounded-[28px] p-7 fs-16 leading-relaxed text-slate-600 sm:p-10">
             {children}
           </article>
 
@@ -92,7 +92,7 @@ export function GuideLayout({
                     </span>
                     {f.q}
                   </summary>
-                  <p className="mt-3 pl-5 text-[15px] leading-relaxed text-slate-600">{f.a}</p>
+                  <p className="mt-3 pl-5 fs-15 leading-relaxed text-slate-600">{f.a}</p>
                 </details>
               ))}
             </div>

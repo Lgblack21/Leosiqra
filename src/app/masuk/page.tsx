@@ -83,7 +83,7 @@ export default function AppLoginPage() {
   const field =
     'flex items-center gap-3 rounded-2xl bg-slate-100 px-4 ring-2 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-indigo-500';
   const input =
-    'min-w-0 flex-1 bg-transparent py-4 text-[15px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400';
+    'min-w-0 flex-1 bg-transparent py-4 fs-15 font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400';
 
   return (
     <main className="flex min-h-[100dvh] flex-col bg-white px-6 pt-[calc(env(safe-area-inset-top)+48px)] pb-[calc(env(safe-area-inset-bottom)+24px)]">
@@ -97,15 +97,15 @@ export default function AppLoginPage() {
             priority
             className="rounded-[22px] shadow-lg shadow-indigo-200/60"
           />
-          <h1 className="mt-6 text-[26px] font-extrabold tracking-tight text-slate-900">Masuk ke Leosiqra</h1>
-          <p className="mt-1.5 text-[14px] font-medium text-slate-500">Catat uangmu, lanjut dari mana saja.</p>
+          <h1 className="mt-6 fsh-26 font-extrabold tracking-tight text-slate-900">Masuk ke Leosiqra</h1>
+          <p className="mt-1.5 fs-14 font-medium text-slate-500">Catat uangmu, lanjut dari mana saja.</p>
         </div>
 
         <form onSubmit={submit} className="mt-10 space-y-3">
           {error && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600"
+              className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600"
             >
               <AlertCircle size={16} className="mt-px shrink-0" /> {error}
             </div>
@@ -147,20 +147,20 @@ export default function AppLoginPage() {
             </button>
           </label>
           <div className="flex justify-end">
-            <Link href="/auth/forgot-password" className="py-1 text-[13px] font-bold text-indigo-600">
+            <Link href="/auth/forgot-password" className="py-1 fs-13 font-bold text-indigo-600">
               Lupa sandi?
             </Link>
           </div>
           <button
             type="submit"
             disabled={loading || !email.trim() || !password}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[16px] font-extrabold text-white shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:shadow-none"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 fs-16 font-extrabold text-white shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:shadow-none"
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : 'Masuk'}
           </button>
         </form>
 
-        <p className="mt-auto pt-10 text-center text-[14px] font-medium text-slate-500">
+        <p className="mt-auto pt-10 text-center fs-14 font-medium text-slate-500">
           Belum punya akun?{' '}
           <Link href={withNext('/auth/register', next)} className="font-extrabold text-indigo-600">
             Daftar

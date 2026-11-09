@@ -140,7 +140,7 @@ export default function AssistantVoicePage() {
               {['Beli kopi 25rb', 'Gajian 5jt', 'Bayar listrik 200rb'].map((hint) => (
                 <span
                   key={hint}
-                  className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full px-3 py-1.5"
+                  className="fs-11 font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full px-3 py-1.5"
                 >
                   {hint}
                 </span>
@@ -177,7 +177,7 @@ export default function AssistantVoicePage() {
         {state === 'transcribed' && (
           <div className="space-y-5 pt-6">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                 Hasil Ucapan
               </label>
               <p className="text-base font-bold text-slate-900 dark:text-white mt-2">{transcript}</p>

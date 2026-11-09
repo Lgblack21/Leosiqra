@@ -19,6 +19,7 @@ import {
   Users,
   Wand2,
   X,
+  FileBarChart,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -157,7 +158,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -170,18 +171,16 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             strokeWidth={1}
             className="pointer-events-none absolute -bottom-8 -right-6 text-violet-300/10"
           />
-          <p className="text-[13px] font-semibold text-white/60">Usahaku</p>
-          <p className="mt-1 text-[24px] font-extrabold leading-tight md:text-[28px]">
-            Punya keahlian? Jadikan usaha sampingan.
-          </p>
-          <p className="mt-2 max-w-md text-[13px] text-white/70">
+          <p className="fs-13 font-semibold text-white/60">Usahaku</p>
+          <p className="mt-1 fsh-24 font-extrabold leading-tight md:fsh-28">Punya keahlian? Jadikan usaha sampingan.</p>
+          <p className="mt-2 max-w-md fs-13 text-white/70">
             Ceritakan apa yang bisa kamu kerjakan — AI-mu sendiri (Claude/ChatGPT) menyusun rencana lengkap: produk &
             harga, modal, langkah minggu ini, dan di mana cari pembeli.
           </p>
           <button
             type="button"
             onClick={() => setSheet({ k: 'ideas' })}
-            className="relative mt-4 flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="relative mt-4 flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Sparkles size={15} /> Cari ide usaha
           </button>
@@ -208,13 +207,13 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                   className="pointer-events-none absolute -bottom-8 -right-6 text-violet-300/10"
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <p className="min-w-0 truncate text-[13px] font-semibold text-white/60">Omzet usaha bulan ini</p>
+                  <p className="min-w-0 truncate fs-13 font-semibold text-white/60">Omzet usaha bulan ini</p>
                   <div className="relative flex shrink-0 gap-2">
                     <button
                       type="button"
                       onClick={() => setSheet({ k: 'tim' })}
                       aria-label="Tim"
-                      className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white ring-1 ring-white/20 hover:bg-white/15"
+                      className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 fs-12 font-bold text-white ring-1 ring-white/20 hover:bg-white/15"
                     >
                       <Users size={14} /> Tim
                     </button>
@@ -223,7 +222,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                         type="button"
                         onClick={() => setSheet({ k: 'ideas' })}
                         aria-label="Usaha baru"
-                        className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-900 hover:bg-white/90"
+                        className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-900 hover:bg-white/90"
                       >
                         <Plus size={14} /> <span className="sm:hidden">Baru</span>
                         <span className="hidden sm:inline">Usaha baru</span>
@@ -231,9 +230,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                     )}
                   </div>
                 </div>
-                <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">
-                  {formatIDR(monOmzet)}
-                </p>
+                <p className="mt-1 fsh-30 font-extrabold leading-none tabular-nums md:fsh-36">{formatIDR(monOmzet)}</p>
                 <div className="relative mt-4 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
                   {[
                     ['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))],
@@ -244,10 +241,8 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       key={k}
                       className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"
                     >
-                      <p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p>
-                      <p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">
-                        {v}
-                      </p>
+                      <p className="truncate fs-10 text-white/55 min-[380px]:fs-11">{k}</p>
+                      <p className="truncate fs-14 font-extrabold tabular-nums tracking-tight min-[380px]:fs-16">{v}</p>
                     </div>
                   ))}
                 </div>
@@ -280,7 +275,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                         (KASIR_THEME[s.style.theme] ?? KASIR_THEME.ungu).header,
                       )}
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-[22px]">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 fsh-22">
                         <CatalogImage
                           src={s.style.logoUrl}
                           alt={`Logo ${s.name}`}
@@ -289,17 +284,17 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                         />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[16px] font-extrabold">{s.name}</span>
-                        <span className="block truncate text-[12px] text-white/65">
+                        <span className="block truncate fs-16 font-extrabold">{s.name}</span>
+                        <span className="block truncate fs-12 text-white/65">
                           {s.tagline || `${s.products.length} produk${cats ? ` · ${cats} kategori` : ''}`}
                         </span>
                         {s.lowStock > 0 && (
-                          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-900">
+                          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 fs-10 font-extrabold text-slate-900">
                             {s.lowStock} stok hampir habis
                           </span>
                         )}
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold transition-colors group-hover:bg-white/25">
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 fs-12 font-bold transition-colors group-hover:bg-white/25">
                         <Store size={13} /> Kasir
                       </span>
                     </div>
@@ -310,10 +305,10 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                         ['Biaya bulan ini', short(-monthCost), monthCost ? 'text-rose-600 dark:text-rose-400' : ''],
                       ].map(([k, v, c]) => (
                         <span key={k} className="min-w-0 px-2 text-center">
-                          <span className="block truncate text-[11px] text-slate-400">{k}</span>
+                          <span className="block truncate fs-11 text-slate-400">{k}</span>
                           <span
                             className={cn(
-                              'block truncate text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white',
+                              'block truncate fs-15 font-extrabold tabular-nums text-slate-900 dark:text-white',
                               c,
                             )}
                           >
@@ -330,7 +325,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       className="flex w-full flex-col gap-2 border-t border-slate-100 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:gap-3 dark:border-slate-800 dark:hover:bg-slate-800/50"
                     >
                       <StageBar stage={st} className="w-full sm:flex-1" />
-                      <span className="shrink-0 text-[11px] font-bold text-violet-600 dark:text-violet-300">
+                      <span className="shrink-0 fs-11 font-bold text-violet-600 dark:text-violet-300">
                         {nextStep} →
                       </span>
                     </button>
@@ -364,7 +359,7 @@ function StageBar({ stage, className }: { stage: number; className?: string }) {
           />
           <span
             className={cn(
-              'mt-1 block truncate text-[10px] font-semibold',
+              'mt-1 block truncate fs-10 font-semibold',
               i <= stage ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400',
             )}
           >
@@ -395,14 +390,14 @@ Susun 3 rencana usaha kecil yang realistis & legal di Indonesia, SEMUA di bidang
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-[24px] dark:bg-violet-500/15">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 fsh-24 dark:bg-violet-500/15">
           💡
         </span>
         <div>
-          <p className="text-[16px] font-extrabold text-slate-900 dark:text-white">
+          <p className="fs-16 font-extrabold text-slate-900 dark:text-white">
             Apa yang bisa kamu kerjakan, buat, atau jual?
           </p>
-          <p className="text-[12px] text-slate-500 dark:text-slate-400">
+          <p className="fs-12 text-slate-500 dark:text-slate-400">
             Pakai kata-katamu sendiri: &ldquo;aku jago bikin kue kering&rdquo;, &ldquo;bisa desain di Canva&rdquo;.
           </p>
         </div>
@@ -414,7 +409,7 @@ Susun 3 rencana usaha kecil yang realistis & legal di Indonesia, SEMUA di bidang
         maxLength={300}
         autoFocus
         placeholder="Aku bisa…"
-        className="w-full resize-none rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+        className="w-full resize-none rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
       />
       <div className="flex flex-wrap gap-1.5">
         {STARTERS.map((s) => (
@@ -424,7 +419,7 @@ Susun 3 rencana usaha kecil yang realistis & legal di Indonesia, SEMUA di bidang
             onClick={() =>
               setText((t) => (t.trim() ? `${t.trim()}, ${s.toLowerCase()}` : `Aku bisa ${s.toLowerCase()}`))
             }
-            className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             {s}
           </button>
@@ -443,8 +438,8 @@ Susun 3 rencana usaha kecil yang realistis & legal di Indonesia, SEMUA di bidang
         className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left ring-1 ring-slate-100 hover:bg-slate-100 dark:bg-slate-800/60 dark:ring-slate-800"
       >
         <span>
-          <span className="block text-[14px] font-extrabold text-slate-900 dark:text-white">Sudah punya usaha?</span>
-          <span className="block text-[12px] text-slate-500 dark:text-slate-400">Daftarkan langsung — tanpa AI.</span>
+          <span className="block fs-14 font-extrabold text-slate-900 dark:text-white">Sudah punya usaha?</span>
+          <span className="block fs-12 text-slate-500 dark:text-slate-400">Daftarkan langsung — tanpa AI.</span>
         </span>
         <Store size={20} className="shrink-0 text-violet-500" />
       </button>
@@ -483,13 +478,13 @@ function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id:
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+        className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
       >
         <ArrowLeft size={15} /> Minta ide ke AI-mu
       </button>
-      <p className="text-[16px] font-extrabold text-slate-900 dark:text-white">Daftarkan usahamu</p>
+      <p className="fs-16 font-extrabold text-slate-900 dark:text-white">Daftarkan usahamu</p>
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -517,7 +512,7 @@ function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id:
               onClick={() => setEmoji(e)}
               aria-pressed={emoji === e}
               className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-xl text-[20px]',
+                'flex h-10 w-10 items-center justify-center rounded-xl fsh-20',
                 emoji === e ? 'bg-violet-600 ring-2 ring-violet-300' : 'bg-slate-100 dark:bg-slate-800',
               )}
             >
@@ -537,7 +532,7 @@ function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id:
         />
       </label>
       <FormButtons busy={busy} onSave={save} label="Simpan usaha" />
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center fs-11 text-slate-400">
         Setelah disimpan: isi WhatsApp & katalog — atau minta AI-mu mengambil harga dari websitemu.
       </p>
     </div>
@@ -557,29 +552,29 @@ function PlanCard({
   };
 }) {
   const p = idea.plan;
-  const label = 'text-[11px] font-bold uppercase tracking-wide text-slate-400';
+  const label = 'fs-11 font-bold uppercase tracking-wide text-slate-400';
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-[28px] dark:bg-violet-500/15">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 fsh-28 dark:bg-violet-500/15">
           {idea.emoji || '🌱'}
         </span>
         <div className="min-w-0">
-          <p className="text-[20px] font-extrabold leading-tight text-slate-900 dark:text-white">{idea.name}</p>
-          {idea.tagline && <p className="text-[13px] text-slate-500 dark:text-slate-400">{idea.tagline}</p>}
+          <p className="fsh-20 font-extrabold leading-tight text-slate-900 dark:text-white">{idea.name}</p>
+          {idea.tagline && <p className="fs-13 text-slate-500 dark:text-slate-400">{idea.tagline}</p>}
         </div>
       </div>
-      {idea.description && <p className="text-[14px] text-slate-700 dark:text-slate-200">{idea.description}</p>}
+      {idea.description && <p className="fs-14 text-slate-700 dark:text-slate-200">{idea.description}</p>}
       <div>
         <p className={label}>Yang dijual</p>
         <ul className="mt-1.5 divide-y divide-slate-100 rounded-2xl ring-1 ring-slate-100 dark:divide-slate-800 dark:ring-slate-800">
           {idea.products.map((x) => (
             <li key={x.name} className="flex items-center justify-between gap-3 px-3 py-2.5">
               <span className="min-w-0">
-                <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{x.name}</span>
-                {x.unit && <span className="text-[11px] text-slate-500 dark:text-slate-400">{x.unit}</span>}
+                <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{x.name}</span>
+                {x.unit && <span className="fs-11 text-slate-500 dark:text-slate-400">{x.unit}</span>}
               </span>
-              <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+              <span className="shrink-0 fs-14 font-extrabold tabular-nums text-slate-900 dark:text-white">
                 {formatIDR(x.price)}
               </span>
             </li>
@@ -595,8 +590,8 @@ function PlanCard({
               ['Per bulan', p.perBulan ? `${short(p.perBulan[0])}–${short(p.perBulan[1]).replace('Rp', '')}` : '—'],
             ].map(([k, v]) => (
               <div key={k} className="rounded-2xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{k}</p>
-                <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">{v}</p>
+                <p className="fs-11 text-slate-500 dark:text-slate-400">{k}</p>
+                <p className="fs-13 font-extrabold text-slate-900 dark:text-white">{v}</p>
               </div>
             ))}
           </div>
@@ -605,7 +600,7 @@ function PlanCard({
               <p className={label}>Kenapa cocok buatmu</p>
               <ul className="mt-1.5 space-y-1.5">
                 {p.alasan.map((a) => (
-                  <li key={a} className="flex gap-2 text-[13px] text-slate-700 dark:text-slate-200">
+                  <li key={a} className="flex gap-2 fs-13 text-slate-700 dark:text-slate-200">
                     <Check size={15} className="mt-0.5 shrink-0 text-emerald-500" />
                     {a}
                   </li>
@@ -618,8 +613,8 @@ function PlanCard({
               <p className={label}>Minggu ini</p>
               <ol className="mt-1.5 space-y-1.5">
                 {p.langkah.map((a, k) => (
-                  <li key={a} className="flex gap-2 text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <li key={a} className="flex gap-2 fs-13 text-slate-700 dark:text-slate-200">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 fs-11 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {k + 1}
                     </span>
                     {a}
@@ -629,7 +624,7 @@ function PlanCard({
             </div>
           )}
           {(p.pembeli || p.cariDi) && (
-            <p className="text-[13px] text-slate-600 dark:text-slate-300">
+            <p className="fs-13 text-slate-600 dark:text-slate-300">
               {p.pembeli && (
                 <>
                   <b>Pembeli:</b> {p.pembeli}
@@ -722,7 +717,7 @@ export function ShopDetail({
   };
   const ready = Boolean(shop.contactWa && shop.products.length);
   const btn =
-    'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
+    'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
 
   return (
     <div className="space-y-4">
@@ -732,32 +727,40 @@ export function ShopDetail({
         <section className="rounded-3xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
           <div className="flex items-baseline justify-between gap-2">
             <div>
-              <p className="text-[12px] font-semibold text-emerald-800/70 dark:text-emerald-300/70">Bulan ini</p>
-              <p className="text-[26px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
+              <p className="fs-12 font-semibold text-emerald-800/70 dark:text-emerald-300/70">Bulan ini</p>
+              <p className="fsh-26 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
                 {formatIDR(Math.round(monthTotal))}
               </p>
             </div>
-            <p className="text-[12px] font-semibold text-emerald-800/70 dark:text-emerald-300/70">
+            <p className="fs-12 font-semibold text-emerald-800/70 dark:text-emerald-300/70">
               {month.length} penjualan · total {sales.length}
             </p>
           </div>
-          <Link
-            href={kasirLink}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[14px] font-bold text-white hover:bg-emerald-700"
-          >
-            <Store size={16} /> Buka kasir
-          </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={kasirLink}
+              className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 fs-14 font-bold text-white hover:bg-emerald-700"
+            >
+              <Store size={16} /> Buka kasir
+            </Link>
+            <Link
+              href={kasirLink.replace('/ladang/kasir?', '/ladang/laporan?')}
+              className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 fs-14 font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:ring-emerald-500/30"
+            >
+              <FileBarChart size={16} /> Laporan & unduh
+            </Link>
+          </div>
         </section>
       )}
 
       <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Kontak & pembayaran</p>
+          <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Kontak & pembayaran</p>
           {section !== 'kontak' && (
             <button
               type="button"
               onClick={() => setSection('kontak')}
-              className="text-[12px] font-bold text-violet-600 dark:text-violet-300"
+              className="fs-12 font-bold text-violet-600 dark:text-violet-300"
             >
               Ubah
             </button>
@@ -773,7 +776,7 @@ export function ShopDetail({
             onCancel={shop.contactWa ? () => setSection('') : undefined}
           />
         ) : (
-          <div className="mt-1 text-[13px] text-slate-600 dark:text-slate-300">
+          <div className="mt-1 fs-13 text-slate-600 dark:text-slate-300">
             <p>WhatsApp {prettyWa(shop.contactWa)}</p>
             {shop.paymentNote && <p className="text-slate-500 dark:text-slate-400">Bayar: {shop.paymentNote}</p>}
             {shop.area && <p className="text-slate-500 dark:text-slate-400">Area: {shop.area}</p>}
@@ -783,12 +786,12 @@ export function ShopDetail({
 
       <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Produk & harga</p>
+          <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Produk & harga</p>
           {section !== 'produk' && (
             <button
               type="button"
               onClick={() => setSection('produk')}
-              className="text-[12px] font-bold text-violet-600 dark:text-violet-300"
+              className="fs-12 font-bold text-violet-600 dark:text-violet-300"
             >
               Ubah
             </button>
@@ -809,14 +812,14 @@ export function ShopDetail({
       </section>
 
       <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
-        <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Katalog siap sebar</p>
+        <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Katalog siap sebar</p>
         {!ready ? (
-          <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+          <p className="mt-1 fs-12 text-slate-500 dark:text-slate-400">
             Isi nomor WhatsApp & minimal satu produk dulu.
           </p>
         ) : (
           <>
-            <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 font-sans text-[12px] leading-relaxed text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+            <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 font-sans fs-12 leading-relaxed text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
               {text}
             </pre>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -861,9 +864,7 @@ export function ShopDetail({
       <HookSection shop={shop} onToast={onToast} onLeave={onLeave} />
 
       <details className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
-        <summary className="cursor-pointer text-[14px] font-extrabold text-slate-900 dark:text-white">
-          Rencananya
-        </summary>
+        <summary className="cursor-pointer fs-14 font-extrabold text-slate-900 dark:text-white">Rencananya</summary>
         <div className="mt-3">
           <PlanCard idea={shop} />
         </div>
@@ -873,7 +874,7 @@ export function ShopDetail({
         type="button"
         onClick={remove}
         className={cn(
-          'flex w-full items-center justify-center gap-1.5 rounded-full py-3 text-[13px] font-bold',
+          'flex w-full items-center justify-center gap-1.5 rounded-full py-3 fs-13 font-bold',
           confirmDel ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
         )}
       >
@@ -884,8 +885,8 @@ export function ShopDetail({
 }
 
 export const fieldCls =
-  'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[14px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
-export const labelCls = 'mb-1 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-14 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+export const labelCls = 'mb-1 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
 
 export function FormButtons({
   busy,
@@ -904,7 +905,7 @@ export function FormButtons({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full bg-slate-100 px-4 py-2.5 text-[13px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          className="rounded-full bg-slate-100 px-4 py-2.5 fs-13 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           <X size={15} />
         </button>
@@ -913,7 +914,7 @@ export function FormButtons({
         type="button"
         onClick={onSave}
         disabled={busy}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-violet-600"
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 fs-13 font-bold text-white disabled:opacity-40 dark:bg-violet-600"
       >
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {label}
       </button>
@@ -941,7 +942,7 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
   return (
     <div className="mt-3 space-y-3">
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -964,7 +965,7 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
           placeholder="QRIS / transfer BCA"
           className={fieldCls}
         />
-        <span className="mt-1 block px-1 text-[11px] text-slate-400">Jangan pernah tulis PIN, password, atau OTP.</span>
+        <span className="mt-1 block px-1 fs-11 text-slate-400">Jangan pernah tulis PIN, password, atau OTP.</span>
       </label>
       <label className="block">
         <span className={labelCls}>Area layanan</span>
@@ -1003,7 +1004,7 @@ function WebsiteSection({
   const [showBrief, setShowBrief] = useState(false);
   const brief = websiteBrief(shop, formatIDR);
   const btn =
-    'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
+    'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
   const url = (shop.linkUrl && !editing ? shop.linkUrl : link).trim();
 
   const copyBrief = async () => {
@@ -1036,7 +1037,7 @@ function WebsiteSection({
   return (
     <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900 dark:text-white">
+        <p className="flex items-center gap-1.5 fs-14 font-extrabold text-slate-900 dark:text-white">
           <Globe size={16} className="text-violet-500" /> Website
         </p>
         {shop.linkUrl && !editing && (
@@ -1046,14 +1047,14 @@ function WebsiteSection({
               setLink(shop.linkUrl ?? '');
               setEditing(true);
             }}
-            className="text-[12px] font-bold text-violet-600 dark:text-violet-300"
+            className="fs-12 font-bold text-violet-600 dark:text-violet-300"
           >
             Ubah
           </button>
         )}
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="mt-2 fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -1063,7 +1064,7 @@ function WebsiteSection({
           href={shop.linkUrl}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2.5 text-[13px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2.5 fs-13 font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
           <span className="min-w-0 flex-1 truncate">{shop.linkUrl.replace(/^https:\/\//, '')}</span>
@@ -1073,8 +1074,8 @@ function WebsiteSection({
         <>
           {!shop.linkUrl && (
             <div className="mt-2 rounded-2xl bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 dark:from-violet-500/10 dark:to-fuchsia-500/10">
-              <p className="text-[13px] font-bold text-slate-900 dark:text-white">Belum punya website?</p>
-              <p className="mt-0.5 text-[12px] text-slate-600 dark:text-slate-300">
+              <p className="fs-13 font-bold text-slate-900 dark:text-white">Belum punya website?</p>
+              <p className="mt-0.5 fs-12 text-slate-600 dark:text-slate-300">
                 Salin brief tokomu, tempel di Pabrik.AI, dan website jadi dalam beberapa menit. Leosiqra tidak ikut
                 mengelola situsnya.
               </p>
@@ -1086,7 +1087,7 @@ function WebsiteSection({
                   href={PABRIK_AI_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 fs-13 font-bold text-white hover:bg-violet-700"
                 >
                   <Wand2 size={14} /> Buka Pabrik.AI
                 </a>
@@ -1094,12 +1095,12 @@ function WebsiteSection({
               <button
                 type="button"
                 onClick={() => setShowBrief((v) => !v)}
-                className="mt-2 text-[11px] font-bold text-violet-600 dark:text-violet-300"
+                className="mt-2 fs-11 font-bold text-violet-600 dark:text-violet-300"
               >
                 {showBrief ? 'Sembunyikan brief' : 'Lihat isi brief'}
               </button>
               {showBrief && (
-                <pre className="mt-1.5 max-h-48 select-all overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/80 [overflow-wrap:anywhere] p-2.5 font-sans text-[11px] leading-relaxed text-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
+                <pre className="mt-1.5 max-h-48 select-all overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/80 [overflow-wrap:anywhere] p-2.5 font-sans fs-11 leading-relaxed text-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
                   {brief}
                 </pre>
               )}
@@ -1114,7 +1115,7 @@ function WebsiteSection({
               placeholder="https://tokomu.vantis.app"
               className={fieldCls}
             />
-            <span className="mt-1 block px-1 text-[11px] text-slate-400">
+            <span className="mt-1 block px-1 fs-11 text-slate-400">
               Website, Shopee, Tokopedia, atau Linktree — tautan publik, bukan tautan editor.
             </span>
           </label>
@@ -1162,10 +1163,10 @@ function ProductList({ products }: { products: ShopProduct[] }) {
       {groups.map(({ group, items }) => (
         <div key={group || 'lain'}>
           {headed && (
-            <p className="sticky top-0 flex items-center gap-1.5 bg-white py-1 dark:bg-slate-900 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            <p className="sticky top-0 flex items-center gap-1.5 bg-white py-1 dark:bg-slate-900 fs-11 font-bold uppercase tracking-wide text-slate-400">
               <span
                 className={cn(
-                  'flex h-5 w-5 items-center justify-center rounded-md text-[9px] normal-case',
+                  'flex h-5 w-5 items-center justify-center rounded-md fs-9 normal-case',
                   toneOf(group || 'Lainnya'),
                 )}
               >
@@ -1176,7 +1177,7 @@ function ProductList({ products }: { products: ShopProduct[] }) {
           )}
           <ul className="space-y-1">
             {items.map(({ p, i }) => (
-              <li key={i} className="flex justify-between gap-3 text-[13px]">
+              <li key={i} className="flex justify-between gap-3 fs-13">
                 <span className="min-w-0 truncate text-slate-700 dark:text-slate-200">
                   {p.name}
                   {p.unit && <span className="text-slate-400"> · {p.unit}</span>}
@@ -1223,7 +1224,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
   return (
     <div className="mt-3 space-y-2">
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-rose-600">
+        <p role="alert" className="fs-12 font-semibold text-rose-600">
           {error}
         </p>
       )}
@@ -1269,7 +1270,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 maxLength={40}
                 placeholder="Kategori, mis. Minuman"
                 aria-label="Kategori"
-                className={cn(fieldCls, 'px-3 py-1.5 text-[12px]')}
+                className={cn(fieldCls, 'px-3 py-1.5 fs-12')}
               />
               <input
                 value={p.unit}
@@ -1277,7 +1278,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 maxLength={24}
                 placeholder="Satuan (opsional)"
                 aria-label="Satuan"
-                className={cn(fieldCls, 'px-3 py-1.5 text-[12px]')}
+                className={cn(fieldCls, 'px-3 py-1.5 fs-12')}
               />
             </div>
           </div>
@@ -1287,7 +1288,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
         <button
           type="button"
           onClick={() => setList((l) => [...l, { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '' }])}
-          className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"
+          className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
         >
           <Plus size={14} /> Tambah produk
         </button>

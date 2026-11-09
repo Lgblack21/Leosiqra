@@ -73,7 +73,7 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         <Link
           href={variant === 'app' ? '/app/more' : '/membership/dashboard'}
           aria-label={variant === 'app' ? 'Kembali' : 'Kembali ke Ringkasan'}
-          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-2 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
+          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-2 fs-13 font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5">
             <ArrowLeft size={16} />
@@ -81,16 +81,16 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           <span className="hidden sm:inline">{variant === 'app' ? 'Kembali' : 'Ringkasan'}</span>
         </Link>
         <div className="min-w-0 text-center">
-          <h1 className="truncate text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[24px]">
+          <h1 className="truncate fs-19 font-extrabold tracking-tight text-slate-900 dark:text-white md:fsh-24">
             {current.title}
           </h1>
-          <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{current.sub}</p>
+          <p className="truncate fs-12 text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
         <LeoGuide topic="cerita" />
       </header>
 
       {notReady && (
-        <p className="mb-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-800">
+        <p className="mb-3 rounded-2xl bg-amber-50 px-4 py-2.5 fs-12 font-semibold text-amber-800">
           Cerita Hari Ini sedang disiapkan di server — sebentar lagi bisa dipakai.
         </p>
       )}
@@ -132,7 +132,7 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                 aria-current={active ? 'page' : undefined}
                 aria-label={t.label}
                 className={cn(
-                  'relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold transition-all',
+                  'relative flex h-12 items-center justify-center gap-2 rounded-full fs-13 font-bold transition-all',
                   active
                     ? 'bg-gradient-to-r from-amber-300 to-pink-300 px-4 text-slate-950'
                     : 'w-12 text-white/70 hover:bg-white/10',

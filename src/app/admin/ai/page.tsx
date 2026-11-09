@@ -134,7 +134,7 @@ export default function AdminAiPage() {
             low ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-white',
           )}
         >
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <div className="flex items-center gap-2 fs-10 font-black uppercase tracking-widest text-slate-400">
             <Wallet size={14} /> Sisa saldo OpenRouter
           </div>
           {loading && !status ? (
@@ -183,7 +183,7 @@ export default function AdminAiPage() {
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <div className="flex items-center gap-2 fs-10 font-black uppercase tracking-widest text-slate-400">
             <KeyRound size={14} /> Key aktif
           </div>
           {status ? (

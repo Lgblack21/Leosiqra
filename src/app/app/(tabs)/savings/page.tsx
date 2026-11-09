@@ -145,11 +145,11 @@ export default function AppSavingsPage() {
         delay={0.05}
         className="rounded-3xl bg-gradient-to-br from-rose-500 to-pink-500 text-white p-5 shadow-lg shadow-rose-200/50 dark:shadow-none"
       >
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Saldo tabungan</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-white/80">Saldo tabungan</p>
         <p className="mt-1 text-3xl font-black tabular-nums">
           <AnimatedNumber value={total} format={formatIDR} />
         </p>
-        <p className="mt-1 text-[11px] text-white/80 tabular-nums">
+        <p className="mt-1 fs-11 text-white/80 tabular-nums">
           Bulan ini +{formatIDR(monthIn)} · −{formatIDR(monthOut)}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -207,7 +207,7 @@ export default function AppSavingsPage() {
                     >
                       {formatIDR(balance)}
                     </p>
-                    <p className="mt-2 text-[10px] text-slate-400">Tap untuk setor</p>
+                    <p className="mt-2 fs-10 text-slate-400">Tap untuk setor</p>
                   </button>
                 );
               }
@@ -226,7 +226,7 @@ export default function AppSavingsPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[18px]"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl fs-18"
                       style={{ background: color, boxShadow: `0 8px 18px -10px ${color}` }}
                     >
                       {targetIcon(goal)}
@@ -249,11 +249,11 @@ export default function AppSavingsPage() {
                       style={{ width: `${pct}%`, background: color }}
                     />
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
+                  <p className="mt-1 fs-10 text-slate-500 dark:text-slate-400 tabular-nums truncate">
                     {done ? '🎉 Tercapai' : `${pct.toFixed(0)}% dari ${formatIDR(goal.targetAmount)}`}
                   </p>
                   {!done && months !== null && (
-                    <p className="text-[10px] text-slate-400 tabular-nums truncate">
+                    <p className="fs-10 text-slate-400 tabular-nums truncate">
                       {months === 0
                         ? 'Lewat tanggal target'
                         : need
@@ -281,7 +281,7 @@ export default function AppSavingsPage() {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">{g.name}</span>
-                  <span className="block text-[11px] text-slate-400 truncate">
+                  <span className="block fs-11 text-slate-400 truncate">
                     {g.status === 'PAUSED'
                       ? 'Dijeda'
                       : `${formatIDR(g.monthlyAmount)} ${INTERVAL_LABEL[g.interval]?.toLowerCase() ?? ''} · berikutnya ${fmtDate(new Date(g.nextDate))}`}
@@ -317,7 +317,7 @@ export default function AppSavingsPage() {
                       <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                         {s.description || s.category}
                       </span>
-                      <span className="block text-[11px] text-slate-400 truncate">
+                      <span className="block fs-11 text-slate-400 truncate">
                         {s.category} · {fmtDate(s.date)}
                       </span>
                     </span>
@@ -397,7 +397,7 @@ export default function AppSavingsPage() {
               <Trash2 size={15} /> {busy ? 'Menghapus...' : confirmDelete ? 'Yakin hapus?' : 'Hapus catatan'}
             </button>
             {confirmDelete && (
-              <p className="text-[11px] text-center text-slate-500">
+              <p className="fs-11 text-center text-slate-500">
                 {accounts.some((a) => a.id === selected.fromAccount)
                   ? `Saldo ${accountName(selected.fromAccount)} akan dikembalikan. `
                   : ''}

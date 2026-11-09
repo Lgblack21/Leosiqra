@@ -47,7 +47,7 @@ export const CurrencySelect = ({ value, onChange, className, label, compact }: C
 
   return (
     <div className={cn('space-y-2', className)}>
-      {label && <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>}
+      {label && <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>}
       <div className="relative">
         <select
           value={value}
@@ -56,7 +56,7 @@ export const CurrencySelect = ({ value, onChange, className, label, compact }: C
           aria-label="Mata uang"
           className={cn(
             'w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 text-sm font-bold text-slate-700 cursor-pointer transition-all disabled:opacity-50',
-            compact ? 'h-full rounded-2xl py-3.5 pl-4 pr-9 text-[15px]' : 'rounded-xl py-3.5 px-5',
+            compact ? 'h-full rounded-2xl py-3.5 pl-4 pr-9 fs-15' : 'rounded-xl py-3.5 px-5',
           )}
         >
           {loading ? (

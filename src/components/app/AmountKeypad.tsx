@@ -155,8 +155,8 @@ export function AmountKeypad({
 
   if (variant === 'flat') {
     const flatKey =
-      'h-14 rounded-2xl text-[24px] font-semibold text-slate-900 dark:text-white tabular-nums flex items-center justify-center active:bg-slate-100 dark:active:bg-slate-800 transition-colors';
-    const dimKey = flatKey + ' !text-[19px] !text-slate-400 dark:!text-slate-500';
+      'h-14 rounded-2xl fsh-24 font-semibold text-slate-900 dark:text-white tabular-nums flex items-center justify-center active:bg-slate-100 dark:active:bg-slate-800 transition-colors';
+    const dimKey = flatKey + ' !fs-19 !text-slate-400 dark:!text-slate-500';
     if (mode === 'calculator') {
       return (
         <div className="px-4 pt-2">

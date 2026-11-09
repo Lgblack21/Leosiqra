@@ -53,17 +53,17 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
 
   return (
     <div className="px-6 pt-12">
-      <p className="text-[14px] font-semibold text-slate-500 dark:text-slate-400">Langkah terakhir</p>
-      <h1 className="mt-1.5 text-[34px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
+      <p className="fs-14 font-semibold text-slate-500 dark:text-slate-400">Langkah terakhir</p>
+      <h1 className="mt-1.5 fsh-34 leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
         Rekening pertama.
       </h1>
-      <p className="text-[16px] leading-relaxed text-slate-500 dark:text-slate-400 mt-3">
+      <p className="fs-16 leading-relaxed text-slate-500 dark:text-slate-400 mt-3">
         Buat satu rekening dulu. Rekening lain bisa ditambah kapan saja.
       </p>
 
       <div className="mt-6 space-y-4">
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
             Nama Rekening
           </label>
           <input
@@ -76,7 +76,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
             Jenis
           </label>
           <div className="grid grid-cols-3 gap-2 mt-2">
@@ -103,7 +103,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-[22px] p-6">
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Saldo Awal (IDR)
           </label>
           <div className="flex items-baseline gap-2 mt-2">
@@ -127,7 +127,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full h-12 rounded-full bg-indigo-600 text-white font-bold text-[15px] disabled:opacity-40 transition-all active:scale-[0.98]"
+          className="w-full h-12 rounded-full bg-indigo-600 text-white font-bold fs-15 disabled:opacity-40 transition-all active:scale-[0.98]"
         >
           {submitting ? 'Menyimpan...' : 'Selesai'}
         </button>

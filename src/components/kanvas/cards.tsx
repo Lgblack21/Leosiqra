@@ -64,7 +64,7 @@ function StatusLine({ card, st, s, m, c }: { card: Card; st: CardState; s: State
     const text =
       card.kind === 'tanya' ? s.answers[card.id] : card.kind === 'angka' ? fmtNum(s.nums[card.id], card.unit) : 'Sudah';
     return (
-      <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">
+      <span className="flex items-center gap-1.5 fs-12.5 font-semibold text-slate-700 dark:text-slate-200">
         <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500">
           <Check size={11} strokeWidth={3.5} className="text-white" />
         </span>
@@ -72,23 +72,21 @@ function StatusLine({ card, st, s, m, c }: { card: Card; st: CardState; s: State
       </span>
     );
   }
-  if (st === 'skipped') return <span className="text-[12px] text-slate-400">Dilewati dulu</span>;
+  if (st === 'skipped') return <span className="fs-12 text-slate-400">Dilewati dulu</span>;
   if (card.kind === 'data') {
     if (st === 'waiting')
-      return <span className="text-[12px] text-slate-400">{m.ready ? `Siap ${m.readyLabel}` : 'Memuat…'}</span>;
+      return <span className="fs-12 text-slate-400">{m.ready ? `Siap ${m.readyLabel}` : 'Memuat…'}</span>;
     return (
-      <span className="text-[16px] font-black tracking-tight text-slate-900 dark:text-white">
-        {rp(card.value(m) ?? 0)}
-      </span>
+      <span className="fs-16 font-black tracking-tight text-slate-900 dark:text-white">{rp(card.value(m) ?? 0)}</span>
     );
   }
   if (card.kind === 'cek') {
     const r = card.calc(m);
-    if (!r) return <span className="text-[12px] text-slate-400">{m.ready ? `Siap ${m.readyLabel}` : 'Memuat…'}</span>;
+    if (!r) return <span className="fs-12 text-slate-400">{m.ready ? `Siap ${m.readyLabel}` : 'Memuat…'}</span>;
     return (
       <span className="block space-y-1">
-        <span className="block text-[12px] text-slate-500 dark:text-slate-400">{r.text}</span>
-        <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-bold', STATUS_PILL[r.status].cls)}>
+        <span className="block fs-12 text-slate-500 dark:text-slate-400">{r.text}</span>
+        <span className={cn('inline-block rounded-full px-2 py-0.5 fs-11 font-bold', STATUS_PILL[r.status].cls)}>
           {STATUS_PILL[r.status].label}
         </span>
       </span>
@@ -97,15 +95,15 @@ function StatusLine({ card, st, s, m, c }: { card: Card; st: CardState; s: State
   if (card.kind === 'hitung') {
     const r = card.calc(c);
     return r ? (
-      <span className={cn('text-[15px] font-black', r.tone ? TONE_CLS[r.tone] : 'text-slate-900 dark:text-white')}>
+      <span className={cn('fs-15 font-black', r.tone ? TONE_CLS[r.tone] : 'text-slate-900 dark:text-white')}>
         {r.value}
       </span>
     ) : (
-      <span className="text-[12px] text-slate-400">Menunggu angka</span>
+      <span className="fs-12 text-slate-400">Menunggu angka</span>
     );
   }
-  if (card.kind === 'info') return <span className="line-clamp-2 text-[12px] text-slate-500">{card.text}</span>;
-  return <span className="text-[12px] text-slate-400">Belum dijawab</span>;
+  if (card.kind === 'info') return <span className="line-clamp-2 fs-12 text-slate-500">{card.text}</span>;
+  return <span className="fs-12 text-slate-400">Belum dijawab</span>;
 }
 
 // Warna per bab (berurutan) — tiap bab punya identitas sendiri di papan.
@@ -140,7 +138,7 @@ function Ring({ got, total }: { got: number; total: number }) {
           strokeDasharray={`${total ? (got / total) * len : 0} ${len}`}
         />
       </svg>
-      <span className="text-[11px] font-black tabular-nums text-white">
+      <span className="fs-11 font-black tabular-nums text-white">
         {got}/{total}
       </span>
     </span>
@@ -178,12 +176,12 @@ export function ChapterNode({
           col.head,
         )}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-[20px] backdrop-blur">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20 fsh-20 backdrop-blur">
           {ch.emoji}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10.5px] font-black uppercase tracking-[0.2em] text-white/75">Bab {index + 1}</p>
-          <p className="truncate text-[16px] font-black leading-tight">{ch.title}</p>
+          <p className="fs-10.5 font-black uppercase tracking-[0.2em] text-white/75">Bab {index + 1}</p>
+          <p className="truncate fs-16 font-black leading-tight">{ch.title}</p>
         </div>
         <Ring got={p.got} total={p.total} />
       </div>
@@ -205,11 +203,11 @@ export function ChapterNode({
               )}
             >
               <span className="flex items-center gap-1.5">
-                <span className={cn('rounded-full px-2 py-0.5 text-[10.5px] font-bold', CHIP[card.kind])}>
+                <span className={cn('rounded-full px-2 py-0.5 fs-10.5 font-bold', CHIP[card.kind])}>
                   {KIND_LABEL[card.kind]}
                 </span>
                 {card.kind === 'data' && st === 'auto' ? (
-                  <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">● terisi</span>
+                  <span className="fs-10.5 font-semibold text-emerald-600 dark:text-emerald-400">● terisi</span>
                 ) : null}
                 <span className="flex-1" />
                 {done ? (
@@ -222,7 +220,7 @@ export function ChapterNode({
                   <span className="h-5 w-5 rounded-full border-2 border-slate-200 dark:border-slate-700" />
                 ) : null}
               </span>
-              <span className="mt-1.5 block text-[13.5px] font-bold leading-snug text-slate-800 dark:text-slate-100">
+              <span className="mt-1.5 block fs-13.5 font-bold leading-snug text-slate-800 dark:text-slate-100">
                 {cardTitle(card)}
               </span>
               <span className="mt-1.5 block">
@@ -232,7 +230,7 @@ export function ChapterNode({
           );
         })}
         {p.done ? (
-          <p className="flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-50 py-2 text-[12px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <p className="flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-50 py-2 fs-12 font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
             <Check size={14} strokeWidth={3} /> Bab {index + 1} selesai
           </p>
         ) : null}
@@ -245,7 +243,7 @@ function Row({ l, v, b, tone }: { l: string; v: number | null; b?: boolean; tone
   return (
     <div
       className={cn(
-        'flex justify-between gap-3 border-t border-slate-100 py-2 text-[13px] dark:border-slate-800',
+        'flex justify-between gap-3 border-t border-slate-100 py-2 fs-13 dark:border-slate-800',
         b && 'font-black',
       )}
     >
@@ -282,9 +280,9 @@ export function TableNode({ kind, m, a }: { kind: TableKind; m: Metrics; a: Reco
       data-handle={`tbl-${kind}`}
       className="cursor-grab rounded-[22px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(15,23,42,.3)] ring-1 ring-slate-200 active:cursor-grabbing dark:bg-slate-950 dark:ring-slate-800"
     >
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Tabel</p>
-      <p className="text-[17px] font-black text-slate-900 dark:text-white">{title}</p>
-      <p className="mb-1.5 text-[12px] text-slate-400">{sub}</p>
+      <p className="fs-10 font-black uppercase tracking-[0.18em] text-slate-400">Tabel</p>
+      <p className="fs-17 font-black text-slate-900 dark:text-white">{title}</p>
+      <p className="mb-1.5 fs-12 text-slate-400">{sub}</p>
       {kind === 'aruskas' ? (
         <>
           <Row l="Pemasukan" v={has ? m.incomeAvg : null} />
@@ -318,7 +316,7 @@ export function TableNode({ kind, m, a }: { kind: TableKind; m: Metrics; a: Reco
           <Row l="Total" v={m.liabilities} b tone="neg" />
         </>
       ) : (
-        <p className="border-t border-slate-100 pt-2 text-[13px] text-slate-500 dark:border-slate-800">
+        <p className="border-t border-slate-100 pt-2 fs-13 text-slate-500 dark:border-slate-800">
           Tidak ada utang tercatat 🎉
         </p>
       )}
@@ -335,11 +333,11 @@ export function StartNode({ t, prog }: { t: Template; prog: { got: number; total
       <div className="flex justify-center">
         <LeoBadge topic="investasi" size={64} />
       </div>
-      <p className="mt-2 text-[10.5px] font-black uppercase tracking-[0.2em] text-slate-400">Mulai di sini</p>
-      <p className="text-[16px] font-black text-slate-900 dark:text-white">
+      <p className="mt-2 fs-10.5 font-black uppercase tracking-[0.2em] text-slate-400">Mulai di sini</p>
+      <p className="fs-16 font-black text-slate-900 dark:text-white">
         {t.emoji} {t.title}
       </p>
-      <p className="mt-0.5 text-[12px] text-slate-500">
+      <p className="mt-0.5 fs-12 text-slate-500">
         {t.chapters.length} bab · {prog.total} kartu · ±{Math.max(3, Math.round(prog.total * 0.4))} menit
       </p>
     </div>
@@ -370,19 +368,19 @@ export function FinalNode({
       <div className="flex items-center gap-3">
         <span
           className={cn(
-            'flex h-11 w-11 items-center justify-center rounded-2xl text-[22px]',
+            'flex h-11 w-11 items-center justify-center rounded-2xl fsh-22',
             unlocked ? 'bg-emerald-400/20' : 'bg-white/10',
           )}
         >
           {unlocked ? t.emoji : <Lock size={18} className="text-white/70" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10.5px] font-black uppercase tracking-[0.2em] text-amber-300">
+          <p className="fs-10.5 font-black uppercase tracking-[0.2em] text-amber-300">
             {unlocked ? 'Siap dijalankan' : 'Hasil akhir'}
           </p>
-          <p className="truncate text-[19px] font-black">{t.finalTitle}</p>
+          <p className="truncate fs-19 font-black">{t.finalTitle}</p>
         </div>
-        <span className="text-[22px] font-black tabular-nums text-white/90">{pctDone}%</span>
+        <span className="fsh-22 font-black tabular-nums text-white/90">{pctDone}%</span>
       </div>
       <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/10">
         <div
@@ -390,7 +388,7 @@ export function FinalNode({
           style={{ width: `${pctDone}%` }}
         />
       </div>
-      <p className="mt-1.5 text-[12px] text-white/55">
+      <p className="mt-1.5 fs-12 text-white/55">
         {prog.babDone} dari {prog.babTotal} bab selesai · {prog.got} dari {prog.total} kartu
         {unlocked ? '' : ` · terbuka penuh setelah ${prog.babTotal} bab selesai`}
       </p>
@@ -398,27 +396,27 @@ export function FinalNode({
         <div className="mt-3 rounded-2xl bg-white/[.07] p-3 ring-1 ring-white/10">
           <p
             className={cn(
-              'text-[20px] font-black',
+              'fsh-20 font-black',
               g.tone === 'bad' ? 'text-rose-300' : g.tone === 'warn' ? 'text-amber-300' : 'text-emerald-300',
             )}
           >
             {g.value}
           </p>
-          {g.note ? <p className="text-[12px] text-white/60">{g.note}</p> : null}
+          {g.note ? <p className="fs-12 text-white/60">{g.note}</p> : null}
         </div>
       ) : null}
       {saran.length ? (
         <div className="mt-3">
-          <p className="mb-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-white/45">Langkah berikutnya</p>
+          <p className="mb-1.5 fs-11 font-black uppercase tracking-[0.18em] text-white/45">Langkah berikutnya</p>
           <div className="space-y-1.5">
             {saran.slice(0, 6).map((s, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => onSaran(s)}
-                className="flex w-full items-center gap-2.5 rounded-2xl bg-white/[.07] px-3 py-2.5 text-left text-[13px] font-semibold text-white/90 ring-1 ring-white/10 transition hover:bg-white/[.12]"
+                className="flex w-full items-center gap-2.5 rounded-2xl bg-white/[.07] px-3 py-2.5 text-left fs-13 font-semibold text-white/90 ring-1 ring-white/10 transition hover:bg-white/[.12]"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-black">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 fs-11 font-black">
                   {i + 1}
                 </span>
                 <span className="flex-1">{s.text}</span>
@@ -428,7 +426,7 @@ export function FinalNode({
           </div>
         </div>
       ) : null}
-      <p className="mt-3 text-[11px] leading-relaxed text-white/35">
+      <p className="mt-3 fs-11 leading-relaxed text-white/35">
         Perkiraan untuk membantu merencanakan, bukan nasihat keuangan pribadi.
       </p>
     </div>
@@ -490,7 +488,7 @@ export function NoteNode({
         onChange={(e) => onText(e.target.value.slice(0, 300))}
         placeholder="Tulis catatan…"
         rows={Math.min(8, Math.max(3, note.text.split('\n').length + Math.floor(note.text.length / 26)))}
-        className="w-full resize-none bg-transparent text-[14px] font-semibold leading-snug text-slate-800 outline-none placeholder:text-slate-500"
+        className="w-full resize-none bg-transparent fs-14 font-semibold leading-snug text-slate-800 outline-none placeholder:text-slate-500"
       />
     </div>
   );

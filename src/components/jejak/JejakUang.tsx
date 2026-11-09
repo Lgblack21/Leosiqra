@@ -303,10 +303,10 @@ export function JejakUang() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="flex items-center gap-2 text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">
+            <h1 className="flex items-center gap-2 fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">
               Jejak Uang <Footprints size={24} className="text-emerald-500" />
             </h1>
-            <p className="text-[14px] text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya.</p>
+            <p className="fs-14 text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya.</p>
           </div>
           <HeaderSlot className="md:hidden" />
         </div>
@@ -323,7 +323,7 @@ export function JejakUang() {
                   }}
                   aria-pressed={mode === m}
                   className={cn(
-                    'relative rounded-full px-4 py-1.5 text-[13px] font-semibold capitalize',
+                    'relative rounded-full px-4 py-1.5 fs-13 font-semibold capitalize',
                     mode === m ? 'text-slate-900' : 'text-slate-500',
                   )}
                 >
@@ -348,7 +348,7 @@ export function JejakUang() {
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[72px] text-center text-[13px] font-bold text-slate-900">{periodLabel}</span>
+            <span className="min-w-[72px] text-center fs-13 font-bold text-slate-900">{periodLabel}</span>
             <button
               type="button"
               onClick={() => step(1)}
@@ -382,13 +382,8 @@ export function JejakUang() {
             className="relative overflow-hidden rounded-[22px] bg-white p-3.5 ring-1 ring-slate-100 md:p-5"
           >
             <span aria-hidden className={cn('absolute inset-x-0 top-0 h-1', s.bar)} />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
-            <p
-              className={cn(
-                'mt-0.5 whitespace-nowrap text-[15px] font-extrabold tabular-nums sm:text-[17px] md:text-[26px]',
-                s.tone,
-              )}
-            >
+            <p className="fs-11 font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
+            <p className={cn('mt-0.5 whitespace-nowrap fs-15 font-extrabold tabular-nums sm:fs-17 md:fsh-26', s.tone)}>
               {short(s.value)}
             </p>
           </motion.div>
@@ -401,8 +396,8 @@ export function JejakUang() {
         ) : !layout ? (
           <div className="py-16 text-center">
             <Footprints className="mx-auto text-slate-300" size={32} />
-            <p className="mt-2 text-[15px] font-semibold text-slate-800">Belum ada jejak di {periodLabel}</p>
-            <p className="text-[13px] text-slate-500">Catat pemasukan & pengeluaran, nanti alirannya muncul di sini.</p>
+            <p className="mt-2 fs-15 font-semibold text-slate-800">Belum ada jejak di {periodLabel}</p>
+            <p className="fs-13 text-slate-500">Catat pemasukan & pengeluaran, nanti alirannya muncul di sini.</p>
           </div>
         ) : (
           <>
@@ -545,7 +540,7 @@ export function JejakUang() {
                 );
               })}
             </svg>
-            <p className="mt-2 text-center text-[12px] text-slate-400">
+            <p className="mt-2 text-center fs-12 text-slate-400">
               {focus ? 'Ketuk lagi untuk kembali' : 'Ketuk kategori untuk mengikuti uangnya lebih jauh'}
               {totalOut > totalIn ? ' · "Dari simpanan" = kekurangan yang ditutup dari saldo/tabungan' : ''}
             </p>
@@ -565,8 +560,8 @@ export function JejakUang() {
             <div className="flex items-center gap-3">
               <span className="h-10 w-1.5 rounded-full" style={{ background: focused.color }} />
               <div className="min-w-0 flex-1">
-                <p className="text-[17px] font-bold text-slate-900">{focused.name}</p>
-                <p className="text-[12px] text-slate-500">
+                <p className="fs-17 font-bold text-slate-900">{focused.name}</p>
+                <p className="fs-12 text-slate-500">
                   {short(focused.value)} · {totalOut > 0 ? Math.round((focused.value / totalOut) * 100) : 0}%
                   pengeluaran · {focused.n} transaksi
                 </p>
@@ -597,7 +592,7 @@ export function JejakUang() {
                     animate={{ width: `${(p.value / focused.value) * 100}%` }}
                     transition={{ duration: 0.7, delay: 0.1 + Math.min(i, 10) * 0.03 }}
                   />
-                  <span className="relative flex items-center justify-between gap-3 text-[13px]">
+                  <span className="relative flex items-center justify-between gap-3 fs-13">
                     <span className="min-w-0 truncate font-semibold text-slate-800">
                       {p.name === '—' ? 'Tanpa keterangan' : p.name}{' '}
                       <span className="font-normal text-slate-400">· {p.n}×</span>
@@ -619,7 +614,7 @@ export function JejakUang() {
               key={c.name}
               type="button"
               onClick={() => setFocus(c.name)}
-              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 fs-12 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
             >
               <span className="h-2 w-2 rounded-full" style={{ background: c.color }} /> {c.name}{' '}
               <span className="text-slate-400">{totalOut > 0 ? Math.round((c.value / totalOut) * 100) : 0}%</span>

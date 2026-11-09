@@ -57,7 +57,7 @@ export function SpendPaceChart({
               if (!active || !payload?.length) return null;
               const p = payload[0].payload as PacePoint;
               return (
-                <div className="rounded-2xl bg-white px-3 py-2 text-[12px] shadow-lg ring-1 ring-slate-200">
+                <div className="rounded-2xl bg-white px-3 py-2 fs-12 shadow-lg ring-1 ring-slate-200">
                   <p className="font-bold text-slate-900">Tanggal {label}</p>
                   {p.now !== null && (
                     <p className="text-indigo-600">

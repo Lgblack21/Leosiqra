@@ -94,7 +94,7 @@ export function AiMarkdown({ text }: { text: string }) {
             <ol key={k} className="space-y-1.5">
               {b.items.map((it, ii) => (
                 <li key={ii} className="flex gap-2">
-                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-black text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 fs-10 font-black text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
                     {ii + 1}
                   </span>
                   <span>{inline(it, `${k}-${ii}`)}</span>

@@ -96,14 +96,14 @@ function CopyRow({ text, label }: { text: string; label: string }) {
   };
   return (
     <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="fs-11 font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <div className="mt-1 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate text-[13px] text-slate-700">{text}</code>
+        <code className="min-w-0 flex-1 truncate fs-13 text-slate-700">{text}</code>
         <button
           type="button"
           onClick={() => void copy()}
           className={cn(
-            'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold',
+            'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 fs-12 font-semibold',
             done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-900 text-white',
           )}
         >
@@ -119,7 +119,7 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
   const origin = base();
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] text-slate-600">
+      <p className="px-1 fs-14 text-slate-600">
         Catat tanpa membuka menu: pasang sekali di app <b>Pintasan</b> iPhone. Tanpa token — memakai login Leosiqra di
         Safari. Hasilnya selalu kamu cek dulu sebelum tersimpan.
       </p>
@@ -145,8 +145,8 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
                   <it.icon size={22} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-bold text-slate-900">{it.title}</span>
-                  <span className="block text-[13px] leading-snug text-slate-500">{it.desc}</span>
+                  <span className="block fs-15 font-bold text-slate-900">{it.title}</span>
+                  <span className="block fs-13 leading-snug text-slate-500">{it.desc}</span>
                 </span>
                 <ChevronDown
                   size={18}
@@ -157,8 +157,8 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
                 <div className="space-y-3 px-4 pb-4">
                   <ol className="space-y-2.5">
                     {it.steps.map((s, i) => (
-                      <li key={i} className="flex gap-3 text-[14px] leading-snug text-slate-700">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[12px] font-bold text-white">
+                      <li key={i} className="flex gap-3 fs-14 leading-snug text-slate-700">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 fs-12 font-bold text-white">
                           {i + 1}
                         </span>
                         <span className="pt-0.5">{s}</span>
@@ -169,7 +169,7 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
                   {it.id !== 'sms' && it.id !== 'notif' && (
                     <a
                       href={url}
-                      className="inline-flex items-center gap-1.5 px-1 text-[13px] font-semibold text-indigo-600 hover:underline"
+                      className="inline-flex items-center gap-1.5 px-1 fs-13 font-semibold text-indigo-600 hover:underline"
                     >
                       Coba sekarang <ExternalLink size={13} />
                     </a>
@@ -180,7 +180,7 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
           );
         })}
       </div>
-      <p className="px-1 text-[12px] leading-relaxed text-slate-500">
+      <p className="px-1 fs-12 leading-relaxed text-slate-500">
         Pastikan sudah login Leosiqra di Safari (atau aplikasi Leosiqra terpasang). Di Android, pakai widget Input Cepat
         di layar utama.
       </p>

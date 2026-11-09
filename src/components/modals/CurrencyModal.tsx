@@ -123,16 +123,16 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
                     {c.symbol.slice(0, 3)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-black text-slate-900 leading-tight">{c.code}</p>
-                    <p className="text-[11px] font-medium text-slate-400 truncate">{c.name}</p>
+                    <p className="fs-13 font-black text-slate-900 leading-tight">{c.code}</p>
+                    <p className="fs-11 font-medium text-slate-400 truncate">{c.name}</p>
                   </div>
                   <button
                     onClick={() => handleAdd(c.code, c.name, c.symbol)}
                     disabled={added || busy}
                     className={
                       added
-                        ? 'flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-black text-emerald-600 bg-emerald-50 shrink-0'
-                        : 'flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-black text-white bg-emerald-500 hover:bg-emerald-600 transition-all shrink-0 disabled:opacity-60'
+                        ? 'flex items-center gap-1 px-3 py-2 rounded-lg fs-11 font-black text-emerald-600 bg-emerald-50 shrink-0'
+                        : 'flex items-center gap-1 px-3 py-2 rounded-lg fs-11 font-black text-white bg-emerald-500 hover:bg-emerald-600 transition-all shrink-0 disabled:opacity-60'
                     }
                   >
                     {added ? (
@@ -156,13 +156,13 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
         {!showManual ? (
           <button
             onClick={() => setShowManual(true)}
-            className="w-full text-center text-[11px] font-bold text-slate-400 hover:text-emerald-600 transition-colors pt-1"
+            className="w-full text-center fs-11 font-bold text-slate-400 hover:text-emerald-600 transition-colors pt-1"
           >
             Tidak ketemu? Tambah manual
           </button>
         ) : (
           <div className="space-y-3 pt-2 border-t border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tambah manual</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Tambah manual</p>
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="text"

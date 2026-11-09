@@ -151,7 +151,7 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
         className="w-[calc(100vw-32px)] max-w-[360px] max-h-[min(520px,calc(100vh-32px))] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 animate-in fade-in zoom-in-95 duration-200"
       >
         <div className="flex items-start justify-between gap-3 mb-2">
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+          <p className="fs-10 font-black text-indigo-500 uppercase tracking-widest">
             Langkah {stepIndex + 1} / {steps.length}
           </p>
           <button onClick={onFinish} className="text-slate-300 hover:text-slate-500 transition-colors shrink-0">
@@ -159,11 +159,11 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
           </button>
         </div>
         <h3 className="text-sm font-black text-slate-900 mb-1.5">{step.title}</h3>
-        <p className="text-[12px] font-medium text-slate-500 leading-relaxed mb-4">{step.content}</p>
+        <p className="fs-12 font-medium text-slate-500 leading-relaxed mb-4">{step.content}</p>
         {step.demo && <FeatureDemo kind={step.demo} />}
         {step.how && (
           <>
-            <p className="mt-3 mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
+            <p className="mt-3 mb-1.5 fs-10 font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
             <HowTo steps={step.how} />
           </>
         )}
@@ -171,17 +171,14 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
           <Link
             href={step.link.href}
             onClick={onFinish}
-            className="mt-4 flex items-center justify-center rounded-xl bg-indigo-50 py-2.5 text-[12px] font-black text-indigo-700 hover:bg-indigo-100"
+            className="mt-4 flex items-center justify-center rounded-xl bg-indigo-50 py-2.5 fs-12 font-black text-indigo-700 hover:bg-indigo-100"
           >
             {step.link.label}
           </Link>
         )}
         <div className="mb-5" />
         <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={onFinish}
-            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
-          >
+          <button onClick={onFinish} className="fs-11 font-bold text-slate-400 hover:text-slate-600 transition-colors">
             Lewati Tur
           </button>
           <div className="flex items-center gap-2">
@@ -196,7 +193,7 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
             <button
               onClick={() => (isLast ? onFinish() : setStepIndex((i) => i + 1))}
               className={cn(
-                'px-4 py-2 rounded-lg text-[11px] font-black text-white flex items-center gap-1.5 transition-colors',
+                'px-4 py-2 rounded-lg fs-11 font-black text-white flex items-center gap-1.5 transition-colors',
                 'bg-indigo-600 hover:bg-indigo-700',
               )}
             >
