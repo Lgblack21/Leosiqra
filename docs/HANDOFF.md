@@ -21,7 +21,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — BELUM DEPLOY (bersama 3.18.0 & 3.19.0). Tanpa SQL.**
   - Keputusan Bos (eksplisit): pakai API Indonesia (apiindonesia.id), termasuk **Alkitab TB** selagi menunggu izin
     LAI (surat sudah disiapkan untuk Bos kirim ke info@alkitab.or.id; surat AYT ke ylsa@sabda.org). Bila ada
-    keberatan → **takedown: set var `ALKITAB_TB_OFF=1`** di dashboard Cloudflare (tanpa deploy) → 451 + layar
+    keberatan → **takedown: tambah `ALKITAB_TB_OFF` = `1` bertipe SECRET** di dashboard Cloudflare (tanpa deploy; tipe Text akan terhapus saat deploy karena wrangler.toml punya [vars] tanpa keep_vars) → 451 + layar
     "Alkitab sedang disiapkan".
   - Worker `handleApiIndonesia`: `/api/member/libur`, `/api/member/teduh/sholat/kota`, `/api/member/teduh/sholat`,
     `/api/member/teduh/alkitab/kitab|pasal`. Header `x-api-key` dari **secret `APIINDONESIA_KEY`** (belum ada →
