@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.16.0 + 3.15.1 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (3.16.0 live, run #186)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.16.0 Peta Belanja Rilis 3 (Rekap + 3D) — BELUM DEPLOY, ikut bersama 3.15.1. Tanpa SQL.**
+- **2026-11-09 — 3.16.0 Peta Belanja Rilis 3 (Rekap + 3D) LIVE (run #186, commit 2ca4aed; termasuk 3.15.1). Tanpa SQL.**
   - Worker: `POST /api/member/places/areas {points}` → `{areas, pending}`; reverse Nominatim zoom 14, kunci koordinat
     3 desimal, `caches.default` 90 hari (null 7 hari), maks 4 titik baru/panggilan berjeda 1,1 s, limiter
     `geo-area:user:` hanya saat ada titik baru. `parsePlaceArea`: Jakarta suburb=kec; Bandung district=kec &
@@ -30,7 +30,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     0 error JS; endpoint 401 tanpa login, cache kedua 0,36 s. Belum dites: beban Nominatim saat banyak user baru.
   - Berikutnya: belum ada rencana Peta lanjutan; tunggu masukan Bos.
 
-- **2026-11-09 — 3.15.1 — BELUM DEPLOY. Tanpa SQL.** TransactionReviewForm (AI Scan/Voice app): kirim `date` dari
+- **2026-11-09 — 3.15.1 — LIVE bersama 3.16.0 (run #186). Tanpa SQL.** TransactionReviewForm (AI Scan/Voice app): kirim `date` dari
   saran AI (kolom Tanggal + "Hari ini", max hari ini) dan pakai `account_id` saran AI kalau milik user. Dites
   Playwright (respons AI dicegat): tersimpan 2026-11-05 di GoPay, lokasi struk tersimpan (source struk).
 
