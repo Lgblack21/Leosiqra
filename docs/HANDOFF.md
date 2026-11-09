@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.18.0–3.20.0 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (3.20.0 live, run #189 — termasuk 3.18.0 & 3.19.0)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — BELUM DEPLOY (bersama 3.18.0 & 3.19.0). Tanpa SQL.**
+- **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — LIVE (run #189, commit 9b764fe; termasuk 3.18.0 & 3.19.0). Tanpa SQL.**
+  - Bos sudah memasang secret `APIINDONESIA_KEY`. Respons API asli belum dicek dari sisi kita (butuh login akun
+    produksi) — menunggu konfirmasi/screenshot Bos.
   - Keputusan Bos (eksplisit): pakai API Indonesia (apiindonesia.id), termasuk **Alkitab TB** selagi menunggu izin
     LAI (surat sudah disiapkan untuk Bos kirim ke info@alkitab.or.id; surat AYT ke ylsa@sabda.org). Bila ada
     keberatan → **takedown: tambah `ALKITAB_TB_OFF` = `1` bertipe SECRET** di dashboard Cloudflare (tanpa deploy; tipe Text akan terhapus saat deploy karena wrangler.toml punya [vars] tanpa keep_vars) → 451 + layar
@@ -35,7 +37,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     Saat kunci terpasang: cek format `abbr` kitab (Worker menolak abbr di luar `^[1-3]?[A-Za-z]{1,12}$`), isi ayat
     tema (rujukan per nomor kitab kanon 1–66), dan field `ashr`/`ashar`.
 
-- **2026-11-09 — 3.19.0 Tanggal merah + jadwal sholat — BELUM DEPLOY (bersama 3.18.0). Tanpa SQL.**
+- **2026-11-09 — 3.19.0 Tanggal merah + jadwal sholat — LIVE (run #189). Tanpa SQL.**
   - `src/lib/hariLibur.ts`: daftar SKB 3 Menteri 2026 (Setneg) & 2027 (Kemenag), dicek jumlah (17+8, 18+8) & nama
     hari. **Tambah tahun berikutnya saat SKB terbit (±September)**; tanggal Hijriah bisa digeser KMA → perbarui.
     Helper: isHariKerja, hariKerjaSebelum, rentangLibur (libur panjang), liburBerikutnya.
@@ -49,7 +51,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites Playwright web + Pixel 7: kartu Natal 45 hari lagi / 4 hari, kalender 2027, hint rutin 25 Des → Rab 23
     Des, jadwal sholat GPS Bogor, 0 error JS.
 
-- **2026-11-09 — 3.18.0 Teduh (Rilis 1: Al-Qur'an) — BELUM DEPLOY. Tanpa SQL.**
+- **2026-11-09 — 3.18.0 Teduh (Rilis 1: Al-Qur'an) — LIVE (run #189). Tanpa SQL.**
   - Data statis: `scripts/teduh/build-quran.mjs` dari `data/teduh/quran/` (Tanzil Uthmani 1.1 **XML** — basmalah di
     atribut `bismillah`, bukan bagian ayat 1; metadata Tanzil; QuranEnc `indonesian_affairs` v1.0.1-csv.1) →
     `public/teduh/quran/surah.json` + `s1..s114.json` (di-commit). Lisensi: Tanzil CC BY 3.0 verbatim + catatan hak
