@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.22.0 Menu samping baru — BELUM DEPLOY, menunggu "gas". Tanpa SQL.** Branch `claude/sidebar-baru-20261109`.
+  - `Sidebar.tsx` hanya tampilan: ubin ikon berwarna (fitur pakai `tint` features.ts, 4 halaman inti `KEUANGAN_TINT`),
+    item aktif = kartu putih + garis aksen (layoutId `sidebar-active`), `GroupLabel`, kartu profil (pil Gratis/PRO).
+    Logika menu/PRO/tamu/shortcut N tidak diubah.
+  - Tombol "Cari fitur… Ctrl K" → `OPEN_PALETTE_EVENT` (`leosiqra:open-palette`) di CommandPalette; Tanya Leo jadi
+    tombol ikon gradien di sebelahnya.
+  - Bug lama diperbaiki: di `.web-dark` tombol Catat transaksi (bg-slate-950) berubah putih tanpa teks → `web-keep`.
+  - Dites Playwright (build lokal, API mock): web 1440 terang/gelap, tablet 1000 (rel ikon), HP 390 (laci), tombol Cari
+    membuka palet & fokus ke input, 0 error JS. Belum dicek: akun PRO (pil PRO + sisa hari), akun tamu.
+
 - **2026-11-09 — 3.21.1 Stikerku: foto kamera/galeri bisa disimpan lagi — LIVE (run #191, commit 4bb871e,
   Release v3.21.1). Tanpa SQL.** Workflow dijalankan Bos (dispatch dari session cloud ditolak auto mode).
   - Penyebab: html-to-image `cacheBust` menambah `?waktu` ke URL gambar; `blob:` URL ber-query gagal di-fetch →

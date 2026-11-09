@@ -85,6 +85,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.20.1 | 9 Nov 2026 | Pelafalan Alkitab |
 | 3.21.0 | 9 Nov 2026 | Teduh baru: renungan harian, Pelajari, audio Al-Qur'an |
 | 3.21.1 | 9 Nov 2026 | Foto kamera & galeri di Stikerku bisa disimpan lagi |
+| 3.22.0 | 9 Nov 2026 | Menu samping baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -98,6 +99,14 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.22.0 — 2026-11-09 — Menu samping baru
+
+- Menu samping (web) lebih rapi: tiap menu punya ikon berwarna, menu yang sedang dibuka ditandai kartu
+  dan garis aksen, label grup lebih jelas.
+- Tombol "Cari fitur…" (Ctrl K) di atas menu untuk membuka fitur apa pun dengan cepat, plus tombol Tanya Leo.
+- Kartu profil baru dengan label paket Gratis/PRO.
+- Mode gelap: tombol "Catat transaksi" tidak lagi berubah putih tanpa tulisan.
 
 ## 3.21.1 — 2026-11-09 — Foto kamera & galeri di Stikerku bisa disimpan lagi
 

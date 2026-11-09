@@ -6,6 +6,9 @@ import { CornerDownLeft, Search } from 'lucide-react';
 import { GOALS, TONE, markSeen, searchFitur, toneOf } from '@/lib/fiturCatalog';
 import { cn } from '@/lib/utils';
 
+// Dibuka juga dari tombol "Cari fitur…" di Sidebar.
+export const OPEN_PALETTE_EVENT = 'leosiqra:open-palette';
+
 // Ctrl/⌘ + K dari halaman mana saja (web): cari fitur lalu Enter untuk membuka.
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -28,8 +31,17 @@ export function CommandPalette() {
         setSel(0);
       } else if (e.key === 'Escape') setOpen(false);
     };
+    const onOpen = () => {
+      setOpen(true);
+      setQ('');
+      setSel(0);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
+    };
   }, [pathname]);
 
   if (!open) return null;
