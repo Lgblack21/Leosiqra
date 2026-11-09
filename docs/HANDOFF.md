@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.20.0 live, run #189 — termasuk 3.18.0 & 3.19.0)
+Terakhir diperbarui: 2026-11-09 (3.21.0 siap deploy — termasuk 3.20.1; live: 3.20.0 run #189)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,22 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  - Teduh layar penuh (`/membership/teduh` masuk FULLSCREEN_PATHS) + dock; bahan UI bersama di
+    `components/teduh/ui.tsx` (TeduhShell, LangitHero langit per waktu, AngkaNaik, CincinProgres, JedaSejenak,
+    LembarTab, NomorAyat, CatatanPribadi). Animasi framer-motion, hormati `useReducedMotion`. JANGAN pasang
+    `filter`/`transform` yang menetap di pembungkus konten — elemen `fixed` (lembar Pelajari) jadi terkurung.
+  - Renungan harian: `lib/teduh/renungan.ts` (bahan renungan & langkah per tema = tulisan tim, bukan tafsir;
+    catatan pribadi localStorage `leosiqra-teduh-catatan`).
+  - Pelajari Al-Qur'an: tafsir Al-Mukhtasar QuranEnc (`scripts/teduh/build-tafsir.mjs` → `public/teduh/tafsir/t*.json`,
+    tanpa diubah, tanpa nomor versi → dicatat tanggal salinan) + kata per kata langsung dari api.quran.com (publik,
+    CORS *, arti per kata Inggris) + catatan. Pelajari Alkitab: rujukan silang OpenBible.info CC BY 4.0
+    (`scripts/teduh/build-silang.mjs` → `public/teduh/silang/b*.json`, 6 teratas per ayat) + konteks perikop + catatan.
+  - **Audio murattal**: `audioService` kini jatuh ke CDN publik `verses.quran.com/<qari>/mp3/SSSAAA.mp3` (9 qari,
+    dicek 206) bila Worker 503 (kunci QF belum ada). Kalau kunci QF dipasang, otomatis pakai API QF.
+  - Dites Playwright web 1440 + Pixel 7 (siang & malam): renungan, audio diputar, tafsir, kata per kata, catatan,
+    jeda, pembaca surah + Pelajari, Alkitab renungan/ayat terkait/konteks (Alkitab pakai respons tiruan).
 
 - **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — LIVE (run #189, commit 9b764fe; termasuk 3.18.0 & 3.19.0). Tanpa SQL.**
   - Bos sudah memasang secret `APIINDONESIA_KEY`. Respons API asli belum dicek dari sisi kita (butuh login akun

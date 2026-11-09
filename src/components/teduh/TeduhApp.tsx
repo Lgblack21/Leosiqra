@@ -1,19 +1,36 @@
 'use client';
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Amiri_Quran } from 'next/font/google';
-import { ArrowLeft, BookOpen, Bookmark, ChevronRight, Home, Search, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { BookOpen, Bookmark, ChevronRight, Home, Pause, Play, Search, Share2, Sparkles, Sunrise } from 'lucide-react';
 import { QuranReader } from '@/components/teduh/QuranReader';
 import { JadwalSholat } from '@/components/teduh/JadwalSholat';
 import { AlkitabHome } from '@/components/teduh/AlkitabHome';
+import { PelajariQuran } from '@/components/teduh/PelajariQuran';
+import {
+  AngkaNaik,
+  Berurutan,
+  Butir,
+  CatatanPribadi,
+  CincinProgres,
+  JedaSejenak,
+  LangitHero,
+  TeduhShell,
+  TitikMingguan,
+  TombolJeda,
+  type DockTab,
+} from '@/components/teduh/ui';
 import { AGAMA, agamaPilihan, type AgamaId } from '@/lib/teduh/agama';
 import {
   TEMA,
   TOTAL_AYAT,
+  audioService,
   ayatHariIni,
   loadMeta,
   loadSurah,
+  loadTafsir,
   parseRef,
   progres,
   searchSurah,
@@ -24,6 +41,7 @@ import {
   type Sources,
   type SurahMeta,
 } from '@/lib/teduh/quran';
+import { bahanHariIni, catatan } from '@/lib/teduh/renungan';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { rp } from '@/lib/kanvas/data';
 import { cn } from '@/lib/utils';
@@ -46,79 +64,90 @@ const setAgama = (v: AgamaId | null) => {
   agamaSubs.forEach((l) => l());
 };
 const useProgres = () => useSyncExternalStore(progres.subscribe, progres.snapshot, () => null);
+const useCatatan = () => useSyncExternalStore(catatan.subscribe, catatan.snapshot, () => null);
 
-type Tab = 'beranda' | 'baca' | 'tema' | 'simpan';
-const TABS: { id: Tab; label: string; icon: typeof Home }[] = [
+type Tab = 'beranda' | 'renungan' | 'baca' | 'tema' | 'simpan';
+const TABS: DockTab<Tab>[] = [
   { id: 'beranda', label: 'Beranda', icon: Home },
+  { id: 'renungan', label: 'Renungan', icon: Sunrise },
   { id: 'baca', label: 'Baca', icon: BookOpen },
   { id: 'tema', label: 'Tema', icon: Sparkles },
-  { id: 'simpan', label: 'Tersimpan', icon: Bookmark },
+  { id: 'simpan', label: 'Simpan', icon: Bookmark },
 ];
+const SUB: Record<Tab, string> = {
+  beranda: "Al-Qur'an · ruang tenang",
+  renungan: 'Renungan hari ini',
+  baca: '114 surah',
+  tema: 'Ayat untuk urusan uangmu',
+  simpan: 'Ayat yang kamu tandai',
+};
 const SEDEKAH_RE = /sedekah|sodaqoh|shodaqoh|zakat|infa[qk]|wakaf|donasi|amal|kurban|qurban|fidyah/i;
+const DZIKIR = [
+  'Subhanallah — Maha Suci Allah',
+  'Alhamdulillah — segala puji bagi Allah',
+  'Allahu Akbar — Allah Maha Besar',
+  'Hasbunallah — cukuplah Allah bagi kami',
+];
 
-// Teduh: ruang tenang lintas agama. Rilis 1: Al-Qur'an lengkap; agama lain menunggu sumber kitab berizin.
+export const greet = () => {
+  const h = new Date().getHours();
+  return h < 4
+    ? 'Selamat malam'
+    : h < 11
+      ? 'Selamat pagi'
+      : h < 15
+        ? 'Selamat siang'
+        : h < 18
+          ? 'Selamat sore'
+          : 'Selamat malam';
+};
+const tanggalHijriah = (d: Date) => {
+  try {
+    return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(d);
+  } catch {
+    return '';
+  }
+};
+
+// Teduh: ruang tenang lintas agama — layar penuh (seperti Ladangku) dengan dock di bawah.
 export function TeduhApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const agama = useAgama();
   const [ganti, setGanti] = useState(false);
   const pilih = AGAMA.find((a) => a.id === agama) ?? null;
-
-  const header = (
-    <div className="flex items-center gap-3">
-      {variant === 'app' ? (
-        <Link
-          href="/app/more"
-          aria-label="Kembali"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-      ) : null}
-      <div className="min-w-0 flex-1">
-        <h1 className={cn('font-black tracking-tight', variant === 'app' ? 'fsh-22' : 'fsh-34')}>Teduh</h1>
-        {variant === 'web' ? (
-          <p className="fs-13.5 text-slate-500">Ruang tenang untuk hatimu, di tengah urusan uang.</p>
-        ) : null}
-      </div>
-      {pilih ? (
-        <button
-          type="button"
-          onClick={() => setGanti(true)}
-          className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 fs-12.5 font-bold ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
-        >
-          <span>{pilih.emoji}</span> {pilih.nama}
-        </button>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <div
-      className={cn(
-        'text-slate-900 dark:text-white',
-        variant === 'app' &&
-          'min-h-dvh bg-[#f6f5f1] px-4 pb-28 pt-[max(12px,env(safe-area-inset-top))] dark:bg-slate-950',
-      )}
+  const tombolAgama = pilih ? (
+    <button
+      type="button"
+      onClick={() => setGanti(true)}
+      className="flex h-11 items-center gap-1.5 rounded-full bg-white px-3 fs-12.5 font-bold shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-700"
     >
-      <div className="mx-auto max-w-3xl space-y-5">
-        {header}
-        {!pilih || ganti ? (
-          <AgamaPicker
-            current={agama}
-            onPick={(id) => {
-              setAgama(id);
-              setGanti(false);
-            }}
-            onCancel={pilih ? () => setGanti(false) : undefined}
-          />
-        ) : pilih.siap && pilih.id === 'islam' ? (
-          <QuranHome variant={variant} />
-        ) : pilih.siap && (pilih.id === 'kristen' || pilih.id === 'katolik') ? (
-          <AlkitabHome variant={variant} katolik={pilih.id === 'katolik'} />
-        ) : (
-          <SegeraHadir agama={pilih.id} onGanti={() => setGanti(true)} />
-        )}
-      </div>
-    </div>
+      <span>{pilih.emoji}</span> <span className="hidden sm:inline">{pilih.nama}</span>
+    </button>
+  ) : null;
+
+  if (!pilih || ganti)
+    return (
+      <TeduhShell variant={variant} nada="islam" judul="Teduh" sub="Ruang tenang di tengah urusan uang">
+        <AgamaPicker
+          current={agama}
+          onPick={(id) => {
+            setAgama(id);
+            setGanti(false);
+          }}
+          onCancel={pilih ? () => setGanti(false) : undefined}
+        />
+      </TeduhShell>
+    );
+  if (pilih.siap && pilih.id === 'islam') return <QuranHome variant={variant} kanan={tombolAgama} />;
+  if (pilih.siap && (pilih.id === 'kristen' || pilih.id === 'katolik'))
+    return <AlkitabHome variant={variant} katolik={pilih.id === 'katolik'} kanan={tombolAgama} />;
+  return (
+    <TeduhShell variant={variant} nada="islam" judul="Teduh" sub={pilih.kitab} kanan={tombolAgama}>
+      <SegeraHadir agama={pilih.id} onGanti={() => setGanti(true)} />
+    </TeduhShell>
   );
 }
 
@@ -131,40 +160,53 @@ function AgamaPicker({
   onPick: (id: AgamaId) => void;
   onCancel?: () => void;
 }) {
+  const reduce = useReducedMotion();
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="fsh-22 font-black">Pilih agamamu</h2>
-        <p className="fs-13 text-slate-500">
-          Teduh menyesuaikan kitab & renungannya. Pilihan ini <b>hanya disimpan di perangkat ini</b> — tidak dikirim ke
-          server Leosiqra.
+    <section className="space-y-4">
+      <div className="text-center">
+        <motion.p
+          initial={reduce ? false : { scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+          className="fsh-40"
+        >
+          🕊️
+        </motion.p>
+        <h2 className="mt-1 fsh-26 font-black">Pilih agamamu</h2>
+        <p className="mx-auto max-w-md fs-13.5 text-slate-500">
+          Teduh menyesuaikan kitab, renungan, dan doanya. Pilihan ini <b>hanya disimpan di perangkat ini</b> — tidak
+          dikirim ke server Leosiqra.
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <Berurutan className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {AGAMA.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => onPick(a.id)}
-            className={cn(
-              'rounded-[22px] bg-gradient-to-br p-4 text-left ring-1 transition hover:scale-[1.01]',
-              a.tint,
-              current === a.id ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-black/5',
-            )}
-          >
-            <span className="fsh-26">{a.emoji}</span>
-            <span className="mt-1 block fs-15 font-black">{a.nama}</span>
-            <span className="block fs-12 opacity-80">{a.kitab}</span>
-            {!a.siap ? (
-              <span className="mt-1.5 inline-block rounded-full bg-white/70 px-2 py-0.5 fs-11 font-bold">
-                Segera hadir
-              </span>
-            ) : null}
-          </button>
+          <Butir key={a.id}>
+            <motion.button
+              type="button"
+              whileHover={reduce ? undefined : { y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onPick(a.id)}
+              className={cn(
+                'relative h-full w-full overflow-hidden rounded-[24px] bg-gradient-to-br p-4 text-left shadow-sm ring-1',
+                a.tint,
+                current === a.id ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-black/5',
+              )}
+            >
+              <span className="absolute -right-3 -top-3 fsh-48 opacity-15">{a.emoji}</span>
+              <span className="fsh-28">{a.emoji}</span>
+              <span className="mt-1 block fs-15 font-black">{a.nama}</span>
+              <span className="block fs-12 opacity-80">{a.kitab}</span>
+              {!a.siap ? (
+                <span className="mt-1.5 inline-block rounded-full bg-white/70 px-2 py-0.5 fs-11 font-bold">
+                  Segera hadir
+                </span>
+              ) : null}
+            </motion.button>
+          </Butir>
         ))}
-      </div>
+      </Berurutan>
       {onCancel ? (
-        <button type="button" onClick={onCancel} className="fs-13 font-bold text-slate-500">
+        <button type="button" onClick={onCancel} className="mx-auto block fs-13 font-bold text-slate-500">
           Batal
         </button>
       ) : null}
@@ -175,10 +217,10 @@ function AgamaPicker({
 function SegeraHadir({ agama, onGanti }: { agama: AgamaId; onGanti: () => void }) {
   const a = AGAMA.find((x) => x.id === agama)!;
   return (
-    <section className={cn('rounded-[26px] bg-gradient-to-br p-6', a.tint)}>
+    <section className={cn('rounded-[28px] bg-gradient-to-br p-6 md:p-8', a.tint)}>
       <p className="fsh-34">{a.emoji}</p>
       <h2 className="mt-1 fsh-24 font-black">{a.kitab} sedang disiapkan</h2>
-      <p className="mt-2 fs-14 leading-relaxed opacity-90">
+      <p className="mt-2 max-w-2xl fs-14 leading-relaxed opacity-90">
         Kami sedang mengurus teks kitab & terjemahan Indonesia dari sumber resmi yang berizin, supaya isinya tepat dan
         sah dipakai. Teduh untuk umat {a.nama} akan hadir dengan bacaan harian, pustaka kitab, tema keuangan (mis.{' '}
         {a.memberi.toLowerCase()}), dan suara.
@@ -190,16 +232,12 @@ function SegeraHadir({ agama, onGanti }: { agama: AgamaId; onGanti: () => void }
   );
 }
 
-const greet = () => {
-  const h = new Date().getHours();
-  return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam';
-};
-
-function QuranHome({ variant }: { variant: 'web' | 'app' }) {
+function QuranHome({ variant, kanan }: { variant: 'web' | 'app'; kanan: React.ReactNode }) {
   const [meta, setMeta] = useState<{ sources: Sources; surah: SurahMeta[] } | null>(null);
   const [err, setErr] = useState('');
   const [tab, setTab] = useState<Tab>('beranda');
   const [open, setOpen] = useState<{ s: number; a?: number; seq: number } | null>(null);
+  const [jeda, setJeda] = useState(false);
   const store = useProgres();
   useEffect(() => {
     loadMeta()
@@ -212,64 +250,69 @@ function QuranHome({ variant }: { variant: 'web' | 'app' }) {
     window.scrollTo({ top: 0 });
   };
 
-  if (err) return <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700">{err}</p>;
-  if (!meta) return <p className="py-10 text-center fs-13 text-slate-400">Memuat Al-Qur&apos;an…</p>;
-
-  const list = meta.surah;
-  if (open) {
-    const m = list.find((x) => x.n === open.s)!;
-    return (
-      <QuranReader
-        key={`${open.s}-${open.seq}`}
-        meta={m}
-        list={list}
-        startAyat={open.a}
-        marks={marks}
-        arabClass={amiri.className}
-        onClose={() => setOpen(null)}
-        onOpen={go}
-      />
-    );
-  }
-
+  const list = meta?.surah ?? [];
+  const reader = open && meta ? list.find((x) => x.n === open.s) : null;
   return (
-    <div className="space-y-5">
-      {tab === 'beranda' ? <Beranda list={list} store={store} go={go} setTab={setTab} /> : null}
-      {tab === 'baca' ? <Pustaka list={list} store={store} go={go} /> : null}
-      {tab === 'tema' ? <TemaView list={list} go={go} /> : null}
-      {tab === 'simpan' ? <Tersimpan list={list} marks={store?.marks ?? []} go={go} /> : null}
-      <Credits sources={meta.sources} />
-      <nav
-        className={cn(
-          'sticky z-30 mx-auto flex w-[min(460px,100%)] gap-1 rounded-full bg-white/95 p-1.5 shadow-xl ring-1 ring-slate-200 backdrop-blur dark:bg-slate-900/95 dark:ring-slate-700',
-          variant === 'app' ? 'bottom-[calc(env(safe-area-inset-bottom)+12px)]' : 'bottom-5',
-        )}
+    <>
+      <TeduhShell
+        variant={variant}
+        nada="islam"
+        tabs={TABS}
+        tab={tab}
+        onTab={setTab}
+        judul="Teduh"
+        sub={SUB[tab]}
+        kanan={kanan}
+        polos={Boolean(reader)}
       >
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => {
-              setTab(t.id);
-              window.scrollTo({ top: 0 });
-            }}
-            className={cn(
-              'flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-full fs-11 font-bold',
-              tab === t.id
-                ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200'
-                : 'text-slate-500',
-            )}
-          >
-            <t.icon size={18} />
-            {t.label}
-          </button>
-        ))}
-      </nav>
-    </div>
+        {err ? <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700">{err}</p> : null}
+        {!meta && !err ? <p className="py-16 text-center fs-13 text-slate-400">Memuat Al-Qur&apos;an…</p> : null}
+        {reader && open ? (
+          <QuranReader
+            key={`${open.s}-${open.seq}`}
+            meta={reader}
+            list={list}
+            startAyat={open.a}
+            marks={marks}
+            arabClass={amiri.className}
+            onClose={() => setOpen(null)}
+            onOpen={go}
+          />
+        ) : meta ? (
+          <>
+            {tab === 'beranda' ? (
+              <Beranda list={list} store={store} go={go} setTab={setTab} onJeda={() => setJeda(true)} />
+            ) : null}
+            {tab === 'renungan' ? <Renungan list={list} go={go} onJeda={() => setJeda(true)} /> : null}
+            {tab === 'baca' ? <Pustaka list={list} store={store} go={go} /> : null}
+            {tab === 'tema' ? <TemaView list={list} go={go} /> : null}
+            {tab === 'simpan' ? <Tersimpan list={list} marks={store?.marks ?? []} go={go} /> : null}
+            <Credits sources={meta.sources} />
+          </>
+        ) : null}
+      </TeduhShell>
+      <AnimatePresence>
+        {jeda ? <JedaSejenak nada="islam" kalimat={DZIKIR} onClose={() => setJeda(false)} /> : null}
+      </AnimatePresence>
+    </>
   );
 }
 
 type StoreSnap = ReturnType<typeof progres.snapshot> | null;
+
+const useAyat = (s: number, a: number) => {
+  const [ay, setAy] = useState<{ k: string; v: Ayat | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadSurah(s)
+      .then((d) => alive && setAy({ k: `${s}:${a}`, v: d.ayat[a - 1] ?? null }))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [s, a]);
+  return ay?.k === `${s}:${a}` ? ay.v : null;
+};
 
 function AyatCard({
   k,
@@ -286,41 +329,39 @@ function AyatCard({
 }) {
   const { s, a } = splitKey(k);
   const m = list.find((x) => x.n === s);
-  const [ay, setAy] = useState<Ayat | null>(null);
-  useEffect(() => {
-    let alive = true;
-    loadSurah(s)
-      .then((d) => alive && setAy(d.ayat[a - 1] ?? null))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [s, a]);
+  const ay = useAyat(s, a);
   return (
-    <article className="rounded-[24px] bg-white p-5 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-      <div className="flex items-center justify-between gap-2">
+    <article className="relative overflow-hidden rounded-[26px] bg-white p-5 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-100/50 blur-2xl dark:bg-emerald-500/10"
+      />
+      <div className="relative flex items-center justify-between gap-2">
         <span className="fs-12 font-bold text-slate-400">{label}</span>
-        <span className="fs-11.5 font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 fs-11 font-black uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
           {m?.latin} · {s}:{a}
         </span>
       </div>
       {ay ? (
-        <>
-          <p dir="rtl" lang="ar" className={cn('mt-3 text-center fsh-28 leading-[2.1]', amiri.className)}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+          <p dir="rtl" lang="ar" className={cn('relative mt-4 text-center fsh-28 leading-[2.1]', amiri.className)}>
             {ay[0]}
           </p>
           <p className="mt-2 text-center fs-14.5 leading-relaxed text-slate-700 dark:text-slate-300">
             {ay[1].replace(/\[\d+\]/g, '')}
           </p>
-        </>
+        </motion.div>
       ) : (
-        <p className="py-6 text-center fs-12.5 text-slate-400">Memuat ayat…</p>
+        <div className="mt-5 space-y-2">
+          <div className="mx-auto h-6 w-4/5 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+          <div className="mx-auto h-4 w-3/5 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+        </div>
       )}
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <div className="relative mt-4 flex flex-wrap justify-center gap-2">
         <button
           type="button"
           onClick={() => go(s, a)}
-          className="h-10 rounded-full bg-slate-900 px-4 fs-13 font-bold text-white dark:bg-white dark:text-slate-900"
+          className="h-10 rounded-full bg-slate-900 px-4 fs-13 font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900"
         >
           Baca dalam surahnya
         </button>
@@ -335,23 +376,24 @@ function Beranda({
   store,
   go,
   setTab,
+  onJeda,
 }: {
   list: SurahMeta[];
   store: StoreSnap;
   go: (s: number, a?: number) => void;
   setTab: (t: Tab) => void;
+  onJeda: () => void;
 }) {
   const hari = ayatHariIni();
   const days = store?.days ?? {};
   const st = streak(days);
   const read = store ? progres.countRead() : 0;
   const pct = read / TOTAL_AYAT;
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    return { d, on: Boolean(days[todayKey(d)]) };
-  });
   const last = store?.last ? list.find((x) => x.n === store.last!.s) : null;
+  const [now] = useState(() => new Date());
+  const { s, a } = splitKey(hari.k);
+  const ay = useAyat(s, a);
+  const mHari = list.find((x) => x.n === s);
   const [sedekah, setSedekah] = useState<{ total: number; n: number } | null>(null);
   useEffect(() => {
     const now = new Date();
@@ -376,116 +418,394 @@ function Beranda({
   }, []);
 
   return (
-    <>
-      <section className="overflow-hidden rounded-[28px] bg-gradient-to-br from-emerald-700 via-teal-700 to-sky-800 p-5 text-white">
-        <p className="fs-12 font-bold uppercase tracking-[0.18em] text-white/60">{greet()}</p>
-        <p className="mt-1 fsh-26 font-black leading-tight">Teduhkan hati sebentar.</p>
-        <div className="mt-4 flex items-end justify-between gap-3">
-          <div>
-            <p className="fsh-34 font-black leading-none">{st}</p>
-            <p className="fs-12.5 text-white/75">hari berturut-turut membaca</p>
+    <Berurutan className="space-y-4">
+      <Butir>
+        <LangitHero
+          nada="islam"
+          sapa={greet()}
+          judul="Teduhkan hati sebentar."
+          tanggal={`${tanggalHijriah(now)} · ${now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
+        >
+          <div className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-3">
+            <div>
+              <p className="fsh-40 font-black leading-none">
+                <AngkaNaik nilai={st} />
+              </p>
+              <p className="fs-12.5 text-white/80">hari berturut-turut membaca</p>
+            </div>
+            <TitikMingguan days={days} todayKey={todayKey} />
           </div>
-          <div className="flex gap-1.5">
-            {week.map((w) => (
-              <span key={w.d.toISOString()} className="flex flex-col items-center gap-1">
-                <span className={cn('h-7 w-7 rounded-full', w.on ? 'bg-amber-300' : 'bg-white/15')} />
-                <span className="fs-10 text-white/60">{w.d.toLocaleDateString('id-ID', { weekday: 'narrow' })}</span>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <TombolJeda onClick={onJeda} />
+            <button
+              type="button"
+              onClick={() => (last ? go(last.n, store!.last!.a) : go(1))}
+              className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3.5 fs-12.5 font-bold text-slate-900 shadow-sm transition hover:bg-white/90"
+            >
+              <BookOpen size={15} /> {last ? `Lanjut ${last.latin}` : 'Mulai membaca'}
+            </button>
+          </div>
+        </LangitHero>
+      </Butir>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Butir>
+          <button
+            type="button"
+            onClick={() => setTab('renungan')}
+            className="group relative flex h-full w-full flex-col overflow-hidden rounded-[26px] bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 text-left ring-1 ring-amber-100 transition hover:shadow-lg dark:from-amber-500/10 dark:via-slate-900 dark:to-emerald-500/10 dark:ring-amber-500/20"
+          >
+            <span className="flex items-center gap-2 fs-11.5 font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              <Sunrise size={15} /> Renungan hari ini · {hari.tema.judul}
+            </span>
+            <span dir="rtl" lang="ar" className={cn('mt-3 line-clamp-2 fsh-24 leading-[2]', amiri.className)}>
+              {ay?.[0] ?? '…'}
+            </span>
+            <span className="mt-1 line-clamp-3 fs-13.5 leading-relaxed text-slate-600 dark:text-slate-300">
+              {ay ? ay[1].replace(/\[\d+\]/g, '') : 'Memuat ayat…'}
+            </span>
+            <span className="mt-auto flex items-center justify-between pt-4">
+              <span className="fs-12 font-bold text-slate-400">
+                QS {mHari?.latin} {hari.k}
               </span>
+              <span className="flex items-center gap-1 rounded-full bg-slate-900 px-3.5 py-2 fs-12.5 font-bold text-white transition group-hover:gap-2 dark:bg-white dark:text-slate-900">
+                Renungkan <ChevronRight size={15} />
+              </span>
+            </span>
+          </button>
+        </Butir>
+        <Butir>
+          <JadwalSholat />
+        </Butir>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Butir>
+          <div className="flex h-full items-center gap-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+            <CincinProgres pct={pct} />
+            <span className="min-w-0 flex-1">
+              <span className="block fs-14.5 font-black">Menuju khatam</span>
+              <span className="block fs-12 text-slate-500">
+                <AngkaNaik nilai={read} /> dari {TOTAL_AYAT.toLocaleString('id-ID')} ayat
+              </span>
+            </span>
+          </div>
+        </Butir>
+        <Butir>
+          <section className="flex h-full items-center gap-3 rounded-[24px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
+            <motion.span
+              className="fsh-26"
+              animate={{ scale: [1, 1.12, 1] }}
+              transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 2 }}
+            >
+              💝
+            </motion.span>
+            <div className="min-w-0 flex-1">
+              <p className="fs-14.5 font-black text-amber-900 dark:text-amber-100">Sedekah bulan ini</p>
+              <p className="fs-12.5 text-amber-800/80 dark:text-amber-200/80">
+                {sedekah === null
+                  ? 'Dari catatan keuanganmu (sedekah, zakat, infak, wakaf).'
+                  : sedekah.n
+                    ? `${rp(sedekah.total)} dari ${sedekah.n} catatan`
+                    : 'Belum ada yang tercatat bulan ini.'}
+              </p>
+            </div>
+            <Link
+              href="/input-cepat?teks=Sedekah"
+              className="h-10 shrink-0 rounded-full bg-amber-500 px-3.5 fs-12.5 font-bold leading-10 text-white transition hover:bg-amber-600"
+            >
+              Catat
+            </Link>
+          </section>
+        </Butir>
+      </div>
+
+      <Butir>
+        <div className="rounded-[24px] bg-white p-4 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="fs-14.5 font-black">Ayat untuk urusan uangmu</p>
+            <button
+              type="button"
+              onClick={() => setTab('tema')}
+              className="flex items-center gap-0.5 fs-12.5 font-bold text-emerald-700"
+            >
+              Semua <ChevronRight size={14} />
+            </button>
+          </div>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+            {TEMA.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab('tema')}
+                className="flex shrink-0 flex-col items-start gap-1 rounded-2xl bg-slate-50 px-3.5 py-3 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-emerald-200 dark:bg-slate-800 dark:ring-slate-700"
+              >
+                <span className="fsh-22">{t.emoji}</span>
+                <span className="fs-12.5 font-bold">{t.judul}</span>
+                <span className="fs-11 text-slate-400">{t.ayat.length} ayat</span>
+              </button>
             ))}
           </div>
         </div>
-      </section>
-
-      <JadwalSholat />
-
-      <AyatCard k={hari.k} list={list} label={`Ayat hari ini · ${hari.tema.judul}`} go={go} />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => (last ? go(last.n, store!.last!.a) : go(1))}
-          className="flex items-center gap-3 rounded-[22px] bg-white p-4 text-left ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
-        >
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-            <BookOpen size={20} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block fs-14.5 font-black">{last ? `Lanjut ${last.latin}` : 'Mulai membaca'}</span>
-            <span className="block fs-12 text-slate-500">
-              {last ? `Ayat ${store!.last!.a} dari ${last.ayat}` : 'Dari Al-Fatihah'}
-            </span>
-          </span>
-          <ChevronRight size={18} className="text-slate-400" />
-        </button>
-        <div className="flex items-center gap-3 rounded-[22px] bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-          <Ring pct={pct} />
-          <span className="min-w-0 flex-1">
-            <span className="block fs-14.5 font-black">Menuju khatam</span>
-            <span className="block fs-12 text-slate-500">
-              {read.toLocaleString('id-ID')} dari {TOTAL_AYAT.toLocaleString('id-ID')} ayat
-            </span>
-          </span>
-        </div>
-      </div>
-
-      <section className="flex items-center gap-3 rounded-[22px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
-        <span className="fsh-26">💝</span>
-        <div className="min-w-0 flex-1">
-          <p className="fs-14.5 font-black text-amber-900 dark:text-amber-100">Sedekah bulan ini</p>
-          <p className="fs-12.5 text-amber-800/80 dark:text-amber-200/80">
-            {sedekah === null
-              ? 'Dihitung dari catatan keuanganmu (sedekah, zakat, infak, wakaf, donasi).'
-              : sedekah.n
-                ? `${rp(sedekah.total)} dari ${sedekah.n} catatan`
-                : 'Belum ada yang tercatat bulan ini.'}
-          </p>
-        </div>
-        <Link
-          href="/input-cepat?teks=Sedekah"
-          className="h-10 shrink-0 rounded-full bg-amber-500 px-3.5 fs-12.5 font-bold leading-10 text-white"
-        >
-          Catat
-        </Link>
-      </section>
-
-      <button
-        type="button"
-        onClick={() => setTab('tema')}
-        className="flex w-full items-center gap-3 rounded-[22px] bg-white p-4 text-left ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
-      >
-        <span className="fsh-24">{hari.tema.emoji}</span>
-        <span className="min-w-0 flex-1">
-          <span className="block fs-14.5 font-black">Ayat untuk urusan uangmu</span>
-          <span className="block fs-12 text-slate-500">Rezeki, syukur, sedekah, utang, tidak boros, dan lainnya</span>
-        </span>
-        <ChevronRight size={18} className="text-slate-400" />
-      </button>
-    </>
+      </Butir>
+    </Berurutan>
   );
 }
 
-function Ring({ pct }: { pct: number }) {
-  const r = 20;
-  const c = 2 * Math.PI * r;
+// ── Renungan harian: ayat + tafsir ringkas + bahan renungan + langkah kecil + catatan pribadi ──
+function Renungan({
+  list,
+  go,
+  onJeda,
+}: {
+  list: SurahMeta[];
+  go: (s: number, a?: number) => void;
+  onJeda: () => void;
+}) {
+  const [now] = useState(() => new Date());
+  const hari = ayatHariIni(now);
+  const { s, a } = splitKey(hari.k);
+  const m = list.find((x) => x.n === s);
+  const ay = useAyat(s, a);
+  const [tafsir, setTafsir] = useState<string | null>(null);
+  const [pelajari, setPelajari] = useState(false);
+  const [toast, setToast] = useState('');
+  const bahan = bahanHariIni(hari.tema.id, now);
+  const tgl = todayKey(now);
+  const cat = useCatatan();
+  const appMode = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
+  const audio = useSatuAyat(s, a, m?.ayat ?? 0);
+  useEffect(() => {
+    let alive = true;
+    loadTafsir(s)
+      .then((t) => alive && setTafsir(t.tafsir[a - 1] ?? ''))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [s, a]);
+  const jumlahCatatan = Object.keys(cat?.hari ?? {}).length;
+  const share = async () => {
+    if (!ay) return;
+    const text = `${ay[0]}\n\n${ay[1].replace(/\[\d+\]/g, '')}\n— QS ${m?.latin} ${hari.k} (Terjemahan Kemenag RI)\n\n${bahan.renung}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else {
+        await navigator.clipboard.writeText(text);
+        setToast('Renungan disalin.');
+        setTimeout(() => setToast(''), 2000);
+      }
+    } catch {
+      /* dibatalkan */
+    }
+  };
+
   return (
-    <svg width="52" height="52" viewBox="0 0 52 52" className="shrink-0">
-      <circle cx="26" cy="26" r={r} fill="none" strokeWidth="6" className="stroke-slate-100 dark:stroke-slate-800" />
-      <circle
-        cx="26"
-        cy="26"
-        r={r}
-        fill="none"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={`${Math.max(pct > 0 ? 2 : 0, c * pct)} ${c}`}
-        transform="rotate(-90 26 26)"
-        className="stroke-emerald-500"
-      />
-      <text x="26" y="30" textAnchor="middle" className="fill-current" style={{ fontSize: 11, fontWeight: 800 }}>
-        {pct > 0 && pct < 0.01 ? '<1%' : `${Math.round(pct * 100)}%`}
-      </text>
-    </svg>
+    <Berurutan className="space-y-4">
+      <Butir>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="fs-12 font-bold uppercase tracking-wider text-slate-400">
+              {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })} ·{' '}
+              {tanggalHijriah(now)}
+            </p>
+            <h2 className="fsh-26 font-black">
+              {hari.tema.emoji} {hari.tema.judul}
+            </h2>
+          </div>
+          <span className="rounded-full bg-white px-3 py-1.5 fs-12 font-bold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+            Berganti setiap hari
+          </span>
+        </div>
+      </Butir>
+
+      <Butir>
+        <article className="relative overflow-hidden rounded-[30px] bg-gradient-to-b from-emerald-900 via-emerald-800 to-teal-900 p-6 text-white md:p-8">
+          <svg aria-hidden viewBox="0 0 200 200" className="absolute -left-16 -top-16 h-64 w-64 text-white/[0.06]">
+            <rect x="40" y="40" width="120" height="120" fill="none" stroke="currentColor" strokeWidth="3" />
+            <rect
+              x="40"
+              y="40"
+              width="120"
+              height="120"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              transform="rotate(45 100 100)"
+            />
+          </svg>
+          <p className="relative text-center fs-11.5 font-black uppercase tracking-[0.2em] text-emerald-200/80">
+            QS {m?.latin} · {hari.k}
+          </p>
+          {ay ? (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <p dir="rtl" lang="ar" className={cn('relative mt-4 text-center fsh-34 leading-[2.15]', amiri.className)}>
+                {ay[0]}
+              </p>
+              <p className="relative mx-auto mt-3 max-w-2xl text-center fs-15.5 leading-relaxed text-emerald-50/90">
+                {ay[1].replace(/\[\d+\]/g, '')}
+              </p>
+            </motion.div>
+          ) : (
+            <p className="py-10 text-center fs-13 text-white/60">Memuat ayat…</p>
+          )}
+          <div className="relative mt-5 flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={audio.toggle}
+              className="flex h-10 items-center gap-1.5 rounded-full bg-white px-4 fs-13 font-bold text-emerald-900"
+            >
+              {audio.main ? <Pause size={15} /> : <Play size={15} />} {audio.main ? 'Jeda' : 'Dengarkan'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPelajari(true)}
+              className="flex h-10 items-center gap-1.5 rounded-full bg-white/15 px-4 fs-13 font-bold ring-1 ring-white/25"
+            >
+              <Sparkles size={15} className="text-amber-300" /> Pelajari
+            </button>
+            <button
+              type="button"
+              onClick={() => void share()}
+              aria-label="Bagikan"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25"
+            >
+              <Share2 size={15} />
+            </button>
+          </div>
+          {audio.err ? <p className="relative mt-2 text-center fs-12 text-amber-200">{audio.err}</p> : null}
+        </article>
+      </Butir>
+
+      <div className="grid gap-4 md:grid-cols-[1.3fr_1fr]">
+        <Butir>
+          <section className="h-full rounded-[26px] bg-white p-5 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+            <p className="fs-11.5 font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+              Tafsir ringkas
+            </p>
+            <p className="mt-2 fs-14.5 leading-relaxed text-slate-700 dark:text-slate-200">
+              {tafsir ?? 'Memuat tafsir…'}
+            </p>
+            <p className="mt-3 fs-11 text-slate-400">
+              Al-Mukhtasar fi Tafsir al-Qur&apos;an al-Karim, via QuranEnc.com — tanpa diubah.
+            </p>
+          </section>
+        </Butir>
+        <div className="space-y-4">
+          <Butir>
+            <section className="rounded-[26px] bg-gradient-to-br from-violet-50 to-sky-50 p-5 ring-1 ring-violet-100 dark:from-violet-500/10 dark:to-sky-500/10 dark:ring-violet-500/20">
+              <p className="fs-11.5 font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                Untuk direnungkan
+              </p>
+              <p className="mt-2 fs-15.5 font-semibold leading-relaxed text-slate-800 dark:text-slate-100">
+                {bahan.renung}
+              </p>
+            </section>
+          </Butir>
+          <Butir>
+            <section className="rounded-[26px] bg-white p-5 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+              <p className="fs-11.5 font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                Langkah kecil hari ini
+              </p>
+              <p className="mt-2 fs-14.5 leading-relaxed">{bahan.langkah.teks}</p>
+              {bahan.langkah.href ? (
+                <Link
+                  href={appMode && bahan.langkah.app ? bahan.langkah.app : bahan.langkah.href}
+                  className="mt-3 inline-flex h-9 items-center gap-1 rounded-full bg-amber-500 px-3.5 fs-12.5 font-bold text-white"
+                >
+                  Lakukan sekarang <ChevronRight size={14} />
+                </Link>
+              ) : null}
+              {/jeda napas/i.test(bahan.langkah.teks) ? (
+                <button
+                  type="button"
+                  onClick={onJeda}
+                  className="mt-3 h-9 rounded-full bg-slate-900 px-3.5 fs-12.5 font-bold text-white"
+                >
+                  Mulai jeda sejenak
+                </button>
+              ) : null}
+            </section>
+          </Butir>
+        </div>
+      </div>
+
+      <Butir>
+        <section className="rounded-[26px] bg-white p-5 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="fs-14.5 font-black">Catatan renunganku</p>
+            {jumlahCatatan ? <span className="fs-12 text-slate-400">{jumlahCatatan} hari tercatat</span> : null}
+          </div>
+          <CatatanPribadi
+            key={tgl}
+            nilai={cat?.hari[tgl] ?? ''}
+            onSimpan={(v) => catatan.setHari(tgl, v)}
+            placeholder="Satu kalimat syukur, doa, atau niat untuk hari ini…"
+          />
+        </section>
+      </Butir>
+
+      <Butir>
+        <button
+          type="button"
+          onClick={() => go(s, a)}
+          className="flex w-full items-center justify-between rounded-[22px] bg-slate-900 px-5 py-4 fs-14 font-bold text-white dark:bg-white dark:text-slate-900"
+        >
+          Lanjut baca QS {m?.latin} <ChevronRight size={18} />
+        </button>
+      </Butir>
+      <AnimatePresence>
+        {pelajari && m ? (
+          <PelajariQuran meta={m} a={a} arabClass={amiri.className} onClose={() => setPelajari(false)} />
+        ) : null}
+      </AnimatePresence>
+      {toast ? (
+        <p className="fixed inset-x-0 bottom-28 z-40 mx-auto w-max rounded-full bg-slate-950/90 px-4 py-2 fs-12.5 font-semibold text-white">
+          {toast}
+        </p>
+      ) : null}
+    </Berurutan>
   );
+}
+
+/** Putar murattal satu ayat (qari pilihan terakhir). */
+function useSatuAyat(s: number, a: number, count: number) {
+  const el = useRef<HTMLAudioElement | null>(null);
+  const [main, setMain] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(
+    () => () => {
+      el.current?.pause();
+    },
+    [],
+  );
+  return {
+    main,
+    err,
+    async toggle() {
+      if (main && el.current) {
+        el.current.pause();
+        setMain(false);
+        return;
+      }
+      setErr('');
+      try {
+        if (!el.current) {
+          const r = await audioService.surah(s, progres.snapshot().qari || 7, count);
+          const src = r.items.find((x) => x.key === `${s}:${a}`)?.url;
+          if (!src) throw new Error('Audio ayat ini belum tersedia.');
+          el.current = new Audio(src);
+          el.current.onended = () => setMain(false);
+          el.current.onpause = () => setMain(false);
+        }
+        await el.current.play();
+        setMain(true);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : 'Audio belum bisa diputar.');
+        setMain(false);
+      }
+    },
+  };
 }
 
 function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go: (s: number, a?: number) => void }) {
@@ -505,10 +825,6 @@ function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go:
   }, [list, store]);
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="fsh-24 font-black">Baca</h2>
-        <p className="fs-13 text-slate-500">114 surah. Ketik nama surah, atau langsung ke ayat seperti 2:255.</p>
-      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -517,9 +833,9 @@ function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go:
           else if (shown.length === 1) go(shown[0].n);
           else setHint(/\d/.test(q) ? 'Nomor surah/ayat tidak ditemukan.' : '');
         }}
-        className="flex h-12 items-center gap-2 rounded-2xl bg-white px-3.5 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+        className="sticky top-2 z-10 flex h-13 items-center gap-2 rounded-2xl bg-white/95 px-4 shadow-sm ring-1 ring-slate-200 backdrop-blur dark:bg-slate-900/95 dark:ring-slate-700"
       >
-        <Search size={17} className="text-slate-400" />
+        <Search size={18} className="text-slate-400" />
         <input
           value={q}
           onChange={(e) => {
@@ -527,11 +843,11 @@ function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go:
             setHint('');
           }}
           placeholder="Cari surah, atau ketik 2:255"
-          className="h-full min-w-0 flex-1 bg-transparent fs-14 outline-none"
+          className="h-12 min-w-0 flex-1 bg-transparent fs-14.5 outline-none"
         />
       </form>
       {hint ? <p className="fs-12.5 font-semibold text-rose-600">{hint}</p> : null}
-      <div className="overflow-hidden rounded-[22px] bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+      <div className="grid gap-2 md:grid-cols-2">
         {shown.map((s) => {
           const done = perSurah.get(s.n) ?? 0;
           return (
@@ -539,10 +855,27 @@ function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go:
               key={s.n}
               type="button"
               onClick={() => go(s.n)}
-              className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+              className="group flex items-center gap-3 rounded-[20px] bg-white px-3.5 py-3 text-left ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-emerald-200 dark:bg-slate-900 dark:ring-slate-800"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 fs-12 font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {s.n}
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+                <svg
+                  viewBox="0 0 40 40"
+                  className="absolute inset-0 text-emerald-500/40 transition group-hover:rotate-45 group-hover:text-emerald-500"
+                >
+                  <rect x="8" y="8" width="24" height="24" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                  <rect
+                    x="8"
+                    y="8"
+                    width="24"
+                    height="24"
+                    rx="3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    transform="rotate(45 20 20)"
+                  />
+                </svg>
+                <span className="relative fs-12 font-black">{s.n}</span>
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate fs-14.5 font-bold">{s.latin}</span>
@@ -550,8 +883,20 @@ function Pustaka({ list, store, go }: { list: SurahMeta[]; store: StoreSnap; go:
                   {s.ayat} ayat · {s.type}
                   {done ? ` · ${done === s.ayat ? 'selesai ✓' : `${done} dibaca`}` : ''}
                 </span>
+                {done ? (
+                  <span className="mt-1 block h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <span
+                      className="block h-full rounded-full bg-emerald-500"
+                      style={{ width: `${(done / s.ayat) * 100}%` }}
+                    />
+                  </span>
+                ) : null}
               </span>
-              <span dir="rtl" lang="ar" className={cn('shrink-0 fsh-24', amiri.className)}>
+              <span
+                dir="rtl"
+                lang="ar"
+                className={cn('shrink-0 fsh-24 text-emerald-800 dark:text-emerald-200', amiri.className)}
+              >
                 {s.ar}
               </span>
             </button>
@@ -568,10 +913,6 @@ function TemaView({ list, go }: { list: SurahMeta[]; go: (s: number, a?: number)
   const appMode = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="fsh-24 font-black">Ayat untuk urusan uangmu</h2>
-        <p className="fs-13 text-slate-500">Pilih tema — ayat-ayat yang berkaitan dengan rezeki dan harta.</p>
-      </div>
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         {TEMA.map((x) => (
           <button
@@ -579,13 +920,22 @@ function TemaView({ list, go }: { list: SurahMeta[]; go: (s: number, a?: number)
             type="button"
             onClick={() => setSel(x.id)}
             className={cn(
-              'h-10 shrink-0 rounded-full px-3.5 fs-13 font-bold',
+              'relative h-10 shrink-0 rounded-full px-3.5 fs-13 font-bold',
               sel === x.id
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                ? 'text-white dark:text-slate-900'
                 : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
             )}
           >
-            {x.emoji} {x.judul}
+            {sel === x.id ? (
+              <motion.span
+                layoutId="tema-quran"
+                className="absolute inset-0 rounded-full bg-slate-900 dark:bg-white"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            ) : null}
+            <span className="relative">
+              {x.emoji} {x.judul}
+            </span>
           </button>
         ))}
       </div>
@@ -597,11 +947,13 @@ function TemaView({ list, go }: { list: SurahMeta[]; go: (s: number, a?: number)
           {t.ajak.label} <ChevronRight size={16} />
         </Link>
       ) : null}
-      <div className="space-y-3">
+      <Berurutan key={sel} className="grid gap-3 md:grid-cols-2">
         {t.ayat.map((k) => (
-          <AyatCard key={k} k={k} list={list} label={t.judul} go={go} />
+          <Butir key={k}>
+            <AyatCard k={k} list={list} label={t.judul} go={go} />
+          </Butir>
         ))}
-      </div>
+      </Berurutan>
     </section>
   );
 }
@@ -617,16 +969,21 @@ function Tersimpan({
 }) {
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="fsh-24 font-black">Tersimpan</h2>
-        <p className="fs-13 text-slate-500">Ayat yang kamu tandai (disimpan di perangkat ini).</p>
-      </div>
+      <p className="fs-13 text-slate-500">Ayat yang kamu tandai — disimpan di perangkat ini.</p>
       {marks.length ? (
-        marks.map((m) => <AyatCard key={m.k} k={m.k} list={list} go={go} />)
+        <Berurutan className="grid gap-3 md:grid-cols-2">
+          {marks.map((m) => (
+            <Butir key={m.k}>
+              <AyatCard k={m.k} list={list} go={go} />
+            </Butir>
+          ))}
+        </Berurutan>
       ) : (
-        <p className="rounded-[22px] bg-white p-6 text-center fs-13.5 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-          Belum ada. Ketuk ikon 🔖 di samping ayat saat membaca.
-        </p>
+        <div className="rounded-[26px] bg-white p-10 text-center ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
+          <p className="fsh-34">🔖</p>
+          <p className="mt-2 fs-14 font-bold">Belum ada ayat tersimpan</p>
+          <p className="fs-13 text-slate-500">Ketuk ikon penanda di samping ayat saat membaca.</p>
+        </div>
       )}
     </section>
   );
@@ -634,16 +991,17 @@ function Tersimpan({
 
 function Credits({ sources }: { sources: Sources }) {
   return (
-    <p className="fs-11.5 leading-relaxed text-slate-400">
+    <p className="pt-2 fs-11.5 leading-relaxed text-slate-400">
       Teks Al-Qur&apos;an: {sources.arab.nama},{' '}
       <a href="https://tanzil.net" target="_blank" rel="noreferrer" className="underline">
         tanzil.net
       </a>{' '}
-      ({sources.arab.lisensi}). Terjemahan: {sources.terjemahan.nama}, versi {sources.terjemahan.versi}, dari{' '}
+      ({sources.arab.lisensi}). Terjemahan: {sources.terjemahan.nama}, versi {sources.terjemahan.versi}, dan tafsir
+      Al-Mukhtasar, dari{' '}
       <a href={sources.terjemahan.url} target="_blank" rel="noreferrer" className="underline">
         QuranEnc.com
       </a>
-      , tanpa diubah. Audio murattal: Quran Foundation (quran.com).
+      , tanpa diubah. Audio murattal & kata per kata: Quran.com.
     </p>
   );
 }

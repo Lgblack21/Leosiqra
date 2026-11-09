@@ -83,6 +83,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.19.0 | 9 Nov 2026 | Tanggal merah & jadwal sholat |
 | 3.20.0 | 9 Nov 2026 | Alkitab & data API Indonesia |
 | 3.20.1 | 9 Nov 2026 | Pelafalan Alkitab |
+| 3.21.0 | 9 Nov 2026 | Teduh baru: renungan harian, Pelajari, audio Al-Qur'an |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -96,6 +97,24 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.21.0 — 2026-11-09 — Teduh baru: renungan harian, Pelajari, audio Al-Qur'an
+
+- **Teduh tampil baru, layar penuh** (seperti Ladangku) dengan menu melayang di bawah: Beranda · Renungan · Baca · Tema
+  · Simpan.
+  - **Langit yang hidup** di beranda: warnanya ikut waktu (fajar, pagi, siang, senja, malam), matahari/bulan bergerak
+    ke posisinya, bintang berkelip di malam hari, awan melayang pelan. Untuk Islam ada tanggal Hijriah.
+  - Kartu muncul berurutan, angka & cincin progres beranimasi, nomor ayat Al-Qur'an dalam bingkai bintang segi delapan.
+    Animasi otomatis mati bila HP-mu memakai "kurangi gerakan".
+- **Renungan harian (Islam & Kristen/Katolik)** — berganti setiap hari: ayat hari ini, tafsir ringkas (Islam) atau
+  konteks perikop (Alkitab), satu pertanyaan untuk direnungkan, satu langkah kecil untuk keuanganmu, dan **catatan
+  renunganmu** (hanya tersimpan di HP-mu).
+- **Pelajari** di setiap ayat:
+  - Al-Qur'an: **tafsir ringkas Al-Mukhtasar**, **kata per kata** (Arab, latin, arti), dan **catatanku**.
+  - Alkitab: **ayat terkait** (rujukan silang yang paling banyak dipakai), **konteks perikop**, dan **catatanku**.
+- **Jeda sejenak** — latihan napas tenang 1 menit dengan lingkaran yang mengembang & mengempis (dzikir untuk Islam).
+- **Audio murattal Al-Qur'an sudah bisa diputar** — 9 pilihan qari (Mishary al-Afasy, Abdul Basit, as-Sudais, dan
+  lainnya), per ayat atau satu surah. Juga tersedia tombol **Dengarkan** di renungan.
 
 ## 3.20.1 — 2026-11-09 — Pelafalan Alkitab
 

@@ -12,7 +12,11 @@ import {
   Share2,
   SkipBack,
   SkipForward,
+  Sparkles,
 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { PelajariQuran } from '@/components/teduh/PelajariQuran';
+import { NomorAyat } from '@/components/teduh/ui';
 import { audioService, loadSurah, progres, type Qari, type SurahData, type SurahMeta } from '@/lib/teduh/quran';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +46,7 @@ export function QuranReader({
   const [err, setErr] = useState('');
   const [note, setNote] = useState<number | null>(null);
   const [toast, setToast] = useState('');
+  const [pelajari, setPelajari] = useState<number | null>(null);
   const boxes = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
@@ -118,7 +123,7 @@ export function QuranReader({
 
   return (
     <div className="pb-6">
-      <div className="sticky top-0 z-20 -mx-4 flex items-center gap-2 bg-[#f6f5f1]/90 px-4 py-2.5 backdrop-blur dark:bg-slate-950/90">
+      <div className="sticky top-0 z-20 -mx-4 flex items-center gap-2 bg-[#f6f7fb]/85 px-4 py-2.5 backdrop-blur-xl md:-mx-8 md:px-8 dark:bg-slate-950/85">
         <button
           type="button"
           onClick={onClose}
@@ -173,9 +178,14 @@ export function QuranReader({
                   )}
                 >
                   <div className="flex items-center gap-1">
-                    <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-emerald-50 px-2 fs-12 font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      {i + 1}
-                    </span>
+                    <NomorAyat n={i + 1} aktif={playing} />
+                    <button
+                      type="button"
+                      onClick={() => setPelajari(i + 1)}
+                      className="ml-1 flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-50 to-emerald-50 px-3 fs-12.5 font-bold text-emerald-800 ring-1 ring-emerald-100 transition hover:ring-emerald-300 dark:from-amber-500/10 dark:to-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20"
+                    >
+                      <Sparkles size={14} className="text-amber-500" /> Pelajari
+                    </button>
                     <span className="flex-1" />
                     <IconBtn label={playing ? 'Jeda' : 'Putar ayat ini'} onClick={() => player.toggleFrom(i)}>
                       {playing && player.playing ? <Pause size={16} /> : <Play size={16} />}
@@ -237,6 +247,17 @@ export function QuranReader({
       ) : null}
 
       {player.on ? player.bar : null}
+      <AnimatePresence>
+        {pelajari ? (
+          <PelajariQuran
+            key={pelajari}
+            meta={meta}
+            a={pelajari}
+            arabClass={arabClass}
+            onClose={() => setPelajari(null)}
+          />
+        ) : null}
+      </AnimatePresence>
       {toast ? (
         <p className="fixed inset-x-0 bottom-28 z-40 mx-auto w-max rounded-full bg-slate-950/90 px-4 py-2 fs-12.5 font-semibold text-white">
           {toast}
@@ -288,7 +309,7 @@ function useMurattal(surah: number, count: number, onFocus: (i: number) => void)
       setErr('');
       if (!urls.current || loaded.current?.surah !== surah || loaded.current?.qari !== qari) {
         try {
-          const r = await audioService.surah(surah, qari);
+          const r = await audioService.surah(surah, qari, count);
           const map = new Map(r.items.map((x) => [x.key, x.url]));
           urls.current = Array.from({ length: count }, (_, k) => map.get(`${surah}:${k + 1}`) ?? '');
           loaded.current = { surah, qari };

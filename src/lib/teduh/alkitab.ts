@@ -142,3 +142,25 @@ export const progresAlkitab = {
     save({ ...s, marks: has ? s.marks.filter((m) => m.k !== k) : [{ k, at: Date.now() }, ...s.marks].slice(0, 500) });
   },
 };
+
+// ── Ayat terkait (referensi silang OpenBible.info, CC BY 4.0) untuk "Pelajari" ──
+export type Silang = Rujukan & { sampai?: number };
+const silangCache = new Map<number, Promise<Record<string, string[]>>>();
+export const loadSilang = async (b: number, c: number, v: number): Promise<Silang[]> => {
+  let p = silangCache.get(b);
+  if (!p) {
+    p = fetch(`/teduh/silang/b${b}.json`).then((r) => {
+      if (!r.ok) throw new Error('Ayat terkait gagal dimuat.');
+      return r.json();
+    });
+    p.catch(() => silangCache.delete(b));
+    silangCache.set(b, p);
+  }
+  const m = await p;
+  return (m[`${c}:${v}`] ?? []).map((s) => {
+    const [ref, sampai] = s.split('-');
+    const [bb, cc, vv] = ref.split('.').map(Number);
+    return { b: bb, c: cc, v: vv, ...(sampai ? { sampai: Number(sampai) } : {}) };
+  });
+};
+export const ATRIBUSI_SILANG = 'Ayat terkait: OpenBible.info (CC BY 4.0)';

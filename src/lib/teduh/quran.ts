@@ -206,12 +206,56 @@ export function streak(days: Record<string, number>, d = new Date()) {
   return n;
 }
 
-// ── Audio murattal (lewat Worker → Quran Foundation) ──
+// ── Audio murattal ──
+// Utama: Worker → Quran Foundation API (perlu kunci QF). Selama kunci belum dipasang / API gagal,
+// pakai CDN audio publik quran.com (verses.quran.com, berkas yang sama yang dikembalikan API QF),
+// ayat demi ayat: <folder>/SSSAAA.mp3. Hanya qari yang sudah dicek tersedia di CDN.
 export type Qari = { id: number; name: string; style: string | null };
+const QARI_CDN: (Qari & { path: string })[] = [
+  { id: 7, name: 'Mishari Rashid al-Afasy', style: null, path: 'Alafasy/mp3' },
+  { id: 2, name: 'Abdul Basit Abdus Samad', style: 'Murattal', path: 'AbdulBaset/Murattal/mp3' },
+  { id: 1, name: 'Abdul Basit Abdus Samad', style: 'Mujawwad', path: 'AbdulBaset/Mujawwad/mp3' },
+  { id: 3, name: 'Abdurrahman as-Sudais', style: null, path: 'Sudais/mp3' },
+  { id: 4, name: 'Abu Bakr asy-Syatri', style: null, path: 'Shatri/mp3' },
+  { id: 5, name: "Hani ar-Rifa'i", style: null, path: 'Rifai/mp3' },
+  { id: 9, name: 'Muhammad Siddiq al-Minshawi', style: 'Murattal', path: 'Minshawi/Murattal/mp3' },
+  { id: 8, name: 'Muhammad Siddiq al-Minshawi', style: 'Mujawwad', path: 'Minshawi/Mujawwad/mp3' },
+  { id: 10, name: "Sa'ud asy-Syuraim", style: null, path: 'Shuraym/mp3' },
+];
+const pad3 = (n: number) => String(n).padStart(3, '0');
+const cdnSurah = (surah: number, reciter: number, count: number) => {
+  const q = QARI_CDN.find((x) => x.id === reciter) ?? QARI_CDN[0];
+  return {
+    reciter: q.id,
+    items: Array.from({ length: count }, (_, i) => ({
+      key: `${surah}:${i + 1}`,
+      url: `https://verses.quran.com/${q.path}/${pad3(surah)}${pad3(i + 1)}.mp3`,
+    })),
+  };
+};
 export const audioService = {
-  reciters: () => cloudflareApi<{ items: Qari[] }>('/api/member/teduh/reciters'),
-  surah: (surah: number, reciter: number) =>
+  reciters: () =>
+    cloudflareApi<{ items: Qari[] }>('/api/member/teduh/reciters').catch(() => ({
+      items: QARI_CDN.map(({ id, name, style }) => ({ id, name, style })),
+    })),
+  surah: (surah: number, reciter: number, count: number) =>
     cloudflareApi<{ reciter: number; items: { key: string; url: string }[] }>(
       `/api/member/teduh/audio?surah=${surah}&reciter=${reciter}`,
-    ),
+    ).catch(() => cdnSurah(surah, reciter, count)),
+};
+
+// ── Tafsir ringkas (Al-Mukhtasar, QuranEnc — tanpa diubah) untuk "Pelajari" ──
+export type TafsirSurah = { n: number; sumber: { nama: string; url: string; salinan: string }; tafsir: string[] };
+const tafsirCache = new Map<number, Promise<TafsirSurah>>();
+export const loadTafsir = (n: number) => {
+  let p = tafsirCache.get(n);
+  if (!p) {
+    p = fetch(`/teduh/tafsir/t${n}.json`).then((r) => {
+      if (!r.ok) throw new Error('Tafsir gagal dimuat.');
+      return r.json();
+    });
+    p.catch(() => tafsirCache.delete(n));
+    tafsirCache.set(n, p);
+  }
+  return p;
 };
