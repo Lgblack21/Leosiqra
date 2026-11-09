@@ -1,9 +1,20 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { CalendarDays, ChevronRight, X } from 'lucide-react';
-import { HARI_LIBUR, hariKerjaSebelum, liburBerikutnya, parseYmd, rentangLibur, ymd } from '@/lib/hariLibur';
+import {
+  hariKerjaSebelum,
+  liburBerikutnya,
+  liburStore,
+  parseYmd,
+  rentangLibur,
+  semuaLibur,
+  sumberTahun,
+  tahunTersedia,
+  ymd,
+} from '@/lib/hariLibur';
+import { muatHariLibur } from '@/lib/hariLiburApi';
 import { cn } from '@/lib/utils';
 
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' }) =>
@@ -11,11 +22,10 @@ const fmt = (d: Date, o: Intl.DateTimeFormatOptions = { weekday: 'short', day: '
 // Dihitung di browser saja (build statis tidak tahu "hari ini"); di-cache per tanggal supaya snapshot stabil.
 let cache: { key: string; value: ReturnType<typeof liburBerikutnya> } | null = null;
 const snapshot = () => {
-  const key = ymd(new Date());
+  const key = `${ymd(new Date())}|${liburStore.versi()}`;
   if (cache?.key !== key) cache = { key, value: liburBerikutnya(new Date()) };
   return cache.value;
 };
-const noop = () => () => {};
 const dayDiff = (a: Date, b: Date) => Math.round((parseYmd(ymd(b)).getTime() - parseYmd(ymd(a)).getTime()) / 86400_000);
 
 // Kartu "Libur berikutnya" (Ringkasan web & Beranda HP): tanggal merah terdekat, libur panjang,
@@ -23,7 +33,10 @@ const dayDiff = (a: Date, b: Date) => Math.round((parseYmd(ymd(b)).getTime() - p
 export function LiburCard({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const [open, setOpen] = useState(false);
   const now = new Date();
-  const next = useSyncExternalStore(noop, snapshot, () => null);
+  const next = useSyncExternalStore(liburStore.subscribe, snapshot, () => null);
+  useEffect(() => {
+    void muatHariLibur();
+  }, []);
   if (!next) return null;
   const n = dayDiff(now, next.mulai);
   const sedang = n <= 0;
@@ -88,11 +101,12 @@ export function LiburCard({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 }
 
 function KalenderLibur({ onClose }: { onClose: () => void }) {
-  const years = [...new Set(HARI_LIBUR.map((h) => Number(h.date.slice(0, 4))))];
+  useSyncExternalStore(liburStore.subscribe, liburStore.versi, () => 0);
+  const years = tahunTersedia();
   const [year, setYear] = useState(() =>
     years.includes(new Date().getFullYear()) ? new Date().getFullYear() : years[0],
   );
-  const list = HARI_LIBUR.filter((h) => h.date.startsWith(String(year)));
+  const list = semuaLibur().filter((h) => h.date.startsWith(String(year)));
   const panjang = rentangLibur(new Date(year, 0, 1), new Date(year + 1, 0, 1)).filter((r) => r.hari >= 3);
   const today = ymd(new Date());
   const months = [...new Set(list.map((h) => h.date.slice(0, 7)))];
@@ -135,7 +149,8 @@ function KalenderLibur({ onClose }: { onClose: () => void }) {
           <p className="fs-12.5 text-slate-500">
             {list.filter((h) => h.jenis === 'libur').length} libur nasional ·{' '}
             {list.filter((h) => h.jenis === 'cuti').length} cuti bersama · {panjang.length} libur panjang. Sesuai SKB 3
-            Menteri {year}.
+            Menteri {year}
+            {sumberTahun(year) === 'api' ? ' (data API Indonesia).' : '.'}
           </p>
           {panjang.length ? (
             <section className="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">

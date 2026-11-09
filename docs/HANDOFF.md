@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.18.0 + 3.19.0 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (3.18.0–3.20.0 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,23 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.20.0 API Indonesia + Alkitab TB — BELUM DEPLOY (bersama 3.18.0 & 3.19.0). Tanpa SQL.**
+  - Keputusan Bos (eksplisit): pakai API Indonesia (apiindonesia.id), termasuk **Alkitab TB** selagi menunggu izin
+    LAI (surat sudah disiapkan untuk Bos kirim ke info@alkitab.or.id; surat AYT ke ylsa@sabda.org). Bila ada
+    keberatan → **takedown: set var `ALKITAB_TB_OFF=1`** di dashboard Cloudflare (tanpa deploy) → 451 + layar
+    "Alkitab sedang disiapkan".
+  - Worker `handleApiIndonesia`: `/api/member/libur`, `/api/member/teduh/sholat/kota`, `/api/member/teduh/sholat`,
+    `/api/member/teduh/alkitab/kitab|pasal`. Header `x-api-key` dari **secret `APIINDONESIA_KEY`** (belum ada →
+    503 unconfigured, klien pakai cadangan). Cache bersama caches.default (libur 7 hari, sholat 30 hari, Alkitab 7
+    hari); limiter `apiid:user:` hanya saat cache kosong. Bentuk respons dari OpenAPI apiindonesia.id/openapi.json.
+  - Klien: `lib/hariLiburApi.ts` (API menimpa data bawaan per tahun; `pakaiDataApi`, `liburStore`), JadwalSholat
+    (cari 514 kab/kota → jadwal bulanan disimpan per bulan di localStorage; GPS → hitung lokal), `lib/teduh/alkitab.ts`
+    + `components/teduh/AlkitabHome.tsx` (Kristen & Katolik `siap: true`; teks tidak disimpan permanen; progres
+    pasal/tanda di localStorage `leosiqra-teduh-alkitab`; TTS Web Speech id-ID).
+  - **Belum dites dengan API asli** (dites dengan respons tiruan + Worker tanpa kunci/kunci palsu/saklar takedown).
+    Saat kunci terpasang: cek format `abbr` kitab (Worker menolak abbr di luar `^[1-3]?[A-Za-z]{1,12}$`), isi ayat
+    tema (rujukan per nomor kitab kanon 1–66), dan field `ashr`/`ashar`.
 
 - **2026-11-09 — 3.19.0 Tanggal merah + jadwal sholat — BELUM DEPLOY (bersama 3.18.0). Tanpa SQL.**
   - `src/lib/hariLibur.ts`: daftar SKB 3 Menteri 2026 (Setneg) & 2027 (Kemenag), dicek jumlah (17+8, 18+8) & nama

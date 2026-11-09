@@ -6,6 +6,7 @@ import { Amiri_Quran } from 'next/font/google';
 import { ArrowLeft, BookOpen, Bookmark, ChevronRight, Home, Search, Sparkles } from 'lucide-react';
 import { QuranReader } from '@/components/teduh/QuranReader';
 import { JadwalSholat } from '@/components/teduh/JadwalSholat';
+import { AlkitabHome } from '@/components/teduh/AlkitabHome';
 import { AGAMA, agamaPilihan, type AgamaId } from '@/lib/teduh/agama';
 import {
   TEMA,
@@ -109,8 +110,10 @@ export function TeduhApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             }}
             onCancel={pilih ? () => setGanti(false) : undefined}
           />
-        ) : pilih.siap ? (
+        ) : pilih.siap && pilih.id === 'islam' ? (
           <QuranHome variant={variant} />
+        ) : pilih.siap && (pilih.id === 'kristen' || pilih.id === 'katolik') ? (
+          <AlkitabHome variant={variant} katolik={pilih.id === 'katolik'} />
         ) : (
           <SegeraHadir agama={pilih.id} onGanti={() => setGanti(true)} />
         )}

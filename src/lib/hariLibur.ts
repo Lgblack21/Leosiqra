@@ -1,4 +1,6 @@
 // Tanggal merah Indonesia: libur nasional + cuti bersama sesuai SKB 3 Menteri (bukan perkiraan).
+// Sumber utama: API Indonesia lewat Worker (/api/member/libur, ter-update otomatis). Daftar di bawah =
+// cadangan bawaan bila API belum aktif/gangguan.
 //   2026: SKB Menag 1497/2025, Menaker 2/2025, MenPANRB 5/2025 (19 Sep 2025) — setneg.go.id
 //   2027: SKB Menag 1205/2026, Menaker 3/2026, MenPANRB 2/2026 (15 Sep 2026) — kemenag.go.id
 // Tanggal hari raya Hijriah bisa disesuaikan lewat Keputusan Menteri Agama — perbarui di sini bila berubah.
@@ -9,7 +11,7 @@ export type HariLibur = { date: string; nama: string; jenis: JenisLibur };
 const L = (date: string, nama: string): HariLibur => ({ date, nama, jenis: 'libur' });
 const C = (date: string, nama: string): HariLibur => ({ date, nama, jenis: 'cuti' });
 
-export const HARI_LIBUR: HariLibur[] = [
+const BAWAAN: HariLibur[] = [
   // ── 2026 ──
   L('2026-01-01', 'Tahun Baru 2026 Masehi'),
   L('2026-01-16', 'Isra Mikraj Nabi Muhammad SAW'),
@@ -64,10 +66,39 @@ export const HARI_LIBUR: HariLibur[] = [
   L('2027-12-25', 'Kelahiran Yesus Kristus (Natal)'),
   L('2027-12-26', 'Isra Mikraj Nabi Muhammad SAW'),
 ];
-export const TAHUN_TERSEDIA = [...new Set(HARI_LIBUR.map((h) => Number(h.date.slice(0, 4))))];
-
-const BY_DATE = new Map<string, HariLibur[]>();
-for (const h of HARI_LIBUR) BY_DATE.set(h.date, [...(BY_DATE.get(h.date) ?? []), h]);
+// Data aktif = bawaan, lalu per tahun diganti data API bila berhasil dimuat.
+let data: HariLibur[] = BAWAAN;
+let BY_DATE = new Map<string, HariLibur[]>();
+const sumber = new Map<number, 'api' | 'bawaan'>();
+let versi = 0;
+const subs = new Set<() => void>();
+const reindex = () => {
+  BY_DATE = new Map();
+  for (const h of data) BY_DATE.set(h.date, [...(BY_DATE.get(h.date) ?? []), h]);
+};
+reindex();
+export const semuaLibur = () => data;
+export const tahunTersedia = () => [...new Set(data.map((h) => Number(h.date.slice(0, 4))))].sort();
+export const sumberTahun = (y: number) => sumber.get(y) ?? 'bawaan';
+export const liburStore = {
+  subscribe(cb: () => void) {
+    subs.add(cb);
+    return () => subs.delete(cb);
+  },
+  versi: () => versi,
+};
+/** Ganti data satu tahun dengan hasil API (urut tanggal). Daftar kosong diabaikan. */
+export function pakaiDataApi(tahun: number, list: HariLibur[]) {
+  const valid = list.filter((h) => h.date.startsWith(`${tahun}-`));
+  if (!valid.length) return;
+  data = [...data.filter((h) => !h.date.startsWith(`${tahun}-`)), ...valid].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+  sumber.set(tahun, 'api');
+  reindex();
+  versi++;
+  subs.forEach((l) => l());
+}
 
 /** YYYY-MM-DD menurut kalender lokal. */
 export const ymd = (d: Date) =>
@@ -85,7 +116,7 @@ const addDays = (d: Date, n: number) => {
 export const liburPada = (d: Date | string) => BY_DATE.get(typeof d === 'string' ? d.slice(0, 10) : ymd(d)) ?? [];
 export const isAkhirPekan = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 /** Data tanggal merah untuk tahun ini tersedia? (kalau tidak, hanya akhir pekan yang diketahui). */
-export const adaData = (d: Date) => TAHUN_TERSEDIA.includes(d.getFullYear());
+export const adaData = (d: Date) => tahunTersedia().includes(d.getFullYear());
 export const isHariKerja = (d: Date) => !isAkhirPekan(d) && liburPada(d).length === 0;
 /** Hari kerja terakhir SEBELUM tanggal ini (untuk transfer/bayar lebih awal). */
 export const hariKerjaSebelum = (d: Date) => {

@@ -41,6 +41,10 @@ export interface Env {
   QF_CLIENT_SECRET?: string;
   /** "prelive" = server uji Quran Foundation; kosong = produksi. */
   QF_ENV?: string;
+  /** API Indonesia (apiindonesia.id): tanggal merah, jadwal sholat, Alkitab TB. Rahasia — `wrangler secret put`. */
+  APIINDONESIA_KEY?: string;
+  /** "1" = matikan Alkitab TB seketika (takedown tanpa deploy, ubah di dashboard Cloudflare). */
+  ALKITAB_TB_OFF?: string;
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
@@ -13373,6 +13377,119 @@ async function handleMemberTeduh(request: Request, env: Env, url: URL) {
   }
 }
 
+// ── API Indonesia (apiindonesia.id) ─────────────────────────────────────────
+// Satu pintu ke API Indonesia: kunci HANYA di Worker, hasil di-cache bersama (semua user membaca cache
+// yang sama) supaya biaya per request tetap kecil. Tanpa kunci → 503 "unconfigured" dan klien memakai
+// data/perhitungan bawaannya sendiri.
+// GET /api/member/libur?tahun=YYYY                       → { items: [{ date, nama, jenis }] }      (cache 7 hari)
+// GET /api/member/teduh/sholat/kota                      → { items: [{ id, nama, provinsi }] }    (cache 30 hari)
+// GET /api/member/teduh/sholat?kota=&tahun=&bulan=       → { items: [{ date, imsak, subuh, … }] } (cache 30 hari)
+// GET /api/member/teduh/alkitab/kitab                    → { items: [{ id, abbr, nama, pasal, perjanjian }] }
+// GET /api/member/teduh/alkitab/pasal?kitab=&pasal=      → { kitab, pasal, ayat: [{ n, judul, teks }] } (cache 7 hari)
+// Alkitab TB: teks © LAI; ALKITAB_TB_OFF="1" mematikannya seketika (takedown).
+async function apiIndonesia(env: Env, path: string) {
+  const res = await fetch(`https://use.apiindonesia.id/api/v1${path}`, {
+    headers: { "x-api-key": env.APIINDONESIA_KEY!, accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`API Indonesia ${path} ${res.status}`);
+  return (await res.json()) as { data?: unknown; meta?: unknown };
+}
+async function handleApiIndonesia(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  if (request.method !== "GET") return json({ error: "Not found" }, { status: 404 });
+  const alkitab = url.pathname.startsWith("/api/member/teduh/alkitab/");
+  if (alkitab && env.ALKITAB_TB_OFF === "1") {
+    return json({ error: "Alkitab sedang tidak tersedia.", code: "alkitab_off" }, { status: 451 });
+  }
+  if (!env.APIINDONESIA_KEY) return json({ error: "Layanan data sedang disiapkan.", code: "unconfigured" }, { status: 503 });
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cached = async (key: string, ttl: number, make: () => Promise<unknown>) => {
+    const req = new Request(`https://cache.leosiqra.internal/apiid/${key}`);
+    const hit = await cache.match(req);
+    if (hit) return new Response(hit.body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    // Cache kosong = akan memanggil API berbayar → batasi per user.
+    if (env.AI_PARSE_RATE_LIMITER) {
+      const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `apiid:user:${userId}` });
+      if (!success) return json({ error: "Terlalu banyak permintaan. Coba lagi sebentar." }, { status: 429 });
+    }
+    const data = await make();
+    await cache.put(req, new Response(JSON.stringify(data), { headers: { "content-type": "application/json", "cache-control": `public, max-age=${ttl}` } }));
+    return json(data);
+  };
+  const int = (v: string | null, min: number, max: number) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= min && n <= max ? n : null;
+  };
+  try {
+    if (url.pathname === "/api/member/libur") {
+      const tahun = int(url.searchParams.get("tahun"), 2020, 2100);
+      if (!tahun) return json({ error: "Tahun tidak valid." }, { status: 400 });
+      return await cached(`libur-${tahun}`, 7 * 86400, async () => {
+        const body = await apiIndonesia(env, `/libur?tahun=${tahun}`);
+        const list = (body.data as { date: string; name: string; type: string; is_joint_leave: number; is_active: number }[]) ?? [];
+        return {
+          items: list
+            .filter((h) => h.is_active !== 0 && /^\d{4}-\d{2}-\d{2}$/.test(h.date))
+            .map((h) => ({ date: h.date, nama: cleanText(h.name, 120) ?? "Libur", jenis: h.is_joint_leave || h.type === "cuti_bersama" ? "cuti" : "libur" })),
+        };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/sholat/kota") {
+      return await cached("sholat-kota", 30 * 86400, async () => {
+        const body = await apiIndonesia(env, "/sholat/list-kota");
+        const list = (body.data as { regency_id: string; regency_name: string; province_name: string }[]) ?? [];
+        return { items: list.map((k) => ({ id: String(k.regency_id), nama: cleanText(k.regency_name, 80) ?? "", provinsi: cleanText(k.province_name, 80) ?? "" })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/sholat") {
+      const kota = (url.searchParams.get("kota") ?? "").trim();
+      const tahun = int(url.searchParams.get("tahun"), 2020, 2100);
+      const bulan = int(url.searchParams.get("bulan"), 1, 12);
+      if (!/^\d{2,6}$/.test(kota) || !tahun || !bulan) return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      return await cached(`sholat-${kota}-${tahun}-${bulan}`, 30 * 86400, async () => {
+        const body = await apiIndonesia(env, `/sholat/monthly?kabupaten_id=${kota}&tahun=${tahun}&bulan=${bulan}`);
+        const list = (body.data as Record<string, string>[]) ?? [];
+        const t = (v: unknown) => (typeof v === "string" && /^\d{2}:\d{2}$/.test(v) ? v : null);
+        return {
+          items: list.map((r) => ({
+            date: String(r.date).slice(0, 10),
+            imsak: t(r.imsyak), subuh: t(r.shubuh), terbit: t(r.terbit), dzuhur: t(r.dzuhur),
+            ashar: t(r.ashr ?? r.ashar), maghrib: t(r.maghrib), isya: t(r.isya),
+          })),
+        };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/alkitab/kitab") {
+      return await cached("alkitab-kitab", 30 * 86400, async () => {
+        const body = await apiIndonesia(env, "/alkitab/books");
+        const list = (body.data as { id: number; abbr: string; name: string; chapter_count: number; testament: string }[]) ?? [];
+        return { items: list.map((b) => ({ id: b.id, abbr: b.abbr, nama: b.name, pasal: b.chapter_count, perjanjian: b.testament === "PB" ? "PB" : "PL" })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/alkitab/pasal") {
+      const kitab = (url.searchParams.get("kitab") ?? "").trim();
+      const pasal = int(url.searchParams.get("pasal"), 1, 150);
+      if (!/^[1-3]?[A-Za-z]{1,12}$/.test(kitab) || !pasal) return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      return await cached(`alkitab-${kitab.toLowerCase()}-${pasal}`, 7 * 86400, async () => {
+        const body = await apiIndonesia(env, `/alkitab/passage/${encodeURIComponent(kitab)}/${pasal}`);
+        const d = body.data as { book: { id: number; abbr: string; name: string }; chapter: number; verses: { verse_number: number; title: string | null; text: string }[] };
+        return {
+          kitab: { id: d.book.id, abbr: d.book.abbr, nama: d.book.name },
+          pasal: d.chapter,
+          ayat: (d.verses ?? []).map((v) => ({ n: v.verse_number, judul: v.title ? cleanText(v.title, 200) : null, teks: String(v.text ?? "") })),
+        };
+      });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    console.error("API Indonesia:", e instanceof Error ? e.message : e);
+    return json({ error: "Data sedang tidak bisa dimuat. Coba lagi nanti.", code: "upstream" }, { status: 502 });
+  }
+}
+
 // ── Kanvas (migrasi 0041) ───────────────────────────────────────────────────
 // Papan rencana keuangan (template: nikah, darurat, rumah, ...). Angka "dari catatanmu" dihitung
 // di klien dari data user sendiri; yang disimpan hanya isian user (state_json, disaring ketat).
@@ -21465,6 +21582,13 @@ const worker = {
         return await handleMemberFocus(request, env, url.pathname);
       }
 
+      if (
+        url.pathname === "/api/member/libur" ||
+        url.pathname.startsWith("/api/member/teduh/sholat") ||
+        url.pathname.startsWith("/api/member/teduh/alkitab/")
+      ) {
+        return await handleApiIndonesia(request, env, url);
+      }
       if (url.pathname.startsWith("/api/member/teduh/")) {
         return await handleMemberTeduh(request, env, url);
       }

@@ -1,6 +1,8 @@
 'use client';
 
-import { hariKerjaSebelum, isAkhirPekan, isHariKerja, liburPada } from '@/lib/hariLibur';
+import { useEffect, useSyncExternalStore } from 'react';
+import { hariKerjaSebelum, isAkhirPekan, isHariKerja, liburPada, liburStore } from '@/lib/hariLibur';
+import { muatHariLibur } from '@/lib/hariLiburApi';
 import { cn } from '@/lib/utils';
 
 const fmt = (d: Date) => d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -8,6 +10,10 @@ const fmt = (d: Date) => d.toLocaleDateString('id-ID', { weekday: 'short', day: 
 // Peringatan kecil di transaksi rutin: jatuh tempo di tanggal merah / akhir pekan → bank bisa tutup,
 // sarankan hari kerja sebelumnya.
 export function LiburHint({ date, className }: { date: Date; className?: string }) {
+  useSyncExternalStore(liburStore.subscribe, liburStore.versi, () => 0);
+  useEffect(() => {
+    void muatHariLibur();
+  }, []);
   if (isHariKerja(date)) return null;
   const libur = liburPada(date);
   const alasan = libur.length ? libur[0].nama : isAkhirPekan(date) ? 'akhir pekan' : 'hari libur';

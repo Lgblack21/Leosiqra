@@ -81,6 +81,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.17.0 | 9 Nov 2026 | Ukuran teks & tampilan lebih ramping |
 | 3.18.0 | 9 Nov 2026 | Teduh |
 | 3.19.0 | 9 Nov 2026 | Tanggal merah & jadwal sholat |
+| 3.20.0 | 9 Nov 2026 | Alkitab & data API Indonesia |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -94,6 +95,22 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.20.0 — 2026-11-09 — Alkitab & data API Indonesia
+
+- **Baru di Teduh: Alkitab untuk umat Kristen & Katolik** — Alkitab Terjemahan Baru (© Lembaga Alkitab Indonesia).
+  - **66 kitab**, baca per pasal lengkap dengan judul perikop. Pasal yang sudah dibaca ditandai.
+  - **Ayat hari ini**, **hari berturut-turut**, **progres menuju tamat Alkitab**, dan **lanjutkan** dari pasal
+    terakhir.
+  - **Tandai** dan **bagikan** ayat.
+  - **Dengarkan**: ayat dibacakan dengan suara bawaan perangkatmu dan ayat yang sedang dibaca disorot.
+  - **Firman untuk urusan uangmu**: persembahan & perpuluhan, utang, hidup cukup, rencana & menabung, jangan kuatir,
+    bekerja, harta & hati.
+  - **Persembahan bulan ini** dihitung dari catatan keuanganmu, dan bisa langsung dicatat.
+  - Untuk umat Katolik: kitab-kitab Deuterokanonika belum tersedia.
+- **Jadwal sholat resmi Kemenag per kab/kota**: cari dan pilih kab/kotamu (514 kab/kota). Pakai lokasi GPS tetap
+  bisa, dihitung di perangkatmu.
+- **Tanggal merah ter-update otomatis** mengikuti data terbaru, tanpa menunggu pembaruan aplikasi.
 
 ## 3.19.0 — 2026-11-09 — Tanggal merah & jadwal sholat
 

@@ -2,9 +2,11 @@
 // Parameter mendekati Kemenag RI: Subuh 20°, Isya 18°, Ashar mazhab Syafi'i, ihtiyat 2 menit,
 // Imsak = Subuh − 10 menit. Tetap perkiraan: ikuti jadwal resmi Kemenag/masjid setempat.
 import { CalculationParameters, Coordinates, Madhab, PrayerTimes, Rounding } from 'adhan';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
-export type LokasiSholat = { lat: number; lng: number; nama: string };
-export const KOTA: LokasiSholat[] = [
+/** kotaId = kab/kota API Indonesia (jadwal resmi Kemenag); lat/lng = hitung di perangkat (GPS / kota bawaan). */
+export type LokasiSholat = { lat?: number; lng?: number; nama: string; kotaId?: string };
+export const KOTA: { nama: string; lat: number; lng: number }[] = [
   { nama: 'Jakarta', lat: -6.1754, lng: 106.8272 },
   { nama: 'Bogor', lat: -6.595, lng: 106.8166 },
   { nama: 'Depok', lat: -6.4025, lng: 106.7942 },
@@ -90,8 +92,14 @@ export const lokasiSholat = {
       let val: LokasiSholat | null = null;
       try {
         const v = JSON.parse(raw ?? 'null');
-        if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng))
-          val = { lat: v.lat, lng: v.lng, nama: String(v.nama ?? 'Lokasimu') };
+        const hasXY = v && Number.isFinite(v.lat) && Number.isFinite(v.lng);
+        const kotaId = v && typeof v.kotaId === 'string' && /^\d{2,6}$/.test(v.kotaId) ? v.kotaId : undefined;
+        if (hasXY || kotaId)
+          val = {
+            nama: String(v.nama ?? 'Lokasimu'),
+            ...(hasXY ? { lat: v.lat, lng: v.lng } : {}),
+            ...(kotaId ? { kotaId } : {}),
+          };
       } catch {
         /* rusak */
       }
@@ -104,7 +112,13 @@ export const lokasiSholat = {
       if (v)
         localStorage.setItem(
           KEY,
-          JSON.stringify({ lat: Math.round(v.lat * 100) / 100, lng: Math.round(v.lng * 100) / 100, nama: v.nama }),
+          JSON.stringify({
+            nama: v.nama,
+            ...(v.lat !== undefined && v.lng !== undefined
+              ? { lat: Math.round(v.lat * 100) / 100, lng: Math.round(v.lng * 100) / 100 }
+              : {}),
+            ...(v.kotaId ? { kotaId: v.kotaId } : {}),
+          }),
         );
       else localStorage.removeItem(KEY);
     } catch {
@@ -113,3 +127,65 @@ export const lokasiSholat = {
     subs.forEach((l) => l());
   },
 };
+
+// ── Jadwal resmi Kemenag per kab/kota (API Indonesia lewat Worker), disimpan per bulan di perangkat ──
+export type KotaApi = { id: string; nama: string; provinsi: string };
+export type BarisJadwal = {
+  date: string;
+  imsak: string | null;
+  subuh: string | null;
+  terbit: string | null;
+  dzuhur: string | null;
+  ashar: string | null;
+  maghrib: string | null;
+  isya: string | null;
+};
+let kotaP: Promise<KotaApi[]> | null = null;
+export const sholatApi = {
+  kota() {
+    if (!kotaP) kotaP = cloudflareApi<{ items: KotaApi[] }>('/api/member/teduh/sholat/kota').then((r) => r.items);
+    kotaP.catch(() => (kotaP = null));
+    return kotaP;
+  },
+  async bulan(kotaId: string, tahun: number, bulan: number): Promise<BarisJadwal[]> {
+    const key = `leosiqra-teduh-sholat-${kotaId}-${tahun}-${bulan}`;
+    try {
+      const v = JSON.parse(localStorage.getItem(key) ?? 'null');
+      if (Array.isArray(v) && v.length) return v;
+    } catch {
+      /* abaikan */
+    }
+    const r = await cloudflareApi<{ items: BarisJadwal[] }>(
+      `/api/member/teduh/sholat?kota=${kotaId}&tahun=${tahun}&bulan=${bulan}`,
+    );
+    try {
+      localStorage.setItem(key, JSON.stringify(r.items));
+    } catch {
+      /* penuh */
+    }
+    return r.items;
+  },
+};
+const NAMA: [keyof BarisJadwal, string, string][] = [
+  ['imsak', 'imsak', 'Imsak'],
+  ['subuh', 'subuh', 'Subuh'],
+  ['terbit', 'terbit', 'Terbit'],
+  ['dzuhur', 'dzuhur', 'Dzuhur'],
+  ['ashar', 'ashar', 'Ashar'],
+  ['maghrib', 'maghrib', 'Maghrib'],
+  ['isya', 'isya', 'Isya'],
+];
+/** Baris jadwal API → Waktu[] pada tanggal itu (jam setempat kota). */
+export function waktuDariBaris(b: BarisJadwal): Waktu[] {
+  const [y, m, d] = b.date.split('-').map(Number);
+  return NAMA.flatMap(([k, id, nama]) => {
+    const v = b[k];
+    if (!v) return [];
+    const [h, mi] = v.split(':').map(Number);
+    return [{ id, nama, at: new Date(y, m - 1, d, h, mi) }];
+  });
+}
+/** Sholat wajib berikutnya dari daftar Waktu hari ini + besok. */
+export function berikutnyaDari(hariIni: Waktu[], besok: Waktu[], now = new Date()): Waktu | null {
+  return hariIni.filter((w) => WAJIB.has(w.id)).find((w) => w.at > now) ?? besok.find((w) => w.id === 'subuh') ?? null;
+}
