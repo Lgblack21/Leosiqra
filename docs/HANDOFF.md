@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.21.1 run #191, commit 4bb871e; 3.21.0 live di run #190)
+Terakhir diperbarui: 2026-11-09 (live: 3.22.0 run #192, commit f004177)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.22.0 Menu samping baru — BELUM DEPLOY, menunggu "gas". Tanpa SQL.** Branch `claude/sidebar-baru-20261109`.
+- **2026-11-09 — 3.22.0 Menu samping baru — LIVE (run #192, commit f004177, Release v3.22.0). Tanpa SQL.**
   - `Sidebar.tsx` hanya tampilan: ubin ikon berwarna (fitur pakai `tint` features.ts, 4 halaman inti `KEUANGAN_TINT`),
     item aktif = kartu putih + garis aksen (layoutId `sidebar-active`), `GroupLabel`, kartu profil (pil Gratis/PRO).
     Logika menu/PRO/tamu/shortcut N tidak diubah.
