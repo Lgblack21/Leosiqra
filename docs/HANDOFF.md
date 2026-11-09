@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (main = 3.21.1 adfdff0, sudah "gas" Bos tapi workflow deploy BELUM dijalankan; live: 3.20.0 run #189)
+Terakhir diperbarui: 2026-11-09 (live: 3.21.1 run #191, commit 4bb871e; 3.21.0 live di run #190)
 
 ## Siapa sedang kerja
 
@@ -18,8 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.21.1 Stikerku: foto kamera/galeri bisa disimpan lagi — DI MAIN (adfdff0), Bos sudah "gas",
-  workflow `deploy-main.yml` BELUM dijalankan** (session cloud ditolak auto mode saat dispatch). Ikut 3.21.0. Tanpa SQL.
+- **2026-11-09 — 3.21.1 Stikerku: foto kamera/galeri bisa disimpan lagi — LIVE (run #191, commit 4bb871e,
+  Release v3.21.1). Tanpa SQL.** Workflow dijalankan Bos (dispatch dari session cloud ditolak auto mode).
   - Penyebab: html-to-image `cacheBust` menambah `?waktu` ke URL gambar; `blob:` URL ber-query gagal di-fetch →
     "Gagal membuat gambar" setiap latar foto. Perbaikan: foto dikonversi ke data URL JPEG (sisi terpanjang 2160 px)
     saat dipilih (`photoToDataUrl` di `StikerApp.tsx`). Jangan kembalikan ke `URL.createObjectURL` untuk gambar yang diekspor.
@@ -27,7 +27,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     berisi foto, 0 error JS. Belum dites: Bagikan (share sheet) di HP asli, foto HEIC.
   - Video "Perjalanan v1→v3.21" (1080×1920, 82 dtk) dibuat di session ini; skripnya tidak di-commit.
 
-- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — LIVE (run #190, Release v3.21.0 09:37 UTC). Tanpa SQL.**
   - Teduh layar penuh (`/membership/teduh` masuk FULLSCREEN_PATHS) + dock; bahan UI bersama di
     `components/teduh/ui.tsx` (TeduhShell, LangitHero langit per waktu, AngkaNaik, CincinProgres, JedaSejenak,
     LembarTab, NomorAyat, CatatanPribadi). Animasi framer-motion, hormati `useReducedMotion`. JANGAN pasang
