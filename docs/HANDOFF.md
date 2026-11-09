@@ -18,6 +18,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.4 Perbaikan panel auth (regresi 3.23.3) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  Branch `claude/auth-panel-fix-20261109`.
+  - 3.23.3 membuat panel `lg:sticky lg:h-screen lg:overflow-y-auto` + isi `justify-center` → di layar Bos (±1280×656)
+    celah kosong besar di bawah logo & panel menggulir sendiri (logo hilang). Bos kecewa ("tambah hancur").
+  - Sekarang panel ikut tinggi halaman (`lg:min-h-screen`, tanpa sticky/overflow), isi rata atas
+    (`pt-[clamp(28px,7vh,72px)]`), kartu dekorasi `mt-auto` & tetap disembunyikan bila tinggi < 860px.
+  - Dites Playwright 1280×656 (login, daftar, + gulir), 1100×540, 1440×900: tidak ada celah/tumpukan, 0 error JS.
+  - PELAJARAN: tes di ukuran layar Bos (tablet landscape ±1280×650) DAN dalam keadaan digulir sebelum minta "gas".
+
 - **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — LIVE (run #194, commit eaab081, Release v3.23.3). Tanpa SQL.**
   Branch `claude/auth-logo-20261109`.
   - Laporan Bos (tablet ±1100×540 CSS px): logo jelek, nama "Leo/siqra" dua warna jelek, panel kiri bertumpuk.

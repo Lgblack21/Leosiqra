@@ -91,6 +91,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.1 | 9 Nov 2026 | Langit Teduh mengikuti jam |
 | 3.23.2 | 9 Nov 2026 | Halaman Mulai senada tampilan baru |
 | 3.23.3 | 9 Nov 2026 | Logo & tata letak halaman masuk/daftar di layar pendek |
+| 3.23.4 | 9 Nov 2026 | Panel halaman masuk/daftar tidak lagi berantakan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -104,6 +105,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.4 — 2026-11-09 — Panel halaman masuk/daftar tidak lagi berantakan
+
+- Panel kiri halaman Masuk & Daftar kembali rapi di tablet/laptop: tidak ada celah kosong besar di bawah logo,
+  dan logo tidak hilang saat halaman digulir.
 
 ## 3.23.3 — 2026-11-09 — Logo & tata letak halaman masuk/daftar di layar pendek
 

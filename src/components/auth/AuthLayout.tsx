@@ -74,13 +74,13 @@ export function AuthLayout({
   return (
     <div className="min-h-screen bg-[#f5f6fb] font-sans text-slate-900 selection:bg-indigo-100 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* ── Panel brand (laptop) ── */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br no-scrollbar lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:flex lg:min-h-screen lg:flex-col">
         <Aurora />
         <div className="relative flex shrink-0 items-center gap-4 px-12 pt-10 xl:px-16">
           {back}
           <Brand light />
         </div>
-        <div className="relative flex flex-1 shrink-0 flex-col justify-center px-12 pb-8 pt-10 xl:px-16">
+        <div className="relative flex flex-col px-12 pb-10 pt-[clamp(28px,7vh,72px)] xl:px-16">
           <span
             style={d(0)}
             className="auth-enter inline-flex w-fit items-center gap-2 rounded-full bg-amber-300/15 px-3.5 py-1.5 fs-13 font-bold text-amber-200 ring-1 ring-amber-300/30"
@@ -110,7 +110,7 @@ export function AuthLayout({
             ))}
           </ul>
         </div>
-        <div aria-hidden className="relative h-[240px] shrink-0 [@media(max-height:860px)]:hidden">
+        <div aria-hidden className="relative mt-auto h-[240px] shrink-0 [@media(max-height:860px)]:hidden">
           <TxChip className="absolute left-12 top-0 xl:left-16" />
           <VoiceChip className="absolute right-10 top-10" />
           <BudgetChip className="absolute left-[30%] top-[118px] hidden xl:block" />
