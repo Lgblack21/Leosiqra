@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (3.27.0 Olahragaku R3 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — tanpa SQL; live: 3.26.0 run #202)
+Terakhir diperbarui: 2026-11-10 (live: 3.27.0 Olahragaku R3, run #203, commit d963821 — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-10 — 3.27.0 Olahragaku R3 — BELUM DEPLOY. Tanpa SQL** (pakai tabel 0044 + `users.metadata_json`).
+- **2026-11-10 — 3.27.0 Olahragaku R3 — LIVE (run #203, commit d963821). Tanpa SQL** (pakai tabel 0044 + `users.metadata_json`).
+  Cek live: /versi 3.27.0, /membership|app|admin/olahraga 200, PUT /api/member/fit/kerja & admin gambar 401 tanpa login.
   Branch `claude/friendly-galileo-omr8xf`. Keputusan Bos: video = animasi ilustrasi AI (A) + tombol cari YouTube (B);
   menu harian gratis 1×/hari selama program (ulang 300); shift → jendela buka 1 jam sebelum shift mulai.
   - Worker: `$.fitKerja` {mode, shifts≤4, hari{tanggal→shift}, ingatkan} via `PUT /api/member/fit/kerja[/hari]`;
