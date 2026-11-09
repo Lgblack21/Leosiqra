@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.5 Panel auth diam (sticky), form bergulir — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  Branch `claude/auth-panel-diam-20261109`. Permintaan Bos: panel diam, form yang geser.
+  - Aside `lg:sticky lg:top-0 lg:h-screen lg:self-start` (self-start wajib di grid supaya sticky jalan), isi tetap rata
+    atas tanpa overflow-y. Layar ≤ 620px tinggi: subjudul keunggulan disembunyikan, pita & header dirapatkan.
+  - Dites Playwright (gulir 500px di kolom form): 1280×656 login/daftar, 1100×540, 1440×900 → panel top 0, tombol
+    kembali tetap di y=40 (540: y=24), keunggulan terakhir masih di dalam layar; HP tidak terpengaruh; 0 error JS.
+
 - **2026-11-09 — 3.23.4 Perbaikan panel auth (regresi 3.23.3) — LIVE (run #195, commit 0f6dc0f, Release v3.23.4). Tanpa SQL.**
   Branch `claude/auth-panel-fix-20261109`.
   - 3.23.3 membuat panel `lg:sticky lg:h-screen lg:overflow-y-auto` + isi `justify-center` → di layar Bos (±1280×656)

@@ -74,9 +74,9 @@ export function AuthLayout({
   return (
     <div className="min-h-screen bg-[#f5f6fb] font-sans text-slate-900 selection:bg-indigo-100 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* ── Panel brand (laptop) ── */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:flex lg:min-h-screen lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start">
         <Aurora />
-        <div className="relative flex shrink-0 items-center gap-4 px-12 pt-10 xl:px-16">
+        <div className="relative flex shrink-0 items-center gap-4 px-12 pt-10 xl:px-16 [@media(max-height:620px)]:pt-6">
           {back}
           <Brand light />
         </div>
@@ -103,7 +103,7 @@ export function AuthLayout({
           {/* Pita kartu fitur yang berjalan terus (muat juga di layar pendek) */}
           <div
             aria-hidden
-            className="relative -mx-12 my-3 shrink-0 overflow-hidden py-4 [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)] xl:-mx-16"
+            className="relative -mx-12 my-3 shrink-0 overflow-hidden py-4 [@media(max-height:620px)]:my-0 [@media(max-height:620px)]:py-2 [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)] xl:-mx-16"
           >
             <div className="auth-ticker flex w-max items-center gap-6 pl-6">
               {[0, 1].map((k) => (
@@ -116,7 +116,7 @@ export function AuthLayout({
               ))}
             </div>
           </div>
-          <ul className="mt-2 max-w-md space-y-4">
+          <ul className="mt-2 max-w-md space-y-4 [@media(max-height:620px)]:space-y-2">
             {PERKS.map((p, i) => (
               <li key={p.title} style={d(3 + i)} className="auth-enter flex items-start gap-4">
                 <span
@@ -127,7 +127,7 @@ export function AuthLayout({
                 </span>
                 <span>
                   <span className="block fs-15.5 font-bold">{p.title}</span>
-                  <span className="block fs-14 text-white/55">{p.sub}</span>
+                  <span className="block fs-14 text-white/55 [@media(max-height:620px)]:hidden">{p.sub}</span>
                 </span>
               </li>
             ))}

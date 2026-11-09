@@ -92,6 +92,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.2 | 9 Nov 2026 | Halaman Mulai senada tampilan baru |
 | 3.23.3 | 9 Nov 2026 | Logo & tata letak halaman masuk/daftar di layar pendek |
 | 3.23.4 | 9 Nov 2026 | Panel halaman masuk/daftar tidak lagi berantakan |
+| 3.23.5 | 9 Nov 2026 | Panel halaman masuk/daftar diam, form yang bergulir |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -105,6 +106,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.5 — 2026-11-09 — Panel halaman masuk/daftar diam, form yang bergulir
+
+- Di tablet & laptop, panel biru-emas di halaman Masuk dan Daftar kini diam di tempat; hanya form yang bergulir,
+  jadi logo dan animasi selalu terlihat.
 
 ## 3.23.4 — 2026-11-09 — Panel halaman masuk/daftar tidak lagi berantakan
 
