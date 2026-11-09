@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.21.0 siap deploy — termasuk 3.20.1; live: 3.20.0 run #189)
+Terakhir diperbarui: 2026-11-09 (main = 3.21.1 adfdff0, sudah "gas" Bos tapi workflow deploy BELUM dijalankan; live: 3.20.0 run #189)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,15 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.21.1 Stikerku: foto kamera/galeri bisa disimpan lagi — DI MAIN (adfdff0), Bos sudah "gas",
+  workflow `deploy-main.yml` BELUM dijalankan** (session cloud ditolak auto mode saat dispatch). Ikut 3.21.0. Tanpa SQL.
+  - Penyebab: html-to-image `cacheBust` menambah `?waktu` ke URL gambar; `blob:` URL ber-query gagal di-fetch →
+    "Gagal membuat gambar" setiap latar foto. Perbaikan: foto dikonversi ke data URL JPEG (sisi terpanjang 2160 px)
+    saat dipilih (`photoToDataUrl` di `StikerApp.tsx`). Jangan kembalikan ke `URL.createObjectURL` untuk gambar yang diekspor.
+  - Dites Playwright (build lokal, API mock): kode lama tidak ada unduhan; kode baru Galeri/Kamera → PNG 1080×1920
+    berisi foto, 0 error JS. Belum dites: Bagikan (share sheet) di HP asli, foto HEIC.
+  - Video "Perjalanan v1→v3.21" (1080×1920, 82 dtk) dibuat di session ini; skripnya tidak di-commit.
 
 - **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
   - Teduh layar penuh (`/membership/teduh` masuk FULLSCREEN_PATHS) + dock; bahan UI bersama di
