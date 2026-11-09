@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.23.3 run #194, commit eaab081)
+Terakhir diperbarui: 2026-11-09 (live: 3.23.4 run #195, commit 0f6dc0f)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.23.4 Perbaikan panel auth (regresi 3.23.3) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.23.4 Perbaikan panel auth (regresi 3.23.3) — LIVE (run #195, commit 0f6dc0f, Release v3.23.4). Tanpa SQL.**
   Branch `claude/auth-panel-fix-20261109`.
   - 3.23.3 membuat panel `lg:sticky lg:h-screen lg:overflow-y-auto` + isi `justify-center` → di layar Bos (±1280×656)
     celah kosong besar di bawah logo & panel menggulir sendiri (logo hilang). Bos kecewa ("tambah hancur").
