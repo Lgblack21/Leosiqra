@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Activity, ArrowLeft, BookOpen, Dumbbell, LineChart, UtensilsCrossed } from 'lucide-react';
 import { LeoGuide } from '@/components/ai/LeoGuide';
 import { MakanApp } from '@/components/makan/MakanApp';
+import { CoachCard } from '@/components/olahraga/CoachCard';
+import { KerjaCard } from '@/components/olahraga/KerjaCard';
 import { LatihanView } from '@/components/olahraga/LatihanView';
 import { MakanBanner } from '@/components/olahraga/MakanBanner';
 import { MetodeView } from '@/components/olahraga/MetodeView';
@@ -159,7 +161,9 @@ export function OlahragaApp({ variant }: { variant: 'web' | 'app' }) {
       <main>
         {tab === 'makan' ? (
           <>
-            {data?.program?.plan ? <MakanBanner plan={data.program.plan} today={data.today} /> : null}
+            {data?.program?.plan ? (
+              <MakanBanner plan={data.program.plan} kerja={data.kerja} today={data.today} />
+            ) : null}
             <MakanApp variant={variant} embedded />
           </>
         ) : !data ? (
@@ -187,9 +191,19 @@ export function OlahragaApp({ variant }: { variant: 'web' | 'app' }) {
                 say('Program dihentikan.');
                 await reload();
               }}
-            />
+            >
+              <KerjaCard
+                kerja={data.kerja}
+                plan={data.program?.plan ?? null}
+                today={data.today}
+                onChanged={reload}
+                onToast={say}
+              />
+              {data.program?.plan && data.pro ? <CoachCard data={data} onChanged={reload} onToast={say} /> : null}
+            </ProgramView>
           )
-        ) : tab === 'metode' ? (
+        ) : null}
+        {tab === 'makan' || tab === 'program' || !data ? null : tab === 'metode' ? (
           <MetodeView
             profile={data.profile}
             pro={data.pro}

@@ -1,6 +1,6 @@
 # Rancangan — Olahragaku (diet + olahraga + coach AI)
 
-Status: **DI-ACC Bos 2026-11-09** (jawaban bagian 9). **R1 + R2 selesai di branch (3.26.0), belum deploy.** Ilustrasi gerakan & R3 menyusul.
+Status: **DI-ACC Bos 2026-11-09** (jawaban bagian 9). R1 + R2 live (3.26.0). **R3 (3.27.0) di branch, belum deploy**: shift kerja, menu harian, evaluasi, tanya coach, pengingat, ilustrasi (admin) + YouTube.
 Keputusan Bos yang sudah ada (chat 2026-11-09):
 
 1. Halaman baru **Olahragaku**; Makanku pindah ke sini. **Sehatku** tinggal Cek + Asuransi.

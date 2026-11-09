@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Clock, Drumstick, Flame } from 'lucide-react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import type { Plan } from '@/lib/olahraga/program';
+import { jendelaHari, type FitKerja, type Plan } from '@/lib/olahraga/program';
 import { cn } from '@/lib/utils';
 
 // Di atas tab Makan saat program aktif: status jendela makan sekarang + kalori & protein hari ini vs target.
@@ -24,7 +24,7 @@ export function jendelaStatus(j: NonNullable<Plan['jendela']>, now = new Date())
   return { buka: fmtJam(buka), tutup: fmtJam(tutup), dalam: dalam(t), dalamWaktu: dalam };
 }
 
-export function MakanBanner({ plan, today }: { plan: Plan; today: string }) {
+export function MakanBanner({ plan, kerja, today }: { plan: Plan; kerja: FitKerja; today: string }) {
   const [meals, setMeals] = useState<Meal[] | null>(null);
   useEffect(() => {
     let alive = true;
@@ -37,7 +37,8 @@ export function MakanBanner({ plan, today }: { plan: Plan; today: string }) {
   }, [today]);
   const kcal = Math.round((meals ?? []).reduce((a, m) => a + (m.kcal ?? 0), 0));
   const protein = Math.round((meals ?? []).reduce((a, m) => a + (m.protein ?? 0), 0));
-  const js = plan.jendela ? jendelaStatus(plan.jendela) : null;
+  const jHari = jendelaHari(plan, kerja, today);
+  const js = jHari ? jendelaStatus(jHari) : null;
   const luar = js ? (meals ?? []).filter((m) => m.time && !js.dalamWaktu(toMin(m.time))).length : 0;
 
   return (

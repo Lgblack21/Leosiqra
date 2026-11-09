@@ -152,6 +152,7 @@ export function ProgramView({
   onPilihMetode,
   onEnd,
   onLatihan,
+  children,
 }: {
   profile: FitProfile;
   pro: boolean;
@@ -161,6 +162,7 @@ export function ProgramView({
   onPilihMetode: () => void;
   onEnd: () => Promise<void>;
   onLatihan: () => void;
+  children?: React.ReactNode;
 }) {
   const h = hitung(profile);
   const dokter = profile.conditions.some(
@@ -207,6 +209,8 @@ export function ProgramView({
       ) : null}
 
       {program ? <ProgramAktifCard program={program} today={today} onEnd={onEnd} onLatihan={onLatihan} /> : null}
+
+      {children}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={card}>

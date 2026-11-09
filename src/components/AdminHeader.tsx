@@ -28,6 +28,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
               '/admin/user': 'User Management',
               '/admin/pembayaran': 'Pembayaran',
               '/admin/koin': 'Koin',
+              '/admin/olahraga': 'Olahragaku',
               '/admin/laporan': 'Executive Reports',
               '/admin/saran': 'Saran & Kritik',
               '/admin/ai': 'AI & Saldo',

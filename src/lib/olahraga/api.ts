@@ -1,5 +1,5 @@
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import type { LatihanItem, Plan } from './program';
+import { KERJA_DEFAULT, type Evaluasi, type FitKerja, type LatihanItem, type MenuHarian, type Plan } from './program';
 import type { FitProfile, MetodeKey } from './types';
 
 // Olahragaku — data di akun (/api/member/fit, migrasi 0044). Tabel belum ada (ready:false / 503) →
@@ -16,6 +16,11 @@ export type Latihan = {
   items: LatihanItem[];
 };
 export type ProgramAktif = { id: string; diet_key: MetodeKey; start: string; plan: Plan | null };
+export type CoachItem =
+  | { id: string; kind: 'menu'; date: string; created_at: string; result: MenuHarian }
+  | { id: string; kind: 'eval'; date: string; created_at: string; result: Evaluasi }
+  | { id: string; kind: 'ask'; date: string; created_at: string; q: string; result: { jawaban: string } };
+export type Harga = { eval: number; ask: number; ask_free: number; menu_ulang: number };
 export type FitData = {
   ready: boolean;
   where: 'akun' | 'perangkat';
@@ -27,10 +32,14 @@ export type FitData = {
   workouts: Latihan[];
   program: ProgramAktif | null;
   coins: number | null;
+  kerja: FitKerja;
+  coach: CoachItem[];
+  prices: Harga;
   prefill: Partial<FitProfile> & { fromCheck?: string };
 };
 
 const LOCAL = 'leosiqra-olahraga';
+const HARGA_DEFAULT: Harga = { eval: 1500, ask: 300, ask_free: 3, menu_ulang: 300 };
 type Local = { profile: FitProfile | null; weights: Timbangan[] };
 const readLocal = (): Local => {
   try {
@@ -64,6 +73,9 @@ type Raw = {
   workouts?: Latihan[];
   program?: ProgramAktif | null;
   coins?: number | null;
+  kerja?: FitKerja;
+  coach?: CoachItem[];
+  prices?: Harga;
   history_days?: number | null;
   prefill?: FitData['prefill'] | null;
 };
@@ -84,6 +96,9 @@ export async function loadFit(): Promise<FitData> {
         workouts: r.workouts ?? [],
         program: r.program ?? null,
         coins: r.coins ?? null,
+        kerja: r.kerja ?? KERJA_DEFAULT,
+        coach: r.coach ?? [],
+        prices: r.prices ?? HARGA_DEFAULT,
         prefill: { ...(r.prefill ?? {}), ...(local.profile ?? {}) },
       };
     }
@@ -98,6 +113,9 @@ export async function loadFit(): Promise<FitData> {
       workouts: [],
       program: null,
       coins: null,
+      kerja: KERJA_DEFAULT,
+      coach: [],
+      prices: HARGA_DEFAULT,
       prefill: r.prefill ?? {},
     };
   } catch {
@@ -112,6 +130,9 @@ export async function loadFit(): Promise<FitData> {
       workouts: [],
       program: null,
       coins: null,
+      kerja: KERJA_DEFAULT,
+      coach: [],
+      prices: HARGA_DEFAULT,
       prefill: {},
     };
   }
@@ -199,3 +220,21 @@ export const saveWorkout = (w: { id: string; date: string; items: LatihanItem[];
   });
 
 export const deleteWorkout = (id: string) => cloudflareApi(`/api/member/fit/workouts/${id}`, { method: 'DELETE' });
+
+// ── Rilis 3 ────────────────────────────────────────────────────────────────────────────────────────────
+export const saveKerja = (k: FitKerja) =>
+  cloudflareApi<{ kerja: FitKerja }>('/api/member/fit/kerja', { method: 'PUT', json: { kerja: k } });
+export const setShiftHari = (date: string, shift: string | null) =>
+  cloudflareApi<{ kerja: FitKerja }>('/api/member/fit/kerja/hari', { method: 'PUT', json: { date, shift } });
+export const mintaMenu = (ulang: boolean) =>
+  cloudflareApi<{ menu: CoachItem }>('/api/member/fit/menu', {
+    method: 'POST',
+    json: { request_id: crypto.randomUUID(), ulang },
+  });
+export const mintaEvaluasi = (requestId: string) =>
+  cloudflareApi<{ eval: CoachItem }>('/api/member/fit/coach/eval', { method: 'POST', json: { request_id: requestId } });
+export const tanyaCoach = (requestId: string, pertanyaan: string) =>
+  cloudflareApi<{ ask: CoachItem; free_left?: number }>('/api/member/fit/coach/ask', {
+    method: 'POST',
+    json: { request_id: requestId, pertanyaan },
+  });

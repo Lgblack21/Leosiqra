@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Dumbbell,
   LayoutDashboard,
   LogOut,
   ChevronRight,
@@ -34,6 +35,7 @@ const adminMenuGroups = [
       { icon: Users, label: 'User', href: '/admin/user' },
       { icon: CreditCard, label: 'Pembayaran', href: '/admin/pembayaran' },
       { icon: Coins, label: 'Koin', href: '/admin/koin' },
+      { icon: Dumbbell, label: 'Olahragaku', href: '/admin/olahraga' },
       { icon: FileText, label: 'Laporan', href: '/admin/laporan' },
       { icon: MessageSquareHeart, label: 'Saran & Kritik', href: '/admin/saran' },
     ],

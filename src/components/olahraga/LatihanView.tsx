@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { GerakanMedia } from '@/components/olahraga/GerakanMedia';
 import { SheetShell } from '@/components/sehat/AsuransiSheets';
 import { deleteWorkout, saveWorkout, type FitData } from '@/lib/olahraga/api';
 import { GERAKAN, GERAKAN_BY_KEY } from '@/lib/olahraga/gerakan';
@@ -43,6 +44,7 @@ function GerakanBaris({ it }: { it: LatihanItem }) {
       </button>
       {open ? (
         <div className="px-4 pb-4">
+          <GerakanMedia g={g} className="mb-3" />
           <ol className="list-decimal space-y-1 pl-5 fs-13 leading-relaxed text-slate-700 dark:text-slate-300">
             {g.cara.map((c) => (
               <li key={c}>{c}</li>
@@ -69,6 +71,7 @@ function DetailGerakan({ g, aman, onClose }: { g: Gerakan; aman: boolean; onClos
             Gerakan ini belum disarankan untuk profilmu (alat, kondisi, atau tingkat). Pilih yang bertanda aman dulu.
           </p>
         ) : null}
+        <GerakanMedia g={g} />
         <ol className="list-decimal space-y-1.5 pl-5 fs-15 leading-relaxed text-slate-700 dark:text-slate-300">
           {g.cara.map((c) => (
             <li key={c}>{c}</li>

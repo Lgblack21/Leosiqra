@@ -97,6 +97,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.24.0 | 9 Nov 2026 | Laporan Usahaku + unduh PDF & Excel |
 | 3.25.0 | 9 Nov 2026 | Pajak Center baru |
 | 3.26.0 | 9 Nov 2026 | Olahragaku |
+| 3.27.0 | 10 Nov 2026 | Olahragaku: shift kerja & coach |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -110,6 +111,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.27.0 — 2026-11-10 — Olahragaku: kerja shift & coach Leo
+
+- **Kerja shift**: atur jam kerjamu (sampai 4 shift, mis. pagi 05–15, sore 15–01, malam 19–05), lalu tiap hari tinggal
+  ketuk "hari ini shift apa". Jendela makan otomatis buka 1 jam sebelum shift mulai (bisa diubah per shift).
+- **Arahan makan hari ini** (PRO, selama program): Leo menyusun apa yang sebaiknya kamu makan di sisa hari ini — sesuai
+  shift, jendela makan, target, dan yang sudah kamu catat. Gratis 1× sehari; susun ulang 300 koin.
+- **Evaluasi mingguan** (1.500 koin): skor, hal yang sudah bagus, yang perlu diperbaiki, dan saran minggu depan dari
+  catatan makan, latihan, dan timbanganmu.
+- **Tanya coach**: 3 pertanyaan gratis per hari untuk PRO, berikutnya 300 koin.
+- **Pengingat jendela makan**: notifikasi saat jendela buka dan 1 jam sebelum tutup, ikut shift hari itu. Bisa dimatikan.
+- **Gerakan latihan** kini punya animasi ilustrasi dan tombol "Lihat video di YouTube".
+- Koin dikembalikan otomatis kalau Leo gagal menyusun menu atau evaluasi, atau AI sedang gangguan.
 
 ## 3.26.0 — 2026-11-09 — Olahragaku: diet & berat badan
 

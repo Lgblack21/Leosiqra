@@ -166,3 +166,112 @@ export function perkiraanLatihan(items: LatihanItem[], byKey: Record<string, Ger
   }
   return { menit: Math.max(1, Math.round(detik / 60)), kkal: Math.round(kkal) };
 }
+
+// ── Rilis 3: jam kerja shift ─────────────────────────────────────────────────────────────────────────
+// Disimpan di metadata akun ($.fitKerja, tanpa migrasi). Tiap hari member memilih shift; jendela makan hari itu
+// = jam buka shift (default 1 jam sebelum shift mulai) + lama makan dari metode.
+export type Shift = { id: string; label: string; mulai: string; selesai: string; jendela: string | null };
+export type FitKerja = { mode: 'normal' | 'shift'; shifts: Shift[]; hari: Record<string, string>; ingatkan: boolean };
+export const KERJA_DEFAULT: FitKerja = { mode: 'normal', shifts: [], hari: {}, ingatkan: true };
+const JAM_HH = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+const fromMin = (m: number) => {
+  const x = ((m % 1440) + 1440) % 1440;
+  return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+};
+export const jendelaShiftDefault = (s: Pick<Shift, 'mulai'>) => fromMin(Math.floor(toMin(s.mulai) / 60) * 60 - 60);
+
+export function sanitizeKerja(raw: unknown): FitKerja {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const shifts = (Array.isArray(r.shifts) ? r.shifts : []).slice(0, 4).flatMap((x, i) => {
+    const s = (x ?? {}) as Record<string, unknown>;
+    const mulai = typeof s.mulai === 'string' && JAM_HH.test(s.mulai) ? s.mulai : null;
+    const selesai = typeof s.selesai === 'string' && JAM_HH.test(s.selesai) ? s.selesai : null;
+    if (!mulai || !selesai) return [];
+    const id = typeof s.id === 'string' && /^[a-z0-9-]{1,20}$/.test(s.id) ? s.id : `s${i + 1}`;
+    const label = teks(s.label, 20) || `Shift ${i + 1}`;
+    // Jendela makan hanya di jam bulat (cocok dengan pilihan saat mulai program & pengingat per jam).
+    const jendela = typeof s.jendela === 'string' && /^([01]\d|2[0-3]):00$/.test(s.jendela) ? s.jendela : null;
+    return [{ id, label, mulai, selesai, jendela }];
+  });
+  const ids = new Set(shifts.map((s) => s.id));
+  const hari: Record<string, string> = {};
+  if (r.hari && typeof r.hari === 'object' && !Array.isArray(r.hari)) {
+    for (const [d, v] of Object.entries(r.hari as Record<string, unknown>)
+      .sort()
+      .slice(-35)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && typeof v === 'string' && ids.has(v)) hari[d] = v;
+    }
+  }
+  return {
+    mode: r.mode === 'shift' && shifts.length ? 'shift' : 'normal',
+    shifts,
+    hari,
+    ingatkan: r.ingatkan !== false,
+  };
+}
+
+export const shiftHari = (k: FitKerja, date: string) =>
+  k.mode === 'shift' ? (k.shifts.find((s) => s.id === k.hari[date]) ?? null) : null;
+
+// Jendela makan untuk tanggal tertentu (null = metode tanpa jendela).
+export function jendelaHari(plan: Pick<Plan, 'jendela'>, k: FitKerja, date: string): Plan['jendela'] {
+  if (!plan.jendela) return null;
+  const s = shiftHari(k, date);
+  return s ? { ...plan.jendela, mulai: s.jendela ?? jendelaShiftDefault(s) } : plan.jendela;
+}
+
+export const jamDalamJendela = (j: NonNullable<Plan['jendela']>, jam: string) => {
+  const t = toMin(jam.replace('.', ':'));
+  const buka = toMin(j.mulai);
+  const tutup = buka + j.makan * 60;
+  return tutup <= 1440 ? t >= buka && t <= tutup : t >= buka || t <= tutup - 1440;
+};
+
+// Arahan menu harian dari AI (disaring).
+export type MenuHarian = {
+  pesan: string;
+  makan: { jam: string; isi: string; kkal: number; protein: number }[];
+  tips: string[];
+};
+export function sanitizeMenuHarian(raw: unknown, jendela: Plan['jendela']): MenuHarian | null {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
+  if (!r) return null;
+  const makan = (Array.isArray(r.makan) ? r.makan : []).slice(0, 6).flatMap((x) => {
+    const m = (x ?? {}) as Record<string, unknown>;
+    const jam = teks(m.jam, 5).replace(':', '.');
+    const isi = teks(m.isi, 180);
+    if (!JAM.test(jam) || !isi || (jendela && !jamDalamJendela(jendela, jam))) return [];
+    return [{ jam, isi, kkal: int(m.kkal, 0, 1500, 0), protein: int(m.protein, 0, 150, 0) }];
+  });
+  if (!makan.length) return null;
+  return {
+    pesan: teks(r.pesan, 300),
+    makan,
+    tips: (Array.isArray(r.tips) ? r.tips : [])
+      .map((t) => teks(t, 180))
+      .filter(Boolean)
+      .slice(0, 4),
+  };
+}
+
+export type Evaluasi = { skor: number; bagus: string[]; perbaiki: string[]; mingguDepan: string };
+export function sanitizeEvaluasi(raw: unknown): Evaluasi | null {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
+  if (!r) return null;
+  const list = (v: unknown) =>
+    (Array.isArray(v) ? v : [])
+      .map((t) => teks(t, 200))
+      .filter(Boolean)
+      .slice(0, 4);
+  const bagus = list(r.bagus);
+  const perbaiki = list(r.perbaiki);
+  if (!bagus.length && !perbaiki.length) return null;
+  return { skor: int(r.skor, 1, 10, 5), bagus, perbaiki, mingguDepan: teks(r.mingguDepan, 400) };
+}
+
+export const senin = (date: string) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = Senin
+  return new Date(d.getTime() - dow * 86400_000).toISOString().slice(0, 10);
+};

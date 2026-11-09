@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.26.0 Olahragaku R1+R2, run #202, commit 4e44ae8; SQL 0044 dijalankan Bos)
+Terakhir diperbarui: 2026-11-10 (3.27.0 Olahragaku R3 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — tanpa SQL; live: 3.26.0 run #202)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,25 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-10 — 3.27.0 Olahragaku R3 — BELUM DEPLOY. Tanpa SQL** (pakai tabel 0044 + `users.metadata_json`).
+  Branch `claude/friendly-galileo-omr8xf`. Keputusan Bos: video = animasi ilustrasi AI (A) + tombol cari YouTube (B);
+  menu harian gratis 1×/hari selama program (ulang 300); shift → jendela buka 1 jam sebelum shift mulai.
+  - Worker: `$.fitKerja` {mode, shifts≤4, hari{tanggal→shift}, ingatkan} via `PUT /api/member/fit/kerja[/hari]`;
+    `POST /fit/menu` (id `menu:<uid>:<tgl>` gratis; `ulang:true` 300 koin), `/fit/coach/eval` (1.500, idem & unik per
+    minggu Senin), `/fit/coach/ask` (3 gratis/hari, lalu 300; jawaban kosong tidak di-refund); `fitCharge`/`fitRefund`/
+    `fitAiJson`; `sendFitWindowReminders` di cron tiap menit saat menit 0 (klaim `$.fitRemind`, maks 40/run);
+    `POST /api/admin/fit/gerakan-gambar` (admin, `generateStoryImage` → R2 `olahraga/gerakan/<key>/<0-3>`) + publik
+    `GET /api/fit/gerakan/:key/:frame`. Harga di konstanta Worker (`FIT_EVAL_PRICE` dll.), dikirim ke klien lewat GET /fit.
+  - Frontend: `program.ts` (sanitizeKerja, jendelaHari, sanitizeMenuHarian, sanitizeEvaluasi, senin), `KerjaCard`,
+    `CoachCard` (di bawah kartu program), `GerakanMedia` (4 frame bergantian + link YouTube), `/admin/olahraga` (tombol
+    "Buat yang belum ada", berurutan, lewati yang sudah ada; ±Rp650/gambar, 160 gambar).
+  - Dites lokal (mock OpenRouter + gambar PNG tiruan, D1 lokal, Playwright Pixel 7 & 1280): menu gratis/duplikat/ulang
+    −300/refund, evaluasi −1.500 + duplikat, tanya 3 gratis lalu −300, provider 500 → refund, jawaban kosong tidak
+    refund, jam di luar jendela dibuang, shift malam → jendela 18–02 di prompt, admin gambar 403/200/skip, gambar
+    publik 200 & key aneh 404, cron klaim `2026-11-10|buka` sekali; 0 error JS. **Belum dites**: notifikasi lonceng
+    (tabel `notifications` tidak ada di D1 lokal), kualitas gambar & teks AI asli.
+  - **Setelah deploy (Bos)**: buka Admin › Olahragaku → "Buat yang belum ada" (±160 gambar, ±Rp104 rb).
 
 - **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 + 2 dari 3) — LIVE (run #202, commit 4e44ae8). SQL 0044 dijalankan Bos
   (belum diverifikasi lewat query oleh dev).** Cek live: /membership/olahraga & /app/olahraga 200, /api/member/fit 401
