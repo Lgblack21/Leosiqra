@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.23.6 run #199, commit 0eae434 — tema terang landing/mulai/masuk/daftar)
+Terakhir diperbarui: 2026-11-09 (live: 3.24.0 run #200, commit 0f7aad0 — Laporan Usahaku)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.24.0 Laporan Usahaku + PDF/Excel — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.24.0 Laporan Usahaku + PDF/Excel — LIVE (run #200, commit 0f7aad0, Release v3.24.0). Tanpa SQL.**
   Branch `claude/usaha-laporan-20261109`. (Rilis 2 berikutnya: Pajak Center baru — lihat "Langkah berikutnya".)
   - Worker `GET /api/member/shops/:id/report?from&to` (BACA SAJA, di handleShopRoutes → requireSession + cek
     `shops.user_id`): penjualan dengan items/pembeli/kasir/sumber dari payload_json, biaya per jenis, bahan & riwayat
