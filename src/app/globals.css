@@ -823,6 +823,45 @@ html[data-daypart='malam'] .auth-greet[data-p='malam'] {
   }
 }
 
+/* Pita kartu fitur berjalan, kilau badge, ikon berkelip (AuthLayout). */
+.auth-ticker {
+  animation: auth-ticker 42s linear infinite;
+}
+@keyframes auth-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.auth-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: auth-shine 3.6s ease-in-out infinite;
+}
+@keyframes auth-shine {
+  60%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.auth-twinkle {
+  animation: auth-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes auth-twinkle {
+  50% {
+    transform: scale(1.25) rotate(18deg);
+    opacity: 0.75;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ticker,
+  .auth-shine,
+  .auth-twinkle {
+    animation: none;
+  }
+}
+
 /* Cahaya aurora pelan di panel brand masuk/daftar (AuthLayout). */
 .auth-aurora {
   animation: auth-aurora 18s ease-in-out infinite alternate;

@@ -110,6 +110,8 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 - Panel kiri halaman Masuk & Daftar kembali rapi di tablet/laptop: tidak ada celah kosong besar di bawah logo,
   dan logo tidak hilang saat halaman digulir.
+- Animasi kembali dan selalu terlihat, juga di tablet: pita kartu fitur yang berjalan di bawah judul, ikon
+  keunggulan yang melayang, dan badge "Gratis 14 hari" yang berkilau.
 
 ## 3.23.3 — 2026-11-09 — Logo & tata letak halaman masuk/daftar di layar pendek
 

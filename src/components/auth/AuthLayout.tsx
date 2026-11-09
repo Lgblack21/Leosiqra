@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronLeft, Mic, ShieldCheck, Sparkles } from 'lucide-react';
 import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
-import { BudgetChip, TxChip, VoiceChip } from './FinanceChips';
+import { BalanceChip, BudgetChip, TxChip, VoiceChip } from './FinanceChips';
 
 // Kerangka halaman masuk/daftar.
 // - Laptop (≥ lg): dua kolom — kiri panel brand navy-emas (senada logo) berisi judul, 3 keunggulan, dan kartu
@@ -80,26 +80,49 @@ export function AuthLayout({
           {back}
           <Brand light />
         </div>
-        <div className="relative flex flex-col px-12 pb-10 pt-[clamp(28px,7vh,72px)] xl:px-16">
+        <div className="relative flex flex-col px-12 pb-6 pt-[clamp(20px,6vh,72px)] xl:px-16">
           <span
             style={d(0)}
-            className="auth-enter inline-flex w-fit items-center gap-2 rounded-full bg-amber-300/15 px-3.5 py-1.5 fs-13 font-bold text-amber-200 ring-1 ring-amber-300/30"
+            className="auth-enter relative inline-flex w-fit items-center gap-2 overflow-hidden rounded-full bg-amber-300/15 px-3.5 py-1.5 fs-13 font-bold text-amber-200 ring-1 ring-amber-300/30"
           >
-            <Sparkles size={14} /> Gratis 14 hari · tanpa kartu kredit
+            <span aria-hidden className="auth-shine" />
+            <Sparkles size={14} className="auth-twinkle" /> Gratis 14 hari · tanpa kartu kredit
           </span>
           <h1
             style={d(1)}
-            className="auth-enter mt-5 max-w-lg fsh-44 font-extrabold leading-[1.05] tracking-[-0.03em] xl:fsh-52"
+            className="auth-enter mt-5 max-w-lg fsh-44 font-extrabold leading-[1.05] tracking-[-0.03em] xl:fsh-52 [@media(max-height:760px)]:mt-4 [@media(max-height:760px)]:fsh-40"
           >
             {headline}
           </h1>
-          <p style={d(2)} className="auth-enter mt-4 max-w-md fs-16 leading-relaxed text-white/60">
+          <p
+            style={d(2)}
+            className="auth-enter mt-4 max-w-md fs-16 leading-relaxed text-white/60 [@media(max-height:760px)]:hidden"
+          >
             {sub}
           </p>
-          <ul className="mt-9 max-w-md space-y-4">
+          {/* Pita kartu fitur yang berjalan terus (muat juga di layar pendek) */}
+          <div
+            aria-hidden
+            className="relative -mx-12 my-3 shrink-0 overflow-hidden py-4 [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)] xl:-mx-16"
+          >
+            <div className="auth-ticker flex w-max items-center gap-6 pl-6">
+              {[0, 1].map((k) => (
+                <div key={k} className="flex shrink-0 items-center gap-6">
+                  <TxChip />
+                  <VoiceChip />
+                  <BudgetChip />
+                  <BalanceChip />
+                </div>
+              ))}
+            </div>
+          </div>
+          <ul className="mt-2 max-w-md space-y-4">
             {PERKS.map((p, i) => (
               <li key={p.title} style={d(3 + i)} className="auth-enter flex items-start gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 text-slate-950 shadow-[0_10px_24px_-10px_rgba(251,191,36,0.8)]">
+                <span
+                  className="paper-float flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 text-slate-950 shadow-[0_10px_24px_-10px_rgba(251,191,36,0.8)]"
+                  style={{ animationDelay: `${-i * 1.6}s`, animationDuration: '4.5s' } as React.CSSProperties}
+                >
                   <p.icon size={19} strokeWidth={2.4} />
                 </span>
                 <span>
@@ -109,11 +132,6 @@ export function AuthLayout({
               </li>
             ))}
           </ul>
-        </div>
-        <div aria-hidden className="relative mt-auto h-[240px] shrink-0 [@media(max-height:860px)]:hidden">
-          <TxChip className="absolute left-12 top-0 xl:left-16" />
-          <VoiceChip className="absolute right-10 top-10" />
-          <BudgetChip className="absolute left-[30%] top-[118px] hidden xl:block" />
         </div>
       </aside>
 

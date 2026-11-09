@@ -25,6 +25,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Sekarang panel ikut tinggi halaman (`lg:min-h-screen`, tanpa sticky/overflow), isi rata atas
     (`pt-[clamp(28px,7vh,72px)]`), kartu dekorasi `mt-auto` & tetap disembunyikan bila tinggi < 860px.
   - Dites Playwright 1280×656 (login, daftar, + gulir), 1100×540, 1440×900: tidak ada celah/tumpukan, 0 error JS.
+  - Bos protes animasi hilang (kartu dekorasi tersembunyi < 860px). Diganti pita `.auth-ticker` (Tx/Voice/Budget/Balance
+    ×2, 42 s) TEPAT DI BAWAH JUDUL (bukan di dasar panel — dasar panel = dasar halaman, di bawah layar), ikon PERKS
+    `paper-float`, badge `.auth-shine` + `.auth-twinkle`. Layar < 760px tinggi: paragraf sub disembunyikan.
+    Dites: pita terlihat & bergerak di 1280×656 (login & daftar) dan 1440×900.
   - PELAJARAN: tes di ukuran layar Bos (tablet landscape ±1280×650) DAN dalam keadaan digulir sebelum minta "gas".
 
 - **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — LIVE (run #194, commit eaab081, Release v3.23.3). Tanpa SQL.**
