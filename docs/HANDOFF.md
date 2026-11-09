@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.22.0 run #192, commit f004177)
+Terakhir diperbarui: 2026-11-09 (live: 3.23.2 run #193, commit bb2db55)
 
 ## Siapa sedang kerja
 
@@ -18,8 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.23.1 Langit Teduh + 3.23.2 /mulai senada — BELUM DEPLOY, menunggu "gas" (satu rangkaian dengan
-  3.22.1 & 3.23.0). Tanpa SQL.** Rantai branch: mulai-lanjut → daftar-baru → teduh-langit → `claude/mulai-baru-20261109`
+- **2026-11-09 — 3.23.1 Langit Teduh + 3.23.2 /mulai senada — LIVE (run #193, commit bb2db55, Release v3.23.2;
+  ikut 3.22.1 & 3.23.0). Tanpa SQL.** Rantai branch: mulai-lanjut → daftar-baru → teduh-langit → `claude/mulai-baru-20261109`
   (paling ujung, berisi semuanya).
   - Teduh `LangitHero` (ui.tsx): warna langit diinterpolasi dari tabel `LANGIT` (jam → 3 warna), matahari terbit 5.85 /
     terbenam 17.95 di busur kanan, tenggelam di balik 3 lapis bukit SVG, bulan sabit SVG (mask), bintang & bintang jatuh
@@ -29,7 +29,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - /mulai: aside = gradien navy + `Aurora` (diekspor dari AuthLayout), sticky di laptop; frame HP bercahaya emas;
     logo tile putih + wordmark Leo/siqra; progress bar sampai emas. Dites web 1440 & HP 390, 0 error JS.
 
-- **2026-11-09 — 3.23.0 Halaman daftar & masuk baru — BELUM DEPLOY, menunggu "gas" (bersama 3.22.1). Tanpa SQL.**
+- **2026-11-09 — 3.23.0 Halaman daftar & masuk baru — LIVE (run #193). Tanpa SQL.**
   Branch `claude/daftar-baru-20261109` (di atas `claude/mulai-lanjut-20261109`).
   - Hanya tampilan `components/auth/AuthLayout.tsx` (dipakai /auth/register & /auth/login): laptop = 2 kolom, panel
     brand navy-emas sticky (aurora `.auth-aurora` di globals.css, 3 PERKS, TxChip/VoiceChip/BudgetChip) + form kanan;
@@ -39,7 +39,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites Playwright: register 1440 & Pixel-ish 390, login 1440 & 390, submit daftar (mock) → body benar + "Akunmu
     siap", 0 error JS.
 
-- **2026-11-09 — 3.22.1 /mulai: isian tamu lama tidak lagi melompat ke langkah terakhir — BELUM DEPLOY, menunggu "gas".
+- **2026-11-09 — 3.22.1 /mulai: isian tamu lama tidak lagi melompat ke langkah terakhir — LIVE (run #193).
   Tanpa SQL.** Branch `claude/mulai-lanjut-20261109`.
   - Laporan Bos: klik Daftar → langsung "Hari pertama, beres." Penyebab: `leosiqra-guest-onboarding.done` di
     localStorage → `setStep(LAST)` saat halaman dibuka. Sekarang `resumable` → kartu "Lanjutkan daftar / Mulai dari
