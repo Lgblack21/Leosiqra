@@ -36,6 +36,9 @@ import { Reveal } from '@/components/landing/Reveal';
 import { AppShowcase } from '@/components/landing/AppShowcase';
 import { ScrollTilt } from '@/components/landing/ScrollTilt';
 import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
+import { Aurora } from '@/components/auth/AuthLayout';
+import { BalanceChip, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
+import { LeoMascot } from '@/components/mascot/LeoMascot';
 
 // Semua klaim di halaman ini mengacu ke fitur yang benar-benar ada di aplikasi.
 const MARQUEE = [
@@ -219,33 +222,31 @@ export default function LandingPage() {
 
   return (
     <div id="beranda" className="min-h-screen overflow-x-clip scroll-mt-20 bg-[#f7f8fb] text-slate-900">
-      <Navbar />
+      <Navbar variant="dark" />
 
-      <section className="relative overflow-hidden px-5 pb-20 pt-36 sm:px-6 sm:pb-28 sm:pt-44">
-        <div aria-hidden className="hero-aurora" />
-        <div aria-hidden className="dot-grid" />
+      {/* ── Hero: langit navy-emas (senada halaman Masuk/Daftar & Mulai) ── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] px-5 pb-0 pt-32 text-white sm:px-6 sm:pt-40">
+        <Aurora />
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.div
             {...heroItem(0)}
-            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-1.5 fs-10 font-bold uppercase tracking-[0.25em] text-indigo-600 shadow-sm backdrop-blur"
+            className="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-amber-300/15 px-4 py-1.5 fs-12 font-bold text-amber-200 ring-1 ring-amber-300/30"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-            </span>
-            Aplikasi catatan keuangan pribadi
+            <span aria-hidden className="auth-shine" />
+            <Sparkles size={14} className="auth-twinkle" />
+            Aplikasi catatan keuangan pribadi · Gratis 14 hari
           </motion.div>
           <motion.h1
             {...heroItem(1)}
-            className="mt-7 font-serif text-[2.7rem] leading-[1.04] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl"
+            className="mt-7 text-[2.6rem] font-extrabold leading-[1.04] tracking-[-0.035em] sm:text-6xl lg:text-7xl"
           >
             Semua uang Anda,
             <br />
-            <span className="lp-shine italic">dalam satu layar.</span>
+            <span className="lp-gold">dalam satu layar.</span>
           </motion.h1>
           <motion.p
             {...heroItem(2)}
-            className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg"
+            className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg"
           >
             Catatan keuangan harian dalam hitungan detik — rekening, kartu kredit, tabungan, hutang, dan investasi
             tercatat rapi, terhitung otomatis, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
@@ -253,83 +254,111 @@ export default function LandingPage() {
           <motion.div {...heroItem(3)} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/mulai"
-              className="lp-btn group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-8 py-4 text-sm font-extrabold text-slate-950 shadow-[0_16px_40px_-14px_rgba(251,191,36,0.85)] transition-all hover:-translate-y-0.5"
             >
               Mulai gratis 14 hari <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-8 py-4 text-sm font-bold text-slate-700 backdrop-blur transition-colors hover:border-slate-300 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white/[0.06] px-8 py-4 text-sm font-bold text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/[0.12]"
             >
               Masuk ke akun
             </Link>
           </motion.div>
-          <motion.p {...heroItem(4)} className="mt-6 text-xs text-slate-400">
+          <motion.p {...heroItem(4)} className="mt-6 text-xs text-white/45">
             Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia ·{' '}
-            <Link href="/install" className="font-bold text-indigo-600 hover:underline">
+            <Link href="/install" className="font-bold text-amber-300 hover:underline">
               Pasang di HP →
             </Link>
           </motion.p>
         </div>
 
+        {/* Pita kartu fitur yang berjalan */}
         <motion.div
-          className="relative mx-auto mt-16 max-w-6xl sm:mt-20"
+          {...heroItem(5)}
+          aria-hidden
+          className="relative -mx-5 mt-14 overflow-hidden py-4 [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)] sm:-mx-6"
+        >
+          <div className="auth-ticker flex w-max items-center gap-6 pl-6">
+            {[0, 1].map((k) => (
+              <div key={k} className="flex shrink-0 items-center gap-6">
+                <TxChip />
+                <VoiceChip />
+                <BudgetChip />
+                <ScanChip />
+                <BalanceChip />
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="relative mx-auto mt-10 max-w-6xl"
           initial={reduce ? false : { opacity: 0, y: 60, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1.2, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <div
             aria-hidden
-            className="absolute -inset-x-10 -top-10 bottom-24 -z-10 rounded-[60px] bg-gradient-to-b from-indigo-200/40 via-violet-100/30 to-transparent blur-3xl"
+            className="absolute -inset-x-10 -top-10 bottom-10 -z-10 rounded-[60px] bg-gradient-to-b from-amber-300/25 via-indigo-500/20 to-transparent blur-3xl"
           />
+          <div className="pointer-events-none absolute -top-[86px] left-1/2 z-10 hidden -translate-x-1/2 sm:block">
+            <LeoMascot mood="happy" size={120} />
+          </div>
           <ScrollTilt>
             <AppShowcase />
           </ScrollTilt>
-          <motion.div
-            initial={reduce ? false : { opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.8, duration: 0.8 }}
-            className="lp-card animate-floaty absolute -left-14 top-[64%] hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <CreditCard size={17} />
-            </span>
-            <span className="leading-tight">
-              <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
-              <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
-            </span>
-          </motion.div>
-          <motion.div
-            initial={reduce ? false : { opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 2.1, duration: 0.8 }}
-            className="lp-card animate-floaty [animation-delay:2s] absolute -right-10 -top-7 hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <Check size={17} />
-            </span>
-            <span className="leading-tight">
-              <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
-              <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
-            </span>
-          </motion.div>
+          <div className="absolute -left-14 top-[60%] hidden xl:block">
+            <div
+              className="paper-float flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-900 shadow-[0_24px_48px_-20px_rgba(2,6,23,0.6)]"
+              style={{ animationDelay: '-2s' } as React.CSSProperties}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <CreditCard size={17} />
+              </span>
+              <span className="leading-tight">
+                <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
+                <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
+              </span>
+            </div>
+          </div>
+          <div className="absolute -right-10 top-[18%] hidden xl:block">
+            <div className="paper-float flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-900 shadow-[0_24px_48px_-20px_rgba(2,6,23,0.6)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Check size={17} />
+              </span>
+              <span className="leading-tight">
+                <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
+                <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
+              </span>
+            </div>
+          </div>
         </motion.div>
 
-        <div className="relative mx-auto mt-16 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
+        <div className="relative mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/10 lg:grid-cols-4">
           {FACTS.map(([big, small], i) => (
-            <Reveal key={big} delay={i * 0.08} y={14} className="bg-white/90 px-5 py-6 text-center backdrop-blur">
-              <p className="font-serif text-xl text-slate-900 sm:text-2xl">{big}</p>
-              <p className="mt-1 text-xs text-slate-500">{small}</p>
+            <Reveal key={big} delay={i * 0.08} y={14} className="bg-[#0b1430]/80 px-5 py-6 text-center backdrop-blur">
+              <p className="text-lg font-extrabold tracking-tight text-white sm:text-xl">{big}</p>
+              <p className="mt-1 text-xs text-white/50">{small}</p>
             </Reveal>
           ))}
         </div>
+        {/* Lengkung ke bagian terang */}
+        <svg
+          aria-hidden
+          viewBox="0 0 1440 90"
+          preserveAspectRatio="none"
+          className="relative -mx-5 mt-16 block h-16 w-[calc(100%+2.5rem)] sm:-mx-6 sm:h-24 sm:w-[calc(100%+3rem)]"
+        >
+          <path d="M0 90 C 360 0, 1080 0, 1440 90 Z" fill="#f7f8fb" />
+        </svg>
       </section>
 
-      <div className="relative border-y border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div className="relative border-b border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
         <div className="marquee-x flex w-max gap-10 whitespace-nowrap">
           {[...MARQUEE, ...MARQUEE].map((m, i) => (
-            <span key={i} className="flex items-center gap-10 text-sm text-slate-500">
-              {m} <span className="h-1 w-1 rotate-45 bg-indigo-300" />
+            <span key={i} className="flex items-center gap-10 text-sm font-semibold text-slate-500">
+              {m} <span className="h-1.5 w-1.5 rotate-45 bg-gradient-to-br from-amber-300 to-orange-400" />
             </span>
           ))}
         </div>
@@ -699,26 +728,21 @@ export default function LandingPage() {
       )}
 
       <section className="relative px-5 py-20 sm:px-6 sm:py-28">
-        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#0f172a] via-indigo-700 to-violet-600 px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(79,70,229,0.7)] sm:px-12 sm:py-24">
-          <div aria-hidden className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div
-            aria-hidden
-            className="absolute -bottom-28 -right-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl"
-          />
-          <div aria-hidden className="dot-grid opacity-30" />
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(15,23,42,0.8)] sm:px-12 sm:py-24">
+          <Aurora />
           <div className="relative">
-            <h2 className="font-serif text-4xl leading-[1.08] sm:text-6xl">
+            <h2 className="text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-6xl">
               Mulai hari ini.
               <br />
-              <span className="italic text-indigo-100">Tenang seterusnya.</span>
+              <span className="lp-gold">Tenang seterusnya.</span>
             </h2>
-            <p className="mx-auto mt-6 max-w-md text-indigo-100/90">
+            <p className="mx-auto mt-6 max-w-md text-white/65">
               Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/mulai"
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-indigo-700 shadow-xl shadow-black/20 transition-all hover:-translate-y-0.5 sm:w-auto"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-9 py-4 text-sm font-extrabold text-slate-950 shadow-[0_16px_40px_-14px_rgba(251,191,36,0.85)] transition-all hover:-translate-y-0.5 sm:w-auto"
               >
                 Daftar gratis{' '}
                 <ArrowUpRight

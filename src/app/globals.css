@@ -277,6 +277,14 @@ html.no-zoom {
   color: transparent;
   animation: lp-shine 8s ease-in-out infinite;
 }
+.lp-gold {
+  background: linear-gradient(100deg, #fde68a 0%, #fbbf24 30%, #fb923c 55%, #fde68a 80%, #fbbf24 100%);
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-shine 8s ease-in-out infinite;
+}
 @keyframes lp-shine {
   0%,
   100% {

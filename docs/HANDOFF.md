@@ -18,6 +18,18 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — Landing page (/) baru — BELUM DEPLOY, menunggu "gas". TANPA naik versi (keputusan Bos: landing di
+  luar versi aplikasi) → CHANGELOG tidak disentuh, Release tidak dibuat. Tanpa SQL.** Branch `claude/landing-baru-20261109`.
+  - Hero gelap navy-emas (`Aurora` dari AuthLayout), badge `.auth-shine`, judul sans + `.lp-gold` (globals.css), CTA
+    emas, pita `.auth-ticker` berisi FinanceChips, AppShowcase + Leo mengintip + 2 kartu `paper-float`, FACTS kaca gelap,
+    lengkung SVG ke bagian terang; marquee teks diberi berlian emas; CTA penutup navy + Aurora + tombol emas.
+  - `Navbar variant="dark"` dirombak (dulu gaya Dark Luxury, tidak dipakai): kaca navy, lambang `logo-emblem.png`, link
+    putih/amber, tombol Daftar emas. Halaman publik lain tetap `light`.
+  - Bug lama diperbaiki: `AppShowcase` (HP) memanggil `scrollIntoView` tiap tab demo berganti → halaman ikut tergulir
+    (sekarang 287 px saat dibuka). Kini hanya deretan tab yang digeser (`box.scrollTo`).
+  - Dites Playwright 1280×656, 1440×900, 390×844: tanpa overflow-x, tanpa error JS, HP tidak lagi tergulir sendiri.
+  - Banner "Pasang Leosiqra di HP" (komponen lama) masih menutup pojok kanan bawah — tidak diubah.
+
 - **2026-11-09 — 3.23.5 Panel auth diam (sticky), form bergulir — LIVE (run #196, commit 380549f, Release v3.23.5). Tanpa SQL.**
   Branch `claude/auth-panel-diam-20261109`. Permintaan Bos: panel diam, form yang geser.
   - Aside `lg:sticky lg:top-0 lg:h-screen lg:self-start` (self-start wajib di grid supaya sticky jalan), isi tetap rata

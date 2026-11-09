@@ -49,31 +49,42 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
       <div
         className={
           dark
-            ? `w-full max-w-7xl h-16 sm:h-[72px] backdrop-blur-xl border rounded-full flex items-center justify-between px-5 sm:px-7 relative transition-all duration-500 ${scrolled ? 'bg-[#0b0d12]/80 border-white/10 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)]' : 'bg-white/[0.03] border-white/[0.06]'}`
+            ? `w-full max-w-7xl h-16 sm:h-[72px] backdrop-blur-xl border rounded-full flex items-center justify-between px-4 sm:px-6 relative transition-all duration-500 ${scrolled ? 'bg-[#0a1029]/85 border-white/10 shadow-[0_20px_60px_-20px_rgba(2,6,23,0.9)]' : 'bg-white/[0.05] border-white/10'}`
             : 'w-full max-w-7xl h-20 bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[32px] flex items-center justify-between px-6 sm:px-8 relative'
         }
       >
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 relative group-hover:rotate-6 transition-transform">
-            <Image src="/images/Logo-new.png" alt="Leosiqra Logo" fill sizes="40px" className="object-contain" />
-          </div>
-          <span
-            className={`font-serif font-black text-xl sm:text-2xl tracking-tight ${dark ? 'text-[#f4efe6]' : 'text-[#1E293B]'}`}
-          >
-            Leosiqra
-          </span>
-        </Link>
+        {dark ? (
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5 sm:gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white p-1 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)] transition-transform group-hover:rotate-6 sm:h-10 sm:w-10">
+              <Image
+                src="/images/logo-emblem.png"
+                alt="Leosiqra"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span className="text-lg font-extrabold tracking-tight text-white sm:text-xl">Leosiqra</span>
+          </Link>
+        ) : (
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 relative group-hover:rotate-6 transition-transform">
+              <Image src="/images/Logo-new.png" alt="Leosiqra Logo" fill sizes="40px" className="object-contain" />
+            </div>
+            <span className="font-serif font-black text-xl sm:text-2xl tracking-tight text-[#1E293B]">Leosiqra</span>
+          </Link>
+        )}
 
         <div className="hidden lg:flex items-center gap-8 mx-4">
           <div
-            className={`flex items-center gap-7 fs-13 font-bold tracking-wide uppercase ${dark ? 'text-[#9a958c]' : 'text-slate-500/80'}`}
+            className={`flex items-center gap-7 fs-13 font-bold tracking-wide ${dark ? 'text-white/65' : 'uppercase text-slate-500/80'}`}
           >
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => goToSection(s.id)}
-                className={dark ? 'hover:text-[#d6b67e] transition-colors' : 'hover:text-indigo-600 transition-colors'}
+                className={dark ? 'hover:text-amber-300 transition-colors' : 'hover:text-indigo-600 transition-colors'}
               >
                 {s.label}
               </button>
@@ -87,7 +98,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
               href="/auth/login"
               className={
                 dark
-                  ? 'px-5 py-2.5 rounded-full text-sm font-bold text-[#f4efe6]/80 hover:text-[#f4efe6] transition-colors'
+                  ? 'px-5 py-2.5 rounded-full text-sm font-bold text-white/80 ring-1 ring-white/15 hover:bg-white/10 hover:text-white transition-colors'
                   : 'px-5 py-2.5 rounded-full border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all'
               }
             >
@@ -98,7 +109,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
             href="/mulai"
             className={
               dark
-                ? 'lux-btn-gold px-5 sm:px-6 py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all hover:-translate-y-0.5'
+                ? 'px-5 sm:px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-[0_10px_26px_-10px_rgba(251,191,36,0.8)] transition-all hover:-translate-y-0.5'
                 : 'px-5 sm:px-7 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-[#0F172A] to-indigo-700 text-white hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all font-bold text-xs sm:text-sm shadow-lg shadow-slate-200'
             }
           >
@@ -108,7 +119,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
           <button
             onClick={() => setIsOpen(!isOpen)}
             aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
-            className={`lg:hidden p-2 rounded-xl transition-colors ${dark ? 'text-[#f4efe6] hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`lg:hidden p-2 rounded-xl transition-colors ${dark ? 'text-white hover:bg-white/10' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -116,17 +127,17 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
 
         {isOpen && (
           <div
-            className={`absolute top-[calc(100%+12px)] left-0 right-0 backdrop-blur-xl border shadow-2xl rounded-[32px] p-6 flex flex-col gap-4 lg:hidden animate-in outline-none slide-in-from-top-4 duration-300 ${dark ? 'bg-[#0b0d12]/95 border-white/10' : 'bg-white/95 border-white/40'}`}
+            className={`absolute top-[calc(100%+12px)] left-0 right-0 backdrop-blur-xl border shadow-2xl rounded-[32px] p-6 flex flex-col gap-4 lg:hidden animate-in outline-none slide-in-from-top-4 duration-300 ${dark ? 'bg-[#0a1029]/95 border-white/10' : 'bg-white/95 border-white/40'}`}
           >
             <div
-              className={`flex flex-col gap-4 text-xs font-black uppercase tracking-widest px-2 ${dark ? 'text-[#9a958c]' : 'text-slate-500'}`}
+              className={`flex flex-col gap-4 text-xs font-black uppercase tracking-widest px-2 ${dark ? 'text-white/65' : 'text-slate-500'}`}
             >
               {SECTIONS.map((s, i) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => goToSection(s.id)}
-                  className={`text-left py-2 transition-colors ${dark ? 'hover:text-[#d6b67e]' : 'hover:text-indigo-600'} ${i < SECTIONS.length - 1 ? (dark ? 'border-b border-white/5' : 'border-b border-slate-50') : ''}`}
+                  className={`text-left py-2 transition-colors ${dark ? 'hover:text-amber-300' : 'hover:text-indigo-600'} ${i < SECTIONS.length - 1 ? (dark ? 'border-b border-white/5' : 'border-b border-slate-50') : ''}`}
                 >
                   {s.label}
                 </button>
@@ -137,7 +148,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
             >
               <Link
                 href="/auth/login"
-                className={`w-full py-4 rounded-2xl border text-center font-black text-xs ${dark ? 'border-white/10 text-[#f4efe6]' : 'border-slate-200 text-slate-700'}`}
+                className={`w-full py-4 rounded-2xl border text-center font-black text-xs ${dark ? 'border-white/15 text-white' : 'border-slate-200 text-slate-700'}`}
               >
                 Masuk
               </Link>

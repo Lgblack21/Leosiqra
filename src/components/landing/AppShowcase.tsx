@@ -628,8 +628,16 @@ export function AppShowcase() {
   const tabsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!compact) return;
-    const el = tabsRef.current?.querySelector<HTMLElement>(`[data-i="${active}"]`);
-    el?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+    // Geser deretan tab ke samping saja — scrollIntoView ikut menggulir halaman (menarik layar HP ke mockup).
+    const box = tabsRef.current;
+    const el = box?.querySelector<HTMLElement>(`[data-i="${active}"]`);
+    if (box && el) {
+      const off = el.getBoundingClientRect().left - box.getBoundingClientRect().left;
+      box.scrollTo({
+        left: box.scrollLeft + off - (box.clientWidth - el.clientWidth) / 2,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+    }
   }, [active, compact, reduce]);
 
   const screenBody = (
