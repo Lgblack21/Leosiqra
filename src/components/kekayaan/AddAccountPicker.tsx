@@ -172,14 +172,14 @@ export function AddAccountPicker({
           <button
             type="button"
             onClick={() => setLinkFor(null)}
-            className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-slate-200"
+            className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-semibold text-slate-600 hover:bg-slate-200"
           >
             <ArrowLeft size={14} /> Pilih lain
           </button>
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[24px] bg-white shadow-[0_12px_30px_-12px_rgba(15,23,42,0.45)] ring-1 ring-slate-100">
               {linkFor.emoji ? (
-                <span className="text-[36px]">{linkFor.emoji}</span>
+                <span className="fsh-36">{linkFor.emoji}</span>
               ) : (
                 <LogoImage
                   src={linkLogo}
@@ -189,7 +189,7 @@ export function AddAccountPicker({
                 />
               )}
             </span>
-            <p className="text-[14px] text-slate-500">
+            <p className="fs-14 text-slate-500">
               Kamu sudah punya {owned(linkFor).length} rekening {linkFor.name}. Atur fungsinya, atau tambah rekening{' '}
               {linkFor.name} lain.
             </p>
@@ -210,8 +210,8 @@ export function AddAccountPicker({
                       />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-bold text-slate-900">{a.name}</span>
-                      <span className="block text-[12px] tabular-nums text-slate-500">
+                      <span className="block truncate fs-14 font-bold text-slate-900">{a.name}</span>
+                      <span className="block fs-12 tabular-nums text-slate-500">
                         {formatMoney(Number(a.balance) || 0, a.currency || 'IDR')}
                         {a.purpose ? ` · sekarang: ${a.purpose}` : ''}
                       </span>
@@ -234,7 +234,7 @@ export function AddAccountPicker({
                           }}
                           aria-pressed={p === v}
                           className={cn(
-                            'flex-1 rounded-full py-1.5 text-[12px] font-semibold transition-colors',
+                            'flex-1 rounded-full py-1.5 fs-12 font-semibold transition-colors',
                             p === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-700',
                           )}
                         >
@@ -247,7 +247,7 @@ export function AddAccountPicker({
                       onClick={() => link(a, linkLogo)}
                       disabled={savingId === a.id || saved}
                       className={cn(
-                        'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold',
+                        'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 fs-12 font-bold',
                         saved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-900 text-white hover:bg-slate-800',
                       )}
                     >
@@ -266,7 +266,7 @@ export function AddAccountPicker({
           <button
             type="button"
             onClick={() => pick({ name: linkFor.name, type: linkFor.type, logoUrl: linkLogo ?? undefined })}
-            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-slate-300 py-3 text-[14px] font-bold text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-slate-300 py-3 fs-14 font-bold text-slate-700 hover:border-slate-400 hover:bg-slate-50"
           >
             <Plus size={16} /> Tambah rekening {linkFor.name} lain
           </button>
@@ -281,7 +281,7 @@ export function AddAccountPicker({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Cari bank atau e-wallet…"
               aria-label="Cari bank atau e-wallet"
-              className="w-full rounded-full bg-slate-100 py-3 pl-11 pr-10 text-[15px] text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+              className="w-full rounded-full bg-slate-100 py-3 pl-11 pr-10 fs-15 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
             {q && (
               <button
@@ -304,7 +304,7 @@ export function AddAccountPicker({
                   onClick={() => setFilter(f.id)}
                   aria-pressed={filter === f.id}
                   className={cn(
-                    'relative rounded-full px-3.5 py-1.5 text-[13px] font-semibold',
+                    'relative rounded-full px-3.5 py-1.5 fs-13 font-semibold',
                     filter === f.id ? 'text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100',
                   )}
                 >
@@ -328,12 +328,12 @@ export function AddAccountPicker({
                 onClick={() => pick('kartu')}
                 className="group flex items-center gap-3 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-3 text-left text-white"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-[20px] transition-transform group-hover:scale-110">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 fsh-20 transition-transform group-hover:scale-110">
                   💳
                 </span>
                 <span>
-                  <span className="block text-[14px] font-bold">Kartu kredit</span>
-                  <span className="block text-[11px] text-white/60">Limit & jatuh tempo</span>
+                  <span className="block fs-14 font-bold">Kartu kredit</span>
+                  <span className="block fs-11 text-white/60">Limit & jatuh tempo</span>
                 </span>
               </button>
               <button
@@ -345,8 +345,8 @@ export function AddAccountPicker({
                   <PencilLine size={18} />
                 </span>
                 <span>
-                  <span className="block text-[14px] font-bold text-slate-900">Isi manual</span>
-                  <span className="block text-[11px] text-slate-500">Bank lain, dompet, dll</span>
+                  <span className="block fs-14 font-bold text-slate-900">Isi manual</span>
+                  <span className="block fs-11 text-slate-500">Bank lain, dompet, dll</span>
                 </span>
               </button>
             </div>
@@ -362,9 +362,7 @@ export function AddAccountPicker({
                   animate={{ opacity: 1 }}
                   exit={reduce ? undefined : { opacity: 0 }}
                 >
-                  <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-                    {SECTION[g.t]}
-                  </p>
+                  <p className="mb-2 px-1 fs-12 font-semibold uppercase tracking-wide text-slate-400">{SECTION[g.t]}</p>
                   <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-5">
                     {g.items.map((i, idx) => {
                       const logo = matchIndonesianInstitutionLogo(i.name, i.type);
@@ -381,7 +379,7 @@ export function AddAccountPicker({
                         >
                           <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-white shadow-[0_6px_16px_-8px_rgba(15,23,42,0.35)] ring-1 ring-slate-100 transition-transform group-hover:-translate-y-0.5">
                             {i.emoji ? (
-                              <span className="text-[26px]">{i.emoji}</span>
+                              <span className="fsh-26">{i.emoji}</span>
                             ) : (
                               <LogoImage
                                 src={logo}
@@ -391,11 +389,11 @@ export function AddAccountPicker({
                               />
                             )}
                           </span>
-                          <span className="line-clamp-2 text-[12px] font-semibold leading-tight text-slate-700">
+                          <span className="line-clamp-2 fs-12 font-semibold leading-tight text-slate-700">
                             {i.name}
                           </span>
                           {owned(i).length > 0 && (
-                            <span className="-mt-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                            <span className="-mt-1 rounded-full bg-emerald-50 px-1.5 py-0.5 fs-10 font-bold text-emerald-700">
                               ✓ Sudah ada
                             </span>
                           )}
@@ -408,11 +406,11 @@ export function AddAccountPicker({
             </AnimatePresence>
             {groups.length === 0 && (
               <div className="py-8 text-center">
-                <p className="text-[14px] font-semibold text-slate-800">“{q}” belum ada di daftar</p>
+                <p className="fs-14 font-semibold text-slate-800">“{q}” belum ada di daftar</p>
                 <button
                   type="button"
                   onClick={() => pick({ name: q.trim(), type: 'Bank Account' })}
-                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white hover:bg-slate-800"
+                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 fs-13 font-bold text-white hover:bg-slate-800"
                 >
                   Tambah “{q.trim()}” manual
                 </button>

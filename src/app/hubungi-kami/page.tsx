@@ -151,7 +151,7 @@ export default function PublicHubungiKamiPage() {
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Bantuan</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Bantuan</p>
           <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">
             Ada yang bisa kami <span className="lp-shine italic">bantu?</span>
           </h1>
@@ -236,9 +236,7 @@ export default function PublicHubungiKamiPage() {
           )}
 
           <Reveal className="mt-16">
-            <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">
-              Pertanyaan umum
-            </p>
+            <p className="text-center fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Pertanyaan umum</p>
             <h2 className="mt-3 text-center font-serif text-3xl sm:text-4xl">Mungkin jawabannya sudah ada di sini</h2>
             <div className="lp-card mt-10 rounded-[28px] px-6 sm:px-8">
               {FAQ.map((f, i) => (

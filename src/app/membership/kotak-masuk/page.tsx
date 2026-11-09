@@ -31,8 +31,8 @@ export default function KotakMasukPage() {
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[38px]">Kotak Masuk</h1>
-          <p className="mt-1 text-[15px] text-slate-500">
+          <h1 className="fsh-30 font-extrabold tracking-tight text-slate-900 md:fsh-38">Kotak Masuk</h1>
+          <p className="mt-1 fs-15 text-slate-500">
             Usulan transaksi dari email pembayaran & pesan Slack-mu. Simpan yang benar, abaikan sisanya — tidak ada yang
             tercatat tanpa persetujuanmu.
           </p>
@@ -46,8 +46,8 @@ export default function KotakMasukPage() {
         (items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-[24px] bg-white px-6 py-12 text-center ring-1 ring-slate-100">
             <Inbox size={32} className="text-slate-300" />
-            <p className="text-[16px] font-semibold text-slate-700">Kotak Masuk kosong</p>
-            <p className="max-w-sm text-[14px] text-slate-500">
+            <p className="fs-16 font-semibold text-slate-700">Kotak Masuk kosong</p>
+            <p className="max-w-sm fs-14 text-slate-500">
               Usulan baru muncul di sini setelah Leosiqra membaca email pembayaran atau pesan Slack (otomatis, atau
               tekan Periksa sekarang).
             </p>

@@ -129,7 +129,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black tracking-[0.2em] uppercase text-indigo-300 mb-5">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 fs-10 font-black tracking-[0.2em] uppercase text-indigo-300 mb-5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-400" />
@@ -140,7 +140,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
               <h1 className="text-3xl sm:text-4xl font-serif font-black text-white leading-tight [text-wrap:balance] mb-3">
                 Leosiqra Sedang Ditingkatkan
               </h1>
-              <p className="text-slate-400 font-medium leading-relaxed text-[15px] [text-wrap:balance] mb-8">
+              <p className="text-slate-400 font-medium leading-relaxed fs-15 [text-wrap:balance] mb-8">
                 Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik. Mohon maaf atas
                 ketidaknyamanannya — layanan akan segera aktif kembali.
               </p>
@@ -159,7 +159,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
                 </a>
               )}
 
-              <p className="mt-10 text-[10px] font-bold text-white/25 uppercase tracking-[0.2em]">
+              <p className="mt-10 fs-10 font-bold text-white/25 uppercase tracking-[0.2em]">
                 Leosiqra &middot; Platform Finansial Pribadi
               </p>
             </div>

@@ -78,12 +78,12 @@ export function AccountSelect({
           <>
             <AccountLogo account={selected} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-semibold text-slate-800">{selected.name}</span>
-              <span className="block truncate text-[11.5px] text-slate-500">{balanceLine(selected)}</span>
+              <span className="block truncate fs-13.5 font-semibold text-slate-800">{selected.name}</span>
+              <span className="block truncate fs-11.5 text-slate-500">{balanceLine(selected)}</span>
             </span>
           </>
         ) : (
-          <span className="flex-1 px-1 py-2 text-[13.5px] font-medium text-slate-400">Pilih rekening</span>
+          <span className="flex-1 px-1 py-2 fs-13.5 font-medium text-slate-400">Pilih rekening</span>
         )}
         <ChevronDown size={16} className={cn('shrink-0 text-slate-400 transition-transform', open && 'rotate-180')} />
       </button>
@@ -113,8 +113,8 @@ export function AccountSelect({
                 >
                   <AccountLogo account={a} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-slate-800">{a.name}</span>
-                    <span className="block truncate text-[11.5px] text-slate-500">{balanceLine(a)}</span>
+                    <span className="block truncate fs-13 font-semibold text-slate-800">{a.name}</span>
+                    <span className="block truncate fs-11.5 text-slate-500">{balanceLine(a)}</span>
                   </span>
                   {active ? <Check size={15} className="shrink-0 text-slate-900" /> : null}
                 </button>

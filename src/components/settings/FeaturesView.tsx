@@ -53,7 +53,7 @@ function FeatureTile({
       </button>
       <span
         className={cn(
-          'line-clamp-2 max-w-[92px] text-[13px] leading-tight',
+          'line-clamp-2 max-w-[92px] fs-13 leading-tight',
           mode === 'on' ? 'font-semibold text-slate-800' : 'text-slate-500',
         )}
       >
@@ -113,16 +113,16 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
           onClick={() => open('/membership/fitur')}
           className="flex w-full items-center gap-3 rounded-[20px] bg-slate-950 p-4 text-left text-white"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-orange-400 text-[18px]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-orange-400 fs-18">
             ✨
           </span>
           <span className="flex-1">
-            <span className="block text-[14.5px] font-black">Lihat Semua fitur</span>
-            <span className="block text-[12.5px] text-white/65">Semua fitur dengan status terbarunya</span>
+            <span className="block fs-14.5 font-black">Lihat Semua fitur</span>
+            <span className="block fs-12.5 text-white/65">Semua fitur dengan status terbarunya</span>
           </span>
           <span className="text-white/60">›</span>
         </button>
-        <p className="px-1 text-[14px] leading-relaxed text-slate-500">
+        <p className="px-1 fs-14 leading-relaxed text-slate-500">
           {editing
             ? 'Ketuk × untuk mematikan, + untuk menyalakan. Mematikan hanya menyembunyikan dari menu — data tidak hilang.'
             : 'Nyalakan yang kamu pakai saja, menu tetap ringkas. Ketuk ikon untuk membuka fiturnya.'}
@@ -130,8 +130,8 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
 
         <section className="rounded-[24px] bg-slate-50 p-4">
           <div className="mb-3 flex items-baseline justify-between px-1">
-            <h3 className="text-[15px] font-bold text-slate-900">Fitur kamu</h3>
-            <span className="flex items-center gap-1 text-[13px] font-medium text-indigo-600">
+            <h3 className="fs-15 font-bold text-slate-900">Fitur kamu</h3>
+            <span className="flex items-center gap-1 fs-13 font-medium text-indigo-600">
               <Check size={13} /> {mine.length} aktif
             </span>
           </div>
@@ -155,7 +155,7 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
                       >
                         <f.icon size={30} strokeWidth={1.8} />
                       </button>
-                      <span className="line-clamp-2 max-w-[92px] text-[13px] font-semibold leading-tight text-slate-800">
+                      <span className="line-clamp-2 max-w-[92px] fs-13 font-semibold leading-tight text-slate-800">
                         {f.label}
                       </span>
                     </div>
@@ -164,14 +164,12 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
               )}
             </div>
           ) : (
-            <p className="px-1 py-4 text-[14px] text-slate-500">
-              Belum ada fitur aktif. Tambahkan dari daftar di bawah.
-            </p>
+            <p className="px-1 py-4 fs-14 text-slate-500">Belum ada fitur aktif. Tambahkan dari daftar di bawah.</p>
           )}
         </section>
 
         <section className="px-1">
-          <h3 className="mb-3 text-[15px] font-bold text-slate-900">Fitur lainnya</h3>
+          <h3 className="mb-3 fs-15 font-bold text-slate-900">Fitur lainnya</h3>
           {others.length ? (
             <div className="grid grid-cols-3 gap-x-2 gap-y-4 pt-2 sm:grid-cols-4">
               {others.map((f) =>
@@ -187,7 +185,7 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
               )}
             </div>
           ) : (
-            <p className="py-2 text-[14px] text-slate-500">Semua fitur sudah aktif.</p>
+            <p className="py-2 fs-14 text-slate-500">Semua fitur sudah aktif.</p>
           )}
         </section>
       </div>

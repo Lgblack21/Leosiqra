@@ -175,9 +175,7 @@ export function FeedbackPanel({ platform }: { platform: 'web' | 'app' }) {
                     >
                       <span className="text-2xl">{c.emoji}</span>
                       <span className="mt-1 block text-sm font-black text-slate-900 dark:text-white">{c.label}</span>
-                      <span className="block text-[11px] leading-tight text-slate-500 dark:text-slate-400">
-                        {c.hint}
-                      </span>
+                      <span className="block fs-11 leading-tight text-slate-500 dark:text-slate-400">{c.hint}</span>
                       {category === c.id && (
                         <motion.span
                           layoutId={`fb-check-${platform}`}
@@ -212,7 +210,7 @@ export function FeedbackPanel({ platform }: { platform: 'web' | 'app' }) {
                       )}
                     >
                       <span className={cn('text-2xl transition-transform', rating === m.v && 'scale-110')}>{m.e}</span>
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{m.t}</span>
+                      <span className="fs-10 font-bold text-slate-500 dark:text-slate-400">{m.t}</span>
                     </button>
                   ))}
                 </div>
@@ -231,9 +229,9 @@ export function FeedbackPanel({ platform }: { platform: 'web' | 'app' }) {
                   onChange={(e) => setMessage(e.target.value.slice(0, FEEDBACK_MAX_CHARS))}
                   rows={5}
                   placeholder={cat.placeholder}
-                  className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 p-4 text-[15px] font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-50 dark:border-slate-800 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-500/10"
+                  className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 p-4 fs-15 font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-50 dark:border-slate-800 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-500/10"
                 />
-                <div className="mt-1.5 flex justify-between text-[11px] font-semibold text-slate-400">
+                <div className="mt-1.5 flex justify-between fs-11 font-semibold text-slate-400">
                   <span>
                     {tooShort && message.length > 0 ? 'Minimal 5 karakter' : 'Masukanmu dibaca langsung oleh tim kami'}
                   </span>
@@ -288,15 +286,15 @@ export function FeedbackPanel({ platform }: { platform: 'web' | 'app' }) {
                     <span className="text-xs font-black text-slate-700 dark:text-slate-200">
                       {c?.emoji} {c?.label} {it.rating ? `· ${MOODS[it.rating - 1]?.e}` : ''}
                     </span>
-                    <span className={cn('rounded-full px-2.5 py-1 text-[10px] font-black', st.tone)}>{st.text}</span>
+                    <span className={cn('rounded-full px-2.5 py-1 fs-10 font-black', st.tone)}>{st.text}</span>
                   </div>
                   <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                     {it.message}
                   </p>
-                  <p className="mt-2 text-[11px] text-slate-400">{fmtDate(it.created_at)}</p>
+                  <p className="mt-2 fs-11 text-slate-400">{fmtDate(it.created_at)}</p>
                   {it.admin_reply && (
                     <div className="mt-3 rounded-2xl bg-indigo-50 p-3.5 dark:bg-indigo-500/10">
-                      <p className="flex items-center gap-1.5 text-[11px] font-black text-indigo-700 dark:text-indigo-300">
+                      <p className="flex items-center gap-1.5 fs-11 font-black text-indigo-700 dark:text-indigo-300">
                         <MessageCircleReply size={13} /> Balasan tim Leosiqra
                         {it.replied_at ? ` · ${fmtDate(it.replied_at)}` : ''}
                       </p>

@@ -47,7 +47,7 @@ export function NotificationBell() {
       >
         <Bell size={17} />
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+          <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 fs-10 font-bold text-white ring-2 ring-white">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
@@ -91,15 +91,13 @@ export function NotificationBell() {
                           type="button"
                           onClick={() => setTab(id)}
                           className={cn(
-                            'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold transition',
+                            'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 fs-13 font-semibold transition',
                             tab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                           )}
                         >
                           <Icon size={14} /> {label}
                           {id === 'notif' && unread > 0 && (
-                            <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
-                              {unread}
-                            </span>
+                            <span className="rounded-full bg-rose-500 px-1.5 fs-10 font-bold text-white">{unread}</span>
                           )}
                         </button>
                       ))}

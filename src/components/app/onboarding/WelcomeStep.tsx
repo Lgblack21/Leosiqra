@@ -37,15 +37,15 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       <span className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
         <Image src="/images/Logo-new.png" alt="Leosiqra" width={34} height={34} className="object-contain" />
       </span>
-      <p className="mt-8 text-[15px] font-semibold text-indigo-600 dark:text-indigo-400">
+      <p className="mt-8 fs-15 font-semibold text-indigo-600 dark:text-indigo-400">
         {name ? `Halo, ${name}` : 'Selamat datang'}
       </p>
-      <h1 className="mt-1.5 text-[38px] leading-[1.03] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
+      <h1 className="mt-1.5 fsh-38 leading-[1.03] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
         Keuangan rapi,
         <br />
         mulai di sini.
       </h1>
-      <p className="mt-4 text-[16px] leading-relaxed text-slate-500 dark:text-slate-400">
+      <p className="mt-4 fs-16 leading-relaxed text-slate-500 dark:text-slate-400">
         Siapkan rekening pertama, lalu langsung catat transaksi.
       </p>
 
@@ -56,8 +56,8 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
               <t.icon size={17} />
             </span>
             <span className="min-w-0">
-              <span className="block text-[15px] font-bold text-slate-900 dark:text-white">{t.title}</span>
-              <span className="block text-[13px] text-slate-500 dark:text-slate-400">{t.desc}</span>
+              <span className="block fs-15 font-bold text-slate-900 dark:text-white">{t.title}</span>
+              <span className="block fs-13 text-slate-500 dark:text-slate-400">{t.desc}</span>
             </span>
           </div>
         ))}
@@ -66,7 +66,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       <button
         type="button"
         onClick={onNext}
-        className="mt-10 w-full h-12 rounded-full bg-indigo-600 text-white font-bold text-[15px] active:scale-[0.98] transition-all"
+        className="mt-10 w-full h-12 rounded-full bg-indigo-600 text-white font-bold fs-15 active:scale-[0.98] transition-all"
       >
         Mulai
       </button>

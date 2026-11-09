@@ -108,7 +108,7 @@ export default function StatisticsPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
+        <h2 className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
           Berdasarkan Kategori
         </h2>
         {slices.length === 0 ? (

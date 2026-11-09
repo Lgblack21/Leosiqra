@@ -236,7 +236,7 @@ export default function OnboardingPage() {
   };
 
   const inputClass =
-    'w-full bg-white border border-slate-200/80 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 rounded-2xl py-3.5 px-4 text-[15px] font-semibold text-slate-900 placeholder:text-slate-300 outline-none transition-all';
+    'w-full bg-white border border-slate-200/80 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 rounded-2xl py-3.5 px-4 fs-15 font-semibold text-slate-900 placeholder:text-slate-300 outline-none transition-all';
 
   const meta = STEPS[step];
 
@@ -246,9 +246,9 @@ export default function OnboardingPage() {
         <aside className="hidden lg:flex flex-col sticky top-0 h-screen border-r border-slate-200/70 bg-[#efeff2]/80 backdrop-blur px-4 py-6">
           <div className="flex items-center gap-2.5 px-2">
             <Image src="/images/Logo-new.png" alt="Leosiqra" width={28} height={28} />
-            <span className="font-black text-[17px] tracking-tight text-slate-900">Leosiqra</span>
+            <span className="font-black fs-17 tracking-tight text-slate-900">Leosiqra</span>
           </div>
-          <p className="mt-8 mb-2 px-3 text-[11px] font-bold text-slate-400">Siapkan akun</p>
+          <p className="mt-8 mb-2 px-3 fs-11 font-bold text-slate-400">Siapkan akun</p>
           <nav className="space-y-1">
             {STEPS.map((s, i) => {
               const done = i < step;
@@ -260,7 +260,7 @@ export default function OnboardingPage() {
                   onClick={() => done && !submitting && setStep(i)}
                   disabled={!done || submitting}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[14px] font-semibold transition-colors',
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left fs-14 font-semibold transition-colors',
                     active ? 'bg-indigo-600 text-white' : done ? 'text-slate-700 hover:bg-white/70' : 'text-slate-400',
                   )}
                 >
@@ -277,7 +277,7 @@ export default function OnboardingPage() {
               );
             })}
           </nav>
-          <div className="mt-auto px-3 text-[12px] font-medium text-slate-400 leading-relaxed">
+          <div className="mt-auto px-3 fs-12 font-medium text-slate-400 leading-relaxed">
             Kurang dari 2 menit. Semua bisa diubah lagi nanti di Pengaturan.
           </div>
         </aside>
@@ -287,10 +287,10 @@ export default function OnboardingPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Image src="/images/Logo-new.png" alt="Leosiqra" width={24} height={24} />
-                <span className="font-black text-[15px] tracking-tight text-slate-900">Leosiqra</span>
+                <span className="font-black fs-15 tracking-tight text-slate-900">Leosiqra</span>
               </div>
               {step > 0 && (
-                <span className="text-[12px] font-semibold text-slate-500">
+                <span className="fs-12 font-semibold text-slate-500">
                   Langkah {step} dari {TOTAL_STEPS - 1}
                 </span>
               )}
@@ -326,15 +326,15 @@ export default function OnboardingPage() {
               <div key={step} className="animate-in fade-in slide-in-from-bottom-3 duration-500">
                 {step === 0 && (
                   <>
-                    <p className="text-[15px] font-semibold text-indigo-600">
+                    <p className="fs-15 font-semibold text-indigo-600">
                       Selamat datang{name ? `, ${name.split(' ')[0]}` : ''}
                     </p>
-                    <h1 className="mt-2 text-[40px] sm:text-[56px] leading-[1.02] font-black tracking-[-0.03em] text-slate-900">
+                    <h1 className="mt-2 fsh-40 sm:fsh-56 leading-[1.02] font-black tracking-[-0.03em] text-slate-900">
                       Keuangan rapi,
                       <br />
                       mulai di sini.
                     </h1>
-                    <p className="mt-5 text-[17px] leading-relaxed text-slate-500">
+                    <p className="mt-5 fs-17 leading-relaxed text-slate-500">
                       Empat langkah singkat untuk menyiapkan akunmu. Setelah itu kami antar keliling fitur biar nggak
                       bingung.
                     </p>
@@ -349,8 +349,8 @@ export default function OnboardingPage() {
                           >
                             <t.icon size={17} />
                           </span>
-                          <p className="mt-4 text-[15px] font-bold text-slate-900 leading-snug">{t.title}</p>
-                          <p className="mt-1 text-[13px] text-slate-500 leading-relaxed">{t.desc}</p>
+                          <p className="mt-4 fs-15 font-bold text-slate-900 leading-snug">{t.title}</p>
+                          <p className="mt-1 fs-13 text-slate-500 leading-relaxed">{t.desc}</p>
                         </div>
                       ))}
                     </div>
@@ -370,7 +370,7 @@ export default function OnboardingPage() {
                 {step === 1 && (
                   <div className="bg-white rounded-[22px] p-5 sm:p-6 space-y-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                     <div>
-                      <label className="block text-[13px] font-semibold text-slate-600 mb-2">
+                      <label className="block fs-13 font-semibold text-slate-600 mb-2">
                         Nama lengkap <span className="text-rose-400">*</span>
                       </label>
                       <input
@@ -382,7 +382,7 @@ export default function OnboardingPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-semibold text-slate-600 mb-2">
+                      <label className="block fs-13 font-semibold text-slate-600 mb-2">
                         Nomor WhatsApp <span className="text-slate-400 font-medium">(opsional)</span>
                       </label>
                       <input
@@ -420,8 +420,8 @@ export default function OnboardingPage() {
                             {c.symbol}
                           </span>
                           <span className="min-w-0">
-                            <span className="block text-[15px] font-bold text-slate-900">{c.code}</span>
-                            <span className="block text-[12px] text-slate-400 truncate">{c.name}</span>
+                            <span className="block fs-15 font-bold text-slate-900">{c.code}</span>
+                            <span className="block fs-12 text-slate-400 truncate">{c.name}</span>
                           </span>
                           {activeSel && (
                             <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
@@ -446,8 +446,8 @@ export default function OnboardingPage() {
                           className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block text-[15px] font-bold text-slate-900">{g.category}</span>
-                            <span className="block text-[12px] text-slate-400 truncate">{g.subs.join(' · ')}</span>
+                            <span className="block fs-15 font-bold text-slate-900">{g.category}</span>
+                            <span className="block fs-12 text-slate-400 truncate">{g.subs.join(' · ')}</span>
                           </span>
                           <span
                             className={cn(
@@ -505,7 +505,7 @@ export default function OnboardingPage() {
                                 />
                               )}
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-600 text-center leading-tight truncate w-full">
+                            <span className="fs-11 font-semibold text-slate-600 text-center leading-tight truncate w-full">
                               {b.name}
                             </span>
                           </button>
@@ -515,7 +515,7 @@ export default function OnboardingPage() {
 
                     <div className="bg-white rounded-[22px] p-5 sm:p-6 space-y-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                       <div>
-                        <label className="block text-[13px] font-semibold text-slate-600 mb-2">Nama rekening</label>
+                        <label className="block fs-13 font-semibold text-slate-600 mb-2">Nama rekening</label>
                         <input
                           className={inputClass}
                           value={bankName}
@@ -524,7 +524,7 @@ export default function OnboardingPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[13px] font-semibold text-slate-600 mb-2">
+                        <label className="block fs-13 font-semibold text-slate-600 mb-2">
                           Saldo saat ini ({currencyMeta.symbol})
                         </label>
                         <input
@@ -542,7 +542,7 @@ export default function OnboardingPage() {
             )}
 
             {error && (
-              <div className="mt-6 py-3 px-4 rounded-2xl bg-rose-50 text-rose-600 text-[13px] font-semibold text-center">
+              <div className="mt-6 py-3 px-4 rounded-2xl bg-rose-50 text-rose-600 fs-13 font-semibold text-center">
                 {error}
               </div>
             )}
@@ -566,7 +566,7 @@ export default function OnboardingPage() {
                   <button
                     onClick={next}
                     disabled={!canNext()}
-                    className="flex-1 h-12 rounded-full bg-indigo-600 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+                    className="flex-1 h-12 rounded-full bg-indigo-600 text-white fs-15 font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
                   >
                     {step === 0 ? 'Mulai setup' : 'Lanjut'}
                     <ArrowRight size={17} />
@@ -576,7 +576,7 @@ export default function OnboardingPage() {
                     {!submitting && (
                       <button
                         onClick={() => finish(false)}
-                        className="h-12 px-4 rounded-full text-[14px] font-semibold text-slate-500 hover:text-slate-700 hover:bg-white transition-colors"
+                        className="h-12 px-4 rounded-full fs-14 font-semibold text-slate-500 hover:text-slate-700 hover:bg-white transition-colors"
                       >
                         Lewati
                       </button>
@@ -584,7 +584,7 @@ export default function OnboardingPage() {
                     <button
                       onClick={() => finish(true)}
                       disabled={submitting || !bankName.trim()}
-                      className="flex-1 h-12 rounded-full bg-indigo-600 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+                      className="flex-1 h-12 rounded-full bg-indigo-600 text-white fs-15 font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
                     >
                       {submitting ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />}
                       {submitting ? 'Menyimpan…' : 'Selesai & mulai'}
@@ -618,11 +618,9 @@ const StepHead = ({
       <span className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-white', tile)}>
         <Icon size={15} />
       </span>
-      <p className="text-[14px] font-semibold text-slate-500">{eyebrow}</p>
+      <p className="fs-14 font-semibold text-slate-500">{eyebrow}</p>
     </div>
-    <h2 className="mt-4 text-[32px] sm:text-[44px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900">
-      {title}
-    </h2>
-    <p className="mt-3 text-[16px] sm:text-[17px] text-slate-500 leading-relaxed">{subtitle}</p>
+    <h2 className="mt-4 fsh-32 sm:fsh-44 leading-[1.05] font-black tracking-[-0.03em] text-slate-900">{title}</h2>
+    <p className="mt-3 fs-16 sm:fs-17 text-slate-500 leading-relaxed">{subtitle}</p>
   </div>
 );

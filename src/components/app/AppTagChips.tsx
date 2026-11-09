@@ -79,7 +79,7 @@ export function AppTagChips({
               aria-pressed={on}
               onClick={() => toggle(n)}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold ring-1 transition-colors',
+                'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 fs-12 font-bold ring-1 transition-colors',
                 on
                   ? tagStyle(tags.list.find((t) => t.name === n)?.color).chip
                   : 'bg-white text-slate-400 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-700',
@@ -109,12 +109,12 @@ export function AppTagChips({
               placeholder="Nama tag"
               aria-label="Nama tag baru"
               enterKeyHint="done"
-              className="w-24 bg-transparent text-[12px] font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+              className="w-24 bg-transparent fs-12 font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
             />
             <button
               type="submit"
               disabled={!draft.trim() || saving}
-              className="flex h-7 items-center rounded-full bg-indigo-600 px-2.5 text-[11px] font-black text-white disabled:opacity-40"
+              className="flex h-7 items-center rounded-full bg-indigo-600 px-2.5 fs-11 font-black text-white disabled:opacity-40"
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : 'Tambah'}
             </button>
@@ -127,13 +127,13 @@ export function AppTagChips({
               setError('');
               setAdding(true);
             }}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold text-indigo-600 ring-1 ring-dashed ring-indigo-200 dark:text-indigo-400 dark:ring-indigo-500/40"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 fs-12 font-bold text-indigo-600 ring-1 ring-dashed ring-indigo-200 dark:text-indigo-400 dark:ring-indigo-500/40"
           >
             <Plus size={12} strokeWidth={3} /> Tag baru
           </button>
         )}
       </div>
-      {error && <p className="px-1 text-[11px] font-bold text-rose-500">{error}</p>}
+      {error && <p className="px-1 fs-11 font-bold text-rose-500">{error}</p>}
     </div>
   );
 }

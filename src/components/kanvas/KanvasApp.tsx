@@ -133,7 +133,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   };
 
   const pill =
-    'flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-bold shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:ring-slate-700 dark:hover:bg-slate-800';
+    'flex h-10 items-center gap-1.5 rounded-full bg-white px-4 fs-13.5 font-bold shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:ring-slate-700 dark:hover:bg-slate-800';
   return (
     <div
       className={cn(
@@ -154,8 +154,8 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           </Link>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[24px] font-black tracking-tight">Kanvas</h1>
-          <p className="line-clamp-1 text-[13px] text-slate-500 dark:text-slate-400">
+          <h1 className="fsh-24 font-black tracking-tight">Kanvas</h1>
+          <p className="line-clamp-1 fs-13 text-slate-500 dark:text-slate-400">
             {tab === 'arus' ? 'Dari uang masuk sampai habis: ke mana uangmu mengalir' : (t?.tagline ?? subtitle)}
           </p>
         </div>
@@ -176,7 +176,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           onClick={() => go('arus')}
           className={cn(
-            'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-bold ring-1 transition',
+            'h-9 shrink-0 rounded-full px-3.5 fs-13 font-bold ring-1 transition',
             tab === 'arus'
               ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900 dark:ring-white'
               : 'text-slate-500 ring-slate-200 hover:text-slate-700 dark:ring-slate-700',
@@ -192,7 +192,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                 type="button"
                 onClick={() => (on ? setMenu((m) => !m) : go(c.id))}
                 className={cn(
-                  'flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold ring-1 transition',
+                  'flex h-9 items-center gap-1.5 rounded-full px-3.5 fs-13 font-bold ring-1 transition',
                   on
                     ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900 dark:ring-white'
                     : 'text-slate-500 ring-slate-200 hover:text-slate-700 dark:ring-slate-700',
@@ -209,7 +209,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           disabled={!list}
           onClick={() => setPicker(true)}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-3.5 text-[13px] font-bold text-slate-600 hover:bg-white disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-900"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-3.5 fs-13 font-bold text-slate-600 hover:bg-white disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-900"
         >
           <Plus size={16} /> Kanvas baru
         </button>
@@ -219,20 +219,20 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           <button
             type="button"
             onClick={() => void rename()}
-            className="rounded-full bg-white px-3.5 py-2 text-[12.5px] font-bold ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+            className="rounded-full bg-white px-3.5 py-2 fs-12.5 font-bold ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
           >
             Ganti nama
           </button>
           <button
             type="button"
             onClick={() => void remove()}
-            className="rounded-full bg-white px-3.5 py-2 text-[12.5px] font-bold text-rose-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+            className="rounded-full bg-white px-3.5 py-2 fs-12.5 font-bold text-rose-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
           >
             Hapus kanvas
           </button>
         </div>
       ) : null}
-      <p className={cn('mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-400', variant === 'app' && 'px-4')}>
+      <p className={cn('mt-1.5 flex items-center gap-1.5 fs-12 text-slate-400', variant === 'app' && 'px-4')}>
         {canvasMode() === 'local' && list ? (
           <>
             <CloudOff size={13} /> Kanvas sedang disiapkan di server — sementara isianmu tersimpan di perangkat ini.
@@ -246,7 +246,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       {err ? (
         <p
           className={cn(
-            'mt-2 rounded-2xl bg-rose-50 px-4 py-2.5 text-[13px] font-semibold text-rose-700',
+            'mt-2 rounded-2xl bg-rose-50 px-4 py-2.5 fs-13 font-semibold text-rose-700',
             variant === 'app' && 'mx-4',
           )}
         >
@@ -290,7 +290,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             className="max-h-[88dvh] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[max(20px,env(safe-area-inset-bottom))] sm:max-w-3xl sm:rounded-[28px] dark:bg-slate-950"
           >
             <div className="mb-3 flex items-center">
-              <h2 className="flex-1 text-[18px] font-black">Kanvas baru</h2>
+              <h2 className="flex-1 fs-18 font-black">Kanvas baru</h2>
               <button
                 type="button"
                 aria-label="Tutup"
@@ -310,10 +310,10 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                   className="relative overflow-hidden rounded-[20px] bg-slate-50 p-3.5 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 dark:bg-slate-900 dark:ring-slate-800"
                 >
                   <span className={cn('absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r', COLORS[x.color].head)} />
-                  <span className="text-[24px]">{x.emoji}</span>
-                  <span className="mt-1 block text-[14.5px] font-black">{busy === x.id ? 'Membuat…' : x.title}</span>
-                  <span className="mt-0.5 block text-[12px] leading-snug text-slate-500">{x.tagline}</span>
-                  <span className="mt-2 block text-[11px] font-bold text-slate-400">
+                  <span className="fsh-24">{x.emoji}</span>
+                  <span className="mt-1 block fs-14.5 font-black">{busy === x.id ? 'Membuat…' : x.title}</span>
+                  <span className="mt-0.5 block fs-12 leading-snug text-slate-500">{x.tagline}</span>
+                  <span className="mt-2 block fs-11 font-bold text-slate-400">
                     {x.chapters.length > 1 ? `${x.chapters.length} bab` : 'bebas'}
                   </span>
                 </button>
@@ -538,11 +538,10 @@ function TemplateBoard({
     };
   }, [api, update]);
 
-  if (error)
-    return <p className="m-4 rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">{error}</p>;
+  if (error) return <p className="m-4 rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700">{error}</p>;
   if (!canvas || !t || !state || !layout)
     return (
-      <div ref={wrap} className="flex h-full items-center justify-center text-[13px] text-slate-400">
+      <div ref={wrap} className="flex h-full items-center justify-center fs-13 text-slate-400">
         Memuat kanvas…
       </div>
     );
@@ -741,7 +740,7 @@ function TemplateBoard({
     />
   ) : null;
   const pill =
-    'flex h-11 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-bold shadow-lg ring-1 ring-slate-200 backdrop-blur hover:bg-white dark:bg-slate-900/95 dark:ring-slate-700';
+    'flex h-11 items-center gap-1.5 rounded-full bg-white/95 px-3.5 fs-13 font-bold shadow-lg ring-1 ring-slate-200 backdrop-blur hover:bg-white dark:bg-slate-900/95 dark:ring-slate-700';
 
   return (
     <div ref={wrap} className="relative flex h-full">
@@ -750,7 +749,7 @@ function TemplateBoard({
           <button
             type="button"
             onClick={() => setMsg('')}
-            className="absolute left-3 right-3 top-3 z-20 rounded-2xl bg-slate-900 px-4 py-2.5 text-left text-[12.5px] font-semibold text-white"
+            className="absolute left-3 right-3 top-3 z-20 rounded-2xl bg-slate-900 px-4 py-2.5 text-left fs-12.5 font-semibold text-white"
           >
             {msg} <span className="opacity-60">· tutup</span>
           </button>
@@ -765,7 +764,7 @@ function TemplateBoard({
                 title={`Bab ${i + 1}: ${ch.title}`}
                 onClick={() => goTo(ch.id)}
                 className={cn(
-                  'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-bold shadow-sm ring-1 backdrop-blur transition',
+                  'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 fs-12.5 font-bold shadow-sm ring-1 backdrop-blur transition',
                   p.done
                     ? 'bg-emerald-500 text-white ring-emerald-500'
                     : 'bg-white/95 text-slate-700 ring-slate-200 hover:ring-slate-300 dark:bg-slate-900/95 dark:text-slate-200 dark:ring-slate-700',
@@ -793,12 +792,12 @@ function TemplateBoard({
           <button
             type="button"
             onClick={() => goTo('akhir')}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-900 px-3 text-[12.5px] font-bold text-white shadow-sm dark:bg-white dark:text-slate-900"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-900 px-3 fs-12.5 font-bold text-white shadow-sm dark:bg-white dark:text-slate-900"
           >
             🎯 {t.finalTitle}
           </button>
         </div>
-        <span className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900/90 dark:ring-slate-700">
+        <span className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 fs-11 font-bold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900/90 dark:ring-slate-700">
           {save === 'saving'
             ? 'Menyimpan…'
             : save === 'dirty'

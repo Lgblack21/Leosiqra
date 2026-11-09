@@ -222,7 +222,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               Judul / Produk Investasi
             </label>
             <AssetCombobox
@@ -243,7 +243,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               Logo Produk (Opsional)
             </label>
             <div className={`flex items-center gap-3 ${initialData ? 'opacity-60 grayscale' : ''}`}>
@@ -266,7 +266,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || !!initialData}
-                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-[10px] font-black text-slate-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 fs-10 font-black text-slate-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {uploading ? <Loader2 className="animate-spin" size={12} /> : <ImageIcon size={12} />}
                 {uploading ? '...' : formData.logoUrl ? 'Ganti' : 'Upload Logo'}
@@ -277,7 +277,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kuantitas</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Kuantitas</label>
             <input
               type="number"
               value={formData.quantity}
@@ -287,7 +287,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Satuan</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Satuan</label>
             <input
               type="text"
               value={formData.unit}
@@ -301,7 +301,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               {initialData ? 'Harga Jual / Satuan' : 'Harga Beli / Satuan'}
             </label>
             <NumberInput
@@ -327,7 +327,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                <p className="fs-9 font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
                   Total Terkonversi (IDR)
                 </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
@@ -335,15 +335,13 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            <span className="fs-10 font-medium text-slate-400 italic">Live Rate</span>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Rekening / Sumber
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Sumber</label>
             <div className="relative">
               <select
                 value={formData.accountId}
@@ -372,7 +370,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Platform</label>
             <input
               type="text"
               value={formData.platform}
@@ -386,7 +384,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               Valuasi Saat Ini (Estimasi)
             </label>
             <NumberInput
@@ -397,7 +395,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
             <input
               type="date"
               value={formData.dateInvested}
@@ -410,9 +408,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Tipe Transaksi
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
             <div className="relative">
               <select
                 value={formData.transactionType}

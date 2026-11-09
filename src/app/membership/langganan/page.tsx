@@ -11,8 +11,8 @@ export default function LanggananPage() {
     <div className="mx-auto mb-12 max-w-[1100px] space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Langgananku</h1>
-          <p className="text-[14px] text-slate-500">
+          <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Langgananku</h1>
+          <p className="fs-14 text-slate-500">
             Semua langganan di satu tempat — total per bulan, tagihan berikutnya, dan radar pemindai.
           </p>
         </div>

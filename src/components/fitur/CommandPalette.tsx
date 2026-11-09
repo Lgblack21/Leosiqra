@@ -67,9 +67,9 @@ export function CommandPalette() {
               } else if (e.key === 'Enter' && list[sel]) go(list[sel].href);
             }}
             placeholder="Cari fitur… (pajak, cicilan, nikah, kasir)"
-            className="h-14 min-w-0 flex-1 bg-transparent text-[15.5px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+            className="h-14 min-w-0 flex-1 bg-transparent fs-15.5 font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
           />
-          <kbd className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-slate-800">
+          <kbd className="rounded-md bg-slate-100 px-1.5 py-0.5 fs-11 font-bold text-slate-500 dark:bg-slate-800">
             Esc
           </kbd>
         </div>
@@ -97,8 +97,8 @@ export function CommandPalette() {
                     <Icon size={17} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-bold text-slate-900 dark:text-white">{f.label}</span>
-                    <span className="block truncate text-[12px] text-slate-500">
+                    <span className="block fs-14 font-bold text-slate-900 dark:text-white">{f.label}</span>
+                    <span className="block truncate fs-12 text-slate-500">
                       {GOALS.find((g) => g.id === f.goal)?.label} · {f.sub}
                     </span>
                   </span>
@@ -107,7 +107,7 @@ export function CommandPalette() {
               );
             })
           ) : (
-            <p className="px-3 py-6 text-center text-[13.5px] text-slate-500">Tidak ada fitur yang cocok.</p>
+            <p className="px-3 py-6 text-center fs-13.5 text-slate-500">Tidak ada fitur yang cocok.</p>
           )}
         </div>
       </div>

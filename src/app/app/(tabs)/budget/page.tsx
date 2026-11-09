@@ -137,7 +137,7 @@ export default function AppBudgetPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-black text-slate-900 dark:text-white truncate">{budget.category}</p>
-            <p className="text-[11px] text-slate-400 tabular-nums">
+            <p className="fs-11 text-slate-400 tabular-nums">
               {formatIDR(total)} dari {formatIDR(budget.amount)}
               {budget.period === 'yearly' ? ' / tahun' : ''}
             </p>
@@ -147,7 +147,7 @@ export default function AppBudgetPage() {
             onClick={() => budget.id && remove(budget.id)}
             aria-label={confirmId === budget.id ? 'Yakin hapus budget' : 'Hapus budget'}
             className={cn(
-              'shrink-0 rounded-full text-[11px] font-black transition-colors',
+              'shrink-0 rounded-full fs-11 font-black transition-colors',
               confirmId === budget.id
                 ? 'bg-rose-500 text-white px-3 py-1.5'
                 : 'text-slate-300 dark:text-slate-600 p-1.5',
@@ -163,10 +163,7 @@ export default function AppBudgetPage() {
           />
         </div>
         <p
-          className={cn(
-            'mt-1.5 text-[11px] font-bold tabular-nums',
-            isSpend && isOver ? 'text-rose-500' : 'text-slate-500',
-          )}
+          className={cn('mt-1.5 fs-11 font-bold tabular-nums', isSpend && isOver ? 'text-rose-500' : 'text-slate-500')}
         >
           {isSpend
             ? isOver
@@ -219,18 +216,18 @@ export default function AppBudgetPage() {
 
       {limitTotal > 0 && (
         <FadeIn className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-500 text-white p-5 shadow-lg shadow-teal-200/50 dark:shadow-none">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">
+          <p className="fs-10 font-bold uppercase tracking-wider text-white/80">
             Terpakai {startDay === 1 ? 'bulan ini' : 'periode ini'}
           </p>
           <p className="mt-1 text-2xl font-black tabular-nums">{formatIDR(usedTotal)}</p>
-          <p className="text-[11px] text-white/80 tabular-nums">dari total batas {formatIDR(limitTotal)}</p>
+          <p className="fs-11 text-white/80 tabular-nums">dari total batas {formatIDR(limitTotal)}</p>
           <div className="mt-3 h-2 rounded-full bg-white/25 overflow-hidden">
             <div
               className="h-full rounded-full bg-white transition-all duration-500"
               style={{ width: `${Math.min(100, (usedTotal / limitTotal) * 100)}%` }}
             />
           </div>
-          {overCount > 0 && <p className="mt-2 text-[11px] font-bold">⚠️ {overCount} kategori melewati batas</p>}
+          {overCount > 0 && <p className="mt-2 fs-11 font-bold">⚠️ {overCount} kategori melewati batas</p>}
         </FadeIn>
       )}
 

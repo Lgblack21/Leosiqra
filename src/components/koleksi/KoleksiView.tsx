@@ -228,7 +228,7 @@ export function KoleksiView({
       {flash && (
         <div
           role="status"
-          className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="rounded-2xl bg-emerald-50 px-4 py-3 fs-13 font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           {flash}
         </div>
@@ -236,7 +236,7 @@ export function KoleksiView({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -249,7 +249,7 @@ export function KoleksiView({
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-white/60">
+            <p className="flex items-center gap-2 fs-13 font-semibold text-white/60">
               Nilai koleksimu
               <button
                 type="button"
@@ -260,13 +260,13 @@ export function KoleksiView({
                 {hidden ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </p>
-            <p className="mt-1 text-[34px] font-extrabold leading-none tracking-tight tabular-nums md:text-[44px]">
+            <p className="mt-1 fsh-34 font-extrabold leading-none tracking-tight tabular-nums md:fsh-44">
               {money(totalValue)}
             </p>
             {totalCost > 0 ? (
               <p
                 className={cn(
-                  'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums',
+                  'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 fs-13 font-bold tabular-nums',
                   totalGain >= 0 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-rose-400/15 text-rose-300',
                 )}
               >
@@ -277,21 +277,19 @@ export function KoleksiView({
                 dari modal {hidden ? '••••' : short(totalCost)}
               </p>
             ) : (
-              <p className="mt-2 text-[13px] text-white/60">
-                {totalQty} item · isi harga beli untuk melihat untung/rugi
-              </p>
+              <p className="mt-2 fs-13 text-white/60">{totalQty} item · isi harga beli untuk melihat untung/rugi</p>
             )}
           </div>
           <button
             type="button"
             onClick={() => setEditor({})}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Plus size={16} strokeWidth={2.6} /> Tambah
           </button>
         </div>
         <Spark history={history} hidden={hidden} />
-        <p className="relative mt-2 flex items-center gap-1.5 text-[11px] text-white/45">
+        <p className="relative mt-2 flex items-center gap-1.5 fs-11 text-white/45">
           <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
           {refreshing
             ? 'Memperbarui harga pasar…'
@@ -307,19 +305,19 @@ export function KoleksiView({
           onClick={() => setEditor({ steam: true })}
           className={cn(card, 'flex w-full items-center gap-3 px-4 py-3 text-left')}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-[18px] dark:bg-slate-800">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 fs-18 dark:bg-slate-800">
             🎮
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-bold text-slate-900 dark:text-white">Steam terhubung</span>
-            <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+            <span className="block fs-14 font-bold text-slate-900 dark:text-white">Steam terhubung</span>
+            <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
               {enriched.filter((e) => e.it.kind === 'steam').length} item CS2
               {steam.syncedAt
                 ? ` · sinkron ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(steam.syncedAt))}`
                 : ''}
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             <RefreshCw size={13} /> Sinkron
           </span>
         </button>
@@ -332,8 +330,8 @@ export function KoleksiView({
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
             <Layers size={26} />
           </span>
-          <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 dark:text-white">Mulai Koleksiku</h3>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+          <h3 className="mt-4 fs-18 font-extrabold text-slate-900 dark:text-white">Mulai Koleksiku</h3>
+          <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
             Kartu Pokémon & item Steam mengikuti harga pasar otomatis (dalam Rupiah). Sneakers, figur, LEGO, koin —
             nilainya kamu isi sendiri. Semuanya ikut dihitung di kekayaan bersih.
           </p>
@@ -341,7 +339,7 @@ export function KoleksiView({
             <button
               type="button"
               onClick={() => setEditor({})}
-              className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"
+              className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 fs-13 font-bold text-white hover:bg-violet-700"
             >
               <Plus size={15} /> Tambah koleksi pertama
             </button>
@@ -349,7 +347,7 @@ export function KoleksiView({
               <button
                 type="button"
                 onClick={() => setEditor({ steam: true })}
-                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-5 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-5 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 🎮 Impor dari Steam
               </button>
@@ -366,7 +364,7 @@ export function KoleksiView({
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Cari nama, set, nomor…"
                 aria-label="Cari koleksi"
-                className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                className="min-w-0 flex-1 bg-transparent fs-14 font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
               />
             </label>
             <div className="flex min-w-0 items-center gap-2">
@@ -377,7 +375,7 @@ export function KoleksiView({
                     type="button"
                     onClick={() => setKind(k.id)}
                     className={cn(
-                      'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold',
+                      'shrink-0 rounded-full px-3 py-1.5 fs-12 font-bold',
                       kind === k.id
                         ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
                         : 'text-slate-500 dark:text-slate-400',
@@ -392,7 +390,7 @@ export function KoleksiView({
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortId)}
                   aria-label="Urutkan"
-                  className="appearance-none rounded-full bg-white py-2.5 pl-4 pr-9 text-[13px] font-bold text-slate-700 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
+                  className="appearance-none rounded-full bg-white py-2.5 pl-4 pr-9 fs-13 font-bold text-slate-700 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
                 >
                   {SORTS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -408,7 +406,7 @@ export function KoleksiView({
             </div>
           </div>
           {shown.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Tidak ada yang cocok.</p>
+            <p className="py-10 text-center fs-13 text-slate-500 dark:text-slate-400">Tidak ada yang cocok.</p>
           ) : (
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {shown.map((e) => (
@@ -424,7 +422,7 @@ export function KoleksiView({
               ))}
             </ul>
           )}
-          <p className="px-1 text-[11px] text-slate-400">
+          <p className="px-1 fs-11 text-slate-400">
             Harga Pokémon: TCGplayer (USD) / Cardmarket (EUR) lewat TCGdex. Item Steam: median penjualan Skinport /
             Steam Market (USD). Dikonversi ke Rupiah — perkiraan, bukan tawaran jual. Koleksi lain memakai nilai yang
             kamu isi.
@@ -501,19 +499,19 @@ function CollectibleCard({
           <Gem size={40} strokeWidth={1.4} className="text-violet-400" />
         )}
         {it.quantity > 1 && (
-          <span className="absolute right-2 top-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[11px] font-extrabold text-white">
+          <span className="absolute right-2 top-2 rounded-full bg-slate-900/80 px-2 py-0.5 fs-11 font-extrabold text-white">
             ×{it.quantity}
           </span>
         )}
         {it.grade && (
-          <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-amber-950">
+          <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 fs-10 font-extrabold text-amber-950">
             {it.grade}
           </span>
         )}
       </span>
       <span className="block p-3">
-        <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{it.name}</span>
-        <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
+        <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{it.name}</span>
+        <span className="block truncate fs-11 text-slate-500 dark:text-slate-400">
           {it.kind === 'pokemon'
             ? [it.setName, it.number && `#${it.number}`, variantLabel(it.variant)].filter(Boolean).join(' · ')
             : it.kind === 'steam'
@@ -522,16 +520,14 @@ function CollectibleCard({
         </span>
         <span className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-2">
           {it.kind === 'steam' && it.marketPrice == null && !it.purchasePrice ? (
-            <span className="text-[12px] font-semibold text-slate-400">Harga menyusul</span>
+            <span className="fs-12 font-semibold text-slate-400">Harga menyusul</span>
           ) : (
-            <span className="text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">
-              {money(value)}
-            </span>
+            <span className="fs-14 font-extrabold tabular-nums text-slate-900 dark:text-white">{money(value)}</span>
           )}
           {pct != null && !hidden && (
             <span
               className={cn(
-                'shrink-0 text-[11px] font-bold tabular-nums',
+                'shrink-0 fs-11 font-bold tabular-nums',
                 gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
               )}
             >
@@ -549,8 +545,8 @@ function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: s
   return (
     <section className={cn(className, 'p-4')}>
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Progres set</h3>
-        <span className="text-[11px] text-slate-400">kartu unik / jumlah resmi</span>
+        <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Progres set</h3>
+        <span className="fs-11 text-slate-400">kartu unik / jumlah resmi</span>
       </div>
       <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {sets.map((s) => {
@@ -563,11 +559,11 @@ function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: s
                   // eslint-disable-next-line @next/next/no-img-element -- logo set dari CDN TCGdex
                   <img src={`${s.logo}.webp`} alt="" loading="lazy" className="max-h-10 max-w-[120px] object-contain" />
                 ) : (
-                  <span className="text-[20px]">⚡</span>
+                  <span className="fsh-20">⚡</span>
                 )}
               </span>
-              <span className="mt-2 block truncate text-[13px] font-bold text-slate-900 dark:text-white">{s.name}</span>
-              <span className="mt-0.5 flex items-baseline justify-between text-[12px] tabular-nums">
+              <span className="mt-2 block truncate fs-13 font-bold text-slate-900 dark:text-white">{s.name}</span>
+              <span className="mt-0.5 flex items-baseline justify-between fs-12 tabular-nums">
                 <span className="font-extrabold text-slate-900 dark:text-white">
                   {s.owned}
                   <span className="font-semibold text-slate-400">/{s.official}</span>
@@ -608,7 +604,7 @@ function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: s
 function Spark({ history, hidden }: { history: HistoryPoint[]; hidden: boolean }) {
   if (history.length < 2) {
     return (
-      <p className="relative mt-4 rounded-2xl bg-white/[0.06] px-3 py-2.5 text-[12px] text-white/55">
+      <p className="relative mt-4 rounded-2xl bg-white/[0.06] px-3 py-2.5 fs-12 text-white/55">
         Grafik nilai muncul setelah beberapa hari — tiap kali Koleksiku dibuka, nilainya dicatat.
       </p>
     );
@@ -647,7 +643,7 @@ function Spark({ history, hidden }: { history: HistoryPoint[]; hidden: boolean }
           strokeLinejoin="round"
         />
       </svg>
-      <div className="flex justify-between text-[10px] text-white/40">
+      <div className="flex justify-between fs-10 text-white/40">
         <span>{fmt(history[0].day)}</span>
         <span>{hidden ? '' : `tertinggi ${short(max)}`}</span>
         <span>{fmt(history[history.length - 1].day)}</span>

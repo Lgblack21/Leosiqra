@@ -104,7 +104,7 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" aria-hidden />
         <div className="absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-white/10" aria-hidden />
         <div className="relative">
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-indigo-100">
+          <div className="flex items-center gap-2 fs-13 font-semibold text-indigo-100">
             <History size={16} /> Riwayat versi
           </div>
           <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
@@ -112,9 +112,7 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
               v{APP_VERSION}
             </h1>
             {APP_BUILD ? (
-              <span className="mb-1 rounded-full bg-white/15 px-2.5 py-0.5 text-[12px] font-semibold">
-                build {APP_BUILD}
-              </span>
+              <span className="mb-1 rounded-full bg-white/15 px-2.5 py-0.5 fs-12 font-semibold">build {APP_BUILD}</span>
             ) : null}
           </div>
           {current ? (
@@ -130,8 +128,8 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
                 { n: tgl(first.date).replace(/^\d+ /, ''), l: 'versi pertama' },
               ].map((s) => (
                 <div key={s.l} className="rounded-2xl bg-white/12 px-2 py-2.5 backdrop-blur">
-                  <div className="text-[15px] font-black leading-tight">{s.n}</div>
-                  <div className="text-[11px] font-medium text-indigo-100">{s.l}</div>
+                  <div className="fs-15 font-black leading-tight">{s.n}</div>
+                  <div className="fs-11 font-medium text-indigo-100">{s.l}</div>
                 </div>
               ))}
             </div>
@@ -148,7 +146,7 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
             aria-selected={era === m}
             onClick={() => setEra(m)}
             className={cn(
-              'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors',
+              'shrink-0 rounded-full px-3.5 py-1.5 fs-13 font-semibold transition-colors',
               era === m
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                 : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800',
@@ -179,15 +177,12 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
                 <li className={cn('list-none', i > 0 && 'pt-4')}>
                   <div className="mb-3 flex items-center gap-2">
                     <span
-                      className={cn(
-                        'shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold',
-                        meta.chip,
-                      )}
+                      className={cn('shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 fs-12 font-bold', meta.chip)}
                     >
                       {meta.name}
                     </span>
                     {meta.desc ? (
-                      <span className="truncate text-[12px] text-slate-500 dark:text-slate-400">{meta.desc}</span>
+                      <span className="truncate fs-12 text-slate-500 dark:text-slate-400">{meta.desc}</span>
                     ) : null}
                   </div>
                 </li>
@@ -235,19 +230,19 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
                         <span
                           className={cn(
                             'font-black tracking-tight text-slate-900 dark:text-white',
-                            milestone ? 'text-[17px]' : 'text-[15px]',
+                            milestone ? 'fs-17' : 'fs-15',
                           )}
                         >
                           v{e.version}
                         </span>
                         {isCurrent ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 fs-11 font-bold text-white">
                             <Sparkles size={11} /> Versi kamu
                           </span>
                         ) : null}
-                        <span className="text-[12px] text-slate-400 dark:text-slate-500">{tgl(e.date)}</span>
+                        <span className="fs-12 text-slate-400 dark:text-slate-500">{tgl(e.date)}</span>
                       </div>
-                      <div className="mt-0.5 text-[14px] font-semibold leading-snug text-slate-700 dark:text-slate-200">
+                      <div className="mt-0.5 fs-14 font-semibold leading-snug text-slate-700 dark:text-slate-200">
                         {e.title}
                       </div>
                     </div>
@@ -262,7 +257,7 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
                   {expanded && (e.intro.length > 0 || e.items.length > 0) ? (
                     <div className="border-t border-slate-100 px-4 pb-4 pt-3 dark:border-slate-800">
                       {e.intro.map((p, k) => (
-                        <p key={k} className="mb-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p key={k} className="mb-2 fs-13 leading-relaxed text-slate-600 dark:text-slate-300">
                           <Inline text={p} />
                         </p>
                       ))}
@@ -270,7 +265,7 @@ export function VersionHistory({ entries, variant }: { entries: ChangelogEntry[]
                         {e.items.map((it, k) => (
                           <li
                             key={k}
-                            className="relative pl-4 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300"
+                            className="relative pl-4 fs-13 leading-relaxed text-slate-600 dark:text-slate-300"
                           >
                             <span
                               className={cn('absolute left-0 top-[0.6em] h-1.5 w-1.5 rounded-full', meta.dot)}

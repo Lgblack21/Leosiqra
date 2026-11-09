@@ -41,7 +41,7 @@ export const cardCycleToForm = (a: {
 const DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 const inputClass =
   'w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all';
-const labelClass = 'text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1';
+const labelClass = 'fs-10 font-black text-slate-400 uppercase tracking-widest pl-1';
 
 // Pengaturan siklus tagihan kartu kredit (opsional). Tanpa tanggal cetak &
 // jatuh tempo, fitur tagihan periode/jatuh tempo/pengingat tidak aktif.
@@ -58,7 +58,7 @@ export function CardCycleFields({
     <div className="col-span-full space-y-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
       <div>
         <p className="text-xs font-black text-indigo-600">Siklus tagihan (opsional)</p>
-        <p className="text-[11px] text-slate-500 mt-0.5">
+        <p className="fs-11 text-slate-500 mt-0.5">
           Isi supaya Leosiqra bisa hitung tagihan per periode, minimum bayar, dan kirim pengingat H-3 & H-1 jatuh tempo.
         </p>
       </div>
@@ -119,9 +119,7 @@ export function CardCycleFields({
           />
         </div>
       </div>
-      {invalid && (
-        <p className="text-[11px] font-bold text-rose-500">Tanggal cetak dan jatuh tempo tidak boleh sama.</p>
-      )}
+      {invalid && <p className="fs-11 font-bold text-rose-500">Tanggal cetak dan jatuh tempo tidak boleh sama.</p>}
     </div>
   );
 }

@@ -124,10 +124,10 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
               <ReceiptText size={18} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className={cn('text-[15px] font-bold', strong)}>
+              <p className={cn('fs-15 font-bold', strong)}>
                 {noteState === 'saved' ? 'Catatan pertama tersimpan' : 'Simpan catatan pertamamu?'}
               </p>
-              <p className={cn('mt-0.5 text-[14px]', muted)}>
+              <p className={cn('mt-0.5 fs-14', muted)}>
                 {note.note} · {note.type === 'pemasukan' ? '+' : '−'}
                 {formatIDR(note.amount)}
               </p>
@@ -136,22 +136,22 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
           </div>
           {noteState !== 'saved' &&
             (accounts === null ? (
-              <p className={cn('mt-4 flex items-center gap-2 text-[13px]', muted)}>
+              <p className={cn('mt-4 flex items-center gap-2 fs-13', muted)}>
                 <Loader2 size={14} className="animate-spin" /> Memuat rekening…
               </p>
             ) : accounts.length === 0 ? (
-              <p className={cn('mt-4 text-[13px]', muted)}>
+              <p className={cn('mt-4 fs-13', muted)}>
                 Belum ada rekening rupiah. Catatan ini bisa kamu tambahkan nanti lewat tombol + di aplikasi.
               </p>
             ) : (
               <div className="mt-4 space-y-3">
-                <label className={cn('block text-[13px] font-semibold', muted)}>
+                <label className={cn('block fs-13 font-semibold', muted)}>
                   Ke rekening
                   <select
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
                     className={cn(
-                      'mt-1.5 block w-full rounded-xl border px-3 py-2.5 text-[15px] font-semibold outline-none',
+                      'mt-1.5 block w-full rounded-xl border px-3 py-2.5 fs-15 font-semibold outline-none',
                       dark ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-200 bg-white text-slate-900',
                     )}
                   >
@@ -162,13 +162,13 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
                     ))}
                   </select>
                 </label>
-                {noteError && <p className="text-[13px] font-semibold text-rose-500">{noteError}</p>}
+                {noteError && <p className="fs-13 font-semibold text-rose-500">{noteError}</p>}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={saveNote}
                     disabled={noteState === 'saving'}
-                    className="flex h-10 items-center gap-2 rounded-full bg-indigo-600 px-5 text-[14px] font-bold text-white disabled:opacity-60"
+                    className="flex h-10 items-center gap-2 rounded-full bg-indigo-600 px-5 fs-14 font-bold text-white disabled:opacity-60"
                   >
                     {noteState === 'saving' && <Loader2 size={14} className="animate-spin" />}
                     Simpan
@@ -176,7 +176,7 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
                   <button
                     type="button"
                     onClick={() => setNoteState('skipped')}
-                    className={cn('h-10 px-4 text-[14px] font-semibold', muted)}
+                    className={cn('h-10 px-4 fs-14 font-semibold', muted)}
                   >
                     Tidak usah
                   </button>
@@ -193,8 +193,8 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
               <Bell size={18} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className={cn('text-[15px] font-bold', strong)}>Pengingat jam {guest.reminder.time}</p>
-              <p className={cn('mt-0.5 text-[14px]', muted)}>
+              <p className={cn('fs-15 font-bold', strong)}>Pengingat jam {guest.reminder.time}</p>
+              <p className={cn('mt-0.5 fs-14', muted)}>
                 {pushState === 'on'
                   ? 'Notifikasi aktif di perangkat ini.'
                   : 'Izinkan notifikasi supaya pengingatnya sampai ke perangkat ini.'}
@@ -204,20 +204,20 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
           </div>
           {pushState !== 'on' && (
             <div className="mt-4">
-              {pushError && <p className="mb-2 text-[13px] font-semibold text-rose-500">{pushError}</p>}
+              {pushError && <p className="mb-2 fs-13 font-semibold text-rose-500">{pushError}</p>}
               <button
                 type="button"
                 onClick={enablePush}
                 disabled={pushState === 'working'}
                 className={cn(
-                  'flex h-10 items-center gap-2 rounded-full px-5 text-[14px] font-bold disabled:opacity-60',
+                  'flex h-10 items-center gap-2 rounded-full px-5 fs-14 font-bold disabled:opacity-60',
                   dark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white',
                 )}
               >
                 {pushState === 'working' && <Loader2 size={14} className="animate-spin" />}
                 Aktifkan notifikasi
               </button>
-              <p className={cn('mt-2 text-[12px]', muted)}>Bisa diatur ulang kapan saja di Profil → Notifikasi.</p>
+              <p className={cn('mt-2 fs-12', muted)}>Bisa diatur ulang kapan saja di Profil → Notifikasi.</p>
             </div>
           )}
         </div>
@@ -227,7 +227,7 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
         type="button"
         onClick={finish}
         disabled={noteState === 'saving'}
-        className="h-12 w-full rounded-full bg-indigo-600 text-[15px] font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+        className="h-12 w-full rounded-full bg-indigo-600 fs-15 font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
       >
         Masuk ke Leosiqra
       </button>

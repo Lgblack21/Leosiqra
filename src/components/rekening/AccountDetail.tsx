@@ -70,30 +70,28 @@ export function AccountDetail({
           {usage ? (
             <div className="grid grid-cols-3 gap-2 rounded-[20px] bg-slate-50 p-4 text-center">
               <div>
-                <p className="text-[12px] font-semibold text-slate-500">Terpakai</p>
-                <p className="mt-0.5 truncate text-[15px] font-extrabold text-rose-600 tabular-nums">
-                  {money(usage.used)}
-                </p>
+                <p className="fs-12 font-semibold text-slate-500">Terpakai</p>
+                <p className="mt-0.5 truncate fs-15 font-extrabold text-rose-600 tabular-nums">{money(usage.used)}</p>
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-slate-500">Sisa limit</p>
-                <p className="mt-0.5 truncate text-[15px] font-extrabold text-emerald-600 tabular-nums">
+                <p className="fs-12 font-semibold text-slate-500">Sisa limit</p>
+                <p className="mt-0.5 truncate fs-15 font-extrabold text-emerald-600 tabular-nums">
                   {usage.limit > 0 ? money(usage.remaining) : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-slate-500">Limit</p>
-                <p className="mt-0.5 truncate text-[15px] font-extrabold text-slate-900 tabular-nums">
+                <p className="fs-12 font-semibold text-slate-500">Limit</p>
+                <p className="mt-0.5 truncate fs-15 font-extrabold text-slate-900 tabular-nums">
                   {usage.limit > 0 ? money(usage.limit) : '—'}
                 </p>
               </div>
             </div>
           ) : (
             <div className="rounded-[20px] bg-slate-50 p-4">
-              <p className="text-[13px] font-semibold text-slate-500">Saldo saat ini</p>
+              <p className="fs-13 font-semibold text-slate-500">Saldo saat ini</p>
               <p
                 className={cn(
-                  'mt-0.5 text-[30px] font-extrabold tracking-tight tabular-nums',
+                  'mt-0.5 fsh-30 font-extrabold tracking-tight tabular-nums',
                   (acc.balance || 0) < 0 ? 'text-rose-600' : 'text-slate-900',
                 )}
               >
@@ -110,10 +108,10 @@ export function AccountDetail({
                   cycle.overdue ? 'bg-rose-50 ring-rose-100' : 'bg-white ring-slate-200',
                 )}
               >
-                <p className="flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                <p className="flex items-center gap-2 fs-13 font-bold text-slate-700">
                   <CalendarClock size={15} /> Tagihan
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-3 text-[13px]">
+                <div className="mt-2 grid grid-cols-2 gap-3 fs-13">
                   <div>
                     <p className="text-slate-500">Tagihan tercetak</p>
                     <p className="font-bold text-slate-900 tabular-nums">
@@ -153,7 +151,7 @@ export function AccountDetail({
               <button
                 type="button"
                 onClick={() => onEdit(acc)}
-                className="w-full rounded-[20px] bg-amber-50 p-4 text-left text-[13px] text-amber-900 ring-1 ring-amber-100"
+                className="w-full rounded-[20px] bg-amber-50 p-4 text-left fs-13 text-amber-900 ring-1 ring-amber-100"
               >
                 Atur tanggal cetak & jatuh tempo kartu ini supaya Leosiqra bisa menghitung tagihan dan mengingatkanmu.{' '}
                 <span className="font-bold">Atur sekarang →</span>
@@ -162,25 +160,23 @@ export function AccountDetail({
 
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-[18px] bg-emerald-50/70 p-3.5">
-              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-700">
+              <p className="flex items-center gap-1.5 fs-12 font-semibold text-emerald-700">
                 <ArrowDownLeft size={14} /> Masuk {monthName}
               </p>
-              <p className="mt-0.5 truncate text-[16px] font-extrabold text-emerald-700 tabular-nums">
-                {money(monthIn)}
-              </p>
+              <p className="mt-0.5 truncate fs-16 font-extrabold text-emerald-700 tabular-nums">{money(monthIn)}</p>
             </div>
             <div className="rounded-[18px] bg-rose-50/70 p-3.5">
-              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-rose-700">
+              <p className="flex items-center gap-1.5 fs-12 font-semibold text-rose-700">
                 <ArrowUpRight size={14} /> Keluar {monthName}
               </p>
-              <p className="mt-0.5 truncate text-[16px] font-extrabold text-rose-700 tabular-nums">{money(monthOut)}</p>
+              <p className="mt-0.5 truncate fs-16 font-extrabold text-rose-700 tabular-nums">{money(monthOut)}</p>
             </div>
           </div>
 
           <div>
-            <p className="mb-1 text-[13px] font-bold uppercase tracking-[0.1em] text-slate-400">Transaksi terakhir</p>
+            <p className="mb-1 fs-13 font-bold uppercase tracking-[0.1em] text-slate-400">Transaksi terakhir</p>
             {recent.length === 0 ? (
-              <p className="rounded-[18px] bg-slate-50 py-6 text-center text-[14px] text-slate-500">
+              <p className="rounded-[18px] bg-slate-50 py-6 text-center fs-14 text-slate-500">
                 Belum ada transaksi di rekening ini.
               </p>
             ) : (
@@ -191,19 +187,16 @@ export function AccountDetail({
                   return (
                     <li key={t.id} className="flex items-center gap-3 py-2.5">
                       <span
-                        className={cn(
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px]',
-                          v.tile,
-                        )}
+                        className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full fs-17', v.tile)}
                         aria-hidden
                       >
                         {v.emoji}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-semibold text-slate-900">
+                        <span className="block truncate fs-14 font-semibold text-slate-900">
                           {t.note || t.subCategory || t.category}
                         </span>
-                        <span className="block truncate text-[12px] text-slate-500">
+                        <span className="block truncate fs-12 text-slate-500">
                           {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(
                             new Date(t.date),
                           )}{' '}
@@ -212,7 +205,7 @@ export function AccountDetail({
                       </span>
                       <span
                         className={cn(
-                          'shrink-0 text-[14px] font-bold tabular-nums',
+                          'shrink-0 fs-14 font-bold tabular-nums',
                           incoming ? 'text-emerald-600' : 'text-slate-900',
                         )}
                       >
@@ -226,7 +219,7 @@ export function AccountDetail({
             )}
             <Link
               href={`/membership/transactions/daily?rekening=${encodeURIComponent(acc.id ?? '')}&periode=semua`}
-              className="mt-2 flex items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-200"
+              className="mt-2 flex items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 fs-14 font-bold text-slate-700 hover:bg-slate-200"
             >
               Semua transaksi {acc.name} <ChevronRight size={16} />
             </Link>
@@ -236,7 +229,7 @@ export function AccountDetail({
             <button
               type="button"
               onClick={() => onEdit(acc)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white py-2.5 text-[14px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white py-2.5 fs-14 font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
             >
               <Edit2 size={15} /> Ubah
             </button>
@@ -244,7 +237,7 @@ export function AccountDetail({
               type="button"
               onClick={() => onDelete(acc)}
               disabled={deleting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-rose-50 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-rose-50 py-2.5 fs-14 font-bold text-rose-600 hover:bg-rose-100 disabled:opacity-50"
             >
               <Trash2 size={15} /> Hapus
             </button>

@@ -100,7 +100,7 @@ export default function AdminSaranPage() {
           ['Rata-rata kepuasan', avg, 'text-indigo-600'],
         ].map(([l, v, c]) => (
           <div key={l as string} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{l}</p>
+            <p className="fs-10 font-black uppercase tracking-widest text-slate-400">{l}</p>
             <p className={cn('mt-1 text-2xl font-black', c as string)}>
               {v}
               {l === 'Rata-rata kepuasan' && avg !== '–' ? ' / 5' : ''}
@@ -151,7 +151,7 @@ export default function AdminSaranPage() {
                     {it.rating ? <span title={`Kepuasan ${it.rating}/5`}>{MOOD[it.rating]}</span> : null}
                     <span
                       className={cn(
-                        'rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest',
+                        'rounded-full px-2.5 py-0.5 fs-10 font-black uppercase tracking-widest',
                         STATUS_TONE[it.status],
                       )}
                     >
@@ -169,7 +169,7 @@ export default function AdminSaranPage() {
 
                 {it.admin_reply && (
                   <div className="mt-3 rounded-xl bg-indigo-50 p-3">
-                    <p className="flex items-center gap-1.5 text-[11px] font-black text-indigo-700">
+                    <p className="flex items-center gap-1.5 fs-11 font-black text-indigo-700">
                       <MessageCircleReply size={13} /> Balasan terkirim{it.replied_at ? ` · ${fmt(it.replied_at)}` : ''}
                     </p>
                     <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{it.admin_reply}</p>

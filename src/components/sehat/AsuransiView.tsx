@@ -56,15 +56,15 @@ function SectionHead({ title, sub, action }: { title: string; sub?: string; acti
   return (
     <div className="mb-3 flex items-end justify-between gap-3 px-1">
       <div>
-        <h2 className="text-[18px] font-black tracking-tight text-slate-900 dark:text-white">{title}</h2>
-        {sub ? <p className="text-[12px] text-slate-500 dark:text-slate-400">{sub}</p> : null}
+        <h2 className="fs-18 font-black tracking-tight text-slate-900 dark:text-white">{title}</h2>
+        {sub ? <p className="fs-12 text-slate-500 dark:text-slate-400">{sub}</p> : null}
       </div>
       {action}
     </div>
   );
 }
 const addBtn =
-  'inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40 dark:bg-white dark:text-slate-900';
+  'inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 fs-12.5 font-bold text-white disabled:opacity-40 dark:bg-white dark:text-slate-900';
 
 // Kartu polis bergaya kartu fisik (warna perusahaan), seperti kartu kredit di Leosiqra.
 function PolicyCard({
@@ -99,23 +99,21 @@ function PolicyCard({
         <span className="relative flex h-full flex-col">
           <span className="flex items-start justify-between gap-2">
             <InsurerTile insurer={ins} name={p.insurer_name} size={40} />
-            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold backdrop-blur">
+            <span className="rounded-full bg-white/20 px-2.5 py-0.5 fs-11 font-bold backdrop-blur">
               {POLICY_KINDS.find((k) => k.id === p.kind)?.label}
             </span>
           </span>
           <span className="mt-auto block">
-            <span className="block truncate text-[16px] font-black leading-tight">{p.insurer_name}</span>
-            <span className="block truncate text-[12px] text-white/80">{p.product ?? 'Polis'}</span>
-            <span className="mt-1.5 block font-mono text-[13px] tracking-[0.18em] text-white/90">
-              {mask(p.policy_no)}
-            </span>
+            <span className="block truncate fs-16 font-black leading-tight">{p.insurer_name}</span>
+            <span className="block truncate fs-12 text-white/80">{p.product ?? 'Polis'}</span>
+            <span className="mt-1.5 block font-mono fs-13 tracking-[0.18em] text-white/90">{mask(p.policy_no)}</span>
           </span>
           <span className="mt-2 flex items-end justify-between gap-2">
             <span>
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-white/70">Premi</span>
-              <span className="block text-[15px] font-black">
+              <span className="block fs-10 font-semibold uppercase tracking-widest text-white/70">Premi</span>
+              <span className="block fs-15 font-black">
                 {p.premium ? short(p.premium) : '–'}
-                <span className="text-[11px] font-semibold text-white/75">
+                <span className="fs-11 font-semibold text-white/75">
                   {' '}
                   {PERIODS.find((x) => x.id === p.period)?.label.toLowerCase()}
                 </span>
@@ -124,7 +122,7 @@ function PolicyCard({
             {p.next_due ? (
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold',
+                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 fs-11 font-bold',
                   soon ? 'bg-white text-rose-600' : 'bg-white/20 text-white backdrop-blur',
                 )}
               >
@@ -139,7 +137,7 @@ function PolicyCard({
           <button
             type="button"
             onClick={onPay}
-            className="flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-50 px-2 text-[13px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+            className="flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-50 px-2 fs-13 font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
           >
             <Wallet size={15} /> Bayar premi
           </button>
@@ -148,7 +146,7 @@ function PolicyCard({
           <a
             href={telHref(phone)}
             aria-label={`Telepon ${prettyPhone(phone)}`}
-            className="flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-3 text-[13px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-3 fs-13 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
           >
             <Phone size={14} className="shrink-0" /> <span className="truncate">{prettyPhone(phone)}</span>
           </a>
@@ -157,7 +155,7 @@ function PolicyCard({
           <button
             type="button"
             onClick={() => onInfo(ins)}
-            className="flex h-10 items-center justify-center rounded-xl bg-slate-100 px-3 text-[13px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="flex h-10 items-center justify-center rounded-xl bg-slate-100 px-3 fs-13 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
           >
             Info
           </button>
@@ -211,12 +209,12 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
   return (
     <div className="space-y-7">
       {notReady ? (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           Polisku & klaim sedang disiapkan di server — biaya kesehatan & daftar asuransi sudah bisa dipakai.
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </p>
       ) : null}
@@ -226,12 +224,10 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
         <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500 p-5 text-white shadow-xl shadow-emerald-500/20 md:p-6">
           <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10" aria-hidden />
           <div className="relative">
-            <div className="text-[13px] font-semibold text-white/85">
+            <div className="fs-13 font-semibold text-white/85">
               Biaya kesehatanmu di {data?.year ?? today.slice(0, 4)}
             </div>
-            <div className="mt-1 text-[32px] font-black leading-tight tracking-tight">
-              {formatIDR(costs?.total ?? 0)}
-            </div>
+            <div className="mt-1 fsh-32 font-black leading-tight tracking-tight">{formatIDR(costs?.total ?? 0)}</div>
             <div className="mt-4 flex h-20 items-end gap-1.5">
               {(costs?.byMonth ?? Array(12).fill(0)).map((v, i) => (
                 <div key={i} className="flex h-full flex-1 flex-col items-center gap-1">
@@ -242,30 +238,27 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
                       style={{ height: `${v ? Math.max(8, (v / maxMonth) * 100) : 4}%` }}
                     />
                   </div>
-                  <span className="text-[9.5px] font-semibold text-white/75">{BULAN[i][0]}</span>
+                  <span className="fs-9.5 font-semibold text-white/75">{BULAN[i][0]}</span>
                 </div>
               ))}
             </div>
             {costs?.bySub.length ? (
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {costs.bySub.slice(0, 6).map((s) => (
-                  <span
-                    key={s.sub}
-                    className="rounded-full bg-white/18 px-2.5 py-1 text-[12px] font-bold backdrop-blur"
-                  >
+                  <span key={s.sub} className="rounded-full bg-white/18 px-2.5 py-1 fs-12 font-bold backdrop-blur">
                     {s.sub} {short(s.total)}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-[13px] text-white/85">
+              <p className="mt-3 fs-13 text-white/85">
                 Diambil dari transaksi kategori Kesehatan: obat, dokter, RS, lab, dan premi.
               </p>
             )}
             <button
               type="button"
               onClick={() => setSheet({ t: 'cost' })}
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[14px] font-bold text-emerald-700 shadow-lg"
+              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white fs-14 font-bold text-emerald-700 shadow-lg"
             >
               <Plus size={17} /> Catat biaya kesehatan
             </button>
@@ -295,9 +288,9 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
               key={s.label}
               className="rounded-[22px] bg-white p-4 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800"
             >
-              <div className="text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">{s.label}</div>
-              <div className="mt-0.5 truncate text-[18px] font-black text-slate-900 dark:text-white">{s.value}</div>
-              <div className="truncate text-[11.5px] text-slate-400">{s.sub}</div>
+              <div className="fs-11.5 font-semibold text-slate-500 dark:text-slate-400">{s.label}</div>
+              <div className="mt-0.5 truncate fs-18 font-black text-slate-900 dark:text-white">{s.value}</div>
+              <div className="truncate fs-11.5 text-slate-400">{s.sub}</div>
             </div>
           ))}
         </section>
@@ -333,10 +326,10 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
               className="flex aspect-[1.62] w-[292px] shrink-0 snap-start flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-slate-300 text-center disabled:opacity-60 sm:w-[320px] dark:border-slate-700"
             >
               <ShieldCheck size={30} className="text-teal-500" />
-              <span className="mt-2 text-[15px] font-bold text-slate-700 dark:text-slate-200">
+              <span className="mt-2 fs-15 font-bold text-slate-700 dark:text-slate-200">
                 {policies.length ? 'Tambah polis lain' : 'Simpan polis pertamamu'}
               </span>
-              <span className="mt-1 max-w-[220px] text-[12.5px] text-slate-500 dark:text-slate-400">
+              <span className="mt-1 max-w-[220px] fs-12.5 text-slate-500 dark:text-slate-400">
                 BPJS, swasta, atau dari kantor
               </span>
             </button>
@@ -362,7 +355,7 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
           }
         />
         {claims.length === 0 ? (
-          <p className="rounded-[22px] bg-slate-50 px-4 py-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+          <p className="rounded-[22px] bg-slate-50 px-4 py-5 text-center fs-13 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
             <FileCheck2 size={22} className="mx-auto mb-1.5 text-slate-400" />
             Ajukan reimburse? Catat di sini — saat cair, uangnya langsung tercatat sebagai pemasukan.
           </p>
@@ -379,22 +372,22 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-[14px] font-bold text-slate-900 dark:text-white">{c.title}</div>
-                      <div className="text-[12px] text-slate-500 dark:text-slate-400">
+                      <div className="truncate fs-14 font-bold text-slate-900 dark:text-white">{c.title}</div>
+                      <div className="fs-12 text-slate-500 dark:text-slate-400">
                         {c.insurer_name ?? 'Tanpa polis'} · {dmy(c.submitted_at)}
                       </div>
                       {c.status === 'diajukan' && -daysUntil(c.submitted_at, today) >= 14 && (
-                        <div className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                        <div className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 fs-11 font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                           Belum ada kabar {-daysUntil(c.submitted_at, today)} hari · hubungi asuransi
                         </div>
                       )}
                     </div>
-                    <div className="shrink-0 text-right text-[14px] font-black text-slate-900 dark:text-white">
+                    <div className="shrink-0 text-right fs-14 font-black text-slate-900 dark:text-white">
                       {short(c.approved_amount ?? c.amount)}
                     </div>
                   </div>
                   {c.status === 'ditolak' ? (
-                    <span className="mt-2 inline-block rounded-full bg-rose-50 px-2.5 py-0.5 text-[11.5px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                    <span className="mt-2 inline-block rounded-full bg-rose-50 px-2.5 py-0.5 fs-11.5 font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                       Ditolak
                     </span>
                   ) : (
@@ -409,7 +402,7 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
                           />
                           <span
                             className={cn(
-                              'text-[10.5px] font-semibold',
+                              'fs-10.5 font-semibold',
                               i <= step ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-400',
                             )}
                           >
@@ -436,7 +429,7 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cari asuransi"
-            className="w-full rounded-2xl bg-white py-2.5 pl-9 pr-3 text-[14px] text-slate-800 outline-none ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-teal-300 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-800"
+            className="w-full rounded-2xl bg-white py-2.5 pl-9 pr-3 fs-14 text-slate-800 outline-none ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-teal-300 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-800"
           />
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -448,16 +441,16 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
               className="flex flex-col items-center rounded-[22px] bg-white px-3 py-4 text-center ring-1 ring-slate-200/80 transition-shadow hover:shadow-md dark:bg-slate-900 dark:ring-slate-800"
             >
               <InsurerTile insurer={i} name={i.name} size={52} />
-              <span className="mt-2 line-clamp-2 text-[13px] font-bold leading-tight text-slate-900 dark:text-white">
+              <span className="mt-2 line-clamp-2 fs-13 font-bold leading-tight text-slate-900 dark:text-white">
                 {i.name}
               </span>
-              <span className="mt-1 text-[11.5px] font-semibold text-teal-700 dark:text-teal-300">
+              <span className="mt-1 fs-11.5 font-semibold text-teal-700 dark:text-teal-300">
                 {i.phone ? prettyPhone(i.phone) : 'Lihat situs resmi'}
               </span>
             </button>
           ))}
         </div>
-        <p className="mt-3 px-1 text-center text-[11px] text-slate-400">
+        <p className="mt-3 px-1 text-center fs-11 text-slate-400">
           Logo milik masing-masing perusahaan, dipakai hanya untuk menandai nama perusahaannya. Leosiqra tidak
           berafiliasi dan tidak merekomendasikan produk tertentu.
         </p>

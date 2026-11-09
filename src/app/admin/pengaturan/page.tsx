@@ -424,7 +424,7 @@ export default function AdminPengaturanPage() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'flex items-center justify-center shrink-0 gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black transition-all whitespace-nowrap',
+              'flex items-center justify-center shrink-0 gap-2 px-5 py-2.5 rounded-xl fs-12 font-black transition-all whitespace-nowrap',
               activeTab === tab.id
                 ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-100'
                 : 'text-slate-400 hover:text-slate-600',
@@ -439,7 +439,7 @@ export default function AdminPengaturanPage() {
       {loading && (
         <div className="flex items-center gap-3 p-6 bg-indigo-50 border border-indigo-100 rounded-2xl">
           <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest">Memuat konfigurasi...</p>
+          <p className="fs-11 font-black text-indigo-500 uppercase tracking-widest">Memuat konfigurasi...</p>
         </div>
       )}
 
@@ -449,51 +449,51 @@ export default function AdminPengaturanPage() {
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Kontak & Rekening</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">Email Kontak</label>
+                <label className="fs-12 font-black text-slate-600">Email Kontak</label>
                 <input
                   type="email"
                   value={settings?.billingEmail || ''}
                   onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), billingEmail: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">WhatsApp Kontak</label>
+                <label className="fs-12 font-black text-slate-600">WhatsApp Kontak</label>
                 <input
                   type="text"
                   placeholder="62812xxxx"
                   value={settings?.whatsapp || ''}
                   onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), whatsapp: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">Nama Bank</label>
+                <label className="fs-12 font-black text-slate-600">Nama Bank</label>
                 <input
                   type="text"
                   value={settings?.bankName || ''}
                   onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), bankName: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">Atas Nama</label>
+                <label className="fs-12 font-black text-slate-600">Atas Nama</label>
                 <input
                   type="text"
                   value={settings?.bankAccountName || ''}
                   onChange={(e) =>
                     setSettings((prev) => ({ ...(prev as AppSettings), bankAccountName: e.target.value }))
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">No Rekening</label>
+                <label className="fs-12 font-black text-slate-600">No Rekening</label>
                 <input
                   type="text"
                   value={settings?.bankNumber || ''}
                   onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), bankNumber: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
               </div>
             </div>
@@ -510,7 +510,7 @@ export default function AdminPengaturanPage() {
                 ) : (
                   <div className="w-40 h-40 rounded-xl bg-white border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
                     <ImageIcon size={36} strokeWidth={1} />
-                    <span className="text-[10px] font-black uppercase tracking-widest mt-2">Belum ada QRIS</span>
+                    <span className="fs-10 font-black uppercase tracking-widest mt-2">Belum ada QRIS</span>
                   </div>
                 )}
                 <div className="w-full">
@@ -525,7 +525,7 @@ export default function AdminPengaturanPage() {
                   <label
                     htmlFor="qris-input"
                     className={cn(
-                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all',
+                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all',
                       isUploadingQRIS && 'opacity-50 cursor-not-allowed',
                     )}
                   >
@@ -546,25 +546,25 @@ export default function AdminPengaturanPage() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[12px] font-black text-slate-600">Label Teks QRIS</label>
+                  <label className="fs-12 font-black text-slate-600">Label Teks QRIS</label>
                   <input
                     type="text"
                     placeholder="Contoh: Scan untuk Bayar"
                     value={settings?.qrisText || ''}
                     onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), qrisText: e.target.value }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[12px] font-black text-slate-600">URL Langsung (Opsional)</label>
+                  <label className="fs-12 font-black text-slate-600">URL Langsung (Opsional)</label>
                   <input
                     type="text"
                     placeholder="https://..."
                     value={settings?.qrisURL || ''}
                     onChange={(e) => setSettings((prev) => ({ ...(prev as AppSettings), qrisURL: e.target.value }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium opacity-60"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium opacity-60"
                   />
-                  <p className="text-[11px] font-medium text-slate-400">Terisi otomatis saat gambar diunggah.</p>
+                  <p className="fs-11 font-medium text-slate-400">Terisi otomatis saat gambar diunggah.</p>
                 </div>
               </div>
             </div>
@@ -581,11 +581,11 @@ export default function AdminPengaturanPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black text-slate-900">Aturan Free Plan</h3>
-                <p className="text-[11px] font-medium text-slate-400">Masa berlaku gratis untuk user baru.</p>
+                <p className="fs-11 font-medium text-slate-400">Masa berlaku gratis untuk user baru.</p>
               </div>
             </div>
             <div className="max-w-xs space-y-2">
-              <label className="text-[12px] font-black text-slate-600">Durasi Free Plan (Hari)</label>
+              <label className="fs-12 font-black text-slate-600">Durasi Free Plan (Hari)</label>
               <div className="relative">
                 <input
                   type="number"
@@ -593,7 +593,7 @@ export default function AdminPengaturanPage() {
                   onChange={(e) =>
                     setSettings((prev) => ({ ...(prev as AppSettings), freePlanDays: parseInt(e.target.value) || 0 }))
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold pointer-events-none">
                   Hari
@@ -610,7 +610,7 @@ export default function AdminPengaturanPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900">Daftar Paket Pro</h3>
-                  <p className="text-[11px] font-medium text-slate-400">Opsi langganan bulanan maupun tahunan.</p>
+                  <p className="fs-11 font-medium text-slate-400">Opsi langganan bulanan maupun tahunan.</p>
                 </div>
               </div>
               <button
@@ -627,7 +627,7 @@ export default function AdminPengaturanPage() {
                     proPackages: [...(prev?.proPackages || []), newPackage],
                   }));
                 }}
-                className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
+                className="px-4 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
               >
                 <Plus size={14} /> Tambah Paket
               </button>
@@ -664,9 +664,7 @@ export default function AdminPengaturanPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 pr-10 xl:pr-0">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Nama Paket
-                        </label>
+                        <label className="fs-10 font-black text-slate-400 uppercase tracking-widest">Nama Paket</label>
                         <input
                           type="text"
                           value={pkg.name}
@@ -679,9 +677,7 @@ export default function AdminPengaturanPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Harga (IDR)
-                        </label>
+                        <label className="fs-10 font-black text-slate-400 uppercase tracking-widest">Harga (IDR)</label>
                         <input
                           type="number"
                           value={pkg.price}
@@ -694,7 +690,7 @@ export default function AdminPengaturanPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <label className="fs-10 font-black text-slate-400 uppercase tracking-widest">
                           Masa Berlaku (Bulan)
                         </label>
                         <div className="flex gap-3 items-center">
@@ -719,9 +715,7 @@ export default function AdminPengaturanPage() {
                               }}
                               className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                             />
-                            <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
-                              Populer
-                            </span>
+                            <span className="fs-10 font-black uppercase text-amber-500 tracking-wider">Populer</span>
                           </label>
                         </div>
                       </div>
@@ -739,7 +733,7 @@ export default function AdminPengaturanPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black text-slate-900">Backfill Logo Bank/E-Wallet</h3>
-                <p className="text-[11px] font-medium text-slate-400">
+                <p className="fs-11 font-medium text-slate-400">
                   Isi otomatis logo untuk rekening lama (semua user) yang cocok nama bank/e-wallet Indonesia dan belum
                   punya logo. Aman diulang — tidak menimpa logo yang sudah ada.
                 </p>
@@ -750,14 +744,14 @@ export default function AdminPengaturanPage() {
                 onClick={handleBackfillBankLogos}
                 disabled={isBackfillingLogos}
                 className={cn(
-                  'px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit',
+                  'px-4 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit',
                   isBackfillingLogos && 'opacity-50 cursor-not-allowed',
                 )}
               >
                 <RefreshCw size={14} className={cn(isBackfillingLogos && 'animate-spin')} />
                 {isBackfillingLogos ? 'Memproses...' : 'Jalankan Backfill'}
               </button>
-              {backfillResult && <p className="text-[11px] font-bold text-slate-600">{backfillResult}</p>}
+              {backfillResult && <p className="fs-11 font-bold text-slate-600">{backfillResult}</p>}
             </div>
           </div>
 
@@ -768,7 +762,7 @@ export default function AdminPengaturanPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black text-slate-900">Kunci Username Unik</h3>
-                <p className="text-[11px] font-medium text-slate-400">
+                <p className="fs-11 font-medium text-slate-400">
                   Pasang UNIQUE index di database untuk kolom username (dipakai login alternatif) — menutup celah race
                   condition di atas pengecekan yang sudah ada. Kalau ada bentrokan lama, ditolak dan ditampilkan
                   daftarnya dulu.
@@ -780,14 +774,14 @@ export default function AdminPengaturanPage() {
                 onClick={handleEnforceUsernameUnique}
                 disabled={isEnforcingUsername}
                 className={cn(
-                  'px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit',
+                  'px-4 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit',
                   isEnforcingUsername && 'opacity-50 cursor-not-allowed',
                 )}
               >
                 <Lock size={14} />
                 {isEnforcingUsername ? 'Memproses...' : 'Pasang UNIQUE Index'}
               </button>
-              {enforceUsernameResult && <p className="text-[11px] font-bold text-slate-600">{enforceUsernameResult}</p>}
+              {enforceUsernameResult && <p className="fs-11 font-bold text-slate-600">{enforceUsernameResult}</p>}
             </div>
           </div>
 
@@ -798,7 +792,7 @@ export default function AdminPengaturanPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black text-slate-900">Kirim Notifikasi ke Semua User</h3>
-                <p className="text-[11px] font-medium text-slate-400">
+                <p className="fs-11 font-medium text-slate-400">
                   Push notification broadcast (butuh subscribe push aktif di perangkat user). Cek isinya sebelum kirim —
                   tidak bisa dibatalkan.
                 </p>
@@ -806,7 +800,7 @@ export default function AdminPengaturanPage() {
             </div>
             <div className="space-y-3 max-w-xl">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Judul</label>
+                <label className="fs-10 font-black text-slate-400 uppercase tracking-widest">Judul</label>
                 <input
                   type="text"
                   value={broadcastTitle}
@@ -815,7 +809,7 @@ export default function AdminPengaturanPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Isi Pesan</label>
+                <label className="fs-10 font-black text-slate-400 uppercase tracking-widest">Isi Pesan</label>
                 <textarea
                   value={broadcastBody}
                   onChange={(e) => setBroadcastBody(e.target.value)}
@@ -828,7 +822,7 @@ export default function AdminPengaturanPage() {
                   onClick={handleBroadcastNotification}
                   disabled={isBroadcasting || !broadcastTitle.trim() || !broadcastBody.trim()}
                   className={cn(
-                    'px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-colors shrink-0 w-fit',
+                    'px-4 py-2.5 bg-indigo-600 text-white rounded-xl fs-11 font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-colors shrink-0 w-fit',
                     (isBroadcasting || !broadcastTitle.trim() || !broadcastBody.trim()) &&
                       'opacity-50 cursor-not-allowed',
                   )}
@@ -836,7 +830,7 @@ export default function AdminPengaturanPage() {
                   <Bell size={14} className={cn(isBroadcasting && 'animate-pulse')} />
                   {isBroadcasting ? 'Mengirim...' : 'Kirim ke Semua User'}
                 </button>
-                {broadcastResult && <p className="text-[11px] font-bold text-slate-600">{broadcastResult}</p>}
+                {broadcastResult && <p className="fs-11 font-bold text-slate-600">{broadcastResult}</p>}
               </div>
             </div>
           </div>
@@ -875,7 +869,7 @@ export default function AdminPengaturanPage() {
                 <label
                   htmlFor="admin-photo-input"
                   className={cn(
-                    'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-50 text-slate-500 border border-slate-100 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:border-indigo-500 transition-all',
+                    'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-50 text-slate-500 border border-slate-100 rounded-xl fs-11 font-black uppercase tracking-widest cursor-pointer hover:border-indigo-500 transition-all',
                     isUploadingProfile && 'opacity-50 cursor-not-allowed',
                   )}
                 >
@@ -890,33 +884,33 @@ export default function AdminPengaturanPage() {
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Kredensial Admin</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[12px] font-black text-slate-600">Email Admin Utama</label>
+                  <label className="fs-12 font-black text-slate-600">Email Admin Utama</label>
                   <input
                     type="email"
                     defaultValue={userEmail}
                     disabled
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium text-slate-500"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium text-slate-500"
                   />
                 </div>
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <label className="text-[12px] font-black text-slate-600">Password Saat Ini</label>
+                    <label className="fs-12 font-black text-slate-600">Password Saat Ini</label>
                     <input
                       type="password"
                       placeholder="Untuk verifikasi"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[12px] font-black text-slate-600">Password Baru</label>
+                    <label className="fs-12 font-black text-slate-600">Password Baru</label>
                     <input
                       type="password"
                       placeholder="Min 6 karakter, Simbol, Angka"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium"
                     />
                   </div>
 
@@ -927,20 +921,20 @@ export default function AdminPengaturanPage() {
                           className={`h-full transition-all duration-500 ${passwordStrength.width} ${passwordStrength.color}`}
                         />
                       </div>
-                      <p className="text-[10px] font-bold text-slate-400">
+                      <p className="fs-10 font-bold text-slate-400">
                         Kekuatan: <span className="text-slate-900 uppercase">{passwordStrength.label}</span>
                       </p>
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-[12px] font-black text-slate-600">Ulangi Password</label>
+                    <label className="fs-12 font-black text-slate-600">Ulangi Password</label>
                     <input
                       type="password"
                       placeholder="Ulangi password baru"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium"
                     />
                   </div>
                 </div>
@@ -949,7 +943,7 @@ export default function AdminPengaturanPage() {
                 onClick={handleSaveAccount}
                 disabled={isSavingAccount}
                 className={cn(
-                  'flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all',
+                  'flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest hover:bg-indigo-600 transition-all',
                   isSavingAccount && 'opacity-50 cursor-not-allowed',
                 )}
               >
@@ -971,9 +965,7 @@ export default function AdminPengaturanPage() {
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between gap-6">
             <div>
               <h3 className="text-sm font-black text-slate-900">Status Maintenance</h3>
-              <p className="text-[12px] font-medium text-slate-400">
-                Alihkan seluruh akses member ke layar pemeliharaan.
-              </p>
+              <p className="fs-12 font-medium text-slate-400">Alihkan seluruh akses member ke layar pemeliharaan.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -995,7 +987,7 @@ export default function AdminPengaturanPage() {
             <div className="space-y-5 p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
               <div>
                 <h4 className="text-sm font-black text-slate-900">Konfigurasi Konten</h4>
-                <p className="text-[11px] font-medium text-slate-400">Cara maintenance ditampilkan ke user.</p>
+                <p className="fs-11 font-medium text-slate-400">Cara maintenance ditampilkan ke user.</p>
               </div>
 
               <div className="flex p-1 bg-slate-50 rounded-xl gap-1">
@@ -1007,7 +999,7 @@ export default function AdminPengaturanPage() {
                     }))
                   }
                   className={cn(
-                    'flex-1 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all',
+                    'flex-1 py-2.5 rounded-lg fs-11 font-black uppercase tracking-widest transition-all',
                     settings?.maintenance?.type === 'code'
                       ? 'bg-white text-indigo-600 shadow-sm'
                       : 'text-slate-400 hover:text-slate-600',
@@ -1023,7 +1015,7 @@ export default function AdminPengaturanPage() {
                     }))
                   }
                   className={cn(
-                    'flex-1 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all',
+                    'flex-1 py-2.5 rounded-lg fs-11 font-black uppercase tracking-widest transition-all',
                     settings?.maintenance?.type === 'image'
                       ? 'bg-white text-indigo-600 shadow-sm'
                       : 'text-slate-400 hover:text-slate-600',
@@ -1036,16 +1028,16 @@ export default function AdminPengaturanPage() {
               {settings?.maintenance?.type === 'code' ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Kode HTML</label>
+                    <label className="fs-11 font-black text-slate-900 uppercase tracking-widest">Kode HTML</label>
                     <button
                       onClick={() => setShowPreviewModal(true)}
-                      className="text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1"
+                      className="fs-10 font-black text-indigo-600 hover:underline flex items-center gap-1"
                     >
                       Preview <ArrowRight size={12} />
                     </button>
                   </div>
                   <textarea
-                    className="w-full p-4 bg-slate-900 text-indigo-300 font-mono text-[12px] rounded-xl min-h-[240px] outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                    className="w-full p-4 bg-slate-900 text-indigo-300 font-mono fs-12 rounded-xl min-h-[240px] outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
                     placeholder="Masukkan kode HTML/CSS kustom Anda di sini..."
                     value={settings?.maintenance?.code || ''}
                     onChange={(e) =>
@@ -1058,7 +1050,7 @@ export default function AdminPengaturanPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <label className="text-[11px] font-black text-slate-900 uppercase tracking-widest">
+                  <label className="fs-11 font-black text-slate-900 uppercase tracking-widest">
                     Gambar Maintenance
                   </label>
 
@@ -1069,7 +1061,7 @@ export default function AdminPengaturanPage() {
                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <button
                             onClick={() => setShowPreviewModal(true)}
-                            className="px-5 py-2 bg-white text-slate-900 rounded-full text-[10px] font-black uppercase tracking-widest"
+                            className="px-5 py-2 bg-white text-slate-900 rounded-full fs-10 font-black uppercase tracking-widest"
                           >
                             Zoom Preview
                           </button>
@@ -1078,7 +1070,7 @@ export default function AdminPengaturanPage() {
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-slate-300">
                         <ImageIcon size={36} strokeWidth={1} />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Belum ada gambar</p>
+                        <p className="fs-10 font-black uppercase tracking-widest">Belum ada gambar</p>
                       </div>
                     )}
                   </div>
@@ -1094,7 +1086,7 @@ export default function AdminPengaturanPage() {
                   <label
                     htmlFor="maintenance-image-input"
                     className={cn(
-                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all',
+                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all',
                       isUploadingMaintenanceImage && 'opacity-50 cursor-not-allowed',
                     )}
                   >
@@ -1107,7 +1099,7 @@ export default function AdminPengaturanPage() {
             <div className="space-y-6 flex flex-col justify-between">
               <div className="p-6 rounded-2xl bg-indigo-600 text-white space-y-3">
                 <h5 className="text-base font-black">Kapan pakai mode apa?</h5>
-                <p className="text-[13px] font-medium text-indigo-100 leading-relaxed">
+                <p className="fs-13 font-medium text-indigo-100 leading-relaxed">
                   Pakai <strong>Kode HTML</strong> jika punya desain kustom berbasis kode, atau <strong>Gambar</strong>{' '}
                   jika sudah punya banner maintenance jadi dari desainer.
                 </p>
@@ -1115,14 +1107,14 @@ export default function AdminPengaturanPage() {
 
               <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-4">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pesan Fallback</p>
+                  <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Pesan Fallback</p>
                   <p className="text-xs font-bold text-slate-500 italic mt-1">
                     &quot;Kami kembali sebentar lagi. Leosiqra sedang dalam pemeliharaan sistem.&quot;
                   </p>
                 </div>
                 <button
                   onClick={handleSaveSettings}
-                  className="w-full py-3.5 bg-indigo-600 text-white rounded-xl text-[13px] font-black hover:bg-slate-900 transition-all"
+                  className="w-full py-3.5 bg-indigo-600 text-white rounded-xl fs-13 font-black hover:bg-slate-900 transition-all"
                 >
                   Simpan & Aktifkan Perubahan
                 </button>
@@ -1137,9 +1129,7 @@ export default function AdminPengaturanPage() {
           <div className="h-14 border-b border-white/10 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md">
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-white text-[11px] font-black uppercase tracking-widest">
-                Live Maintenance Preview
-              </span>
+              <span className="text-white fs-11 font-black uppercase tracking-widest">Live Maintenance Preview</span>
             </div>
             <button
               onClick={() => setShowPreviewModal(false)}
@@ -1181,7 +1171,7 @@ export default function AdminPengaturanPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Market Control Center</h3>
-              <p className="text-[12px] font-medium text-slate-400 mt-1">
+              <p className="fs-12 font-medium text-slate-400 mt-1">
                 Pantau hasil sinkron data pasar dan refresh manual bila perlu.
               </p>
             </div>
@@ -1189,7 +1179,7 @@ export default function AdminPengaturanPage() {
               onClick={fetchMarketData}
               disabled={isRefreshingMarket}
               className={cn(
-                'px-5 py-2.5 border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shrink-0',
+                'px-5 py-2.5 border border-slate-200 rounded-xl fs-11 font-black text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shrink-0',
                 isRefreshingMarket && 'opacity-50 cursor-not-allowed',
               )}
             >
@@ -1206,15 +1196,15 @@ export default function AdminPengaturanPage() {
           </div>
 
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
-            <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Kurs Mata Uang</h4>
+            <h4 className="fs-12 font-black text-slate-900 uppercase tracking-widest">Kurs Mata Uang</h4>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pair</th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rate</th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Diperbarui</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Pair</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Rate</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">User</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Diperbarui</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1224,7 +1214,7 @@ export default function AdminPengaturanPage() {
                     if (fxCurrencies.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={4} className="py-6 text-center text-[11px] text-slate-400 italic">
+                          <td colSpan={4} className="py-6 text-center fs-11 text-slate-400 italic">
                             Klik &quot;Refresh Semua&quot; untuk memuat data kurs.
                           </td>
                         </tr>
@@ -1235,20 +1225,20 @@ export default function AdminPengaturanPage() {
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="py-3">
-                            <p className="text-[12px] font-black text-slate-700">{c.code}/IDR</p>
-                            <p className="text-[10px] font-medium text-slate-400">{c.name}</p>
+                            <p className="fs-12 font-black text-slate-700">{c.code}/IDR</p>
+                            <p className="fs-10 font-medium text-slate-400">{c.name}</p>
                           </td>
-                          <td className="py-3 text-[12px] font-bold text-slate-900">
+                          <td className="py-3 fs-12 font-bold text-slate-900">
                             {rate ? (
                               `Rp ${rate.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
                             ) : (
                               <span className="text-slate-300 italic">-</span>
                             )}
                           </td>
-                          <td className="py-3 text-[12px] font-medium text-slate-400">
+                          <td className="py-3 fs-12 font-medium text-slate-400">
                             {settings?.marketData?.userCovered || 0}
                           </td>
-                          <td className="py-3 text-[11px] font-medium text-slate-400">{liveTimestamp}</td>
+                          <td className="py-3 fs-11 font-medium text-slate-400">{liveTimestamp}</td>
                         </tr>
                       );
                     });
@@ -1259,17 +1249,15 @@ export default function AdminPengaturanPage() {
           </div>
 
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
-            <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Crypto Feed</h4>
+            <h4 className="fs-12 font-black text-slate-900 uppercase tracking-widest">Crypto Feed</h4>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Crypto</th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Harga (IDR)
-                    </th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">24 Jam</th>
-                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Diperbarui</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Crypto</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Harga (IDR)</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">24 Jam</th>
+                    <th className="pb-3 fs-10 font-black text-slate-400 uppercase tracking-widest">Diperbarui</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1288,29 +1276,25 @@ export default function AdminPengaturanPage() {
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="py-3">
-                            <p className="text-[12px] font-black text-slate-900">{p.asset}</p>
-                            <p className="text-[10px] font-medium text-slate-400">{p.name}</p>
+                            <p className="fs-12 font-black text-slate-900">{p.asset}</p>
+                            <p className="fs-10 font-medium text-slate-400">{p.name}</p>
                           </td>
                           <td className="py-3">
                             {priceIDR ? (
                               <>
-                                <p className="text-[12px] font-bold text-slate-900">
-                                  Rp {priceIDR.toLocaleString('id-ID')}
-                                </p>
-                                <p className="text-[10px] font-medium text-slate-400">
-                                  ${priceUSD?.toLocaleString('en-US')}
-                                </p>
+                                <p className="fs-12 font-bold text-slate-900">Rp {priceIDR.toLocaleString('id-ID')}</p>
+                                <p className="fs-10 font-medium text-slate-400">${priceUSD?.toLocaleString('en-US')}</p>
                               </>
                             ) : (
-                              <span className="text-[12px] text-slate-300 italic">Belum direfresh</span>
+                              <span className="fs-12 text-slate-300 italic">Belum direfresh</span>
                             )}
                           </td>
                           <td
-                            className={`py-3 text-[12px] font-bold ${change == null ? 'text-slate-400' : change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
+                            className={`py-3 fs-12 font-bold ${change == null ? 'text-slate-400' : change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
                           >
                             {change != null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : `-`}
                           </td>
-                          <td className="py-3 text-[11px] font-medium text-slate-400">{liveTimestamp}</td>
+                          <td className="py-3 fs-11 font-medium text-slate-400">{liveTimestamp}</td>
                         </tr>
                       );
                     });
@@ -1331,7 +1315,7 @@ export default function AdminPengaturanPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black text-slate-900">Profil Developer (Landing Page)</h3>
-                <p className="text-[11px] font-medium text-slate-400">
+                <p className="fs-11 font-medium text-slate-400">
                   Foto & kata motivasi yang tampil di halaman depan leosiqra.com. Hanya superadmin yang bisa mengubah
                   ini.
                 </p>
@@ -1347,7 +1331,7 @@ export default function AdminPengaturanPage() {
                 ) : (
                   <div className="w-40 h-40 rounded-full bg-white border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
                     <ImageIcon size={36} strokeWidth={1} />
-                    <span className="text-[10px] font-black uppercase tracking-widest mt-2 text-center px-4">
+                    <span className="fs-10 font-black uppercase tracking-widest mt-2 text-center px-4">
                       Belum ada foto
                     </span>
                   </div>
@@ -1364,7 +1348,7 @@ export default function AdminPengaturanPage() {
                   <label
                     htmlFor="developer-photo-input"
                     className={cn(
-                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all',
+                      'w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl fs-11 font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all',
                       isUploadingDeveloperPhoto && 'opacity-50 cursor-not-allowed',
                     )}
                   >
@@ -1385,7 +1369,7 @@ export default function AdminPengaturanPage() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[12px] font-black text-slate-600">Nama Developer</label>
+                  <label className="fs-12 font-black text-slate-600">Nama Developer</label>
                   <input
                     type="text"
                     placeholder="Contoh: Leo Wendry"
@@ -1393,11 +1377,11 @@ export default function AdminPengaturanPage() {
                     onChange={(e) =>
                       setSettings((prev) => ({ ...(prev as AppSettings), developerName: e.target.value }))
                     }
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[12px] font-black text-slate-600">Kata Motivasi</label>
+                  <label className="fs-12 font-black text-slate-600">Kata Motivasi</label>
                   <textarea
                     rows={5}
                     placeholder="Tulis pesan atau kata motivasi singkat yang ingin ditampilkan di landing page..."
@@ -1405,7 +1389,7 @@ export default function AdminPengaturanPage() {
                     onChange={(e) =>
                       setSettings((prev) => ({ ...(prev as AppSettings), developerQuote: e.target.value }))
                     }
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl fs-14 font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none"
                   />
                 </div>
               </div>
@@ -1418,7 +1402,7 @@ export default function AdminPengaturanPage() {
         <div className="flex justify-end">
           <button
             onClick={handleSaveSettings}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl fs-12 font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
           >
             <Save size={16} />
             Simpan Konfigurasi
@@ -1432,7 +1416,7 @@ export default function AdminPengaturanPage() {
 function AdminStatCardLocal({ label, value, small }: { label: string; value: string | number; small?: boolean }) {
   return (
     <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-2">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">{label}</p>
       <p className={cn('font-black text-slate-900 tracking-tight', small ? 'text-sm' : 'text-2xl')}>{value}</p>
     </div>
   );

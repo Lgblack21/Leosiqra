@@ -188,7 +188,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
           >
             <ChevronLeft size={20} />
           </button>
-          <h2 className="flex-1 text-[19px] font-bold text-slate-900">
+          <h2 className="flex-1 fs-19 font-bold text-slate-900">
             {editing ? 'Ubah transaksi rutin' : 'Transaksi rutin baru'}
           </h2>
           <button
@@ -222,13 +222,13 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
                 >
                   <span
                     className={cn(
-                      'block text-[15px] font-bold',
+                      'block fs-15 font-bold',
                       on ? (k === 'Pemasukan' ? 'text-emerald-700' : 'text-rose-700') : 'text-slate-700',
                     )}
                   >
                     {k === 'Pemasukan' ? '↓ Uang masuk' : '↑ Uang keluar'}
                   </span>
-                  <span className="block text-[12px] text-slate-500">
+                  <span className="block fs-12 text-slate-500">
                     {k === 'Pemasukan' ? 'Gaji, sewa diterima' : 'Langganan, cicilan, kos'}
                   </span>
                 </button>
@@ -238,7 +238,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
 
           <div className={cn('rounded-[24px] px-4 py-5 text-center', tone.soft)}>
             <div className="flex items-baseline justify-center gap-2">
-              <span className={cn('text-[22px] font-semibold', tone.text)}>
+              <span className={cn('fsh-22 font-semibold', tone.text)}>
                 {type === 'Pemasukan' ? '+' : '−'}
                 {getCurrencySymbol(currency)}
               </span>
@@ -250,32 +250,32 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
                 aria-label="Nominal"
                 style={{ width: `${Math.max(2, Math.min(14, amount.replace(/\..*/, '').length * 1.33 + 1))}ch` }}
                 className={cn(
-                  'min-w-0 bg-transparent text-left text-[40px] font-extrabold tabular-nums outline-none placeholder:text-slate-300',
+                  'min-w-0 bg-transparent text-left fsh-40 font-extrabold tabular-nums outline-none placeholder:text-slate-300',
                   tone.text,
                 )}
               />
             </div>
             {value > 0 && (
-              <p className="mt-1 text-[13px] text-slate-600">
+              <p className="mt-1 fs-13 text-slate-600">
                 ≈ {formatCurrency(Math.round(value * (PER_MONTH[interval] ?? 1)), currency)} per bulan
               </p>
             )}
           </div>
 
           <label className="block space-y-1.5">
-            <span className="px-1 text-[13px] font-medium text-slate-500">Nama</span>
+            <span className="px-1 fs-13 font-medium text-slate-500">Nama</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 60))}
               placeholder={type === 'Pemasukan' ? 'Mis. Gaji bulanan' : 'Mis. Netflix, kos, cicilan motor'}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3.5 text-[16px] outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3.5 fs-16 outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
             />
           </label>
 
           <div className="space-y-2">
-            <span className="px-1 text-[13px] font-medium text-slate-500">Kategori</span>
+            <span className="px-1 fs-13 font-medium text-slate-500">Kategori</span>
             {shownCategories.length === 0 ? (
-              <p className="px-1 text-[13px] text-slate-400">
+              <p className="px-1 fs-13 text-slate-400">
                 Belum ada kategori. Tambahkan di Pengaturan → Kategori & Anggaran.
               </p>
             ) : (
@@ -290,14 +290,14 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
                       onClick={() => setCategory(c)}
                       aria-pressed={on}
                       className={cn(
-                        'flex items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 text-[14px] transition',
+                        'flex items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 fs-14 transition',
                         on
                           ? cn('font-semibold text-slate-900 ring-2', tone.ring, tone.soft)
                           : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100',
                       )}
                     >
                       <span
-                        className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[15px]', v.tile)}
+                        className={cn('flex h-7 w-7 items-center justify-center rounded-full fs-15', v.tile)}
                         aria-hidden
                       >
                         {v.emoji}
@@ -311,13 +311,13 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
           </div>
 
           <label className="block space-y-1.5">
-            <span className="px-1 text-[13px] font-medium text-slate-500">
+            <span className="px-1 fs-13 font-medium text-slate-500">
               {type === 'Pemasukan' ? 'Masuk ke rekening' : 'Dari rekening'}
             </span>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[16px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 fs-16 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
             >
               {accounts.length === 0 && <option value="">Belum ada rekening</option>}
               {accounts.map((a) => (
@@ -337,7 +337,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
                   onClick={() => setIntervalValue(i)}
                   aria-pressed={interval === i}
                   className={cn(
-                    'rounded-full px-3.5 py-2 text-[14px] transition',
+                    'rounded-full px-3.5 py-2 fs-14 transition',
                     interval === i
                       ? 'bg-slate-900 font-semibold text-white'
                       : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100',
@@ -348,9 +348,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
               ))}
             </div>
             <label className="block space-y-1.5">
-              <span className="px-1 text-[13px] font-medium text-slate-500">
-                {editing ? 'Jadwal berikutnya' : 'Mulai'}
-              </span>
+              <span className="px-1 fs-13 font-medium text-slate-500">{editing ? 'Jadwal berikutnya' : 'Mulai'}</span>
               <div className="relative">
                 <CalendarDays
                   size={18}
@@ -362,14 +360,14 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
                   min={editing ? undefined : today}
                   onChange={(e) => setStart(e.target.value)}
                   className={cn(
-                    'w-full rounded-2xl border bg-white py-3.5 pl-11 pr-4 text-[16px] outline-none focus:ring-4 focus:ring-indigo-100',
+                    'w-full rounded-2xl border bg-white py-3.5 pl-11 pr-4 fs-16 outline-none focus:ring-4 focus:ring-indigo-100',
                     pastDate ? 'border-rose-300' : 'border-slate-200',
                   )}
                 />
               </div>
             </label>
             {upcoming.length > 0 && !pastDate && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-slate-600">
+              <div className="flex flex-wrap items-center gap-1.5 fs-12 text-slate-600">
                 <span>Dicatat:</span>
                 {upcoming.map((d) => (
                   <span key={d.toISOString()} className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
@@ -380,7 +378,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
               </div>
             )}
             {start === today && !editing && (
-              <p className="flex items-start gap-1.5 text-[12px] text-slate-500">
+              <p className="flex items-start gap-1.5 fs-12 text-slate-500">
                 <Info size={13} className="mt-0.5 shrink-0" /> Mulai hari ini: dicatat otomatis pada pengecekan
                 berikutnya (paling lambat besok pagi) dengan tanggal hari ini.
               </p>
@@ -388,18 +386,18 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
           </div>
 
           <label className="block space-y-1.5">
-            <span className="px-1 text-[13px] font-medium text-slate-500">
+            <span className="px-1 fs-13 font-medium text-slate-500">
               Catatan <span className="text-slate-400">· opsional</span>
             </span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
               rows={2}
-              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-[15px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 fs-15 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
             />
           </label>
 
-          {error && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[14px] text-rose-700">{error}</p>}
+          {error && <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-14 text-rose-700">{error}</p>}
         </div>
 
         <div className="border-t border-slate-100 px-5 py-4">
@@ -408,7 +406,7 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
             onClick={() => void submit()}
             disabled={Boolean(problem) || saving}
             className={cn(
-              'w-full rounded-full py-3.5 text-[16px] font-bold text-white transition disabled:bg-slate-200 disabled:text-slate-500',
+              'w-full rounded-full py-3.5 fs-16 font-bold text-white transition disabled:bg-slate-200 disabled:text-slate-500',
               tone.bg,
             )}
           >

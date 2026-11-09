@@ -142,7 +142,7 @@ export function SavingsSheet({ isOpen, onClose, accounts, goalBalances, initialM
         </div>
 
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Pos tabungan</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Pos tabungan</p>
           <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5">
             {goals.map((g) => (
               <button
@@ -163,12 +163,7 @@ export function SavingsSheet({ isOpen, onClose, accounts, goalBalances, initialM
               </button>
             ))}
           </div>
-          <p
-            className={cn(
-              'mt-2 px-1 text-[11px] tabular-nums',
-              overdraw ? 'text-rose-500 font-bold' : 'text-slate-400',
-            )}
-          >
+          <p className={cn('mt-2 px-1 fs-11 tabular-nums', overdraw ? 'text-rose-500 font-bold' : 'text-slate-400')}>
             Saldo {category}: {formatIDR(available)}
             {overdraw ? ' — penarikan melebihi saldo pos ini' : ''}
           </p>

@@ -23,7 +23,7 @@ export function AdminStatCard({
   return (
     <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+        <p className="fs-11 font-black text-slate-400 uppercase tracking-widest">{label}</p>
         {Icon && (
           <div className={cn('p-2 rounded-xl', bg, color)}>
             <Icon size={16} />
@@ -31,7 +31,7 @@ export function AdminStatCard({
         )}
       </div>
       <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-none">{value}</h3>
-      {note && <p className="text-[11px] font-medium text-slate-400">{note}</p>}
+      {note && <p className="fs-11 font-medium text-slate-400">{note}</p>}
     </div>
   );
 }

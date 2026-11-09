@@ -50,32 +50,30 @@ function TargetCard({
     <div className="group relative flex flex-col overflow-hidden rounded-[24px] bg-white p-5 ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)]">
       <div className="relative flex items-start gap-3">
         <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[24px]"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl fsh-24"
           style={{ background: `${color}1f` }}
           aria-hidden
         >
           {targetIcon(goal)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[16px] font-bold text-slate-900">{goal.name}</p>
-          <p className="text-[12px] text-slate-500">
+          <p className="truncate fs-16 font-bold text-slate-900">{goal.name}</p>
+          <p className="fs-12 text-slate-500">
             {goal.monthlyAmount > 0
               ? `Otomatis ${formatIDR(goal.monthlyAmount)} ${INTERVAL_LABEL[goal.interval]?.toLowerCase() ?? ''}`
               : 'Setor manual'}
           </p>
         </div>
         {status && (
-          <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold', status.cls)}>
-            {status.text}
-          </span>
+          <span className={cn('shrink-0 rounded-full px-2.5 py-1 fs-11 font-semibold', status.cls)}>{status.text}</span>
         )}
       </div>
 
       <div className="relative mt-4">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[20px] font-extrabold tabular-nums text-slate-900">{formatIDR(goal.currentTotal)}</p>
+          <p className="fsh-20 font-extrabold tabular-nums text-slate-900">{formatIDR(goal.currentTotal)}</p>
           {goal.targetAmount ? (
-            <p className="text-[13px] font-semibold tabular-nums" style={{ color }}>
+            <p className="fs-13 font-semibold tabular-nums" style={{ color }}>
               {Math.floor(pct)}%
             </p>
           ) : null}
@@ -88,13 +86,13 @@ function TargetCard({
                 style={{ width: `${pct}%`, background: done ? '#10b981' : color }}
               />
             </div>
-            <p className="mt-1.5 text-[12px] tabular-nums text-slate-500">
+            <p className="mt-1.5 fs-12 tabular-nums text-slate-500">
               dari {formatIDR(goal.targetAmount)}
               {need ? ` · butuh ± ${formatIDR(need)}/bln` : ''}
             </p>
           </>
         ) : (
-          <p className="mt-1 text-[12px] text-slate-500">terkumpul · belum ada nominal target</p>
+          <p className="mt-1 fs-12 text-slate-500">terkumpul · belum ada nominal target</p>
         )}
       </div>
 
@@ -102,7 +100,7 @@ function TargetCard({
         <button
           type="button"
           onClick={onDeposit}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[14px] font-semibold text-white transition hover:brightness-110"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 fs-14 font-semibold text-white transition hover:brightness-110"
           style={{ background: color }}
         >
           <Plus size={16} strokeWidth={2.5} /> Setor
@@ -397,22 +395,22 @@ export default function TabunganPanel() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900 md:text-[26px]">Tabungan</h2>
-            <p className="text-[14px] text-slate-500">Sisihkan sedikit demi sedikit untuk tujuanmu.</p>
+            <h2 className="fsh-22 font-extrabold tracking-tight text-slate-900 md:fsh-26">Tabungan</h2>
+            <p className="fs-14 text-slate-500">Sisihkan sedikit demi sedikit untuk tujuanmu.</p>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => openSaving('Penarikan')}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:flex-none"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-14 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:flex-none"
           >
             <ArrowUpRight size={16} /> Tarik
           </button>
           <button
             type="button"
             onClick={() => openSaving('Setoran')}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 sm:flex-none"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 fs-14 font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 sm:flex-none"
           >
             <ArrowDownLeft size={16} /> Setor
           </button>
@@ -430,18 +428,18 @@ export default function TabunganPanel() {
         />
         <div className="relative grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
           <div>
-            <p className="flex items-center gap-2 text-[14px] text-white/70">
+            <p className="flex items-center gap-2 fs-14 text-white/70">
               <PiggyBank size={16} /> Total tabungan
             </p>
             <p
               className={cn(
-                'mt-1 text-[34px] font-extrabold tabular-nums leading-tight md:text-[42px]',
+                'mt-1 fsh-34 font-extrabold tabular-nums leading-tight md:fsh-42',
                 totalSaldo < 0 && 'text-rose-300',
               )}
             >
               {formatIDR(totalSaldo)}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[13px] tabular-nums">
+            <div className="mt-3 flex flex-wrap gap-2 fs-13 tabular-nums">
               <span className="rounded-full bg-white/10 px-3 py-1">
                 Bulan ini <span className="font-semibold text-emerald-300">+{formatIDR(monthSetor)}</span>
               </span>
@@ -452,9 +450,9 @@ export default function TabunganPanel() {
           </div>
           <div className="rounded-[22px] bg-white/10 p-4 backdrop-blur">
             <div className="flex items-baseline justify-between">
-              <p className="text-[13px] text-white/70">{goals.length} target</p>
+              <p className="fs-13 text-white/70">{goals.length} target</p>
               {targetAim > 0 && (
-                <p className="text-[13px] font-semibold tabular-nums">
+                <p className="fs-13 font-semibold tabular-nums">
                   {Math.min(100, Math.floor((targetSaved / targetAim) * 100))}%
                 </p>
               )}
@@ -465,7 +463,7 @@ export default function TabunganPanel() {
                 style={{ width: `${targetAim > 0 ? Math.min(100, (targetSaved / targetAim) * 100) : 0}%` }}
               />
             </div>
-            <p className="mt-2 text-[12px] tabular-nums text-white/70">
+            <p className="mt-2 fs-12 tabular-nums text-white/70">
               {targetAim > 0 ? `${formatIDR(targetSaved)} dari ${formatIDR(targetAim)}` : 'Belum ada nominal target'}
             </p>
           </div>
@@ -474,19 +472,19 @@ export default function TabunganPanel() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[18px] font-bold text-slate-900">Target</h2>
+          <h2 className="fs-18 font-bold text-slate-900">Target</h2>
           <button
             type="button"
             onClick={() => setTargetModal({ open: true, goal: null, preset: null })}
-            className="flex items-center gap-1 text-[14px] font-semibold text-indigo-600 hover:text-indigo-700"
+            className="flex items-center gap-1 fs-14 font-semibold text-indigo-600 hover:text-indigo-700"
           >
             <Plus size={16} /> Target baru
           </button>
         </div>
         {goals.length === 0 ? (
           <div className="rounded-[24px] border-2 border-dashed border-slate-200 bg-white/60 p-5">
-            <p className="text-[15px] font-semibold text-slate-900">Mau nabung untuk apa?</p>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="fs-15 font-semibold text-slate-900">Mau nabung untuk apa?</p>
+            <p className="mt-0.5 fs-13 text-slate-500">
               Pilih salah satu atau buat sendiri — progresnya dihitung dari setoranmu.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -495,7 +493,7 @@ export default function TabunganPanel() {
                   key={sg.name}
                   type="button"
                   onClick={() => setTargetModal({ open: true, goal: null, preset: sg })}
-                  className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[14px] font-medium text-slate-700 ring-1 ring-slate-200 transition hover:ring-indigo-300"
+                  className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 fs-14 font-medium text-slate-700 ring-1 ring-slate-200 transition hover:ring-indigo-300"
                 >
                   <span aria-hidden>{sg.icon}</span> {sg.name}
                 </button>
@@ -503,7 +501,7 @@ export default function TabunganPanel() {
               <button
                 type="button"
                 onClick={() => setTargetModal({ open: true, goal: null, preset: null })}
-                className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3.5 py-2 text-[14px] font-semibold text-white hover:bg-indigo-700"
+                className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3.5 py-2 fs-14 font-semibold text-white hover:bg-indigo-700"
               >
                 <Plus size={15} /> Buat sendiri
               </button>
@@ -528,7 +526,7 @@ export default function TabunganPanel() {
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
                 <Plus size={22} />
               </span>
-              <span className="text-[14px] font-semibold">Tambah target</span>
+              <span className="fs-14 font-semibold">Tambah target</span>
             </button>
           </div>
         )}
@@ -536,7 +534,7 @@ export default function TabunganPanel() {
 
       {otherPots.length > 0 && (
         <section className="space-y-3">
-          <h2 className="px-1 text-[18px] font-bold text-slate-900">Pos tabungan lain</h2>
+          <h2 className="px-1 fs-18 font-bold text-slate-900">Pos tabungan lain</h2>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {otherPots.map(([cat, bal]) => (
               <button
@@ -545,13 +543,8 @@ export default function TabunganPanel() {
                 onClick={() => openSaving('Setoran', cat)}
                 className="min-w-[160px] shrink-0 rounded-[20px] bg-white p-4 text-left ring-1 ring-slate-200/70 hover:ring-indigo-200"
               >
-                <p className="truncate text-[13px] text-slate-500">{cat}</p>
-                <p
-                  className={cn(
-                    'mt-0.5 text-[16px] font-bold tabular-nums',
-                    bal < 0 ? 'text-rose-600' : 'text-slate-900',
-                  )}
-                >
+                <p className="truncate fs-13 text-slate-500">{cat}</p>
+                <p className={cn('mt-0.5 fs-16 font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>
                   {formatIDR(bal)}
                 </p>
               </button>
@@ -560,15 +553,13 @@ export default function TabunganPanel() {
         </section>
       )}
 
-      {error && (
-        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-[14px] text-rose-700">{error}</div>
-      )}
+      {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 fs-14 text-rose-700">{error}</div>}
 
       <section className="overflow-hidden rounded-[28px] bg-white ring-1 ring-slate-200/70">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
           <div>
-            <h2 className="text-[18px] font-bold text-slate-900">Riwayat</h2>
-            <p className="text-[13px] text-slate-500">{periodLabel}</p>
+            <h2 className="fs-18 font-bold text-slate-900">Riwayat</h2>
+            <p className="fs-13 text-slate-500">{periodLabel}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative flex-1 sm:w-56 sm:flex-none">
@@ -581,7 +572,7 @@ export default function TabunganPanel() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari…"
-                className="w-full rounded-full bg-slate-100 py-2.5 pl-10 pr-4 text-[14px] outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                className="w-full rounded-full bg-slate-100 py-2.5 pl-10 pr-4 fs-14 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
               />
             </div>
             <MonthPicker
@@ -595,20 +586,20 @@ export default function TabunganPanel() {
         </div>
 
         {loading ? (
-          <p className="p-10 text-center text-[14px] text-slate-400">Memuat…</p>
+          <p className="p-10 text-center fs-14 text-slate-400">Memuat…</p>
         ) : grouped.length === 0 ? (
           <div className="flex flex-col items-center gap-2 p-10 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <Wallet size={22} />
             </span>
-            <p className="text-[15px] font-semibold text-slate-800">
+            <p className="fs-15 font-semibold text-slate-800">
               {searchQuery ? 'Tidak ada yang cocok' : 'Belum ada setoran bulan ini'}
             </p>
             {!searchQuery && (
               <button
                 type="button"
                 onClick={() => openSaving('Setoran')}
-                className="mt-1 text-[14px] font-semibold text-indigo-600"
+                className="mt-1 fs-14 font-semibold text-indigo-600"
               >
                 Catat setoran
               </button>
@@ -618,7 +609,7 @@ export default function TabunganPanel() {
           <div className="divide-y divide-slate-100">
             {grouped.map((g) => (
               <div key={g.day}>
-                <p className="bg-slate-50/70 px-4 py-2 text-[12px] font-semibold text-slate-500 md:px-6">{g.day}</p>
+                <p className="bg-slate-50/70 px-4 py-2 fs-12 font-semibold text-slate-500 md:px-6">{g.day}</p>
                 <ul>
                   {g.items.map((item) => {
                     const out = item.transactionType === 'Penarikan';
@@ -627,7 +618,7 @@ export default function TabunganPanel() {
                       <li key={item.id} className="group flex items-center gap-3 px-4 py-3 md:px-6">
                         <span
                           className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[18px]',
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl fs-18',
                             out ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600',
                           )}
                           aria-hidden
@@ -635,10 +626,10 @@ export default function TabunganPanel() {
                           {target ? targetIcon(target) : out ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold text-slate-900">
+                          <p className="truncate fs-15 font-semibold text-slate-900">
                             {item.description || (out ? 'Penarikan' : 'Setoran')}
                           </p>
-                          <p className="truncate text-[12px] text-slate-500">
+                          <p className="truncate fs-12 text-slate-500">
                             {target?.name ?? item.category}
                             {item.subCategory ? ` · ${item.subCategory}` : ''} · {out ? 'ke' : 'dari'}{' '}
                             {getAccountName(item.fromAccount || '')}
@@ -646,7 +637,7 @@ export default function TabunganPanel() {
                         </div>
                         <p
                           className={cn(
-                            'shrink-0 text-right text-[15px] font-bold tabular-nums',
+                            'shrink-0 text-right fs-15 font-bold tabular-nums',
                             out ? 'text-rose-600' : 'text-emerald-600',
                           )}
                         >
@@ -671,7 +662,7 @@ export default function TabunganPanel() {
           </div>
         )}
         {!loading && savings.length > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] md:px-6">
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 fs-13 md:px-6">
             <span className="text-slate-500">{savings.length} catatan</span>
             <span className="font-semibold tabular-nums text-slate-700">
               Bersih {monthSetor - monthTarik < 0 ? '−' : '+'}

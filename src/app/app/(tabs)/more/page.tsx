@@ -257,17 +257,17 @@ export default function AppMorePage() {
             <StaggerItem key={href}>
               <Link href={href} onClick={lightTap} className="relative flex flex-col items-center gap-1.5 text-center">
                 {f && isNew(f, APP_VERSION) ? (
-                  <span className="absolute -top-1.5 right-0 z-10 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px text-[8.5px] font-black uppercase text-white">
+                  <span className="absolute -top-1.5 right-0 z-10 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px fs-8.5 font-black uppercase text-white">
                     Baru
                   </span>
                 ) : null}
                 <span className={`w-14 h-14 rounded-2xl flex items-center justify-center ${color}`}>
                   <Icon size={22} />
                 </span>
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{label}</span>
+                <span className="fs-11 font-bold text-slate-700 dark:text-slate-300 leading-tight">{label}</span>
                 {st ? (
                   <span
-                    className={`line-clamp-1 text-[9.5px] font-semibold leading-tight ${st.tone === 'warn' ? 'text-amber-600' : st.tone === 'bad' ? 'text-rose-600' : st.tone === 'good' ? 'text-emerald-600' : 'text-slate-400'}`}
+                    className={`line-clamp-1 fs-9.5 font-semibold leading-tight ${st.tone === 'warn' ? 'text-amber-600' : st.tone === 'bad' ? 'text-rose-600' : st.tone === 'good' ? 'text-emerald-600' : 'text-slate-400'}`}
                   >
                     {st.text}
                   </span>
@@ -288,7 +288,7 @@ export default function AppMorePage() {
         </span>
         <span className="flex-1">
           <span className="block text-sm font-bold text-slate-900 dark:text-white">Profil & Pengaturan</span>
-          <span className="block text-[11px] text-slate-400">Tema, akun, keluar</span>
+          <span className="block fs-11 text-slate-400">Tema, akun, keluar</span>
         </span>
         <ChevronRight size={18} className="text-slate-300" />
       </Link>
@@ -304,7 +304,7 @@ export default function AppMorePage() {
           </span>
           <span className="flex-1">
             <span className="block text-sm font-bold text-slate-900 dark:text-white">Pasang Input Cepat</span>
-            <span className="block text-[11px] text-slate-400">Catat kilat dari layar utama HP</span>
+            <span className="block fs-11 text-slate-400">Catat kilat dari layar utama HP</span>
           </span>
           <ChevronRight size={18} className="text-slate-300" />
         </Link>
@@ -318,7 +318,7 @@ export default function AppMorePage() {
           </span>
           <span className="flex-1">
             <span className="block text-sm font-bold text-slate-900 dark:text-white">Saran & Kritik</span>
-            <span className="block text-[11px] text-slate-400">Bantu kami bikin Leosiqra lebih baik</span>
+            <span className="block fs-11 text-slate-400">Bantu kami bikin Leosiqra lebih baik</span>
           </span>
           <ChevronRight size={18} className="text-slate-300" />
         </Link>
@@ -335,7 +335,7 @@ export default function AppMorePage() {
           </span>
           <span className="flex-1">
             <span className="block text-sm font-bold text-slate-900 dark:text-white">Putar tur aplikasi</span>
-            <span className="block text-[11px] text-slate-400">Lihat lagi cara pakai tiap fitur</span>
+            <span className="block fs-11 text-slate-400">Lihat lagi cara pakai tiap fitur</span>
           </span>
           <ChevronRight size={18} className="text-slate-300" />
         </button>
@@ -346,7 +346,7 @@ export default function AppMorePage() {
           <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Fitur lengkap
           </h2>
-          <span className="text-[10px] font-bold text-slate-400">dibuka di versi web</span>
+          <span className="fs-10 font-bold text-slate-400">dibuka di versi web</span>
         </div>
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
           {WEB_FEATURES.map(({ label, desc, href, icon: Icon, color }) => (
@@ -361,13 +361,13 @@ export default function AppMorePage() {
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">{label}</span>
-                {desc && <span className="block text-[11px] text-slate-400 truncate">{desc}</span>}
+                {desc && <span className="block fs-11 text-slate-400 truncate">{desc}</span>}
               </span>
               <ExternalLink size={14} className="text-slate-300 shrink-0" />
             </a>
           ))}
         </div>
-        <p className="text-[11px] text-slate-400 mt-2 px-1">Fitur-fitur ini sedang dipindahkan ke tampilan aplikasi.</p>
+        <p className="fs-11 text-slate-400 mt-2 px-1">Fitur-fitur ini sedang dipindahkan ke tampilan aplikasi.</p>
       </section>
     </div>
   );

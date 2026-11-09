@@ -250,7 +250,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const list = STICKERS.filter((s) => group === 'Semua' || s.group === group);
   const chip = (on: boolean) =>
     cn(
-      'h-9 shrink-0 rounded-full px-3.5 text-[12.5px] font-bold transition',
+      'h-9 shrink-0 rounded-full px-3.5 fs-12.5 font-bold transition',
       on
         ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
         : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -343,21 +343,21 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
               <button
                 type="button"
                 onClick={() => toFront(selected.uid)}
-                className="flex h-8 items-center gap-1 rounded-full bg-black/60 px-3 text-[11.5px] font-bold text-white backdrop-blur"
+                className="flex h-8 items-center gap-1 rounded-full bg-black/60 px-3 fs-11.5 font-bold text-white backdrop-blur"
               >
                 <Layers size={13} /> Depan
               </button>
               <button
                 type="button"
                 onClick={() => update(selected.uid, { rot: 0, scale: 1 })}
-                className="h-8 rounded-full bg-black/60 px-3 text-[11.5px] font-bold text-white backdrop-blur"
+                className="h-8 rounded-full bg-black/60 px-3 fs-11.5 font-bold text-white backdrop-blur"
               >
                 Luruskan
               </button>
               <button
                 type="button"
                 onClick={() => remove(selected.uid)}
-                className="flex h-8 items-center gap-1 rounded-full bg-rose-500/90 px-3 text-[11.5px] font-bold text-white"
+                className="flex h-8 items-center gap-1 rounded-full bg-rose-500/90 px-3 fs-11.5 font-bold text-white"
               >
                 <Trash2 size={13} /> Hapus
               </button>
@@ -379,7 +379,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
               type="button"
               onClick={() => setRange(r.id)}
               className={cn(
-                'h-8 rounded-full text-[12.5px] font-bold transition',
+                'h-8 rounded-full fs-12.5 font-bold transition',
                 range === r.id ? 'bg-white text-slate-950 shadow dark:bg-slate-950 dark:text-white' : 'text-slate-500',
               )}
             >
@@ -394,7 +394,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
               type="button"
               onClick={() => setSize(s)}
               className={cn(
-                'h-8 rounded-full px-2.5 text-[12px] font-bold',
+                'h-8 rounded-full px-2.5 fs-12 font-bold',
                 size === s ? 'bg-white text-slate-950 shadow dark:bg-slate-950 dark:text-white' : 'text-slate-500',
               )}
             >
@@ -421,7 +421,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           onClick={() => camIn.current?.click()}
           aria-label="Foto dari kamera"
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 text-[12.5px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 fs-12.5 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <Camera size={15} /> <span className="hidden sm:inline">Kamera</span>
         </button>
@@ -429,7 +429,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           onClick={() => galIn.current?.click()}
           aria-label="Foto dari galeri"
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 text-[12.5px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 fs-12.5 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <ImagePlus size={15} /> <span className="hidden sm:inline">Galeri</span>
         </button>
@@ -511,14 +511,12 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                     {s.render({ s: stats, hide })}
                   </div>
                   {n > 0 && (
-                    <span className="absolute right-1.5 top-1.5 rounded-full bg-pink-400 px-1.5 text-[10px] font-black text-slate-950">
+                    <span className="absolute right-1.5 top-1.5 rounded-full bg-pink-400 px-1.5 fs-10 font-black text-slate-950">
                       ×{n}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 truncate text-[10.5px] font-semibold text-slate-600 dark:text-slate-300">
-                  {s.name}
-                </div>
+                <div className="mt-0.5 truncate fs-10.5 font-semibold text-slate-600 dark:text-slate-300">{s.name}</div>
               </button>
             );
           })}
@@ -534,7 +532,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           disabled={!!busy || !txs}
           onClick={() => doExport('share')}
-          className="flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 via-pink-300 to-violet-300 text-[14px] font-black text-slate-950 shadow-lg disabled:opacity-60"
+          className="flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-300 via-pink-300 to-violet-300 fs-14 font-black text-slate-950 shadow-lg disabled:opacity-60"
         >
           {busy === 'share' ? <Loader2 size={17} className="animate-spin" /> : <Share2 size={17} />} Bagikan
         </button>
@@ -542,14 +540,14 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           disabled={!!busy || !txs}
           onClick={() => doExport('save')}
-          className="flex h-11 items-center justify-center gap-2 rounded-full bg-slate-950 text-[14px] font-black text-white shadow-lg disabled:opacity-60 dark:bg-white dark:text-slate-950"
+          className="flex h-11 items-center justify-center gap-2 rounded-full bg-slate-950 fs-14 font-black text-white shadow-lg disabled:opacity-60 dark:bg-white dark:text-slate-950"
         >
           {busy === 'save' ? <Loader2 size={17} className="animate-spin" /> : <Download size={17} />} Simpan
         </button>
       </div>
       <p
         className={cn(
-          'mt-1.5 truncate text-center text-[11px] text-slate-500 dark:text-slate-400',
+          'mt-1.5 truncate text-center fs-11 text-slate-500 dark:text-slate-400',
           !msg && '[@media(max-height:640px)]:hidden',
         )}
       >
@@ -567,7 +565,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         <Link
           href={variant === 'app' ? '/app/more' : '/membership/dashboard'}
           aria-label={variant === 'app' ? 'Kembali' : 'Kembali ke Ringkasan'}
-          className="group flex h-10 items-center gap-1.5 rounded-full bg-slate-950 pl-1.5 pr-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
+          className="group flex h-10 items-center gap-1.5 rounded-full bg-slate-950 pl-1.5 pr-1.5 fs-13 font-semibold text-white shadow-sm hover:bg-slate-800 sm:pr-4"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5">
             <ArrowLeft size={16} />
@@ -575,14 +573,14 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           <span className="hidden sm:inline">{variant === 'app' ? 'Kembali' : 'Ringkasan'}</span>
         </Link>
         <div className="min-w-0 text-center">
-          <h1 className="truncate text-[18px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[22px]">
+          <h1 className="truncate fs-18 font-extrabold tracking-tight text-slate-900 dark:text-white md:fsh-22">
             Stikerku
           </h1>
-          <p className="truncate text-[11.5px] text-slate-500 [@media(max-height:640px)]:hidden dark:text-slate-400">
+          <p className="truncate fs-11.5 text-slate-500 [@media(max-height:640px)]:hidden dark:text-slate-400">
             Foto + angka keuanganmu, siap dibagikan
           </p>
         </div>
-        <span className="flex h-10 items-center rounded-full bg-gradient-to-r from-amber-200 to-pink-200 px-3 text-[12px] font-black text-slate-900">
+        <span className="flex h-10 items-center rounded-full bg-gradient-to-r from-amber-200 to-pink-200 px-3 fs-12 font-black text-slate-900">
           {STICKERS.length} stiker
         </span>
       </header>

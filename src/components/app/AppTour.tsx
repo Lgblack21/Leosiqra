@@ -189,11 +189,9 @@ export function AppTour() {
                 transition={{ duration: 0.25 }}
               >
                 <h2 className="text-lg font-black text-slate-900 dark:text-white">{s.title}</h2>
-                <p className="mb-3 mt-1 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{s.content}</p>
+                <p className="mb-3 mt-1 fs-13 leading-relaxed text-slate-500 dark:text-slate-400">{s.content}</p>
                 <FeatureDemo kind={s.demo} />
-                <p className="mb-1.5 mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Cara pakai
-                </p>
+                <p className="mb-1.5 mt-3 fs-10 font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
                 <HowTo steps={s.how} />
                 {s.link && (
                   <Link

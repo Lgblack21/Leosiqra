@@ -70,7 +70,7 @@ export function KasirStyleEditor({
   };
   const seg = (on: boolean) =>
     cn(
-      'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-bold transition-colors',
+      'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 fs-12 font-bold transition-colors',
       on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400',
     );
 
@@ -115,7 +115,7 @@ export function KasirStyleEditor({
       {!shop.styleReady && (
         <p
           role="alert"
-          className="rounded-2xl bg-amber-50 px-3 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"
+          className="rounded-2xl bg-amber-50 px-3 py-2.5 fs-12 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"
         >
           Tampilan kasir sedang disiapkan di server — sementara belum bisa disimpan.
         </p>
@@ -123,7 +123,7 @@ export function KasirStyleEditor({
       {error && (
         <p
           role="alert"
-          className="rounded-2xl bg-rose-50 px-3 py-2.5 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-3 py-2.5 fs-12 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </p>
@@ -143,7 +143,7 @@ export function KasirStyleEditor({
 
       {bebas && (
         <div className="space-y-3 rounded-2xl ring-1 ring-violet-200 p-3 dark:ring-violet-500/30">
-          <p className="flex items-start gap-1.5 text-[12px] text-slate-600 dark:text-slate-300">
+          <p className="flex items-start gap-1.5 fs-12 text-slate-600 dark:text-slate-300">
             <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-600" />{' '}
             <span>
               Desain bebas: HTML, CSS & JavaScript sesukamu. Berjalan di kotak terisolasi — tidak bisa mengakses akun,
@@ -163,7 +163,7 @@ export function KasirStyleEditor({
               <button
                 type="button"
                 onClick={() => set('customHtml', KASIR_SAMPLE_HTML)}
-                className="flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-300"
+                className="flex items-center gap-1 fs-11 font-bold text-violet-600 dark:text-violet-300"
               >
                 <Wand2 size={12} /> Pakai contoh
               </button>
@@ -174,13 +174,13 @@ export function KasirStyleEditor({
               rows={10}
               spellCheck={false}
               placeholder="<style>…</style> <div id=app></div> <script>Leosiqra.onData(d => …)</script>"
-              className="w-full resize-y rounded-2xl bg-slate-950 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-emerald-200 outline-none ring-2 ring-transparent placeholder:text-slate-500 focus:ring-violet-500"
+              className="w-full resize-y rounded-2xl bg-slate-950 px-3 py-2.5 font-mono fs-11 leading-relaxed text-emerald-200 outline-none ring-2 ring-transparent placeholder:text-slate-500 focus:ring-violet-500"
             />
-            <p className="mt-1 text-right text-[10px] text-slate-400">
+            <p className="mt-1 text-right fs-10 text-slate-400">
               {st.customHtml.length.toLocaleString('id-ID')} / 60.000 karakter
             </p>
           </div>
-          <details className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+          <details className="rounded-xl bg-slate-50 px-3 py-2 fs-11 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <summary className="cursor-pointer font-bold">Cara pakai data kasir di kode</summary>
             <ul className="mt-1.5 space-y-1">
               <li>
@@ -227,15 +227,15 @@ export function KasirStyleEditor({
         className="rounded-2xl ring-1 ring-slate-100 p-3 dark:ring-slate-800"
         open={Boolean(st.logoUrl || Object.keys(st.categoryImages).length)}
       >
-        <summary className="cursor-pointer text-[13px] font-extrabold text-slate-900 dark:text-white">
+        <summary className="cursor-pointer fs-13 font-extrabold text-slate-900 dark:text-white">
           Logo & gambar kategori
         </summary>
-        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+        <p className="mt-1 fs-11 text-slate-500 dark:text-slate-400">
           Tempel tautan gambar https atau gambar data:image (mis. ikon SVG buatan AI-mu). Kosongkan untuk kembali ke
           inisial.
         </p>
         <label className="mt-2 flex items-center gap-2">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-[20px] dark:bg-slate-800">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 fsh-20 dark:bg-slate-800">
             <CatalogImage
               src={st.logoUrl}
               alt="Logo"
@@ -249,7 +249,7 @@ export function KasirStyleEditor({
             inputMode="url"
             placeholder="Logo toko — https://…/logo.png"
             aria-label="Tautan logo toko"
-            className={cn(fieldCls, 'py-2 text-[12px]')}
+            className={cn(fieldCls, 'py-2 fs-12')}
           />
         </label>
         {groups.length > 0 && (
@@ -258,7 +258,7 @@ export function KasirStyleEditor({
               <li key={g} className="flex items-center gap-2">
                 <span
                   className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[12px] font-extrabold',
+                    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl fs-12 font-extrabold',
                     toneOf(g),
                   )}
                 >
@@ -275,7 +275,7 @@ export function KasirStyleEditor({
                   inputMode="url"
                   placeholder={`${g} — https://…`}
                   aria-label={`Gambar ${g}`}
-                  className={cn(fieldCls, 'py-2 text-[12px]')}
+                  className={cn(fieldCls, 'py-2 fs-12')}
                 />
               </li>
             ))}
@@ -292,11 +292,11 @@ export function KasirStyleEditor({
       </details>
 
       <div className={cn('web-keep rounded-2xl p-3 text-white', (KASIR_THEME[st.theme] ?? KASIR_THEME.ungu).header)}>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Kasir</p>
-        <p className="text-[16px] font-extrabold">
+        <p className="fs-10 font-bold uppercase tracking-wider text-white/50">Kasir</p>
+        <p className="fs-16 font-extrabold">
           {shop.emoji || '🏪'} {shop.name}
         </p>
-        {st.greeting && <p className="text-[11px] text-white/70">{st.greeting}</p>}
+        {st.greeting && <p className="fs-11 text-white/70">{st.greeting}</p>}
       </div>
 
       <div>
@@ -309,7 +309,7 @@ export function KasirStyleEditor({
               onClick={() => set('theme', id)}
               aria-pressed={st.theme === id}
               className={cn(
-                'flex flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-bold ring-1 transition',
+                'flex flex-col items-center gap-1 rounded-2xl py-2 fs-11 font-bold ring-1 transition',
                 st.theme === id
                   ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900'
                   : 'bg-white text-slate-600 ring-slate-100 hover:ring-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800',
@@ -342,7 +342,7 @@ export function KasirStyleEditor({
             Wajib diisi
           </button>
         </div>
-        <p className="mt-1 px-1 text-[11px] text-slate-400">
+        <p className="mt-1 px-1 fs-11 text-slate-400">
           {st.buyer === 'wajib'
             ? 'Kasir harus mengisi nama / no. HP / ID pelanggan (mis. ID game untuk top up) sebelum bayar.'
             : 'Boleh dikosongkan — cocok untuk toko, warung, atau jualan langsung.'}
@@ -372,7 +372,7 @@ export function KasirStyleEditor({
                   <Rows3 size={14} /> Semua produk
                 </button>
               </div>
-              <p className="mt-1 px-1 text-[11px] text-slate-400">
+              <p className="mt-1 px-1 fs-11 text-slate-400">
                 {st.browse === 'katalog'
                   ? 'Kotak per kategori → ketuk masuk daftar produk, ada tombol Kembali ke katalog.'
                   : 'Semua produk dalam satu halaman, pilih kategori lewat chip.'}
@@ -512,7 +512,7 @@ export function KasirStyleEditor({
             .filter(([k]) => !bebas || k === 'showStats' || k === 'showRecent')
             .map(([k, l]) => (
               <label key={k} className="flex items-center justify-between gap-3 px-4 py-3">
-                <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{l}</span>
+                <span className="fs-13 font-bold text-slate-700 dark:text-slate-200">{l}</span>
                 <input
                   type="checkbox"
                   checked={st[k]}
@@ -550,10 +550,8 @@ export function KasirStyleEditor({
           <ul className="space-y-1.5">
             {order.map((g, i) => (
               <li key={g} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-                <span className="w-5 text-center text-[12px] font-bold text-slate-400">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-slate-800 dark:text-slate-100">
-                  {g}
-                </span>
+                <span className="w-5 text-center fs-12 font-bold text-slate-400">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate fs-13 font-bold text-slate-800 dark:text-slate-100">{g}</span>
                 <button
                   type="button"
                   onClick={() => move(i, -1)}
@@ -582,7 +580,7 @@ export function KasirStyleEditor({
         type="button"
         onClick={save}
         disabled={busy || !shop.styleReady}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan tampilan
       </button>

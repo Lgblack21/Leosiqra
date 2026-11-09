@@ -159,14 +159,14 @@ export default function RegisterPage() {
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
                 <Check size={28} />
               </div>
-              <h2 className="mt-4 text-[24px] font-extrabold tracking-tight">
+              <h2 className="mt-4 fsh-24 font-extrabold tracking-tight">
                 Halo{firstName ? `, ${firstName}` : ''}! Akunmu siap.
               </h2>
               <p className="mt-1.5 text-sm text-slate-500">Leo antar kamu ke dashboard…</p>
             </motion.div>
           ) : (
             <motion.div key="form" exit={{ opacity: 0, y: -8 }}>
-              <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Buat akun</h2>
+              <h2 className="fsh-26 font-extrabold tracking-tight text-slate-900">Buat akun</h2>
               <p className="mt-1 text-sm text-slate-500">
                 Sudah punya akun?{' '}
                 <Link href={withNext('/auth/login', next)} className="font-bold text-indigo-600 hover:underline">
@@ -178,7 +178,7 @@ export default function RegisterPage() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600"
+                  className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600"
                   role="alert"
                 >
                   <AlertCircle size={16} className="mt-px shrink-0" /> {error}
@@ -187,7 +187,7 @@ export default function RegisterPage() {
 
               <a
                 href={googleHref}
-                className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-[15px] font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+                className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 fs-15 font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
               >
                 <GoogleIcon size={19} />
                 Daftar dengan Google
@@ -244,7 +244,7 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block">
-                    <span className="mb-1.5 flex items-center justify-between pl-1 text-[13px] font-semibold text-slate-600">
+                    <span className="mb-1.5 flex items-center justify-between pl-1 fs-13 font-semibold text-slate-600">
                       Password
                       {strength.label && <span className={`font-bold ${strength.text}`}>{strength.label}</span>}
                     </span>
@@ -294,7 +294,7 @@ export default function RegisterPage() {
                     {checks.map((c) => (
                       <span
                         key={c.label}
-                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors duration-300 ${c.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
+                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 fs-11 font-semibold transition-colors duration-300 ${c.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
                       >
                         <motion.span
                           initial={false}
@@ -308,7 +308,7 @@ export default function RegisterPage() {
                     ))}
                   </div>
                   {password && !showPassword && (
-                    <p className="mt-2 px-1 text-[11px] text-slate-400">
+                    <p className="mt-2 px-1 fs-11 text-slate-400">
                       Cukup ketik sekali — cek dulu ketikanmu lewat ikon mata.
                     </p>
                   )}
@@ -345,7 +345,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowWhatsapp(true)}
-                    className="flex items-center gap-1.5 pl-1 text-[13px] font-semibold text-slate-500 transition-colors hover:text-indigo-600"
+                    className="flex items-center gap-1.5 pl-1 fs-13 font-semibold text-slate-500 transition-colors hover:text-indigo-600"
                   >
                     <Plus size={15} /> Tambah nomor WhatsApp{' '}
                     <span className="font-normal text-slate-400">(opsional)</span>

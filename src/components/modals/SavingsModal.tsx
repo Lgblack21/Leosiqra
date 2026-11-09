@@ -148,7 +148,7 @@ export const SavingsModal = ({
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
             {isPenarikan ? 'Untuk Apa (Keperluan Penarikan)' : 'Deskripsi'}
           </label>
           <input
@@ -162,9 +162,7 @@ export const SavingsModal = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Goal / Kategori
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Goal / Kategori</label>
             <div className="relative">
               <select
                 value={formData.category}
@@ -201,7 +199,7 @@ export const SavingsModal = ({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
             <input
               type="text"
               value={formData.subCategory}
@@ -214,7 +212,7 @@ export const SavingsModal = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                 {getCurrencySymbol(formData.currency)}
@@ -241,7 +239,7 @@ export const SavingsModal = ({
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                <p className="fs-9 font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
                   Terkonversi ke IDR
                 </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
@@ -249,13 +247,13 @@ export const SavingsModal = ({
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            <span className="fs-10 font-medium text-slate-400 italic">Live Rate</span>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
               {isPenarikan ? 'Ke Rekening' : 'Dari Rekening'}
             </label>
             <div className="relative">
@@ -285,7 +283,7 @@ export const SavingsModal = ({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
             <input
               type="date"
               value={formData.date}
@@ -297,9 +295,7 @@ export const SavingsModal = ({
 
         {!isPenarikan && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Ke Goal (Tujuan)
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal (Tujuan)</label>
             <input
               type="text"
               value={formData.toGoal}

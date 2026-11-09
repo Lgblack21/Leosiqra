@@ -181,7 +181,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
               style={{ width: `${paidPct}%` }}
             />
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
+          <p className="mt-2 fs-11 text-slate-400">
             {debt.subCategory && debt.subCategory !== 'Piutang' ? `${debt.subCategory} · ` : ''}dicatat{' '}
             {fmtDate(debt.date)}
             {debt.note ? ` · ${debt.note}` : ''}
@@ -228,7 +228,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
               />
             )}
             {!needAccount && (
-              <p className="text-[11px] text-slate-400 px-1">
+              <p className="fs-11 text-slate-400 px-1">
                 {isHutang ? 'Dibayar dari' : 'Masuk ke'} {accounts.find((a) => a.id === accountId)?.name}.
               </p>
             )}
@@ -285,7 +285,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
                       >
                         {due ? due.text : 'Belum ada jatuh tempo'}
                       </span>
-                      <span className="block text-[11px] text-slate-400">
+                      <span className="block fs-11 text-slate-400">
                         {due ? 'Ketuk untuk ubah' : 'Atur supaya diingatkan H-3 & H-1'}
                       </span>
                     </span>
@@ -323,7 +323,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
                         <span className="block font-bold text-slate-800 dark:text-slate-100">
                           {p.subCategory?.endsWith('Lunas') ? 'Pelunasan' : 'Cicilan'}
                         </span>
-                        <span className="block text-[11px] text-slate-400">{fmtDate(p.date)}</span>
+                        <span className="block fs-11 text-slate-400">{fmtDate(p.date)}</span>
                       </span>
                       <span className="font-black tabular-nums text-slate-700 dark:text-slate-200">
                         {formatMoney(p.amount, p.currency || currency)}
@@ -348,7 +348,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
               <Trash2 size={15} /> {confirmDelete ? 'Yakin hapus catatan ini?' : 'Hapus catatan'}
             </button>
             {confirmDelete && (
-              <p className="text-[11px] text-center text-slate-500">
+              <p className="fs-11 text-center text-slate-500">
                 Riwayat pembayaran yang sudah tercatat tidak ikut terhapus. Tap lagi untuk menghapus.
               </p>
             )}

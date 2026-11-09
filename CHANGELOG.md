@@ -78,6 +78,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.15.1 | 9 Nov 2026 | AI Scan pakai tanggal & rekening dari struk |
 | 3.16.0 | 9 Nov 2026 | Rekap per wilayah & peta 3D |
 | 3.16.1 | 9 Nov 2026 | Tombol peta baru & 3D di tab Peta |
+| 3.17.0 | 9 Nov 2026 | Ukuran teks & tampilan lebih ramping |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -91,6 +92,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.17.0 — 2026-11-09 — Ukuran teks & tampilan lebih ramping
+
+- **Tampilan lebih ramping**: teks dan judul di seluruh aplikasi (web & HP) sedikit diperkecil supaya lebih rapi
+  dan lebih banyak isi muat di layar. Judul diperkecil sedikit lebih banyak dari teks biasa.
+- **Baru: Ukuran teks Kecil / Sedang / Besar** — atur sesukamu:
+  - Web: Pengaturan › **Tampilan** (sebelumnya "Mode gelap").
+  - Aplikasi HP: Profil › Preferensi.
+  - Berlaku di semua halaman dan tersimpan di perangkat itu. Teks sekecil apa pun tetap terbaca (minimal 9px).
 
 ## 3.16.1 — 2026-11-09 — Tombol peta baru & 3D di tab Peta
 

@@ -41,11 +41,11 @@ export const YearCard = ({
     </div>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Income</span>
+        <span className="fs-10 font-bold text-slate-400 uppercase tracking-widest">Income</span>
         <span className="text-sm font-black text-emerald-600">+{income}</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expense</span>
+        <span className="fs-10 font-bold text-slate-400 uppercase tracking-widest">Expense</span>
         <span className="text-sm font-black text-rose-600">-{expense}</span>
       </div>
     </div>

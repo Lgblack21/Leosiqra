@@ -106,7 +106,7 @@ export function AddBudgetSheet({ isOpen, onClose, categories, existing }: Props)
         </div>
 
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Kategori</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Kategori</p>
           {options.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {options.map((c) => (
@@ -136,9 +136,7 @@ export function AddBudgetSheet({ isOpen, onClose, categories, existing }: Props)
             aria-label="Kategori"
             className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
           />
-          {duplicate && (
-            <p className="mt-2 px-1 text-[11px] font-bold text-rose-500">Budget untuk kategori ini sudah ada.</p>
-          )}
+          {duplicate && <p className="mt-2 px-1 fs-11 font-bold text-rose-500">Budget untuk kategori ini sudah ada.</p>}
         </div>
 
         <div className="flex gap-2">

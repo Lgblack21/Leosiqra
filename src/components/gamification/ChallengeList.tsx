@@ -29,12 +29,12 @@ export function ChallengeList({ data }: { data: GamificationData }) {
             <span className="text-lg font-black leading-none">{level.level}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-100">Level {level.level}</p>
+            <p className="fs-11 font-bold uppercase tracking-widest text-indigo-100">Level {level.level}</p>
             <p className="text-xl font-black">{level.name}</p>
           </div>
           <div className="text-right">
             <p className="text-xl font-black tabular-nums">{xp}</p>
-            <p className="text-[11px] font-bold text-indigo-100">XP</p>
+            <p className="fs-11 font-bold text-indigo-100">XP</p>
           </div>
         </div>
         <div className="relative mt-4">
@@ -98,7 +98,7 @@ export function ChallengeList({ data }: { data: GamificationData }) {
                   </p>
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black',
+                      'shrink-0 rounded-full px-2 py-0.5 fs-10 font-black',
                       c.done
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                         : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
@@ -116,7 +116,7 @@ export function ChallengeList({ data }: { data: GamificationData }) {
                         style={{ width: `${(c.progress / c.target) * 100}%` }}
                       />
                     </div>
-                    <span className="shrink-0 text-[11px] font-bold tabular-nums text-slate-400">
+                    <span className="shrink-0 fs-11 font-bold tabular-nums text-slate-400">
                       {challengeProgressLabel(c)}
                     </span>
                   </div>

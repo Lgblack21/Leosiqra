@@ -128,14 +128,14 @@ export const AssetCombobox = ({ value, onChange, onSelect, disabled, placeholder
       {open && !disabled && (
         <div className="absolute z-20 left-0 right-0 mt-2 max-h-72 overflow-y-auto bg-white border border-slate-100 rounded-2xl shadow-xl p-2 custom-scrollbar">
           {loading && (
-            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">
+            <p className="fs-10 text-slate-400 text-center py-4 font-bold">
               {q ? `Mencari "${q}"...` : 'Memuat daftar koin...'}
             </p>
           )}
 
           {!loading && kripto.length > 0 && (
             <div className="mb-2">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 py-1">
+              <p className="fs-9 font-black text-slate-400 uppercase tracking-widest px-2 py-1">
                 {q ? 'Hasil Pencarian Koin' : 'Kripto Populer'}
               </p>
               {kripto.map((opt) => (
@@ -159,7 +159,7 @@ export const AssetCombobox = ({ value, onChange, onSelect, disabled, placeholder
 
           {!loading && emas.length > 0 && (
             <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 py-1">Emas & Perak</p>
+              <p className="fs-9 font-black text-slate-400 uppercase tracking-widest px-2 py-1">Emas & Perak</p>
               {emas.map((opt) => (
                 <button
                   key={opt.name}
@@ -177,7 +177,7 @@ export const AssetCombobox = ({ value, onChange, onSelect, disabled, placeholder
           )}
 
           {!loading && totalCount === 0 && (
-            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">
+            <p className="fs-10 text-slate-400 text-center py-4 font-bold">
               Tidak ditemukan — nama ini akan dipakai sebagai judul manual.
             </p>
           )}

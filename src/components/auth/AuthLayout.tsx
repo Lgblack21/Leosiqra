@@ -49,13 +49,9 @@ export function AuthLayout({
       <div className="relative flex min-h-screen flex-col items-center px-5 pb-10 pt-8 sm:justify-center">
         <Link href="/" style={d(0)} className="auth-enter flex items-center gap-2.5">
           <Image src="/images/Logo-new.png" alt="Leosiqra" width={32} height={32} />
-          <span className="text-[21px] font-extrabold tracking-tight">Leosiqra</span>
+          <span className="fsh-21 font-extrabold tracking-tight">Leosiqra</span>
         </Link>
-        <h1
-          style={d(0)}
-          className="auth-enter mt-2 max-w-sm text-center text-[15px] font-medium text-slate-500"
-          title={sub}
-        >
+        <h1 style={d(0)} className="auth-enter mt-2 max-w-sm text-center fs-15 font-medium text-slate-500" title={sub}>
           {headline}
         </h1>
 
@@ -81,10 +77,10 @@ export function AuthLayout({
 export const authInputWrap =
   'group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10';
 export const authInput =
-  'w-full bg-transparent py-3.5 text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400';
-export const authLabel = 'mb-1.5 block pl-1 text-[13px] font-semibold text-slate-600';
+  'w-full bg-transparent py-3.5 fs-15 font-medium text-slate-900 outline-none placeholder:text-slate-400';
+export const authLabel = 'mb-1.5 block pl-1 fs-13 font-semibold text-slate-600';
 export const authPrimaryBtn =
-  'group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-4 text-[15px] font-bold text-white shadow-[0_14px_30px_-12px_rgba(79,70,229,0.7)] transition-all hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0';
+  'group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-4 fs-15 font-bold text-white shadow-[0_14px_30px_-12px_rgba(79,70,229,0.7)] transition-all hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0';
 
 export const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>

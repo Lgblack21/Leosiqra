@@ -174,7 +174,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
       {flash && (
         <div
           role="status"
-          className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="rounded-2xl bg-emerald-50 px-4 py-3 fs-13 font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           {flash}
         </div>
@@ -182,7 +182,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -199,7 +199,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-white/60">
+            <p className="flex items-center gap-2 fs-13 font-semibold text-white/60">
               Langgananmu per bulan
               <button
                 type="button"
@@ -210,10 +210,10 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
                 {hidden ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </p>
-            <p className="mt-1 text-[34px] font-extrabold leading-none tracking-tight tabular-nums md:text-[44px]">
+            <p className="mt-1 fsh-34 font-extrabold leading-none tracking-tight tabular-nums md:fsh-44">
               {money(monthly)}
             </p>
-            <p className="mt-2 text-[13px] text-white/60">
+            <p className="mt-2 fs-13 text-white/60">
               {paying.length} aktif · {money(monthly * 12)}/tahun
               {savedMonthly > 0 && (
                 <span className="text-emerald-300"> · hemat {money(savedMonthly)}/bln dari yang dihentikan</span>
@@ -223,7 +223,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
           <button
             type="button"
             onClick={() => setSheet({ kind: 'add' })}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Plus size={16} strokeWidth={2.6} /> Tambah
           </button>
@@ -231,11 +231,11 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         {nextUp?.next && (
           <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.07] px-3 py-2.5">
             <SubLogo name={nextUp.s.name} domain={nextUp.s.domain} color={catalogFor(nextUp.s)?.color} size={34} />
-            <p className="min-w-0 flex-1 text-[13px]">
+            <p className="min-w-0 flex-1 fs-13">
               <span className="text-white/60">Berikutnya</span> <b className="font-bold">{nextUp.s.name}</b>{' '}
               <span className="text-white/60">{whenLabel(nextUp.inDays ?? 0, nextUp.next)}</span>
             </p>
-            <span className="text-[14px] font-extrabold tabular-nums">{money(nextUp.s.amount)}</span>
+            <span className="fs-14 font-extrabold tabular-nums">{money(nextUp.s.amount)}</span>
           </div>
         )}
       </section>
@@ -248,14 +248,14 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
           <RadarIcon size={22} />
           {pending.length > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 fs-10 font-extrabold text-white">
               {pending.length}
             </span>
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-extrabold text-slate-900 dark:text-white">Nyalakan radar</span>
-          <span className="block text-[12px] text-slate-500 dark:text-slate-400">
+          <span className="block fs-15 font-extrabold text-slate-900 dark:text-white">Nyalakan radar</span>
+          <span className="block fs-12 text-slate-500 dark:text-slate-400">
             {pending.length > 0
               ? `${pending.length} kemungkinan langganan di 30 hari terakhir belum tercatat`
               : 'Pindai pembayaran 30 hari terakhir, temukan langganan yang terlupa'}
@@ -275,10 +275,10 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
       {upcoming.length > 0 && (
         <section className={cn(card, 'p-4')}>
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold text-slate-900 dark:text-white">
+            <h3 className="flex items-center gap-1.5 fs-15 font-extrabold text-slate-900 dark:text-white">
               <CalendarClock size={16} className="text-indigo-500" /> 30 hari ke depan
             </h3>
-            <span className="text-[13px] font-bold tabular-nums text-slate-500 dark:text-slate-400">
+            <span className="fs-13 font-bold tabular-nums text-slate-500 dark:text-slate-400">
               {money(upcomingTotal)}
             </span>
           </div>
@@ -299,17 +299,15 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
                 >
                   <span
                     className={cn(
-                      'text-[11px] font-bold',
+                      'fs-11 font-bold',
                       n <= 2 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400',
                     )}
                   >
                     {whenLabel(n, d)}
                   </span>
                   <SubLogo name={x.s.name} domain={x.s.domain} color={catalogFor(x.s)?.color} size={36} />
-                  <span className="w-full truncate text-[11px] font-bold text-slate-800 dark:text-slate-100">
-                    {x.s.name}
-                  </span>
-                  <span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                  <span className="w-full truncate fs-11 font-bold text-slate-800 dark:text-slate-100">{x.s.name}</span>
+                  <span className="fs-11 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
                     {hidden ? '••••' : formatIDR(x.s.amount)}
                   </span>
                 </button>
@@ -324,10 +322,8 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
             <Repeat size={26} />
           </span>
-          <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 dark:text-white">
-            Belum ada langganan dipantau
-          </h3>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+          <h3 className="mt-4 fs-18 font-extrabold text-slate-900 dark:text-white">Belum ada langganan dipantau</h3>
+          <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
             Netflix, Spotify, internet, pulsa, iCloud… lihat totalnya per bulan & tahun, dan diingatkan sehari sebelum
             ditagih.
           </p>
@@ -335,14 +331,14 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
             <button
               type="button"
               onClick={() => setSheet({ kind: 'radar' })}
-              className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-emerald-700"
+              className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 fs-13 font-bold text-white hover:bg-emerald-700"
             >
               <RadarIcon size={15} /> Nyalakan radar
             </button>
             <button
               type="button"
               onClick={() => setSheet({ kind: 'add' })}
-              className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+              className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
             >
               <Plus size={15} /> Tambah manual
             </button>
@@ -351,9 +347,9 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
       ) : (
         <section className={cn(card, 'overflow-hidden')}>
           <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
-            <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Semua langganan</h3>
+            <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Semua langganan</h3>
             {top && paying.length > 1 && monthly > 0 && (
-              <span className="text-[12px] text-slate-500 dark:text-slate-400">
+              <span className="fs-12 text-slate-500 dark:text-slate-400">
                 Termahal: {top.s.name} ({Math.round((top.monthly / monthly) * 100)}%)
               </span>
             )}
@@ -368,7 +364,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
               <button
                 type="button"
                 onClick={() => setShowStopped((v) => !v)}
-                className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] font-bold text-slate-500 dark:border-slate-800 dark:text-slate-400"
+                className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-3 fs-13 font-bold text-slate-500 dark:border-slate-800 dark:text-slate-400"
               >
                 Sudah berhenti ({stopped.length}){' '}
                 <ChevronDown size={15} className={cn('transition-transform', showStopped && 'rotate-180')} />
@@ -384,7 +380,7 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
           )}
         </section>
       )}
-      <p className="px-1 text-[11px] text-slate-400">
+      <p className="px-1 fs-11 text-slate-400">
         Langgananku hanya memantau — tidak mencatat transaksi otomatis. Untuk pencatatan otomatis, pakai Transaksi
         Rutin.
       </p>
@@ -428,16 +424,16 @@ function SubRow({
         <SubLogo name={s.name} domain={s.domain} color={catalogFor(s)?.color} size={44} />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-bold text-slate-900 dark:text-white">{s.name}</span>
+            <span className="truncate fs-15 font-bold text-slate-900 dark:text-white">{s.name}</span>
             {s.status === 'coba' && (
-              <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+              <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 fs-10 font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
                 Masa coba
               </span>
             )}
           </span>
           <span
             className={cn(
-              'block truncate text-[12px]',
+              'block truncate fs-12',
               inDays !== null && inDays <= 2 && s.status === 'aktif'
                 ? 'font-semibold text-amber-600 dark:text-amber-400'
                 : 'text-slate-500 dark:text-slate-400',
@@ -453,12 +449,12 @@ function SubRow({
           </span>
         </span>
         <span className="text-right">
-          <span className="block whitespace-nowrap text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+          <span className="block whitespace-nowrap fs-15 font-extrabold tabular-nums text-slate-900 dark:text-white">
             {money(s.amount)}
-            <span className="text-[11px] font-semibold text-slate-400">{CYCLE_SHORT[s.cycle]}</span>
+            <span className="fs-11 font-semibold text-slate-400">{CYCLE_SHORT[s.cycle]}</span>
           </span>
           {s.cycle !== 'bulanan' && (
-            <span className="block text-[11px] tabular-nums text-slate-400">≈ {money(x.monthly)}/bln</span>
+            <span className="block fs-11 tabular-nums text-slate-400">≈ {money(x.monthly)}/bln</span>
           )}
         </span>
       </button>

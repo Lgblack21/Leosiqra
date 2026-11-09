@@ -170,7 +170,7 @@ export default function DepositoPage() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
-            <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
+            <p className="fs-10 md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Kelola seluruh penempatan dana deposito Anda.
             </p>
           </div>
@@ -195,13 +195,13 @@ export default function DepositoPage() {
             <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
               <Banknote size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Deposito</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Total Deposito</p>
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">
               Rp {formatRp(Math.round(animatedTotalDeposited))}
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+            <p className="fs-10 font-bold text-slate-400 mt-1 uppercase tracking-wider">
               {realInvestments.length} penempatan aktif
             </p>
           </div>
@@ -216,13 +216,13 @@ export default function DepositoPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Percent size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rata-rata Bunga/Thn</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Rata-rata Bunga/Thn</p>
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">
               {animatedAvgRate.toFixed(2)}%
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1">Per Annum</p>
+            <p className="fs-10 font-bold text-slate-400 mt-1">Per Annum</p>
           </div>
           <Percent
             size={48}
@@ -247,43 +247,43 @@ export default function DepositoPage() {
             <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     No
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Jam
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Tgl Penempatan
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
                     Tgl Jatuh Tempo
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Nama Deposito
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Bank/Institusi
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
                     Nominal
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
                     Durasi
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Bunga %
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Tipe
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Kategori
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Rekening
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Aksi
                   </th>
                 </tr>
@@ -323,14 +323,14 @@ export default function DepositoPage() {
                         <div className="flex flex-col">
                           <p className="text-sm font-black text-slate-900">{inv.name}</p>
                           {estimasiCair !== null && (
-                            <span className="text-[9px] font-bold text-emerald-500 mt-0.5">
+                            <span className="fs-9 font-bold text-emerald-500 mt-0.5">
                               Estimasi cair: {formatAmount(estimasiCair, inv.currency)}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                        <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">
+                        <span className="px-3 py-1 bg-orange-50 text-orange-600 fs-9 font-black rounded-lg uppercase tracking-widest">
                           {inv.platform || '-'}
                         </span>
                       </td>
@@ -341,7 +341,7 @@ export default function DepositoPage() {
                         <span className="text-sm font-bold text-slate-600">{inv.durationDays || 0} Hari</span>
                       </td>
                       <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap">
-                        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">
+                        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 fs-10 font-black rounded-lg">
                           {inv.returnPercentage.toFixed(2)}%
                         </span>
                       </td>
@@ -350,7 +350,7 @@ export default function DepositoPage() {
                         {inv.transactionType === 'Penempatan' && inv.status === 'Active' && (
                           <span
                             className={cn(
-                              'block mt-1 text-[8px] font-black uppercase tracking-tighter',
+                              'block mt-1 fs-8 font-black uppercase tracking-tighter',
                               inv.maturityAction === 'aro_full'
                                 ? 'text-purple-500'
                                 : inv.maturityAction === 'aro_bunga'
@@ -367,7 +367,7 @@ export default function DepositoPage() {
                         )}
                       </td>
                       <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                        <span className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest bg-slate-100 text-slate-600">
+                        <span className="px-2 py-0.5 fs-9 font-black rounded uppercase tracking-widest bg-slate-100 text-slate-600">
                           {getCategoryName(inv.category || '')}
                         </span>
                       </td>
@@ -409,7 +409,7 @@ export default function DepositoPage() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          <span className="text-[9px] font-black text-slate-400 tracking-tighter whitespace-nowrap">
+                          <span className="fs-9 font-black text-slate-400 tracking-tighter whitespace-nowrap">
                             {formatAmount(inv.currentValue, inv.currency)}
                           </span>
                         </div>

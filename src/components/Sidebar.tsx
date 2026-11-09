@@ -116,7 +116,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
         title={item.label}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition-colors md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
+          'relative flex items-center gap-3 rounded-xl px-3 py-2 fs-14 transition-colors md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
           active ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         )}
       >
@@ -138,14 +138,14 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
           <span
             title={proHint(item.href)}
             className={cn(
-              'relative rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px text-[10px] font-black tracking-wider text-white',
+              'relative rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px fs-10 font-black tracking-wider text-white',
               fullOnly,
             )}
           >
             PRO
           </span>
         ) : badge ? (
-          <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{badge}</span>
+          <span className={cn('relative fs-12 font-semibold text-slate-400', fullOnly)}>{badge}</span>
         ) : null}
       </Link>
     );
@@ -187,7 +187,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
           title="Ringkasan"
         >
           <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="wm-logo object-contain" />
-          <Wordmark className={cn('text-[19px] font-extrabold tracking-tight text-slate-900', fullOnly)} />
+          <Wordmark className={cn('fs-19 font-extrabold tracking-tight text-slate-900', fullOnly)} />
         </Link>
         <div className={cn('flex items-center gap-1', fullOnly)}>
           <button
@@ -217,7 +217,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
           href="/membership/ai-leosiqra"
           onClick={closeOnMobile}
           title="Tanya Leo"
-          className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-2.5 text-[14px] text-slate-400 ring-1 ring-slate-100 transition-colors hover:bg-indigo-50/60 hover:text-slate-500 md:max-lg:justify-center md:max-lg:px-0"
+          className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-2.5 fs-14 text-slate-400 ring-1 ring-slate-100 transition-colors hover:bg-indigo-50/60 hover:text-slate-500 md:max-lg:justify-center md:max-lg:px-0"
         >
           <Sparkles size={17} className="shrink-0 text-indigo-500" />
           <span className={fullOnly}>Tanya Leo…</span>
@@ -235,10 +235,10 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                 )}
               </div>
               <div className="space-y-2">
-                <h3 className="text-[15px] font-bold text-slate-900">
+                <h3 className="fs-15 font-bold text-slate-900">
                   {profile?.status === 'PENDING' ? 'Sedang diverifikasi' : 'Akses terbatas'}
                 </h3>
-                <p className="text-[13px] leading-relaxed text-slate-500">
+                <p className="fs-13 leading-relaxed text-slate-500">
                   {profile?.status === 'PENDING'
                     ? 'Permintaan aksesmu sudah terkirim. Admin akan memverifikasi segera.'
                     : 'Akunmu masih berstatus tamu. Ajukan akses gratis (diverifikasi admin) atau bayar untuk akses instan.'}
@@ -249,7 +249,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                   <button
                     onClick={handleRequestPro}
                     disabled={isRequesting}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 text-[14px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-70"
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 fs-14 font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-70"
                   >
                     {isRequesting ? (
                       'Mengirim…'
@@ -260,13 +260,13 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                     )}
                   </button>
                 ) : (
-                  <div className="w-full rounded-full bg-slate-100 py-3 text-[13px] font-semibold text-slate-500">
+                  <div className="w-full rounded-full bg-slate-100 py-3 fs-13 font-semibold text-slate-500">
                     Menunggu konfirmasi…
                   </div>
                 )}
                 <Link
                   href="/membership/contact"
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-indigo-200 bg-white py-3 text-[14px] font-bold text-indigo-600 hover:bg-indigo-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-indigo-200 bg-white py-3 fs-14 font-bold text-indigo-600 hover:bg-indigo-50"
                 >
                   Bayar / upgrade ke PRO <ChevronRight size={15} />
                 </Link>
@@ -279,9 +279,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
         ) : (
           <div className="space-y-5">
             <div data-tour="sidebar-group-keuangan">
-              <p
-                className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}
-              >
+              <p className={cn('px-3 pb-1.5 fs-11 font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>
                 Keuangan
               </p>
               <div className="space-y-0.5">{keuanganNav.map((item) => renderItem(item))}</div>
@@ -290,9 +288,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
               data-tour="sidebar-group-fitur"
               className="md:max-lg:border-t md:max-lg:border-slate-100 md:max-lg:pt-4"
             >
-              <p
-                className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}
-              >
+              <p className={cn('px-3 pb-1.5 fs-11 font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>
                 Fitur
               </p>
               <div className="space-y-0.5">
@@ -305,14 +301,14 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                   onClick={closeOnMobile}
                   title="Fitur lainnya"
                   className={cn(
-                    'relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
+                    'relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left fs-14 font-medium transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
                     pathname === '/membership/fitur' ? 'bg-slate-100 text-slate-900' : 'text-slate-600',
                   )}
                 >
                   <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
                   <span className={cn('relative flex-1 truncate', fullOnly)}>Fitur lainnya</span>
                   {sidebarFeatures.more ? (
-                    <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
+                    <span className={cn('relative fs-12 font-semibold text-slate-400', fullOnly)}>
                       +{sidebarFeatures.more}
                     </span>
                   ) : null}
@@ -342,10 +338,10 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
               <Plus size={20} strokeWidth={2.8} className="transition-transform duration-300 group-hover:rotate-90" />
             </span>
             <span className={cn('relative min-w-0 flex-1 leading-tight', fullOnly)}>
-              <span className="block text-[14px] font-extrabold tracking-tight">Catat transaksi</span>
-              <span className="block text-[11px] font-medium text-white/55">Masuk / keluar, 10 detik</span>
+              <span className="block fs-14 font-extrabold tracking-tight">Catat transaksi</span>
+              <span className="block fs-11 font-medium text-white/55">Masuk / keluar, 10 detik</span>
             </span>
-            <kbd className="relative hidden h-6 min-w-6 items-center justify-center rounded-lg border border-white/15 bg-white/10 px-1.5 text-[11px] font-bold text-white/80 lg:inline-flex">
+            <kbd className="relative hidden h-6 min-w-6 items-center justify-center rounded-lg border border-white/15 bg-white/10 px-1.5 fs-11 font-bold text-white/80 lg:inline-flex">
               N
             </kbd>
           </button>
@@ -365,10 +361,10 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
             <span className="h-9 w-9 shrink-0 rounded-full bg-slate-100" />
           )}
           <span className={cn('flex min-w-0 flex-1 flex-col', fullOnly)}>
-            <span className="truncate text-[14px] font-semibold text-slate-900">{profile?.name || 'Memuat…'}</span>
+            <span className="truncate fs-14 font-semibold text-slate-900">{profile?.name || 'Memuat…'}</span>
             <span
               className={cn(
-                'truncate text-[12px] font-medium',
+                'truncate fs-12 font-medium',
                 profile?.plan === 'PRO' ? 'text-violet-600' : 'text-slate-400',
               )}
             >

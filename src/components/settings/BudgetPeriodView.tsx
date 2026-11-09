@@ -39,19 +39,19 @@ export function BudgetPeriodView() {
   return (
     <div className="space-y-4">
       <div className="rounded-[24px] bg-gradient-to-br from-indigo-600 to-violet-600 p-5 text-white">
-        <p className="flex items-center gap-2 text-[13px] text-white/80">
+        <p className="flex items-center gap-2 fs-13 text-white/80">
           <CalendarRange size={15} /> Periode berjalan
         </p>
-        <p className="mt-1 text-[22px] font-extrabold">{formatBudgetPeriod(period)}</p>
+        <p className="mt-1 fsh-22 font-extrabold">{formatBudgetPeriod(period)}</p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/25">
           <div className="h-full rounded-full bg-white" style={{ width: `${(passed / totalDays) * 100}%` }} />
         </div>
-        <p className="mt-1.5 text-[12px] text-white/80">
+        <p className="mt-1.5 fs-12 text-white/80">
           Hari ke-{passed} dari {totalDays} · sisa {totalDays - passed} hari
         </p>
       </div>
 
-      <p className="px-1 text-[14px] text-slate-600">
+      <p className="px-1 fs-14 text-slate-600">
         Mulai hitung anggaran bulanan tiap tanggal berapa? Biasanya tanggal gajian.
       </p>
 
@@ -67,7 +67,7 @@ export function BudgetPeriodView() {
               aria-pressed={on}
               aria-label={`Tanggal ${d}`}
               className={cn(
-                'flex aspect-square items-center justify-center rounded-2xl text-[15px] font-semibold tabular-nums transition',
+                'flex aspect-square items-center justify-center rounded-2xl fs-15 font-semibold tabular-nums transition',
                 on
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
                   : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300',
@@ -91,7 +91,7 @@ export function BudgetPeriodView() {
             onClick={() => void pick(p.d)}
             disabled={busy}
             className={cn(
-              'rounded-full px-3.5 py-2 text-[13px] transition',
+              'rounded-full px-3.5 py-2 fs-13 transition',
               p.d === day
                 ? 'bg-slate-900 font-semibold text-white'
                 : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50',
@@ -102,7 +102,7 @@ export function BudgetPeriodView() {
         ))}
       </div>
 
-      <p className="flex items-start gap-2 px-1 text-[12px] leading-relaxed text-slate-500">
+      <p className="flex items-start gap-2 px-1 fs-12 leading-relaxed text-slate-500">
         <Info size={14} className="mt-0.5 shrink-0" />
         Berlaku untuk anggaran bulanan (web, aplikasi HP, asisten AI). Tanggal 29–31 tidak tersedia karena tidak ada di
         setiap bulan. Laporan bulanan tetap per bulan kalender.

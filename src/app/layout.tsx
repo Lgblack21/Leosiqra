@@ -101,6 +101,7 @@ const softwareAppJsonLd = {
 import MaintenanceGuard from '@/components/MaintenanceGuard';
 import StaleReloadGuard from '@/components/StaleReloadGuard';
 import { NoZoomGuard } from '@/components/NoZoomGuard';
+import { TEXT_SIZE_BOOT } from '@/lib/textSizeBoot';
 import LogoUpdateBanner from '@/components/LogoUpdateBanner';
 import { InstallPromptCatcher } from '@/components/install/InstallPromptCatcher';
 import { InstallBanner } from '@/components/install/InstallBanner';
@@ -127,6 +128,8 @@ export default function RootLayout({
             Home Screen" cuma jadi bookmark biasa (bukan app standalone),
             jadi navigator.standalone tetap false dan Web Push tidak jalan. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        {/* Ukuran teks tersimpan (Pengaturan → Tampilan) diterapkan sebelum halaman digambar. */}
+        <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_BOOT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd).replace(/</g, '\\u003c') }}

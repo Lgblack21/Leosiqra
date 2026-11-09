@@ -186,7 +186,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
           <div className="grid grid-cols-2 gap-3">
             {(['hutang', 'piutang'] as const).map((type) => (
               <button
@@ -209,14 +209,14 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
         {formData.debtType === 'hutang' && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Hutang</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Hutang</label>
             <div className="flex flex-wrap gap-2">
               {DEBT_KINDS.map((k) => (
                 <button
                   key={k}
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, debtKind: k }))}
-                  className={`px-3 py-2 rounded-xl text-[11px] font-black transition-all ${
+                  className={`px-3 py-2 rounded-xl fs-11 font-black transition-all ${
                     formData.debtKind === k
                       ? 'bg-slate-900 text-white'
                       : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
@@ -230,9 +230,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-            Status Pembayaran
-          </label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Status Pembayaran</label>
           <div className="grid grid-cols-2 gap-3">
             {(['belum', 'lunas'] as const).map((s) => (
               <button
@@ -252,7 +250,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             ))}
           </div>
           {formData.paymentStatus === 'lunas' && (
-            <p className="text-[10px] font-bold text-emerald-600 pl-1 mt-1">
+            <p className="fs-10 font-bold text-emerald-600 pl-1 mt-1">
               Status lunas akan otomatis mencatat {formData.debtType === 'hutang' ? 'pengeluaran' : 'pemasukan'} saat
               disimpan.
             </p>
@@ -261,9 +259,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Nominal Pokok
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Pokok</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
                 {getCurrencySymbol(formData.currency)}
@@ -290,7 +286,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                <p className="fs-9 font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
                   Terkonversi ke IDR
                 </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
@@ -298,15 +294,13 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            <span className="fs-10 font-medium text-slate-400 italic">Live Rate</span>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Pemberi / Penerima
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Pemberi / Penerima</label>
             <input
               type="text"
               value={formData.lenderName}
@@ -316,9 +310,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Rekening Terkait
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Rekening Terkait</label>
             <div className="relative">
               <select
                 value={formData.accountId}
@@ -345,7 +337,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
               />
             </div>
             {formData.accountId && (
-              <p className="text-[11px] font-medium text-slate-400 pl-1">
+              <p className="fs-11 font-medium text-slate-400 pl-1">
                 {formData.debtType === 'piutang'
                   ? 'Saldo rekening ini langsung berkurang (uang dipinjamkan).'
                   : formData.debtKind === 'Kartu Kredit' || formData.debtKind === 'Paylater'
@@ -358,7 +350,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bln)</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bln)</label>
             <input
               type="number"
               value={formData.installmentTenor}
@@ -368,9 +360,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Bunga/bln (%)
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Bunga/bln (%)</label>
             <input
               type="number"
               step="0.01"
@@ -381,7 +371,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
             <input
               type="date"
               value={formData.date}
@@ -394,15 +384,15 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         {(calc.tenor > 0 || calc.totalBunga > 0) && (
           <div className="bg-slate-900 rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Total Bunga</p>
+              <p className="fs-9 font-black text-white/40 uppercase tracking-widest mb-1">Total Bunga</p>
               <p className="text-xs font-black text-amber-300">{formatCurrency(calc.totalBunga, formData.currency)}</p>
             </div>
             <div className="border-x border-white/10">
-              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Cicilan/bln</p>
+              <p className="fs-9 font-black text-white/40 uppercase tracking-widest mb-1">Cicilan/bln</p>
               <p className="text-xs font-black text-white">{formatCurrency(calc.cicilanPerBulan, formData.currency)}</p>
             </div>
             <div>
-              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Total Hutang</p>
+              <p className="fs-9 font-black text-white/40 uppercase tracking-widest mb-1">Total Hutang</p>
               <p className="text-xs font-black text-emerald-300">
                 {formatCurrency(calc.totalHutang, formData.currency)}
               </p>
@@ -413,9 +403,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         {formData.paymentStatus !== 'lunas' && <DueDateInput value={due} onChange={setDue} />}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-            Deskripsi / Catatan
-          </label>
+          <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
           <textarea
             rows={2}
             value={formData.note}

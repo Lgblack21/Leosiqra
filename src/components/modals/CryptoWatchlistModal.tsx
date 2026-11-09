@@ -65,7 +65,7 @@ export const CryptoWatchlistModal = ({ isOpen, onClose, initialSelected, onSave 
             {selected.map((c) => (
               <span
                 key={c.id}
-                className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-[11px] font-black pl-2.5 pr-1 py-1 rounded-full"
+                className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 fs-11 font-black pl-2.5 pr-1 py-1 rounded-full"
               >
                 {c.symbol}
                 <button
@@ -91,7 +91,7 @@ export const CryptoWatchlistModal = ({ isOpen, onClose, initialSelected, onSave 
           />
         </div>
 
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+        <p className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">
           {selected.length}/{MAX_WATCHLIST_COINS} dipilih
         </p>
 
@@ -117,7 +117,7 @@ export const CryptoWatchlistModal = ({ isOpen, onClose, initialSelected, onSave 
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-slate-900 truncate">{coin.name}</p>
-                    <p className="text-[10px] font-medium text-slate-400 uppercase">{coin.symbol}</p>
+                    <p className="fs-10 font-medium text-slate-400 uppercase">{coin.symbol}</p>
                   </div>
                   {active && <Check size={16} className="text-indigo-600 shrink-0" />}
                 </button>

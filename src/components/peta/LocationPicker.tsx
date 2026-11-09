@@ -98,10 +98,10 @@ export function LocationPicker({
       >
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <p className="fs-11 font-black uppercase tracking-[0.18em] text-slate-400">
               {zone ? 'Zona privat' : 'Tandai lokasi'}
             </p>
-            <p className="truncate text-[16px] font-black text-slate-900 dark:text-white">{title}</p>
+            <p className="truncate fs-16 font-black text-slate-900 dark:text-white">{title}</p>
           </div>
           <button
             type="button"
@@ -114,19 +114,19 @@ export function LocationPicker({
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className={cn('block', zone && 'hidden')}>
-            <span className="text-[12px] font-bold text-slate-500">Nama tempat</span>
+            <span className="fs-12 font-bold text-slate-500">Nama tempat</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 120))}
               placeholder="mis. Kopi Kenangan Cipete"
-              className="mt-1 h-11 w-full rounded-xl bg-slate-50 px-3 text-[14px] font-semibold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 dark:bg-slate-900 dark:ring-slate-700"
+              className="mt-1 h-11 w-full rounded-xl bg-slate-50 px-3 fs-14 font-semibold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 dark:bg-slate-900 dark:ring-slate-700"
             />
           </label>
           <button
             type="button"
             onClick={() => void gps()}
             disabled={busy !== null}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[14px] font-bold text-white disabled:opacity-60"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 fs-14 font-bold text-white disabled:opacity-60"
           >
             <LocateFixed size={17} /> {busy === 'gps' ? 'Mencari lokasimu…' : 'Pakai lokasiku sekarang'}
           </button>
@@ -135,12 +135,12 @@ export function LocationPicker({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Cari tempat, mis. Senayan City"
-              className="h-11 min-w-0 flex-1 rounded-xl bg-slate-50 px-3 text-[14px] outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 dark:bg-slate-900 dark:ring-slate-700"
+              className="h-11 min-w-0 flex-1 rounded-xl bg-slate-50 px-3 fs-14 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 dark:bg-slate-900 dark:ring-slate-700"
             />
             <button
               type="submit"
               disabled={busy !== null}
-              className="flex h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-[14px] font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+              className="flex h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-4 fs-14 font-bold text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
             >
               <Search size={16} /> {busy === 'cari' ? '…' : 'Cari'}
             </button>
@@ -158,15 +158,13 @@ export function LocationPicker({
                   }}
                   className="block w-full rounded-xl px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
                 >
-                  <span className="block text-[13.5px] font-bold text-slate-800 dark:text-slate-100">{h.name}</span>
-                  <span className="block truncate text-[12px] text-slate-500">{h.address}</span>
+                  <span className="block fs-13.5 font-bold text-slate-800 dark:text-slate-100">{h.name}</span>
+                  <span className="block truncate fs-12 text-slate-500">{h.address}</span>
                 </button>
               ))}
             </div>
           ) : null}
-          {err ? (
-            <p className="rounded-xl bg-rose-50 px-3 py-2 text-[12.5px] font-semibold text-rose-700">{err}</p>
-          ) : null}
+          {err ? <p className="rounded-xl bg-rose-50 px-3 py-2 fs-12.5 font-semibold text-rose-700">{err}</p> : null}
           <div className="h-60 overflow-hidden rounded-2xl ring-1 ring-slate-200 dark:ring-slate-800">
             <PlaceMap
               markers={[]}
@@ -182,7 +180,7 @@ export function LocationPicker({
               }}
             />
           </div>
-          <p className="text-[11.5px] text-slate-400">
+          <p className="fs-11.5 text-slate-400">
             {zone
               ? 'Geser peta sampai pin 📍 tepat di tengah zona. Titik ini hanya disimpan di perangkat ini, tidak dikirim ke server.'
               : 'Geser peta sampai pin 📍 tepat di tempatnya. Lokasi hanya disimpan untuk transaksi ini — Leosiqra tidak melacak posisimu.'}
@@ -194,7 +192,7 @@ export function LocationPicker({
             onClick={() => void save()}
             disabled={busy !== null}
             className={cn(
-              'h-12 w-full rounded-full text-[15px] font-bold text-white disabled:opacity-60',
+              'h-12 w-full rounded-full fs-15 font-bold text-white disabled:opacity-60',
               center ? 'bg-emerald-600' : 'bg-slate-400',
             )}
           >

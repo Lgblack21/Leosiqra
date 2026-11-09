@@ -51,7 +51,7 @@ function AppNotifications() {
             type="button"
             onClick={() => pick(id)}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold transition',
+              'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 fs-13 font-semibold transition',
               tab === id
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
                 : 'text-slate-500 dark:text-slate-400',
@@ -59,7 +59,7 @@ function AppNotifications() {
           >
             <Icon size={14} /> {label}
             {id === 'notif' && notif.unread > 0 && (
-              <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">{notif.unread}</span>
+              <span className="rounded-full bg-rose-500 px-1.5 fs-10 font-bold text-white">{notif.unread}</span>
             )}
           </button>
         ))}

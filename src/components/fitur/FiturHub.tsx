@@ -55,22 +55,22 @@ function FiturButton({ f, s, to, showPro }: { f: Fitur; s?: Status; to: string; 
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[15px] font-bold text-slate-900 dark:text-white">{f.label}</span>
+          <span className="truncate fs-15 font-bold text-slate-900 dark:text-white">{f.label}</span>
           {showPro && f.pro ? (
             <span
               title={f.pro}
-              className="shrink-0 rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px text-[9.5px] font-black tracking-wider text-white"
+              className="shrink-0 rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px fs-9.5 font-black tracking-wider text-white"
             >
               PRO
             </span>
           ) : null}
           {isNew(f, APP_VERSION) ? (
-            <span className="shrink-0 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px text-[9.5px] font-black uppercase tracking-wider text-white">
+            <span className="shrink-0 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px fs-9.5 font-black uppercase tracking-wider text-white">
               Baru
             </span>
           ) : null}
         </span>
-        <span className={cn('block truncate text-[13px]', s ? toneText(s) : 'text-slate-500 dark:text-slate-400')}>
+        <span className={cn('block truncate fs-13', s ? toneText(s) : 'text-slate-500 dark:text-slate-400')}>
           {s?.text ?? f.sub}
         </span>
       </span>
@@ -100,11 +100,11 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         className="rounded-[24px] bg-white p-3 ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
       >
         <div className="px-2.5 pb-2 pt-1.5">
-          <h2 className="flex items-center gap-2 text-[15px] font-black">
+          <h2 className="flex items-center gap-2 fs-15 font-black">
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-br', t.tile)} />
             {g.label}
           </h2>
-          <p className="pl-[18px] text-[12.5px] text-slate-400">{g.sub}</p>
+          <p className="pl-[18px] fs-12.5 text-slate-400">{g.sub}</p>
         </div>
         {items.map((f) => (
           <FiturButton key={f.key} f={f} s={status[f.key]} to={href(f)} showPro={isPro === false} />
@@ -117,8 +117,8 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     <div className={cn('mx-auto max-w-6xl pb-14 text-slate-900 dark:text-white', variant === 'app' && 'px-4 pt-2')}>
       <div className="mb-7 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-black tracking-tight md:text-[38px]">Fitur lainnya</h1>
-          <p className="text-[14.5px] text-slate-500 dark:text-slate-400">
+          <h1 className="fsh-30 font-black tracking-tight md:fsh-38">Fitur lainnya</h1>
+          <p className="fs-14.5 text-slate-500 dark:text-slate-400">
             Fitur yang belum ada di menu samping. Tekan Ctrl + K untuk mencari semua fitur dari mana saja.
           </p>
         </div>

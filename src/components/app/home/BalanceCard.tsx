@@ -70,7 +70,7 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
       </p>
       <div className="grid grid-cols-2 gap-3 mt-5">
         <div className="bg-white/15 rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold">
+          <div className="flex items-center gap-1.5 text-white/70 fs-11 font-bold">
             <ArrowDownCircle size={13} /> Pemasukan
           </div>
           <p className="text-sm font-black mt-1 tabular-nums">
@@ -78,7 +78,7 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
           </p>
         </div>
         <div className="bg-white/15 rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold">
+          <div className="flex items-center gap-1.5 text-white/70 fs-11 font-bold">
             <ArrowUpCircle size={13} /> Pengeluaran
           </div>
           <p className="text-sm font-black mt-1 tabular-nums">

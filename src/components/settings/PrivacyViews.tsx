@@ -88,7 +88,7 @@ export function PermissionsView({ openNotifications }: { openNotifications: () =
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] text-slate-500">
+      <p className="px-1 fs-14 text-slate-500">
         Izin di perangkat & browser ini. Leosiqra hanya meminta saat fiturnya kamu pakai.
       </p>
       <ul className="divide-y divide-slate-100 overflow-hidden rounded-[22px] bg-white ring-1 ring-slate-200">
@@ -100,8 +100,8 @@ export function PermissionsView({ openNotifications }: { openNotifications: () =
                 <r.icon size={18} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-slate-900">{r.title}</span>
-                <span className="block text-[12px] text-slate-500">{r.desc}</span>
+                <span className="block fs-15 font-semibold text-slate-900">{r.title}</span>
+                <span className="block fs-12 text-slate-500">{r.desc}</span>
               </span>
               {!st ? (
                 <Loader2 size={16} className="animate-spin text-slate-400" />
@@ -110,12 +110,12 @@ export function PermissionsView({ openNotifications }: { openNotifications: () =
                   type="button"
                   onClick={r.onAsk}
                   disabled={busy === r.key}
-                  className="rounded-full bg-slate-900 px-3.5 py-1.5 text-[12px] font-semibold text-white disabled:opacity-50"
+                  className="rounded-full bg-slate-900 px-3.5 py-1.5 fs-12 font-semibold text-white disabled:opacity-50"
                 >
                   {busy === r.key ? 'Menunggu…' : 'Izinkan'}
                 </button>
               ) : (
-                <span className={cn('rounded-full px-2.5 py-1 text-[12px] font-semibold', STATE_LABEL[st].cls)}>
+                <span className={cn('rounded-full px-2.5 py-1 fs-12 font-semibold', STATE_LABEL[st].cls)}>
                   {STATE_LABEL[st].text}
                 </span>
               )}
@@ -127,15 +127,15 @@ export function PermissionsView({ openNotifications }: { openNotifications: () =
             <ImageIcon size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-slate-900">Foto & file</span>
-            <span className="block text-[12px] text-slate-500">
+            <span className="block fs-15 font-semibold text-slate-900">Foto & file</span>
+            <span className="block fs-12 text-slate-500">
               Tidak perlu izin — kamu sendiri yang memilih file saat impor atau melampirkan struk.
             </span>
           </span>
         </li>
       </ul>
       {states && Object.values(states).includes('denied') && (
-        <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] leading-snug text-amber-900">
+        <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 fs-13 leading-snug text-amber-900">
           <Lock size={15} className="mt-0.5 shrink-0" /> Izin yang diblokir hanya bisa dibuka dari browser: ketuk ikon
           gembok di samping alamat situs → Izin situs. Di aplikasi HP: Pengaturan HP → Aplikasi → Leosiqra → Izin.
         </p>
@@ -198,19 +198,19 @@ export function AssistantMemoryView() {
     }
   };
 
-  if (!memory) return <p className="py-6 text-center text-[14px] text-slate-400">{msg?.text ?? 'Memuat…'}</p>;
+  if (!memory) return <p className="py-6 text-center fs-14 text-slate-400">{msg?.text ?? 'Memuat…'}</p>;
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] leading-snug text-slate-500">
+      <p className="px-1 fs-14 leading-snug text-slate-500">
         Catatan yang dibaca <b>Tanya Leo</b> di setiap obrolan, supaya kamu tidak perlu mengulang. Kosongkan kapan saja.
       </p>
       {FIELDS.map((f) => (
         <label key={f.key} className="block">
-          <span className="flex items-center justify-between px-1 text-[13px] font-semibold text-slate-600">
+          <span className="flex items-center justify-between px-1 fs-13 font-semibold text-slate-600">
             {f.label}
             <span
               className={cn(
-                'text-[11px] font-normal tabular-nums',
+                'fs-11 font-normal tabular-nums',
                 memory[f.key].length > MAX - 50 ? 'text-amber-600' : 'text-slate-400',
               )}
             >
@@ -222,24 +222,22 @@ export function AssistantMemoryView() {
             onChange={(e) => setMemory({ ...memory, [f.key]: e.target.value.slice(0, MAX) })}
             rows={3}
             placeholder={f.hint}
-            className="mt-1 w-full resize-none rounded-2xl bg-slate-50 p-3 text-[14px] text-slate-800 ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300"
+            className="mt-1 w-full resize-none rounded-2xl bg-slate-50 p-3 fs-14 text-slate-800 ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300"
           />
         </label>
       ))}
       {msg && (
-        <p className={cn('px-1 text-[13px] font-semibold', msg.ok ? 'text-emerald-600' : 'text-rose-600')}>
-          {msg.text}
-        </p>
+        <p className={cn('px-1 fs-13 font-semibold', msg.ok ? 'text-emerald-600' : 'text-rose-600')}>{msg.text}</p>
       )}
       <button
         type="button"
         onClick={() => void save()}
         disabled={!dirty || saving}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-15 font-bold text-white disabled:opacity-40"
       >
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan
       </button>
-      <p className="flex items-start gap-2 px-1 text-[12px] leading-relaxed text-slate-500">
+      <p className="flex items-start gap-2 px-1 fs-12 leading-relaxed text-slate-500">
         <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" /> Hanya dikirim ke AI saat kamu bertanya di
         Tanya Leo, bersama data keuanganmu seperti biasa. Jangan tulis kata sandi, PIN, atau nomor kartu.
       </p>

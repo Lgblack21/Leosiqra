@@ -229,7 +229,7 @@ export function BarangkuView({
       {flash && (
         <div
           role="status"
-          className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+          className="rounded-2xl bg-emerald-50 px-4 py-3 fs-13 font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
         >
           {flash}
         </div>
@@ -237,7 +237,7 @@ export function BarangkuView({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -250,7 +250,7 @@ export function BarangkuView({
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-white/60">
+            <p className="flex items-center gap-2 fs-13 font-semibold text-white/60">
               Nilai barangmu sekarang
               <button
                 type="button"
@@ -261,10 +261,10 @@ export function BarangkuView({
                 {hidden ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </p>
-            <p className="mt-1 text-[34px] font-extrabold leading-none tracking-tight tabular-nums md:text-[44px]">
+            <p className="mt-1 fsh-34 font-extrabold leading-none tracking-tight tabular-nums md:fsh-44">
               {money(totalValue)}
             </p>
-            <p className="mt-2 text-[13px] text-white/60">
+            <p className="mt-2 fs-13 text-white/60">
               {active.length} barang
               {totalCost > 0 && (
                 <>
@@ -278,7 +278,7 @@ export function BarangkuView({
           <button
             type="button"
             onClick={() => setEditor({})}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 fs-13 font-bold text-slate-900 hover:bg-white/90"
           >
             <Plus size={16} strokeWidth={2.6} /> Tambah barang
           </button>
@@ -295,7 +295,7 @@ export function BarangkuView({
                 />
               ))}
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-white/70">
+            <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 fs-12 text-white/70">
               {byCat.slice(0, 5).map(({ c, value }) => (
                 <span key={c} className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full" style={{ background: CAT_COLOR[c] }} />
@@ -306,7 +306,7 @@ export function BarangkuView({
           </div>
         )}
         {soon.length > 0 && (
-          <p className="relative mt-4 flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2 text-[12px] font-semibold text-amber-200">
+          <p className="relative mt-4 flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2 fs-12 font-semibold text-amber-200">
             <ShieldAlert size={15} className="shrink-0" /> Garansi{' '}
             {soon
               .slice(0, 2)
@@ -322,10 +322,8 @@ export function BarangkuView({
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
             <Package size={26} />
           </span>
-          <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 dark:text-white">
-            Catat barang yang kamu punya
-          </h3>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+          <h3 className="mt-4 fs-18 font-extrabold text-slate-900 dark:text-white">Catat barang yang kamu punya</h3>
+          <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
             HP, motor, laptop, jam — lihat berapa nilainya sekarang, ikut dihitung di kekayaan bersih, dan diingatkan
             sebelum garansinya habis.
           </p>
@@ -337,7 +335,7 @@ export function BarangkuView({
                   key={p.name}
                   type="button"
                   onClick={() => setEditor({ preset: p })}
-                  className="flex items-center gap-2 rounded-full bg-slate-100 py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex items-center gap-2 rounded-full bg-slate-100 py-1.5 pl-1.5 pr-3.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <span className={cn('flex h-7 w-7 items-center justify-center rounded-full', M.tone)}>
                     <M.icon size={14} />
@@ -358,7 +356,7 @@ export function BarangkuView({
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Cari nama, merek, catatan…"
                 aria-label="Cari barang"
-                className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                className="min-w-0 flex-1 bg-transparent fs-14 font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
               />
             </label>
             <div className="flex items-center gap-2">
@@ -367,7 +365,7 @@ export function BarangkuView({
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortId)}
                   aria-label="Urutkan"
-                  className="appearance-none rounded-full bg-white py-2.5 pl-4 pr-9 text-[13px] font-bold text-slate-700 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
+                  className="appearance-none rounded-full bg-white py-2.5 pl-4 pr-9 fs-13 font-bold text-slate-700 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
                 >
                   {SORTS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -386,7 +384,7 @@ export function BarangkuView({
                   onClick={() => setShowInactive((v) => !v)}
                   aria-pressed={showInactive}
                   className={cn(
-                    'rounded-full px-4 py-2.5 text-[13px] font-bold ring-1',
+                    'rounded-full px-4 py-2.5 fs-13 font-bold ring-1',
                     showInactive
                       ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900'
                       : 'bg-white text-slate-600 ring-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800',
@@ -409,7 +407,7 @@ export function BarangkuView({
                     onClick={() => setCat(c)}
                     aria-pressed={on}
                     className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold',
+                      'flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 fs-13 font-bold',
                       on
                         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                         : 'bg-white text-slate-600 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800',
@@ -424,7 +422,7 @@ export function BarangkuView({
           )}
 
           {shown.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="py-10 text-center fs-13 text-slate-500 dark:text-slate-400">
               {showInactive ? 'Tidak ada barang terjual/hilang.' : 'Tidak ada barang yang cocok.'}
             </p>
           ) : (
@@ -443,7 +441,7 @@ export function BarangkuView({
               ))}
             </ul>
           )}
-          <p className="px-1 text-[11px] text-slate-400">
+          <p className="px-1 fs-11 text-slate-400">
             Nilai sekarang = perkiraan (turun mengikuti umur & kategori). Barang terjual/hilang tidak dihitung di
             kekayaan.
           </p>
@@ -521,7 +519,7 @@ function ItemCard({
         {warranty && warranty.tone !== 'ok' && item.status === 'aktif' && (
           <span
             className={cn(
-              'absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold',
+              'absolute left-2 top-2 rounded-full px-2 py-0.5 fs-10 font-bold',
               warranty.tone === 'soon' ? 'bg-amber-400 text-amber-950' : 'bg-slate-900/70 text-white',
             )}
           >
@@ -529,23 +527,23 @@ function ItemCard({
           </span>
         )}
         {item.status !== 'aktif' && (
-          <span className="absolute left-2 top-2 rounded-full bg-slate-900/75 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+          <span className="absolute left-2 top-2 rounded-full bg-slate-900/75 px-2 py-0.5 fs-10 font-bold uppercase text-white">
             {item.status}
           </span>
         )}
       </span>
       <span className="block p-3">
-        <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{item.name}</span>
-        <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
+        <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{item.name}</span>
+        <span className="block truncate fs-11 text-slate-500 dark:text-slate-400">
           {[item.brand, item.variant].filter(Boolean).join(' · ') || item.category}
         </span>
         <span className="mt-1.5 flex items-baseline justify-between gap-2">
-          <span className="truncate text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+          <span className="truncate fs-15 font-extrabold tabular-nums text-slate-900 dark:text-white">
             {money(value)}
           </span>
           {dropped && <TrendingDown size={13} className="shrink-0 text-amber-500" aria-label="Nilai turun" />}
         </span>
-        <span className="block truncate text-[11px] text-slate-400">
+        <span className="block truncate fs-11 text-slate-400">
           {age ? `Umur ${age}` : warranty?.tone === 'ok' ? warranty.label : 'Belum ada tanggal beli'}
         </span>
       </span>

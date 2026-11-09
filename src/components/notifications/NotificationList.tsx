@@ -92,15 +92,15 @@ export function NotificationItems({
     else router.push(url);
   };
 
-  if (items === null) return <p className="py-10 text-center text-[13px] text-slate-400">Memuat…</p>;
+  if (items === null) return <p className="py-10 text-center fs-13 text-slate-400">Memuat…</p>;
   if (items.length === 0) {
     return (
       <div className="py-12 text-center">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
           <Bell size={22} />
         </span>
-        <p className="mt-3 text-[14px] font-semibold text-slate-800 dark:text-slate-100">Belum ada notifikasi</p>
-        <p className="mx-auto mt-0.5 max-w-[260px] text-[12px] text-slate-500 dark:text-slate-400">
+        <p className="mt-3 fs-14 font-semibold text-slate-800 dark:text-slate-100">Belum ada notifikasi</p>
+        <p className="mx-auto mt-0.5 max-w-[260px] fs-12 text-slate-500 dark:text-slate-400">
           Pengingat, ringkasan harian & wawasan dari Leosiqra akan muncul di sini.
         </p>
       </div>
@@ -122,18 +122,16 @@ export function NotificationItems({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block text-[14px] leading-snug text-slate-900 dark:text-slate-100',
+                  'block fs-14 leading-snug text-slate-900 dark:text-slate-100',
                   !n.read && 'font-semibold',
                 )}
               >
                 {n.title}
               </span>
               {n.body && (
-                <span className="mt-0.5 block text-[12px] leading-snug text-slate-500 dark:text-slate-400">
-                  {n.body}
-                </span>
+                <span className="mt-0.5 block fs-12 leading-snug text-slate-500 dark:text-slate-400">{n.body}</span>
               )}
-              <span className="mt-1 block text-[11px] text-slate-400 dark:text-slate-500">{timeAgo(n.createdAt)}</span>
+              <span className="mt-1 block fs-11 text-slate-400 dark:text-slate-500">{timeAgo(n.createdAt)}</span>
             </span>
           </button>
         </li>
@@ -148,7 +146,7 @@ export function ReadAllButton({ state }: { state: ReturnType<typeof useNotificat
       type="button"
       onClick={() => void state.readAll()}
       disabled={!state.unread}
-      className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-100 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+      className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-100 py-2.5 fs-13 font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
     >
       <CheckCheck size={15} /> Tandai semua dibaca
     </button>

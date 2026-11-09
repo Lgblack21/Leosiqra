@@ -251,7 +251,7 @@ function AdminPembayaranContent() {
                   {t.id}
                   <span
                     className={cn(
-                      'min-w-5 rounded-full px-1.5 py-0.5 text-[10px]',
+                      'min-w-5 rounded-full px-1.5 py-0.5 fs-10',
                       statusF === t.id ? 'bg-orange-50 text-orange-600' : 'bg-slate-100 text-slate-400',
                     )}
                   >
@@ -287,7 +287,7 @@ function AdminPembayaranContent() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Cari nama, email, ref…"
-                className="w-full bg-transparent text-[13px] outline-none placeholder:text-slate-300"
+                className="w-full bg-transparent fs-13 outline-none placeholder:text-slate-300"
               />
             </label>
           </div>
@@ -295,7 +295,7 @@ function AdminPembayaranContent() {
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Memuat antrean…</p>
+              <p className="fs-11 font-black uppercase tracking-widest text-slate-400">Memuat antrean…</p>
             </div>
           ) : error ? (
             <p className="py-10 text-center text-sm text-rose-600">{error}</p>
@@ -334,7 +334,7 @@ function AdminPembayaranContent() {
                         <span className="absolute inset-0 bg-indigo-600/0 transition group-hover:bg-indigo-600/30" />
                       </button>
                     ) : (
-                      <div className="grid h-20 w-16 shrink-0 place-items-center rounded-xl border border-dashed border-slate-200 text-center text-[9px] font-bold leading-tight text-slate-300">
+                      <div className="grid h-20 w-16 shrink-0 place-items-center rounded-xl border border-dashed border-slate-200 text-center fs-9 font-bold leading-tight text-slate-300">
                         tanpa
                         <br />
                         bukti
@@ -344,7 +344,7 @@ function AdminPembayaranContent() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide',
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 fs-10 font-black uppercase tracking-wide',
                             info.isCoin ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800',
                           )}
                         >
@@ -353,13 +353,13 @@ function AdminPembayaranContent() {
                         </span>
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black',
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 fs-10 font-black',
                             st.tone,
                           )}
                         >
                           <StIcon size={11} /> {st.label}
                         </span>
-                        <span className="w-full text-[10px] font-medium text-slate-400 sm:ml-auto sm:w-auto">
+                        <span className="w-full fs-10 font-medium text-slate-400 sm:ml-auto sm:w-auto">
                           {when(row.created_at)} · #{row.id.slice(-6).toUpperCase()}
                         </span>
                       </div>
@@ -376,11 +376,11 @@ function AdminPembayaranContent() {
                         </p>
                       </div>
                       {info.mismatch && (
-                        <p className="text-[11px] font-bold text-amber-600">
+                        <p className="fs-11 font-bold text-amber-600">
                           ⚠ Nominal beda dari harga paket ({rp(info.expected)})
                         </p>
                       )}
-                      <p className="text-[11px] text-slate-500">
+                      <p className="fs-11 text-slate-500">
                         {info.method || 'Transfer'}
                         {info.ref ? (
                           <>
@@ -390,7 +390,7 @@ function AdminPembayaranContent() {
                         ) : null}
                       </p>
                       {row.note && (
-                        <p className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">“{row.note}”</p>
+                        <p className="rounded-lg bg-slate-50 px-2.5 py-1.5 fs-11 text-slate-600">“{row.note}”</p>
                       )}
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         {row.status === 'MENUNGGU' && (
@@ -450,7 +450,7 @@ function AdminPembayaranContent() {
             <div className="overflow-hidden rounded-2xl bg-white shadow-2xl">
               <div className="flex items-center gap-2.5 border-b border-slate-100 p-4">
                 <ImageIcon size={16} className="text-indigo-500" />
-                <h4 className="text-[13px] font-black uppercase tracking-widest text-slate-900">Bukti Pembayaran</h4>
+                <h4 className="fs-13 font-black uppercase tracking-widest text-slate-900">Bukti Pembayaran</h4>
               </div>
               <Image
                 src={proof}

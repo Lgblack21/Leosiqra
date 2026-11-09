@@ -139,7 +139,7 @@ export function ExpenseForm({
       {error && (
         <p
           role="alert"
-          className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </p>
@@ -157,7 +157,7 @@ export function ExpenseForm({
                 setStockId(m.id);
               }}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[12px] font-bold',
+                'rounded-full px-3 py-1.5 fs-12 font-bold',
                 stockId === m.id
                   ? 'bg-violet-600 text-white'
                   : 'bg-violet-50 text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-300',
@@ -175,7 +175,7 @@ export function ExpenseForm({
                 setKind(q.kind);
               }}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[12px] font-bold',
+                'rounded-full px-3 py-1.5 fs-12 font-bold',
                 item === q.label
                   ? 'bg-rose-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300',
@@ -196,7 +196,7 @@ export function ExpenseForm({
       <label className="block">
         <span className={labelCls}>Nominal</span>
         <span className="relative block">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 fs-14 font-bold text-slate-400">
             Rp
           </span>
           <input
@@ -204,7 +204,7 @@ export function ExpenseForm({
             value={amount ? Number(amount).toLocaleString('id-ID') : ''}
             onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 11))}
             placeholder="0"
-            className={cn(fieldCls, 'pl-11 text-[18px] font-extrabold tabular-nums')}
+            className={cn(fieldCls, 'pl-11 fs-18 font-extrabold tabular-nums')}
           />
         </span>
       </label>
@@ -218,7 +218,7 @@ export function ExpenseForm({
               onClick={() => setKind(k)}
               aria-pressed={kind === k}
               className={cn(
-                'rounded-xl px-2 py-2 text-[12px] font-bold',
+                'rounded-xl px-2 py-2 fs-12 font-bold',
                 kind === k
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -242,7 +242,7 @@ export function ExpenseForm({
                 if (m && kind === 'Lainnya') setKind('Bahan & Stok');
               }}
               aria-label="Bahan stok"
-              className={cn(fieldCls, 'min-w-0 flex-1 bg-white py-2.5 text-[13px] dark:bg-slate-900')}
+              className={cn(fieldCls, 'min-w-0 flex-1 bg-white py-2.5 fs-13 dark:bg-slate-900')}
             >
               <option value="">Tidak menambah stok</option>
               {materials.map((m) => (
@@ -259,16 +259,16 @@ export function ExpenseForm({
                   inputMode="decimal"
                   placeholder="Jumlah"
                   aria-label="Jumlah masuk stok"
-                  className={cn(fieldCls, 'bg-white py-2.5 pr-10 text-[13px] tabular-nums dark:bg-slate-900')}
+                  className={cn(fieldCls, 'bg-white py-2.5 pr-10 fs-13 tabular-nums dark:bg-slate-900')}
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 fs-11 font-bold text-slate-400">
                   {mat.unit}
                 </span>
               </span>
             )}
           </div>
           {mat && value > 0 && Number(parseQty(stockQty)) > 0 && (
-            <p className="mt-1.5 text-[11px] text-slate-500">
+            <p className="mt-1.5 fs-11 text-slate-500">
               ≈ {formatIDR(Math.round((value / parseQty(stockQty)) * 100) / 100)} per {mat.unit} — dipakai menghitung
               modal per produk.
             </p>
@@ -276,7 +276,7 @@ export function ExpenseForm({
         </div>
       )}
       {locked ? (
-        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-[13px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+        <p className="rounded-2xl bg-slate-50 px-4 py-3 fs-13 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Dibayar dari <b>{locked.accountName ?? '—'}</b> · hari ini
         </p>
       ) : (
@@ -319,7 +319,7 @@ export function ExpenseForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full bg-slate-100 px-5 py-3 text-[14px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            className="rounded-full bg-slate-100 px-5 py-3 fs-14 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Batal
           </button>
@@ -328,12 +328,12 @@ export function ExpenseForm({
           type="button"
           onClick={save}
           disabled={busy}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-rose-600 py-3 text-[14px] font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-rose-600 py-3 fs-14 font-bold text-white hover:bg-rose-700 disabled:opacity-50"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Catat pengeluaran
         </button>
       </div>
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center fs-11 text-slate-400">
         Masuk sebagai pengeluaran Biaya Usaha › {kind} — omzet tidak berkurang, laba bersih dihitung otomatis.
       </p>
     </div>

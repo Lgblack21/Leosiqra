@@ -21,9 +21,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
         </button>
 
         <div className="flex flex-col">
-          <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">
-            Admin Consol
-          </h2>
+          <h2 className="fs-10 font-bold text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Admin Consol</h2>
           <h1 className="text-lg md:text-xl font-black text-slate-900 leading-none truncate max-w-[150px] xs:max-w-[200px] md:max-w-none">
             {{
               '/admin/dashboard': 'Admin Dashboard Overview',
@@ -40,7 +38,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="hidden md:flex px-4 py-2 rounded-full bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest">
+        <div className="hidden md:flex px-4 py-2 rounded-full bg-slate-900 fs-10 font-black text-white uppercase tracking-widest">
           Role: Master Admin
         </div>
       </div>

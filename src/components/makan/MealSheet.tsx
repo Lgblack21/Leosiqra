@@ -32,13 +32,13 @@ const toStr = (n: number | null | undefined) => (n == null ? '' : String(Math.ro
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">{label}</span>
       {children}
     </label>
   );
 }
 const inputCls =
-  'w-full rounded-xl bg-slate-100 px-3 py-2.5 text-[14px] font-semibold text-slate-800 outline-none placeholder:font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-orange-300 dark:bg-slate-800 dark:text-slate-100';
+  'w-full rounded-xl bg-slate-100 px-3 py-2.5 fs-14 font-semibold text-slate-800 outline-none placeholder:font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-orange-300 dark:bg-slate-800 dark:text-slate-100';
 
 export function MealSheet({
   state,
@@ -239,7 +239,7 @@ export function MealSheet({
         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
       >
         <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4">
-          <h2 className="text-[17px] font-black text-slate-900 dark:text-white">
+          <h2 className="fs-17 font-black text-slate-900 dark:text-white">
             {editing ? 'Ubah makanan' : 'Tambah makanan'}
           </h2>
           <button
@@ -267,24 +267,20 @@ export function MealSheet({
               )}
               <div className="min-w-0 flex-1">
                 {analyzing ? (
-                  <div className="flex items-center gap-2 text-[14px] font-bold text-orange-700 dark:text-orange-300">
+                  <div className="flex items-center gap-2 fs-14 font-bold text-orange-700 dark:text-orange-300">
                     <LeoBadge topic="makan" size={30} thinking />
                     Leo lagi ngenalin makananmu…
                   </div>
                 ) : analysis ? (
                   <>
-                    <div className="text-[11px] font-bold uppercase tracking-widest text-orange-600/80 dark:text-orange-300/80">
+                    <div className="fs-11 font-bold uppercase tracking-widest text-orange-600/80 dark:text-orange-300/80">
                       Kata Leo {analysis.emoji}
                     </div>
-                    <div className="text-[17px] font-black leading-tight text-slate-900 dark:text-white">
-                      {analysis.name}
-                    </div>
-                    <div className="mt-1 text-[13px] font-bold text-slate-600 dark:text-slate-300">
-                      ±{analysis.kcal} kkal
-                    </div>
+                    <div className="fs-17 font-black leading-tight text-slate-900 dark:text-white">{analysis.name}</div>
+                    <div className="mt-1 fs-13 font-bold text-slate-600 dark:text-slate-300">±{analysis.kcal} kkal</div>
                   </>
                 ) : (
-                  <div className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">Foto makanan</div>
+                  <div className="fs-13 font-semibold text-slate-500 dark:text-slate-400">Foto makanan</div>
                 )}
                 {score ? (
                   <div className="mt-1.5 flex items-center gap-1" aria-label={`Keseimbangan gizi ${score} dari 5`}>
@@ -297,7 +293,7 @@ export function MealSheet({
                         )}
                       />
                     ))}
-                    <span className="ml-1 text-[11px] font-semibold text-slate-500">gizi seimbang</span>
+                    <span className="ml-1 fs-11 font-semibold text-slate-500">gizi seimbang</span>
                   </div>
                 ) : null}
               </div>
@@ -307,7 +303,7 @@ export function MealSheet({
           {analysis?.charged ? (
             <p
               className={cn(
-                'rounded-full px-3 py-1 text-center text-[11.5px] font-bold',
+                'rounded-full px-3 py-1 text-center fs-11.5 font-bold',
                 analysis.charged === 'coin'
                   ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
                   : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
@@ -319,13 +315,13 @@ export function MealSheet({
             </p>
           ) : null}
           {tip ? (
-            <p className="flex gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+            <p className="flex gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 fs-13 leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
               <Sparkles size={15} className="mt-0.5 shrink-0 text-amber-500" /> {tip}
             </p>
           ) : null}
 
           {error ? (
-            <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 text-[13px] font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+            <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 fs-13 font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
               {error}
             </p>
           ) : null}
@@ -344,23 +340,21 @@ export function MealSheet({
                 type="button"
                 onClick={() => void analyzeText()}
                 disabled={name.trim().length < 3 || textBusy || analyzing}
-                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 text-[13px] font-bold text-white shadow-md shadow-rose-500/20 disabled:opacity-40"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 fs-13 font-bold text-white shadow-md shadow-rose-500/20 disabled:opacity-40"
               >
                 {textBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 <span className="whitespace-nowrap">{analysis ? 'Hitung ulang' : 'Hitung pakai Leo'}</span>
               </button>
             </div>
             {!analysis && !img ? (
-              <span className="mt-1 block text-[11.5px] text-slate-400">
+              <span className="mt-1 block fs-11.5 text-slate-400">
                 Ketik menunya, Leo hitung kalori, protein, karbo & lemaknya.
               </span>
             ) : null}
           </Field>
 
           <div>
-            <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
-              Waktu makan
-            </span>
+            <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">Waktu makan</span>
             <div className="flex flex-wrap gap-2">
               {SLOTS.map((s) => (
                 <button
@@ -368,7 +362,7 @@ export function MealSheet({
                   type="button"
                   onClick={() => setSlot(s.id)}
                   className={cn(
-                    'rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors',
+                    'rounded-full px-3 py-1.5 fs-13 font-bold transition-colors',
                     slot === s.id
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -382,7 +376,7 @@ export function MealSheet({
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 aria-label="Jam makan"
-                className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-bold text-slate-700 outline-none dark:bg-slate-800 dark:text-slate-200"
+                className="rounded-full bg-slate-100 px-3 py-1.5 fs-13 font-bold text-slate-700 outline-none dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
           </div>
@@ -393,7 +387,7 @@ export function MealSheet({
                 <div
                   key={i}
                   className={cn(
-                    'flex items-center justify-between gap-3 px-3.5 py-2 text-[13px]',
+                    'flex items-center justify-between gap-3 px-3.5 py-2 fs-13',
                     i && 'border-t border-slate-100 dark:border-slate-800',
                   )}
                 >
@@ -450,7 +444,7 @@ export function MealSheet({
 
           {editing ? (
             editing.price ? (
-              <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3.5 py-2.5 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3.5 py-2.5 fs-13 font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
                 <Wallet size={16} /> {formatIDR(editing.price)}
                 {editing.recorded ? ' · tercatat sebagai pengeluaran (ubah di Transaksi)' : ''}
               </p>
@@ -459,7 +453,7 @@ export function MealSheet({
             <div className="space-y-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/50">
               <Field label={analysis?.price_estimate ? 'Harga (perkiraan Leo, ubah kalau beda)' : 'Harga (opsional)'}>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 fs-14 font-bold text-slate-400">
                     Rp
                   </span>
                   <input
@@ -484,9 +478,9 @@ export function MealSheet({
                         onChange={(e) => setRecord(e.target.checked)}
                         className="h-5 w-5 accent-orange-500"
                       />
-                      <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">
+                      <span className="fs-13 font-bold text-slate-700 dark:text-slate-200">
                         Catat {formatIDR(priceNum)} sebagai pengeluaran
-                        <span className="block text-[11.5px] font-medium text-slate-500 dark:text-slate-400">
+                        <span className="block fs-11.5 font-medium text-slate-500 dark:text-slate-400">
                           Kategori Makanan & Minuman
                         </span>
                       </span>
@@ -507,7 +501,7 @@ export function MealSheet({
                     ) : null}
                   </div>
                 ) : (
-                  <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                  <p className="fs-12 text-slate-500 dark:text-slate-400">
                     Tambah rekening Rupiah dulu supaya harganya bisa dicatat sebagai pengeluaran.
                   </p>
                 )
@@ -533,7 +527,7 @@ export function MealSheet({
                 type="button"
                 disabled={saving}
                 onClick={() => void remove()}
-                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 text-[14px] font-bold text-white"
+                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 fs-14 font-bold text-white"
               >
                 <Trash2 size={16} /> Yakin hapus
               </button>
@@ -552,7 +546,7 @@ export function MealSheet({
             type="button"
             disabled={saving || analyzing}
             onClick={() => void save()}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 text-[15px] font-bold text-white shadow-lg shadow-rose-500/25 disabled:opacity-60"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 fs-15 font-bold text-white shadow-lg shadow-rose-500/25 disabled:opacity-60"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : null}
             {editing

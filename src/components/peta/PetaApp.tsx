@@ -243,7 +243,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           onClick={() => setDays(p.days)}
           className={cn(
-            'h-9 flex-1 rounded-full text-[13px] font-bold',
+            'h-9 flex-1 rounded-full fs-13 font-bold',
             days === p.days ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-slate-500',
           )}
         >
@@ -255,20 +255,20 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const placePanel = (
     <div className="space-y-5">
       {!ready ? (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800">
           Peta Belanja sedang disiapkan di server. Coba lagi sebentar lagi.
         </p>
       ) : null}
-      {err ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">{err}</p> : null}
+      {err ? <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700">{err}</p> : null}
 
       {periodChips}
 
       <div className="rounded-[22px] bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">
+        <p className="fs-11 font-black uppercase tracking-[0.18em] text-white/70">
           Belanja di peta · {PERIODS.find((p) => p.days === days)?.label}
         </p>
-        <p className="mt-1 text-[28px] font-black leading-tight tabular-nums">{rp(total)}</p>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-semibold text-white/85">
+        <p className="mt-1 fsh-28 font-black leading-tight tabular-nums">{rp(total)}</p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 fs-12.5 font-semibold text-white/85">
           <span>{places.length} tempat</span>
           <span>{visits} kunjungan</span>
           <span>{newPlaces} tempat baru</span>
@@ -281,7 +281,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cari tempat atau kategori"
-          className="h-full min-w-0 flex-1 bg-transparent text-[14px] outline-none"
+          className="h-full min-w-0 flex-1 bg-transparent fs-14 outline-none"
         />
       </label>
 
@@ -291,7 +291,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             type="button"
             onClick={() => setCat(null)}
             className={cn(
-              'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-bold',
+              'h-9 shrink-0 rounded-full px-3.5 fs-13 font-bold',
               !cat
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -305,7 +305,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
               type="button"
               onClick={() => setCat(c === cat ? null : c)}
               className={cn(
-                'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-bold',
+                'h-9 shrink-0 rounded-full px-3.5 fs-13 font-bold',
                 cat === c
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -335,22 +335,22 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
       {langganan.length ? (
         <section>
-          <h2 className="mb-2 text-[15px] font-black">Tempat langgananmu</h2>
+          <h2 className="mb-2 fs-15 font-black">Tempat langgananmu</h2>
           <PlaceList list={langganan} onPick={choose} sel={sel} sub={(p) => `${p.visits}× ke sini`} />
         </section>
       ) : null}
 
       <section>
-        <h2 className="mb-2 text-[15px] font-black">Semua tempat</h2>
+        <h2 className="mb-2 fs-15 font-black">Semua tempat</h2>
         {items === null ? (
-          <p className="text-[13px] text-slate-400">Memuat…</p>
+          <p className="fs-13 text-slate-400">Memuat…</p>
         ) : places.length ? (
           <PlaceList list={places} onPick={choose} sel={sel} sub={(p) => `${p.visits}× · terakhir ${dShort(p.last)}`} />
         ) : (
           <div className="rounded-2xl bg-slate-50 p-4 text-center dark:bg-slate-900">
             <MapPin size={22} className="mx-auto text-slate-400" />
-            <p className="mt-1 text-[14px] font-bold">Belum ada tempat di petamu</p>
-            <p className="text-[12.5px] text-slate-500">
+            <p className="mt-1 fs-14 font-bold">Belum ada tempat di petamu</p>
+            <p className="fs-12.5 text-slate-500">
               Tandai lokasi transaksi di bawah, atau ketuk 📍 saat mencatat pengeluaran.
             </p>
           </div>
@@ -359,8 +359,8 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
       {missing.length ? (
         <section>
-          <h2 className="text-[15px] font-black">Lengkapi lokasi</h2>
-          <p className="mb-2 text-[12.5px] text-slate-500">Pengeluaran 30 hari terakhir yang belum punya tempat.</p>
+          <h2 className="fs-15 font-black">Lengkapi lokasi</h2>
+          <p className="mb-2 fs-12.5 text-slate-500">Pengeluaran 30 hari terakhir yang belum punya tempat.</p>
           <div className="space-y-1.5">
             {missing.map((t) => (
               <button
@@ -369,16 +369,16 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                 onClick={() => setPick({ txId: t.id!, title: t.note || t.category, name: t.note || '' })}
                 className="flex w-full items-center gap-3 rounded-2xl bg-white px-3 py-2.5 text-left ring-1 ring-slate-200 hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-800"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[17px] dark:bg-slate-800">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 fs-17 dark:bg-slate-800">
                   {categoryVisual(t.category, 'pengeluaran').emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-bold">{t.note || t.category}</span>
-                  <span className="block text-[12px] text-slate-500">
+                  <span className="block truncate fs-13.5 font-bold">{t.note || t.category}</span>
+                  <span className="block fs-12 text-slate-500">
                     {dShort(new Date(t.date).toISOString())} · {rp(Number(t.amountIDR) || Number(t.amount) || 0)}
                   </span>
                 </span>
-                <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-[12px] font-bold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+                <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 fs-12 font-bold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
                   📍 Tandai
                 </span>
               </button>
@@ -387,7 +387,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         </section>
       ) : null}
 
-      <p className="text-[11.5px] leading-relaxed text-slate-400">
+      <p className="fs-11.5 leading-relaxed text-slate-400">
         Lokasi hanya tersimpan saat kamu menandainya atau saat mencatat dengan lokasi otomatis — tidak ada pelacakan di
         latar belakang. Atur di 🛡️ Lokasi &amp; privasi. Data peta © kontributor OpenStreetMap.
       </p>
@@ -409,7 +409,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             type="button"
             onClick={() => setTab(k)}
             className={cn(
-              'h-10 flex-1 rounded-full text-[14px] font-black transition-colors',
+              'h-10 flex-1 rounded-full fs-14 font-black transition-colors',
               tab === k ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-slate-500',
             )}
           >
@@ -498,7 +498,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             >
               <ArrowLeft size={18} />
             </Link>
-            <h1 className="text-[20px] font-black">Peta Belanja</h1>
+            <h1 className="fsh-20 font-black">Peta Belanja</h1>
           </div>
           <div className="h-[42dvh] shrink-0">{map}</div>
           <div className="flex-1 overflow-y-auto px-4 pb-10 pt-4">{panel}</div>
@@ -506,8 +506,8 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       ) : (
         <div className="space-y-4">
           <div>
-            <h1 className="text-[26px] font-black tracking-tight md:text-[34px]">Peta Belanja</h1>
-            <p className="text-[13.5px] text-slate-500 dark:text-slate-400">
+            <h1 className="fsh-26 font-black tracking-tight md:fsh-34">Peta Belanja</h1>
+            <p className="fs-13.5 text-slate-500 dark:text-slate-400">
               Ke mana uangmu dibelanjakan — dari lokasi yang kamu tandai sendiri.
             </p>
           </div>
@@ -556,14 +556,14 @@ function PlaceList({
             sel === p.key ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
           )}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[18px] dark:bg-slate-800">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 fs-18 dark:bg-slate-800">
             {categoryVisual(p.category, 'pengeluaran').emoji}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-bold">{p.name}</span>
-            <span className="block truncate text-[12px] text-slate-500">{sub(p)}</span>
+            <span className="block truncate fs-14 font-bold">{p.name}</span>
+            <span className="block truncate fs-12 text-slate-500">{sub(p)}</span>
           </span>
-          <span className="shrink-0 text-[14px] font-black tabular-nums">{short(p.total)}</span>
+          <span className="shrink-0 fs-14 font-black tabular-nums">{short(p.total)}</span>
         </button>
       ))}
     </div>
@@ -584,11 +584,11 @@ function SelectedPlace({
   return (
     <div className="rounded-[22px] bg-white p-4 ring-2 ring-orange-300 dark:bg-slate-900">
       <div className="flex items-start gap-3">
-        <span className="text-[26px]">{categoryVisual(p.category, 'pengeluaran').emoji}</span>
+        <span className="fsh-26">{categoryVisual(p.category, 'pengeluaran').emoji}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-black">{p.name}</p>
-          {p.address ? <p className="line-clamp-2 text-[12px] text-slate-500">{p.address}</p> : null}
-          <p className="mt-0.5 text-[12.5px] font-semibold text-slate-600 dark:text-slate-300">
+          <p className="fs-16 font-black">{p.name}</p>
+          {p.address ? <p className="line-clamp-2 fs-12 text-slate-500">{p.address}</p> : null}
+          <p className="mt-0.5 fs-12.5 font-semibold text-slate-600 dark:text-slate-300">
             {rp(p.total)} · {p.visits}× kunjungan · rata-rata {short(p.total / p.visits)}
           </p>
         </div>
@@ -605,7 +605,7 @@ function SelectedPlace({
         {p.txs.slice(0, 8).map((t) => (
           <div
             key={t.tx_id}
-            className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[12.5px] dark:bg-slate-800/60"
+            className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 fs-12.5 dark:bg-slate-800/60"
           >
             <span className="w-14 shrink-0 text-slate-500">{dShort(t.date)}</span>
             <span className="min-w-0 flex-1 truncate font-semibold">{t.note || t.category}</span>

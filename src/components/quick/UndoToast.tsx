@@ -64,7 +64,7 @@ export function UndoToast({ item, onUndo, onDone, seconds = 6 }: Props) {
           </span>
           <span className="flex-1 min-w-0">
             <span className="block text-sm font-black truncate">{error || 'Tersimpan'}</span>
-            <span className="block text-[11px] text-white/60 truncate">{item.label}</span>
+            <span className="block fs-11 text-white/60 truncate">{item.label}</span>
           </span>
           <button
             type="button"

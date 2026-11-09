@@ -191,12 +191,12 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       currency: selectedAccount?.currency || prev.currency,
     }));
   };
-  const labelCls = 'mb-1.5 block text-[12px] font-semibold text-slate-500';
+  const labelCls = 'mb-1.5 block fs-12 font-semibold text-slate-500';
   const fieldCls =
-    'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] font-semibold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5';
+    'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 fs-13.5 font-semibold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5';
   const chipCls = (active: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12.5 font-semibold transition-colors',
       active ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
     );
 
@@ -207,7 +207,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       <div className="relative flex max-h-[92dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[24px] bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-[24px]">
         <div className="shrink-0 px-5 pt-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-[16px] font-extrabold tracking-tight text-slate-900">Catat transaksi</h2>
+            <h2 className="fs-16 font-extrabold tracking-tight text-slate-900">Catat transaksi</h2>
             <button
               type="button"
               onClick={onClose}
@@ -234,7 +234,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
                   aria-selected={active}
                   onClick={() => setType(t.id as TransactionType)}
                   className={cn(
-                    'flex h-8 items-center justify-center gap-1.5 rounded-lg text-[13px] font-bold transition-all',
+                    'flex h-8 items-center justify-center gap-1.5 rounded-lg fs-13 font-bold transition-all',
                     active
                       ? cn('bg-white shadow-sm', t.id === 'pemasukan' ? 'text-emerald-600' : 'text-rose-600')
                       : 'text-slate-500 hover:text-slate-700',
@@ -253,7 +253,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               isIncome ? 'bg-emerald-50/70 ring-emerald-100' : 'bg-rose-50/70 ring-rose-100',
             )}
           >
-            <div className="shrink-0 [&_select]:rounded-lg [&_select]:border-slate-200 [&_select]:bg-white [&_select]:py-1.5 [&_select]:pl-2.5 [&_select]:pr-7 [&_select]:text-[12.5px] [&_select]:font-bold">
+            <div className="shrink-0 [&_select]:rounded-lg [&_select]:border-slate-200 [&_select]:bg-white [&_select]:py-1.5 [&_select]:pl-2.5 [&_select]:pr-7 [&_select]:fs-12.5 [&_select]:font-bold">
               <CurrencySelect
                 value={formData.currency}
                 onChange={(val) => setFormData({ ...formData, currency: val })}
@@ -267,7 +267,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               required
               aria-label="Nominal"
               className={cn(
-                'min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-[26px] font-extrabold leading-tight tracking-tight outline-none placeholder:text-slate-300',
+                'min-w-0 flex-1 border-0 bg-transparent p-0 text-right fsh-26 font-extrabold leading-tight tracking-tight outline-none placeholder:text-slate-300',
                 isIncome ? 'text-emerald-700' : 'text-rose-700',
               )}
             />
@@ -278,7 +278,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             />
           </div>
           {formData.currency !== 'IDR' && formData.amount ? (
-            <p className="mt-1.5 flex items-center justify-end gap-1.5 text-[12px] font-medium text-slate-500">
+            <p className="mt-1.5 flex items-center justify-end gap-1.5 fs-12 font-medium text-slate-500">
               <RefreshCw size={11} /> ≈ {formatCurrency(convertedAmount, 'IDR')} · kurs terkini
             </p>
           ) : null}
@@ -287,7 +287,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="custom-scrollbar min-h-0 flex-1 space-y-3.5 overflow-y-auto px-5 pb-4 pt-3.5">
             {error && (
-              <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-[12.5px] font-semibold text-rose-600">
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 fs-12.5 font-semibold text-rose-600">
                 {error}
               </div>
             )}
@@ -344,7 +344,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     required
                     aria-label="Pilih tanggal"
-                    className="w-[112px] bg-transparent text-[12.5px] font-semibold outline-none [color-scheme:light]"
+                    className="w-[112px] bg-transparent fs-12.5 font-semibold outline-none [color-scheme:light]"
                   />
                 </label>
               </div>
@@ -355,7 +355,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               {accounts.length ? (
                 <AccountSelect accounts={accounts} value={formData.accountId} onChange={pickAccount} />
               ) : (
-                <p className="rounded-xl border border-dashed border-slate-200 px-3.5 py-3 text-[12.5px] text-slate-500">
+                <p className="rounded-xl border border-dashed border-slate-200 px-3.5 py-3 fs-12.5 text-slate-500">
                   Belum ada rekening.{' '}
                   <Link
                     href="/membership/rekening"
@@ -379,7 +379,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             )}
 
             <details className="group rounded-xl px-3.5 py-2.5 ring-1 ring-slate-200">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-[12.5px] font-semibold text-slate-500">
+              <summary className="flex cursor-pointer list-none items-center justify-between fs-12.5 font-semibold text-slate-500">
                 Detail cicilan (opsional)
                 <ChevronDown size={15} className="transition-transform group-open:rotate-180" />
               </summary>
@@ -412,7 +412,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
           <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3">
             <Button
               variant="secondary"
-              className="h-11 rounded-xl px-4 text-[13.5px] font-semibold"
+              className="h-11 rounded-xl px-4 fs-13.5 font-semibold"
               type="button"
               onClick={onClose}
             >
@@ -420,7 +420,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             </Button>
             <Button
               className={cn(
-                'h-11 flex-1 rounded-xl text-[13.5px] font-bold text-white',
+                'h-11 flex-1 rounded-xl fs-13.5 font-bold text-white',
                 isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700',
               )}
               isLoading={loading}

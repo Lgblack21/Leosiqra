@@ -117,18 +117,18 @@ function KindPicker({
       <span className="min-w-0 flex-1">
         <span
           className={cn(
-            'flex items-center gap-1.5 text-[15px] font-bold',
+            'flex items-center gap-1.5 fs-15 font-bold',
             soon ? 'text-slate-400' : 'text-slate-900 dark:text-white',
           )}
         >
           {title}
           {soon && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700">
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 fs-9 font-bold uppercase text-amber-700">
               Segera
             </span>
           )}
         </span>
-        <span className="block text-[12px] text-slate-500 dark:text-slate-400">{desc}</span>
+        <span className="block fs-12 text-slate-500 dark:text-slate-400">{desc}</span>
       </span>
       {!soon && <ChevronRight size={18} className="shrink-0 text-slate-300" />}
     </button>
@@ -139,7 +139,7 @@ function KindPicker({
         'pokemon',
         'Kartu Pokémon',
         'Cari kartunya — foto & harga pasar otomatis, dalam Rupiah',
-        <span className="text-[22px]">⚡</span>,
+        <span className="fsh-22">⚡</span>,
         'bg-yellow-50 dark:bg-yellow-500/15',
       )}
       {opt(
@@ -155,7 +155,7 @@ function KindPicker({
         steamLinked
           ? 'Sudah terhubung — sinkron ulang inventaris & harga'
           : 'Impor inventaris publik CS2 — skin, case, stiker + harga pasar',
-        <span className="text-[20px]">🎮</span>,
+        <span className="fsh-20">🎮</span>,
         'bg-slate-100 dark:bg-slate-800',
       )}
     </div>
@@ -229,14 +229,14 @@ function SteamImport({
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+          className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
         >
           <ArrowLeft size={15} /> Jenis koleksi
         </button>
       )}
       <div className="web-keep relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_100%)] p-4 text-white">
-        <p className="text-[15px] font-extrabold">🎮 Inventaris CS2 → Koleksiku</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-white/70">
+        <p className="fs-15 font-extrabold">🎮 Inventaris CS2 → Koleksiku</p>
+        <p className="mt-1 fs-12 leading-relaxed text-white/70">
           Item yang bisa dijual (skin, case, stiker) masuk otomatis dengan gambar & harga pasar dalam Rupiah. Sinkron
           ulang kapan saja — yang sudah terjual ikut terhapus.
         </p>
@@ -244,7 +244,7 @@ function SteamImport({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -252,8 +252,8 @@ function SteamImport({
       {steam ? (
         <div className="space-y-3">
           <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
-            <p className="text-[13px] font-bold text-slate-900 dark:text-white">Terhubung ke Steam</p>
-            <p className="mt-0.5 break-all text-[12px] text-slate-500 dark:text-slate-400">
+            <p className="fs-13 font-bold text-slate-900 dark:text-white">Terhubung ke Steam</p>
+            <p className="mt-0.5 break-all fs-12 text-slate-500 dark:text-slate-400">
               ID {steam.id}
               {synced ? ` · sinkron terakhir ${synced}` : ''}
             </p>
@@ -262,7 +262,7 @@ function SteamImport({
             type="button"
             onClick={() => run(true)}
             disabled={Boolean(busy)}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
           >
             {busy === 'sync' ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={17} />} Sinkron ulang
             sekarang
@@ -272,7 +272,7 @@ function SteamImport({
             onClick={unlink}
             disabled={Boolean(busy)}
             className={cn(
-              'flex w-full items-center justify-center gap-1.5 rounded-full py-3 text-[13px] font-bold',
+              'flex w-full items-center justify-center gap-1.5 rounded-full py-3 fs-13 font-bold',
               confirmUnlink
                 ? 'bg-rose-500 text-white'
                 : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
@@ -285,7 +285,7 @@ function SteamImport({
       ) : (
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+            <span className="mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400">
               Tautan profil Steam
             </span>
             <input
@@ -298,13 +298,13 @@ function SteamImport({
               placeholder="steamcommunity.com/id/namamu"
               aria-label="Tautan profil Steam"
               maxLength={200}
-              className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+              className="w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
             />
-            <span className="mt-1 block px-1 text-[11px] text-slate-400">
+            <span className="mt-1 block px-1 fs-11 text-slate-400">
               Bisa juga Steam ID 17 digit (7656119…). Tanpa login, tanpa kata sandi.
             </span>
           </label>
-          <p className="flex gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 text-[12px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          <p className="flex gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 fs-12 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             <Lock size={14} className="mt-0.5 shrink-0" />
             <span>
               Inventaris harus <b>Publik</b>: Steam → Profil → Edit Profil → Pengaturan Privasi → Inventaris → Publik.{' '}
@@ -322,14 +322,14 @@ function SteamImport({
             type="button"
             onClick={() => run(false)}
             disabled={Boolean(busy) || !profile.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
           >
             {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}{' '}
             {busy ? 'Membaca inventaris…' : 'Impor inventaris'}
           </button>
         </div>
       )}
-      <p className="px-1 text-[11px] text-slate-400">
+      <p className="px-1 fs-11 text-slate-400">
         Harga: median penjualan Skinport (cadangan: Steam Market), USD → Rupiah. Perkiraan, bukan tawaran jual.
       </p>
     </div>
@@ -378,7 +378,7 @@ function PokemonSearch({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+        className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
       >
         <ArrowLeft size={15} /> Jenis koleksi
       </button>
@@ -394,17 +394,17 @@ function PokemonSearch({
           onChange={(e) => setQ(e.target.value)}
           placeholder="Charizard, Pikachu 58/102…"
           aria-label="Cari kartu Pokémon"
-          className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+          className="min-w-0 flex-1 bg-transparent fs-15 font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
         />
       </label>
-      {error && <p className="px-1 text-[13px] font-semibold text-rose-600">{error}</p>}
+      {error && <p className="px-1 fs-13 font-semibold text-rose-600">{error}</p>}
       {!shown ? (
-        <p className="px-1 text-[12px] text-slate-500 dark:text-slate-400">
+        <p className="px-1 fs-12 text-slate-500 dark:text-slate-400">
           Ketik nama kartu (bahasa Inggris). Tambah nomor untuk mempersempit, mis. “Pikachu 58”. Data & harga: TCGdex
           (TCGplayer/Cardmarket).
         </p>
       ) : shown.length === 0 && !busy ? (
-        <p className="py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="py-6 text-center fs-13 text-slate-500 dark:text-slate-400">
           Kartu tidak ditemukan. Coba ejaan Inggris, mis. “Charizard”.
         </p>
       ) : (
@@ -427,13 +427,11 @@ function PokemonSearch({
                     className="h-[76px] w-[54px] shrink-0 rounded-md bg-slate-100 object-cover shadow-sm dark:bg-slate-800"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-bold text-slate-900 dark:text-white">
-                      {c.name}
-                    </span>
-                    <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+                    <span className="block truncate fs-15 font-bold text-slate-900 dark:text-white">{c.name}</span>
+                    <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
                       {[c.set, c.number && `#${c.number}`, c.rarity].filter(Boolean).join(' · ')}
                     </span>
-                    <span className="mt-0.5 block text-[13px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    <span className="mt-0.5 block fs-13 font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                       {p ? (
                         `${idr != null ? formatIDR(Math.round(idr)) : fmtForeign(p.price, p.currency)} · harga pasar`
                       ) : (
@@ -579,12 +577,12 @@ function CollectibleForm({
     }
   };
 
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   const chip = (on: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
       on
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
@@ -596,7 +594,7 @@ function CollectibleForm({
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+          className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
         >
           <ArrowLeft size={15} /> {card ? 'Cari kartu lain' : 'Jenis koleksi'}
         </button>
@@ -604,7 +602,7 @@ function CollectibleForm({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -633,10 +631,8 @@ function CollectibleForm({
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
           {isMarket ? (
             <>
-              <p className="break-words text-[18px] font-extrabold leading-tight text-slate-900 dark:text-white">
-                {title}
-              </p>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400">
+              <p className="break-words fs-18 font-extrabold leading-tight text-slate-900 dark:text-white">{title}</p>
+              <p className="fs-12 text-slate-500 dark:text-slate-400">
                 {sub}
                 {(card?.rarity ?? item?.rarity) ? ` · ${card?.rarity ?? item?.rarity}` : ''}
               </p>
@@ -656,14 +652,14 @@ function CollectibleForm({
                 <button
                   type="button"
                   onClick={() => camRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 text-[12px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <Camera size={15} /> Kamera
                 </button>
                 <button
                   type="button"
                   onClick={() => galRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 text-[12px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <ImagePlus size={15} /> Galeri
                 </button>
@@ -708,7 +704,7 @@ function CollectibleForm({
                   className={cn(chip(variant === k), 'flex flex-col items-start rounded-2xl px-3 py-2 text-left')}
                 >
                   <span>{variantLabel(k)}</span>
-                  <span className="text-[11px] font-semibold opacity-70">
+                  <span className="fs-11 font-semibold opacity-70">
                     {idr != null ? formatIDR(Math.round(idr)) : fmtForeign(p.price, p.currency)}
                   </span>
                 </button>
@@ -722,8 +718,8 @@ function CollectibleForm({
         {isSteam ? (
           <div>
             <span className={label}>Jumlah</span>
-            <p className="rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-extrabold tabular-nums text-slate-900 dark:bg-slate-800 dark:text-white">
-              {qty} <span className="text-[11px] font-semibold text-slate-400">dari inventaris</span>
+            <p className="rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-extrabold tabular-nums text-slate-900 dark:bg-slate-800 dark:text-white">
+              {qty} <span className="fs-11 font-semibold text-slate-400">dari inventaris</span>
             </p>
           </div>
         ) : (
@@ -738,7 +734,7 @@ function CollectibleForm({
               >
                 <Minus size={16} />
               </button>
-              <span className="text-[17px] font-extrabold tabular-nums text-slate-900 dark:text-white">{qty}</span>
+              <span className="fs-17 font-extrabold tabular-nums text-slate-900 dark:text-white">{qty}</span>
               <button
                 type="button"
                 onClick={() => setQty((n) => Math.min(9999, n + 1))}
@@ -790,7 +786,7 @@ function CollectibleForm({
               className="min-w-0 flex-1 bg-transparent tabular-nums outline-none"
             />
           </span>
-          <span className="mt-1 block px-1 text-[11px] text-slate-400">
+          <span className="mt-1 block px-1 fs-11 text-slate-400">
             Cek harga jual terbaru di marketplace, lalu perbarui di sini sesekali.
           </span>
         </label>
@@ -798,17 +794,17 @@ function CollectibleForm({
 
       <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-800/60">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+          <span className="fs-12 font-semibold text-slate-500 dark:text-slate-400">
             Nilai sekarang{qty > 1 ? ` (${qty}×)` : ''}
           </span>
-          <span className="text-[20px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+          <span className="fsh-20 font-extrabold tabular-nums text-slate-900 dark:text-white">
             {formatIDR(Math.round(unitValue * qty))}
           </span>
         </div>
         {Number(price || '0') > 0 && (
           <p
             className={cn(
-              'text-right text-[12px] font-bold tabular-nums',
+              'text-right fs-12 font-bold tabular-nums',
               gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
             )}
           >
@@ -817,12 +813,12 @@ function CollectibleForm({
           </p>
         )}
         {isPokemon && (
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 fs-11 text-slate-400">
             Harga pasar TCGplayer/Cardmarket, dikonversi ke Rupiah & diperbarui otomatis.
           </p>
         )}
         {isSteam && (
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 fs-11 text-slate-400">
             {item?.marketPrice != null
               ? 'Median penjualan Skinport/Steam Market, dikonversi ke Rupiah & diperbarui otomatis.'
               : 'Harga pasar sedang diambil — muncul setelah pembaruan berikutnya.'}
@@ -887,7 +883,7 @@ function CollectibleForm({
         type="button"
         onClick={save}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}{' '}
         {item ? 'Simpan perubahan' : 'Simpan ke Koleksiku'}
@@ -898,7 +894,7 @@ function CollectibleForm({
           onClick={remove}
           disabled={busy}
           className={cn(
-            'flex w-full items-center justify-center gap-1.5 rounded-full py-3 text-[13px] font-bold',
+            'flex w-full items-center justify-center gap-1.5 rounded-full py-3 fs-13 font-bold',
             confirmDelete
               ? 'bg-rose-500 text-white'
               : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
@@ -908,7 +904,7 @@ function CollectibleForm({
         </button>
       )}
       {item && isSteam && (
-        <p className="text-center text-[11px] text-slate-400">
+        <p className="text-center fs-11 text-slate-400">
           Item yang dihapus muncul lagi saat sinkron Steam kalau masih ada di inventaris.
         </p>
       )}

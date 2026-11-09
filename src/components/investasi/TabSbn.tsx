@@ -93,7 +93,7 @@ export function TabSbn() {
   return (
     <div className="space-y-4">
       {stale && (
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5 text-[13px] text-amber-800 ring-1 ring-amber-100">
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5 fs-13 text-amber-800 ring-1 ring-amber-100">
           <AlertTriangle size={16} className="shrink-0" /> Angka di halaman ini per {fmtDate(AS_OF)} dan mungkin sudah
           berubah — cek sumber resminya di bawah.
         </p>
@@ -101,8 +101,8 @@ export function TabSbn() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Tangga bunga</p>
-          <h2 className="text-[20px] font-extrabold tracking-tight text-slate-900">
+          <p className="fs-11 font-bold uppercase tracking-[0.14em] text-slate-400">Tangga bunga</p>
+          <h2 className="fsh-20 font-extrabold tracking-tight text-slate-900">
             SBN ritel sampai {top ? pct(top.coupon) : '—'} setahun
           </h2>
           {/* Tinggi batang proporsional terhadap bunga tertinggi (85% area); Leo duduk di atas batang tertinggi. */}
@@ -128,7 +128,7 @@ export function TabSbn() {
                     animate={{ height: `${h}%` }}
                     transition={{ duration: 0.7, delay: i * 0.12, ease: 'easeOut' }}
                     className={cn(
-                      'flex items-start justify-center rounded-t-[18px] bg-gradient-to-b pt-2 text-[15px] font-extrabold tabular-nums',
+                      'flex items-start justify-center rounded-t-[18px] bg-gradient-to-b pt-2 fs-15 font-extrabold tabular-nums',
                       l.cls,
                     )}
                   >
@@ -141,15 +141,15 @@ export function TabSbn() {
           <div className="mt-2 grid grid-cols-3 gap-2.5 text-center">
             {ladder.map((l) => (
               <div key={l.label}>
-                <p className="text-[13px] font-semibold text-slate-800">{l.label}</p>
-                <p className="text-[11px] text-slate-400">{l.sub}</p>
+                <p className="fs-13 font-semibold text-slate-800">{l.label}</p>
+                <p className="fs-11 text-slate-400">{l.sub}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Sebulan dapat berapa?</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.14em] text-slate-400">Sebulan dapat berapa?</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {AMOUNTS.map((a) => (
               <button
@@ -157,7 +157,7 @@ export function TabSbn() {
                 type="button"
                 onClick={() => setAmount(a)}
                 className={cn(
-                  'rounded-full px-3 py-1.5 text-[13px] font-semibold',
+                  'rounded-full px-3 py-1.5 fs-13 font-semibold',
                   a === amount ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
                 )}
               >
@@ -169,8 +169,8 @@ export function TabSbn() {
             {compare.map((c, i) => (
               <li key={c.key} className="grid grid-cols-[92px_minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-slate-900">{c.label}</p>
-                  <p className="truncate text-[11px] text-slate-400">{c.sub}</p>
+                  <p className="truncate fs-13 font-semibold text-slate-900">{c.label}</p>
+                  <p className="truncate fs-11 text-slate-400">{c.sub}</p>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                   <motion.div
@@ -182,13 +182,11 @@ export function TabSbn() {
                     style={{ background: c.color }}
                   />
                 </div>
-                <p className="w-24 text-right text-[14px] font-bold text-slate-900 tabular-nums">
-                  {formatIDR(c.value)}
-                </p>
+                <p className="w-24 text-right fs-14 font-bold text-slate-900 tabular-nums">{formatIDR(c.value)}</p>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[11px] text-slate-400">
+          <p className="mt-3 fs-11 text-slate-400">
             Per bulan setelah pajak: kupon SBN {TAX_SBN}%, bunga deposito {TAX_DEPOSITO}%. Kupon mengambang (SBR/ST)
             bisa berubah tiap 3 bulan, tapi tidak turun di bawah kupon awalnya.
           </p>
@@ -197,8 +195,8 @@ export function TabSbn() {
 
       <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
         <div className="flex items-baseline justify-between">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Seri ritel</p>
-          <p className="text-[12px] text-slate-400">
+          <p className="fs-11 font-bold uppercase tracking-[0.14em] text-slate-400">Seri ritel</p>
+          <p className="fs-12 text-slate-400">
             {list.length} seri · per {fmtDate(AS_OF)}
           </p>
         </div>
@@ -218,7 +216,7 @@ export function TabSbn() {
                 type="button"
                 onClick={() => setFilter(k)}
                 className={cn(
-                  'rounded-full px-3 py-1.5 text-[12px] font-semibold',
+                  'rounded-full px-3 py-1.5 fs-12 font-semibold',
                   filter === k ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
                 )}
               >
@@ -233,7 +231,7 @@ export function TabSbn() {
                 type="button"
                 onClick={() => setSort(k)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[12px] font-semibold capitalize',
+                  'rounded-full px-3 py-1 fs-12 font-semibold capitalize',
                   sort === k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                 )}
               >
@@ -242,7 +240,7 @@ export function TabSbn() {
             ))}
           </div>
         </div>
-        <div className="relative mt-4 h-4 text-[10px] font-semibold text-slate-400" aria-hidden>
+        <div className="relative mt-4 h-4 fs-10 font-semibold text-slate-400" aria-hidden>
           <span
             className="absolute -translate-x-1/2"
             style={{ left: `calc(56px + (100% - 56px) * ${LPS.bankUmum / scaleMax})` }}
@@ -270,22 +268,22 @@ export function TabSbn() {
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[11px] font-extrabold"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fs-11 font-extrabold"
                     style={{ background: `${info.color}1a`, color: info.color }}
                   >
                     {s.kind}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-slate-900">{s.code}</p>
-                    <p className="truncate text-[12px] text-slate-500">
+                    <p className="fs-15 font-bold text-slate-900">{s.code}</p>
+                    <p className="truncate fs-12 text-slate-500">
                       {s.tenorYears} tahun · {s.floating ? 'mengambang' : 'tetap'} ·{' '}
                       {info.tradable ? 'bisa dijual' : 'bisa dicairkan awal'}
                       {info.syariah ? ' · syariah' : ''}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[17px] font-extrabold text-slate-900 tabular-nums">{pct(s.coupon)}</p>
-                    <p className="text-[11px] text-slate-500 tabular-nums">
+                    <p className="fs-17 font-extrabold text-slate-900 tabular-nums">{pct(s.coupon)}</p>
+                    <p className="fs-11 text-slate-500 tabular-nums">
                       ≈ {formatIDR(monthlyNet(amount, s.coupon, TAX_SBN))}/bln
                     </p>
                   </div>
@@ -313,14 +311,14 @@ export function TabSbn() {
             );
           })}
         </ul>
-        <p className="mt-2 text-[11px] text-slate-400">
+        <p className="mt-2 fs-11 text-slate-400">
           ≈ per bulan dari {amountLabel(amount)} setelah pajak {TAX_SBN}%. Seri hanya bisa dibeli saat masa penawaran;
           seri yang sudah beredar dijual-beli di pasar sekunder.
         </p>
       </section>
 
       <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Sumber</p>
+        <p className="fs-11 font-bold uppercase tracking-[0.14em] text-slate-400">Sumber</p>
         <ul className="mt-2 divide-y divide-slate-100">
           {SBN_SOURCES.map((src) => (
             <li key={src.name}>
@@ -332,15 +330,15 @@ export function TabSbn() {
               >
                 <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-semibold text-slate-900">{src.name}</span>
-                  <span className="block text-[12px] text-slate-500">{src.what}</span>
+                  <span className="block fs-14 font-semibold text-slate-900">{src.name}</span>
+                  <span className="block fs-12 text-slate-500">{src.what}</span>
                 </span>
                 <ExternalLink size={15} className="shrink-0 text-slate-400" />
               </a>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-slate-400">
+        <p className="mt-2 fs-11 text-slate-400">
           Angka resmi per {fmtDate(AS_OF)}. Bukan ajakan membeli — pilihannya tetap di kamu.
         </p>
       </section>

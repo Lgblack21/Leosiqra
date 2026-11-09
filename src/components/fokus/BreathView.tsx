@@ -204,21 +204,21 @@ export function BreathView() {
       <div className="relative shrink-0 py-2 text-center md:py-3">
         {running ? (
           <>
-            <p className="text-[22px] font-extrabold tracking-tight md:text-[28px]">{step.text}</p>
-            <p className="text-[13px] font-semibold tabular-nums text-indigo-100/70">
+            <p className="fsh-22 font-extrabold tracking-tight md:fsh-28">{step.text}</p>
+            <p className="fs-13 font-semibold tabular-nums text-indigo-100/70">
               {Math.ceil(step.sec - inCycle)} · sisa {Math.floor(left / 60)}:
               {String(Math.floor(left % 60)).padStart(2, '0')}
             </p>
           </>
         ) : finished ? (
           <>
-            <p className="text-[22px] font-extrabold tracking-tight">Selesai. Lebih enteng? 🌿</p>
-            <p className="text-[13px] text-indigo-100/70">{minutes} menit napas bareng Leo.</p>
+            <p className="fsh-22 font-extrabold tracking-tight">Selesai. Lebih enteng? 🌿</p>
+            <p className="fs-13 text-indigo-100/70">{minutes} menit napas bareng Leo.</p>
           </>
         ) : (
           <>
-            <p className="text-[20px] font-extrabold tracking-tight md:text-[24px]">{p.label}</p>
-            <p className="mx-auto max-w-sm text-[13px] text-indigo-100/70">{p.hint}</p>
+            <p className="fsh-20 font-extrabold tracking-tight md:fsh-24">{p.label}</p>
+            <p className="mx-auto max-w-sm fs-13 text-indigo-100/70">{p.hint}</p>
           </>
         )}
       </div>
@@ -228,7 +228,7 @@ export function BreathView() {
           <button
             type="button"
             onClick={stop}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/15 py-3.5 text-[15px] font-bold text-white hover:bg-white/20"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/15 py-3.5 fs-15 font-bold text-white hover:bg-white/20"
           >
             <Square size={16} /> Berhenti
           </button>
@@ -242,7 +242,7 @@ export function BreathView() {
                   onClick={() => setPattern(x.id)}
                   aria-pressed={pattern === x.id}
                   className={cn(
-                    'rounded-2xl py-2.5 text-[12px] font-bold transition-colors md:text-[13px]',
+                    'rounded-2xl py-2.5 fs-12 font-bold transition-colors md:fs-13',
                     pattern === x.id ? 'bg-white text-indigo-900' : 'bg-white/10 text-white/80 hover:bg-white/15',
                   )}
                 >
@@ -258,7 +258,7 @@ export function BreathView() {
                   onClick={() => setMinutes(m)}
                   aria-pressed={minutes === m}
                   className={cn(
-                    'flex-1 rounded-full py-2 text-[12px] font-bold transition-colors md:text-[13px]',
+                    'flex-1 rounded-full py-2 fs-12 font-bold transition-colors md:fs-13',
                     minutes === m ? 'bg-indigo-400 text-indigo-950' : 'bg-white/10 text-white/80 hover:bg-white/15',
                   )}
                 >
@@ -272,7 +272,7 @@ export function BreathView() {
                 aria-label="Suara ombak pelan"
                 onClick={() => setSound((v) => !v)}
                 className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold transition-colors',
+                  'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 fs-12 font-bold transition-colors',
                   sound ? 'bg-sky-300 text-sky-950' : 'bg-white/10 text-white/80 hover:bg-white/15',
                 )}
               >
@@ -282,7 +282,7 @@ export function BreathView() {
             <button
               type="button"
               onClick={start}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 text-[15px] font-bold text-indigo-950 shadow-lg active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 fs-15 font-bold text-indigo-950 shadow-lg active:scale-[0.98]"
             >
               {finished ? (
                 <>

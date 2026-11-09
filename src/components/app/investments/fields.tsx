@@ -9,9 +9,9 @@ export const inputClass =
 export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">{label}</span>
+      <span className="block fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">{label}</span>
       {children}
-      {hint ? <span className="block mt-1.5 px-1 text-[11px] text-slate-400">{hint}</span> : null}
+      {hint ? <span className="block mt-1.5 px-1 fs-11 text-slate-400">{hint}</span> : null}
     </label>
   );
 }

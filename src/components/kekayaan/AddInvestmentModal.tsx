@@ -273,8 +273,8 @@ export function AddInvestmentModal({
     reset(k);
   };
   const field =
-    'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-800 ring-1 ring-transparent placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
-  const lbl = 'pl-1 text-[12px] font-semibold text-slate-500';
+    'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 fs-15 font-semibold text-slate-800 ring-1 ring-transparent placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
+  const lbl = 'pl-1 fs-12 font-semibold text-slate-500';
   const unitWord = kind === 'idx' ? (lot ? 'lot' : 'lembar') : UNIT[kind];
   const platforms = useMemo(() => PLATFORMS[kind] ?? [], [kind]);
 
@@ -307,10 +307,10 @@ export function AddInvestmentModal({
                 kind === k.id ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100',
               )}
             >
-              <span aria-hidden className="text-[20px] leading-none">
+              <span aria-hidden className="fsh-20 leading-none">
                 {k.emoji}
               </span>
-              <span className="line-clamp-2 text-[11px] font-semibold leading-tight">{k.label}</span>
+              <span className="line-clamp-2 fs-11 font-semibold leading-tight">{k.label}</span>
             </button>
           ))}
         </div>
@@ -333,7 +333,7 @@ export function AddInvestmentModal({
                   }}
                   aria-pressed={auto === m.v}
                   className={cn(
-                    'relative rounded-full px-4 py-1.5 text-[13px] font-semibold',
+                    'relative rounded-full px-4 py-1.5 fs-13 font-semibold',
                     auto === m.v ? 'text-slate-900' : 'text-slate-500',
                   )}
                 >
@@ -350,7 +350,7 @@ export function AddInvestmentModal({
             </div>
           </LayoutGroup>
         ) : (
-          <p className="rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-800">
+          <p className="rounded-2xl bg-amber-50 px-3.5 py-2.5 fs-12 text-amber-800">
             Harga {meta.label.toLowerCase()} diisi manual — belum ada sumber harga resmi yang bisa diambil otomatis.
           </p>
         )}
@@ -367,25 +367,25 @@ export function AddInvestmentModal({
                 />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[17px] font-extrabold">{picked.symbol}</p>
-                <p className="truncate text-[12px] text-white/60">
+                <p className="fs-17 font-extrabold">{picked.symbol}</p>
+                <p className="truncate fs-12 text-white/60">
                   {picked.name}
                   {picked.exchangeCode ? ` · ${picked.exchangeCode}` : ''}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[11px] text-white/50">Harga terbaru</p>
+                <p className="fs-11 text-white/50">Harga terbaru</p>
                 {priceState === 'loading' ? (
                   <Loader2 size={16} className="ml-auto animate-spin" />
                 ) : live ? (
-                  <p className="text-[16px] font-extrabold tabular-nums">{formatMoney(live.price, live.currency)}</p>
+                  <p className="fs-16 font-extrabold tabular-nums">{formatMoney(live.price, live.currency)}</p>
                 ) : (
-                  <p className="text-[12px] text-amber-300">Gagal dimuat</p>
+                  <p className="fs-12 text-amber-300">Gagal dimuat</p>
                 )}
                 <button
                   type="button"
                   onClick={() => fetchPrice(picked, false)}
-                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-white/60 hover:text-white"
+                  className="mt-0.5 inline-flex items-center gap-1 fs-11 text-white/60 hover:text-white"
                 >
                   <RefreshCw size={11} /> Muat ulang
                 </button>
@@ -436,7 +436,7 @@ export function AddInvestmentModal({
                     className="max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-2xl bg-white ring-1 ring-slate-200"
                   >
                     {results.length === 0 ? (
-                      <li className="px-4 py-4 text-center text-[13px] text-slate-500">
+                      <li className="px-4 py-4 text-center fs-13 text-slate-500">
                         Tidak ketemu. Coba kode lain atau pakai{' '}
                         <button
                           type="button"
@@ -464,11 +464,11 @@ export function AddInvestmentModal({
                               />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-[14px] font-bold text-slate-900">{r.symbol}</span>
-                              <span className="block truncate text-[12px] text-slate-500">{r.name}</span>
+                              <span className="block fs-14 font-bold text-slate-900">{r.symbol}</span>
+                              <span className="block truncate fs-12 text-slate-500">{r.name}</span>
                             </span>
                             {r.exchangeCode && (
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 fs-10 font-bold text-slate-500">
                                 {r.exchangeCode}
                               </span>
                             )}
@@ -512,7 +512,7 @@ export function AddInvestmentModal({
                     <button
                       type="button"
                       onClick={() => setLot((l) => !l)}
-                      className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
+                      className="rounded-full bg-slate-100 px-2 py-0.5 fs-11 font-semibold text-slate-600 hover:bg-slate-200"
                     >
                       {lot ? 'pakai lembar' : 'pakai lot'}
                     </button>
@@ -520,7 +520,7 @@ export function AddInvestmentModal({
                 </div>
                 <NumberInput value={qty} onChange={setQty} placeholder="0" className={field} />
                 {kind === 'idx' && lot && qtyNum > 0 && (
-                  <p className="pl-1 text-[11px] text-slate-400">= {(qtyNum * 100).toLocaleString('id-ID')} lembar</p>
+                  <p className="pl-1 fs-11 text-slate-400">= {(qtyNum * 100).toLocaleString('id-ID')} lembar</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -548,22 +548,20 @@ export function AddInvestmentModal({
             {cost > 0 && (
               <div className="grid grid-cols-3 gap-2 rounded-[22px] bg-slate-50 p-3 text-center">
                 <div>
-                  <p className="text-[11px] text-slate-500">Modal</p>
-                  <p className="text-[14px] font-extrabold tabular-nums text-slate-900">
-                    {formatMoney(cost, currency)}
-                  </p>
+                  <p className="fs-11 text-slate-500">Modal</p>
+                  <p className="fs-14 font-extrabold tabular-nums text-slate-900">{formatMoney(cost, currency)}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500">Nilai sekarang</p>
-                  <p className="text-[14px] font-extrabold tabular-nums text-slate-900">
+                  <p className="fs-11 text-slate-500">Nilai sekarang</p>
+                  <p className="fs-14 font-extrabold tabular-nums text-slate-900">
                     {value > 0 ? formatMoney(value, currency) : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500">Untung/rugi</p>
+                  <p className="fs-11 text-slate-500">Untung/rugi</p>
                   <p
                     className={cn(
-                      'text-[14px] font-extrabold tabular-nums',
+                      'fs-14 font-extrabold tabular-nums',
                       value <= 0 ? 'text-slate-400' : gain >= 0 ? 'text-emerald-600' : 'text-rose-600',
                     )}
                   >
@@ -576,7 +574,7 @@ export function AddInvestmentModal({
             <div className="space-y-2">
               <p className={lbl}>Bayar dari rekening</p>
               {accounts.length === 0 ? (
-                <p className="rounded-2xl bg-slate-50 px-3.5 py-3 text-[13px] text-slate-500">
+                <p className="rounded-2xl bg-slate-50 px-3.5 py-3 fs-13 text-slate-500">
                   Belum ada rekening. Tambah akun dulu dari menu Tambah → Akun.
                 </p>
               ) : (
@@ -605,10 +603,8 @@ export function AddInvestmentModal({
                           />
                         </span>
                         <span>
-                          <span className="block text-[13px] font-bold">{a.name}</span>
-                          <span
-                            className={cn('block text-[11px] tabular-nums', on ? 'text-white/60' : 'text-slate-400')}
-                          >
+                          <span className="block fs-13 font-bold">{a.name}</span>
+                          <span className={cn('block fs-11 tabular-nums', on ? 'text-white/60' : 'text-slate-400')}>
                             {formatMoney(Number(a.balance) || 0, a.currency || 'IDR')}
                           </span>
                         </span>
@@ -619,18 +615,18 @@ export function AddInvestmentModal({
                 </div>
               )}
               {currencyMismatch && (
-                <p className="pl-1 text-[12px] font-medium text-rose-600">
+                <p className="pl-1 fs-12 font-medium text-rose-600">
                   Harga {label || 'aset ini'} dalam {currency}, rekening {account?.name} dalam{' '}
                   {account?.currency || 'IDR'}. Pilih rekening {currency} — konversi otomatis belum didukung.
                 </p>
               )}
               {lowBalance && (
-                <p className="pl-1 text-[12px] font-medium text-amber-700">
+                <p className="pl-1 fs-12 font-medium text-amber-700">
                   Saldo {account?.name} kurang dari modal — saldonya akan jadi minus.
                 </p>
               )}
               {!currencyMismatch && account && cost > 0 && (
-                <p className="pl-1 text-[12px] text-slate-400">
+                <p className="pl-1 fs-12 text-slate-400">
                   Saldo {account.name} berkurang {formatMoney(cost, currency)} dan tercatat sebagai pembelian investasi
                   — tidak dihitung sebagai belanja di laporan.
                 </p>
@@ -679,7 +675,7 @@ export function AddInvestmentModal({
           type="button"
           onClick={save}
           disabled={!canSave}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-[15px] font-bold text-white transition-all hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 fs-15 font-bold text-white transition-all hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
         >
           {saving && <Loader2 size={16} className="animate-spin" />}
           {saving ? 'Menyimpan…' : cost > 0 ? `Tambah investasi · ${formatMoney(cost, currency)}` : 'Tambah investasi'}

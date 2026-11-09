@@ -59,7 +59,7 @@ export default function LogoUpdateBanner() {
           </div>
           <div className="space-y-1.5">
             <h3 className="text-sm font-black">Logo Leosiqra baru!</h3>
-            <p className="text-[11px] font-medium text-indigo-100 leading-relaxed">
+            <p className="fs-11 font-medium text-indigo-100 leading-relaxed">
               Ikon di Home Screen kamu masih versi lama. Hapus ikonnya, lalu buka web ini lagi dan &quot;Add to Home
               Screen&quot; ulang untuk dapat logo terbaru.
             </p>

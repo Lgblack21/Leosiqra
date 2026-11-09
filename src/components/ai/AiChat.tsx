@@ -225,10 +225,10 @@ export function AiChat({
             className="mx-auto flex max-w-xl flex-col items-center pt-2 text-center md:pt-6"
           >
             <LeoMascot mood="happy" size={variant === 'web' ? 128 : 112} interactive />
-            <h2 className="mt-3 text-[20px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[22px]">
+            <h2 className="mt-3 fsh-20 font-extrabold tracking-tight text-slate-900 dark:text-white md:fsh-22">
               Hai! Aku Leo 👋
             </h2>
-            <p className="mt-1 max-w-md text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <p className="mt-1 max-w-md fs-13 leading-relaxed text-slate-500 dark:text-slate-400">
               Aku nyambung ke catatan keuanganmu & data pasar terbaru. Tanya aja santai — pengeluaran, budget, tabungan,
               investasi.
             </p>
@@ -241,7 +241,7 @@ export function AiChat({
                   initial={reduce ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 fs-13 font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
                 >
                   <span aria-hidden>{s.emoji}</span> {s.label}
                 </motion.button>
@@ -265,7 +265,7 @@ export function AiChat({
                   >
                     <div
                       className={cn(
-                        'rounded-3xl px-4 py-3 text-[14.5px] leading-relaxed',
+                        'rounded-3xl px-4 py-3 fs-14.5 leading-relaxed',
                         m.role === 'user'
                           ? 'rounded-br-lg bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/20'
                           : 'rounded-tl-lg border border-slate-100 bg-white text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200',
@@ -277,7 +277,7 @@ export function AiChat({
                         <span className="whitespace-pre-wrap">{m.text}</span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-2 px-1 text-[10px] font-semibold text-slate-400">
+                    <div className="mt-1 flex items-center gap-2 px-1 fs-10 font-semibold text-slate-400">
                       {m.at.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                       {m.role === 'model' && (
                         <button
@@ -297,7 +297,7 @@ export function AiChat({
                             key={f}
                             type="button"
                             onClick={() => send(f)}
-                            className="rounded-full border border-indigo-100 bg-indigo-50/60 px-3 py-1.5 text-[12px] font-bold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300"
+                            className="rounded-full border border-indigo-100 bg-indigo-50/60 px-3 py-1.5 fs-12 font-bold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300"
                           >
                             {f}
                           </button>
@@ -311,7 +311,7 @@ export function AiChat({
             {thinking && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
                 <AiOrb size={32} thinking />
-                <div className="flex items-center gap-2 rounded-3xl rounded-tl-lg border border-slate-100 bg-white px-4 py-3 text-[13px] font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2 rounded-3xl rounded-tl-lg border border-slate-100 bg-white px-4 py-3 fs-13 font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                   Leo lagi mikir
                   <span className="flex gap-1">
                     {[0, 1, 2].map((d) => (
@@ -345,7 +345,7 @@ export function AiChat({
                   type="button"
                   disabled={thinking}
                   onClick={() => send(s.prompt)}
-                  className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                  className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
                 >
                   {s.emoji} {s.label}
                 </button>
@@ -366,7 +366,7 @@ export function AiChat({
               rows={1}
               placeholder="Tanya Leo soal keuanganmu…"
               aria-label="Pesan untuk Leo"
-              className="max-h-[140px] min-h-[24px] flex-1 resize-none bg-transparent py-2.5 text-[15px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-white"
+              className="max-h-[140px] min-h-[24px] flex-1 resize-none bg-transparent py-2.5 fs-15 text-slate-800 outline-none placeholder:text-slate-400 dark:text-white"
             />
             <button
               type="button"
@@ -378,7 +378,7 @@ export function AiChat({
               <ArrowUp size={18} strokeWidth={2.6} />
             </button>
           </div>
-          <p className="mt-2 text-center text-[10px] font-medium text-slate-400">
+          <p className="mt-2 text-center fs-10 font-medium text-slate-400">
             {quota && (
               <span
                 className={

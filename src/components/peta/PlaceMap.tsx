@@ -168,11 +168,11 @@ export function PlaceMap({
     <div className={cn('relative h-full w-full overflow-hidden bg-[#eef1f4]', className)}>
       <div ref={box} className="h-full w-full" />
       {picker ? (
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full text-[34px] drop-shadow-lg">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full fsh-34 drop-shadow-lg">
           📍
         </div>
       ) : null}
-      <p className="pointer-events-auto absolute bottom-1 right-2 z-10 text-[9.5px] leading-tight text-slate-500/80 [text-shadow:0_0_3px_#fff] dark:text-slate-400/80">
+      <p className="pointer-events-auto absolute bottom-1 right-2 z-10 fs-9.5 leading-tight text-slate-500/80 [text-shadow:0_0_3px_#fff] dark:text-slate-400/80">
         <a href="https://openfreemap.org" target="_blank" rel="noreferrer">
           OpenFreeMap
         </a>{' '}
@@ -186,7 +186,7 @@ export function PlaceMap({
         </a>
       </p>
       {failed ? (
-        <p className="absolute bottom-2 left-2 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-500 shadow">
+        <p className="absolute bottom-2 left-2 z-10 rounded-full bg-white/90 px-2.5 py-1 fs-11 font-semibold text-slate-500 shadow">
           Peta jalan sedang tidak bisa dimuat — pin tetap di posisinya.
         </p>
       ) : null}

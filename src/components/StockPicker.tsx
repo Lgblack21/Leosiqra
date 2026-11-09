@@ -90,9 +90,7 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
 
       {open && !disabled && q && (
         <div className="absolute z-20 left-0 right-0 mt-2 max-h-72 overflow-y-auto bg-white border border-slate-100 rounded-2xl shadow-xl p-2 custom-scrollbar">
-          {loading && (
-            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">Mencari &quot;{q}&quot;...</p>
-          )}
+          {loading && <p className="fs-10 text-slate-400 text-center py-4 font-bold">Mencari &quot;{q}&quot;...</p>}
 
           {!loading &&
             results.length > 0 &&
@@ -113,13 +111,13 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
                   <p className="text-xs font-black text-slate-700">
                     {stock.symbol} <span className="text-slate-400 font-bold">· {stock.exchangeCode}</span>
                   </p>
-                  <p className="text-[10px] font-medium text-slate-400 truncate">{stock.name}</p>
+                  <p className="fs-10 font-medium text-slate-400 truncate">{stock.name}</p>
                 </div>
               </button>
             ))}
 
           {!loading && results.length === 0 && (
-            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">
+            <p className="fs-10 text-slate-400 text-center py-4 font-bold">
               Tidak ditemukan — kode ini akan dipakai sebagai input manual.
             </p>
           )}

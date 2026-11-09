@@ -23,11 +23,11 @@ export default function OnboardingPage() {
       {step === 'carry' && (
         // Datang dari /mulai: simpan pilihan + tawarkan catatan pertama & notifikasi.
         <div className="px-6 pt-12">
-          <p className="text-[14px] font-semibold text-slate-500 dark:text-slate-400">Rekening siap</p>
-          <h1 className="mt-1.5 text-[34px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
+          <p className="fs-14 font-semibold text-slate-500 dark:text-slate-400">Rekening siap</p>
+          <h1 className="mt-1.5 fsh-34 leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
             Hampir selesai.
           </h1>
-          <p className="mt-3 mb-6 text-[16px] leading-relaxed text-slate-500 dark:text-slate-400">
+          <p className="mt-3 mb-6 fs-16 leading-relaxed text-slate-500 dark:text-slate-400">
             Pilihanmu dari tadi sudah tersimpan di akun. Tinggal dua hal kecil ini.
           </p>
           <GuestCarryOver onDone={toApp} dark={resolvedTheme === 'dark'} />

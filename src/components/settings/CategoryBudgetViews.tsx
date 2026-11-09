@@ -204,7 +204,7 @@ function IconPicker({
         <div className="flex justify-center pb-2">
           <span
             className={cn(
-              'flex h-20 w-20 items-center justify-center rounded-[26px] text-[38px]',
+              'flex h-20 w-20 items-center justify-center rounded-[26px] fsh-38',
               CATEGORY_COLORS[style.color]?.tile,
             )}
             aria-hidden
@@ -212,7 +212,7 @@ function IconPicker({
             {style.emoji}
           </span>
         </div>
-        <p className="px-1 pb-2 text-[14px] text-slate-500">Warna</p>
+        <p className="px-1 pb-2 fs-14 text-slate-500">Warna</p>
         <div className="flex flex-wrap gap-2.5">
           {Object.entries(CATEGORY_COLORS).map(([key, c]) => (
             <button
@@ -228,7 +228,7 @@ function IconPicker({
             />
           ))}
         </div>
-        <p className="px-1 pb-2 pt-4 text-[14px] text-slate-500">Ikon</p>
+        <p className="px-1 pb-2 pt-4 fs-14 text-slate-500">Ikon</p>
         <div className="grid grid-cols-6 gap-1.5">
           {CATEGORY_ICONS.map((emoji) => (
             <button
@@ -237,7 +237,7 @@ function IconPicker({
               aria-label={`Ikon ${emoji}`}
               onClick={() => setStyle((s) => ({ ...s, emoji }))}
               className={cn(
-                'flex aspect-square items-center justify-center rounded-2xl text-[26px]',
+                'flex aspect-square items-center justify-center rounded-2xl fsh-26',
                 style.emoji === emoji ? 'bg-slate-100 ring-2 ring-slate-900' : 'hover:bg-slate-50',
               )}
             >
@@ -249,7 +249,7 @@ function IconPicker({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-full bg-slate-100 py-3 text-[15px] font-semibold text-slate-700"
+            className="flex-1 rounded-full bg-slate-100 py-3 fs-15 font-semibold text-slate-700"
           >
             Batal
           </button>
@@ -259,7 +259,7 @@ function IconPicker({
               onPick(style);
               onClose();
             }}
-            className="flex-1 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white"
+            className="flex-1 rounded-full bg-slate-900 py-3 fs-15 font-bold text-white"
           >
             Pakai
           </button>
@@ -290,12 +290,12 @@ const AvatarButton = ({ emoji, tile, onClick }: { emoji: string; tile: string; o
     onClick={onClick}
     aria-label="Ganti ikon & warna"
     className={cn(
-      'group relative flex h-20 w-20 items-center justify-center rounded-[26px] text-[38px] shadow-[inset_0_-4px_0_rgba(15,23,42,0.06)] transition hover:scale-105',
+      'group relative flex h-20 w-20 items-center justify-center rounded-[26px] fsh-38 shadow-[inset_0_-4px_0_rgba(15,23,42,0.06)] transition hover:scale-105',
       tile,
     )}
   >
     <span aria-hidden>{emoji}</span>
-    <span className="absolute -bottom-1 -right-1 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-600 shadow ring-1 ring-slate-200">
+    <span className="absolute -bottom-1 -right-1 rounded-full bg-white px-1.5 py-0.5 fs-10 font-bold text-slate-600 shadow ring-1 ring-slate-200">
       Ubah
     </span>
   </button>
@@ -325,7 +325,7 @@ function BudgetRing({ pct, over }: { pct: number; over: boolean }) {
           strokeDasharray={`${(shown / 100) * c} ${c}`}
         />
       </svg>
-      <span className={cn('text-[11px] font-bold tabular-nums', over ? 'text-rose-600' : 'text-slate-700')}>
+      <span className={cn('fs-11 font-bold tabular-nums', over ? 'text-rose-600' : 'text-slate-700')}>
         {Math.round(pct)}%
       </span>
     </span>
@@ -366,7 +366,7 @@ export function KategoriListView({
               type="button"
               onClick={() => setTab(k)}
               className={cn(
-                'flex items-center justify-center gap-2 rounded-[15px] py-2.5 text-[14px] font-semibold capitalize transition-colors',
+                'flex items-center justify-center gap-2 rounded-[15px] py-2.5 fs-14 font-semibold capitalize transition-colors',
                 on
                   ? k === 'pengeluaran'
                     ? 'bg-white text-indigo-700 shadow-sm'
@@ -392,18 +392,18 @@ export function KategoriListView({
         />
         <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-white/80">
+            <p className="fs-13 font-medium text-white/80">
               {isOut ? 'Pengeluaran' : 'Pemasukan'} {periodText}
             </p>
-            <p className="mt-0.5 truncate text-[26px] font-extrabold tabular-nums">{formatIDR(total)}</p>
-            <p className="text-[12px] text-white/75">
+            <p className="mt-0.5 truncate fsh-26 font-extrabold tabular-nums">{formatIDR(total)}</p>
+            <p className="fs-12 text-white/75">
               {list.length} kategori{isOut && budgetTotal > 0 ? ` · anggaran ${formatIDR(budgetTotal)}` : ''}
             </p>
           </div>
           <button
             type="button"
             onClick={() => onAdd(tab)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-[13px] font-bold hover:bg-white/30"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 fs-13 font-bold hover:bg-white/30"
           >
             <Plus size={15} strokeWidth={2.6} /> Kategori
           </button>
@@ -416,17 +416,15 @@ export function KategoriListView({
                 style={{ width: `${Math.min(100, overall)}%` }}
               />
             </div>
-            <p className="mt-1.5 text-[12px] text-white/80">{Math.round(overall)}% anggaran terpakai</p>
+            <p className="mt-1.5 fs-12 text-white/80">{Math.round(overall)}% anggaran terpakai</p>
           </div>
         )}
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-[14px] text-slate-400">Memuat…</p>
+        <p className="py-8 text-center fs-14 text-slate-400">Memuat…</p>
       ) : list.length === 0 ? (
-        <p className="rounded-[22px] bg-slate-50 py-8 text-center text-[14px] text-slate-500">
-          Belum ada kategori {tab}.
-        </p>
+        <p className="rounded-[22px] bg-slate-50 py-8 text-center fs-14 text-slate-500">Belum ada kategori {tab}.</p>
       ) : (
         <ul className="grid gap-2.5">
           {list.map((r) => {
@@ -445,19 +443,16 @@ export function KategoriListView({
                   )}
                 >
                   <span
-                    className={cn(
-                      'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[23px]',
-                      v.tile,
-                    )}
+                    className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl fsh-23', v.tile)}
                     aria-hidden
                   >
                     {v.emoji}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-slate-900">{r.name}</span>
+                    <span className="block truncate fs-15 font-semibold text-slate-900">{r.name}</span>
                     <span
                       className={cn(
-                        'block truncate text-[13px] tabular-nums',
+                        'block truncate fs-13 tabular-nums',
                         over ? 'font-semibold text-rose-600' : 'text-slate-500',
                       )}
                     >
@@ -469,12 +464,12 @@ export function KategoriListView({
                     amount > 0 ? (
                       <BudgetRing pct={pct} over={over} />
                     ) : (
-                      <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600">
+                      <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 fs-11 font-semibold text-indigo-600">
                         Atur anggaran
                       </span>
                     )
                   ) : (
-                    <span className="shrink-0 text-[12px] text-slate-400">{r.subs.length} sub</span>
+                    <span className="shrink-0 fs-12 text-slate-400">{r.subs.length} sub</span>
                   )}
                 </button>
               </li>
@@ -482,7 +477,7 @@ export function KategoriListView({
           })}
         </ul>
       )}
-      <p className="flex items-center gap-2 px-1 text-[12px] text-slate-500">
+      <p className="flex items-center gap-2 px-1 fs-12 text-slate-500">
         <CalendarDays size={14} />
         {startDay === 1
           ? 'Anggaran bulanan dihitung per bulan kalender (tanggal 1 sampai akhir bulan).'
@@ -491,7 +486,7 @@ export function KategoriListView({
       {isOut && (
         <a
           href="/membership/budget"
-          className="flex items-center justify-between rounded-[18px] bg-indigo-50 px-4 py-3 text-[13px] font-semibold text-indigo-700 hover:bg-indigo-100"
+          className="flex items-center justify-between rounded-[18px] bg-indigo-50 px-4 py-3 fs-13 font-semibold text-indigo-700 hover:bg-indigo-100"
         >
           Lihat halaman Anggaran — sisa, laju belanja & ubah semua sekaligus <span aria-hidden>→</span>
         </a>
@@ -659,7 +654,7 @@ export function KategoriDetailView({
                 }
               }}
               aria-label="Nama kategori baru"
-              className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] font-bold text-slate-900 outline-none"
+              className="min-w-0 flex-1 bg-transparent py-1.5 fs-16 font-bold text-slate-900 outline-none"
             />
             <button
               type="button"
@@ -692,17 +687,17 @@ export function KategoriDetailView({
             className="group flex items-center gap-1.5 rounded-full px-2 py-0.5 hover:bg-slate-100"
             title="Ganti nama kategori"
           >
-            <span className="text-[20px] font-bold text-slate-900">{row.name}</span>
+            <span className="fsh-20 font-bold text-slate-900">{row.name}</span>
             <Pencil size={14} className="text-slate-400 group-hover:text-slate-600" />
           </button>
         )}
         {editingName && (
-          <p className="text-[12px] text-slate-500">Semua transaksi, anggaran & subkategori ikut berganti nama.</p>
+          <p className="fs-12 text-slate-500">Semua transaksi, anggaran & subkategori ikut berganti nama.</p>
         )}
-        <p className="flex items-center gap-2 text-[14px] text-slate-500">
+        <p className="flex items-center gap-2 fs-14 text-slate-500">
           <span
             className={cn(
-              'rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
+              'rounded-full px-2.5 py-0.5 fs-12 font-semibold',
               row.kind === 'pemasukan' ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700',
             )}
           >
@@ -715,7 +710,7 @@ export function KategoriDetailView({
 
       {row.kind === 'pengeluaran' && (
         <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
-          <p className="text-[14px] font-semibold text-slate-700">Anggaran</p>
+          <p className="fs-14 font-semibold text-slate-700">Anggaran</p>
           <div className="flex rounded-full bg-slate-200/60 p-1">
             {(['monthly', 'yearly'] as const).map((p) => (
               <button
@@ -723,7 +718,7 @@ export function KategoriDetailView({
                 type="button"
                 onClick={() => setPeriod(p)}
                 className={cn(
-                  'flex-1 rounded-full py-1.5 text-[13px] font-semibold',
+                  'flex-1 rounded-full py-1.5 fs-13 font-semibold',
                   period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                 )}
               >
@@ -732,40 +727,38 @@ export function KategoriDetailView({
             ))}
           </div>
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400">
-            <span className="text-[15px] text-slate-400">Rp</span>
+            <span className="fs-15 text-slate-400">Rp</span>
             <input
               inputMode="numeric"
               value={amount ? Number(amount.replace(/[^\d]/g, '') || 0).toLocaleString('id-ID') : ''}
               onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
               placeholder="Tanpa anggaran"
               aria-label="Jumlah anggaran"
-              className="w-full bg-transparent py-3 text-[16px] font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
+              className="w-full bg-transparent py-3 fs-16 font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
             />
           </div>
           <button
             type="button"
             onClick={saveBudget}
             disabled={busy}
-            className="w-full rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60"
+            className="w-full rounded-full bg-slate-900 py-3 fs-15 font-bold text-white disabled:opacity-60"
           >
             Simpan anggaran
           </button>
-          <p className="text-[12px] text-slate-500">Kosongkan lalu simpan untuk menghapus anggaran.</p>
+          <p className="fs-12 text-slate-500">Kosongkan lalu simpan untuk menghapus anggaran.</p>
         </div>
       )}
 
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
-        <p className="text-[14px] font-semibold text-slate-700">Subkategori</p>
+        <p className="fs-14 font-semibold text-slate-700">Subkategori</p>
         {row.subs.length === 0 ? (
-          <p className="text-[13px] text-slate-500">
-            Belum ada subkategori. Tambahkan supaya muncul di form pencatatan.
-          </p>
+          <p className="fs-13 text-slate-500">Belum ada subkategori. Tambahkan supaya muncul di form pencatatan.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {row.subs.map((c) => (
               <span
                 key={c.id}
-                className="flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-3.5 pr-1.5 text-[14px] text-slate-800 ring-1 ring-slate-200"
+                className="flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-3.5 pr-1.5 fs-14 text-slate-800 ring-1 ring-slate-200"
               >
                 {c.subCategory}
                 <button
@@ -789,13 +782,13 @@ export function KategoriDetailView({
             }}
             placeholder="Subkategori baru (pisahkan dengan koma)"
             aria-label="Subkategori baru"
-            className="min-w-0 flex-1 rounded-2xl bg-white px-4 py-2.5 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="min-w-0 flex-1 rounded-2xl bg-white px-4 py-2.5 fs-14 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
           <button
             type="button"
             onClick={addSub}
             disabled={busy || !newSub.trim()}
-            className="rounded-2xl bg-slate-900 px-4 text-[14px] font-bold text-white disabled:opacity-40"
+            className="rounded-2xl bg-slate-900 px-4 fs-14 font-bold text-white disabled:opacity-40"
           >
             Tambah
           </button>
@@ -807,7 +800,7 @@ export function KategoriDetailView({
           type="button"
           onClick={removeGroup}
           disabled={busy}
-          className="flex w-full items-center justify-center gap-2 py-2 text-[14px] font-medium text-rose-600 hover:text-rose-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 py-2 fs-14 font-medium text-rose-600 hover:text-rose-700 disabled:opacity-50"
         >
           <Trash2 size={15} /> Hapus kategori
         </button>
@@ -897,7 +890,7 @@ export function KategoriBaruView({
               type="button"
               onClick={() => setKind(k)}
               className={cn(
-                'flex-1 rounded-full py-2 text-[14px] font-semibold capitalize',
+                'flex-1 rounded-full py-2 fs-14 font-semibold capitalize',
                 kind === k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
               )}
             >
@@ -906,35 +899,35 @@ export function KategoriBaruView({
           ))}
         </div>
         <label className="block">
-          <span className="px-1 text-[13px] text-slate-500">Nama kategori</span>
+          <span className="px-1 fs-13 text-slate-500">Nama kategori</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="mis. Kopi"
-            className="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="mt-1 w-full rounded-2xl bg-white px-4 py-3 fs-16 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
-          {exists && <span className="mt-1 block px-1 text-[12px] text-rose-600">Kategori ini sudah ada.</span>}
+          {exists && <span className="mt-1 block px-1 fs-12 text-rose-600">Kategori ini sudah ada.</span>}
         </label>
         <label className="block">
-          <span className="px-1 text-[13px] text-slate-500">Subkategori (opsional, pisahkan koma)</span>
+          <span className="px-1 fs-13 text-slate-500">Subkategori (opsional, pisahkan koma)</span>
           <input
             value={subs}
             onChange={(e) => setSubs(e.target.value)}
             placeholder="mis. Kopi susu, Kopi hitam"
-            className="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-[15px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="mt-1 w-full rounded-2xl bg-white px-4 py-3 fs-15 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
         </label>
         {kind === 'pengeluaran' && (
           <label className="block">
-            <span className="px-1 text-[13px] text-slate-500">Anggaran bulanan (opsional)</span>
+            <span className="px-1 fs-13 text-slate-500">Anggaran bulanan (opsional)</span>
             <div className="mt-1 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400">
-              <span className="text-[15px] text-slate-400">Rp</span>
+              <span className="fs-15 text-slate-400">Rp</span>
               <input
                 inputMode="numeric"
                 value={amount ? Number(amount).toLocaleString('id-ID') : ''}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
                 placeholder="0"
-                className="w-full bg-transparent py-3 text-[15px] outline-none"
+                className="w-full bg-transparent py-3 fs-15 outline-none"
               />
             </div>
           </label>
@@ -942,14 +935,14 @@ export function KategoriBaruView({
       </div>
       {suggestions.length > 0 && (
         <div>
-          <p className="px-1 pb-2 text-[13px] text-slate-500">Saran</p>
+          <p className="px-1 pb-2 fs-13 text-slate-500">Saran</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setName(s)}
-                className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[14px] text-slate-800 hover:bg-slate-200"
+                className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 fs-14 text-slate-800 hover:bg-slate-200"
               >
                 <span aria-hidden>{categoryVisual(s, kind).emoji}</span> {s}
               </button>
@@ -961,7 +954,7 @@ export function KategoriBaruView({
         type="button"
         onClick={save}
         disabled={busy || !name.trim() || exists}
-        className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:bg-slate-100 disabled:text-slate-400"
+        className="w-full rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white disabled:bg-slate-100 disabled:text-slate-400"
       >
         Tambah kategori
       </button>
@@ -1004,32 +997,32 @@ export function MataUangView({ onAdd }: { onAdd: () => void }) {
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] text-slate-500">
+      <p className="px-1 fs-14 text-slate-500">
         Mata uang yang bisa dipakai di rekening & transaksi. Semua laporan tetap dihitung dalam Rupiah.
       </p>
       <ul className="divide-y divide-slate-200/60 overflow-hidden rounded-[22px] bg-slate-50">
         <li className="flex items-center gap-4 px-5 py-3.5">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[16px] font-semibold text-slate-700">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white fs-16 font-semibold text-slate-700">
             Rp
           </span>
           <span className="flex-1">
-            <span className="block text-[16px] text-slate-900">Rupiah Indonesia</span>
-            <span className="text-[13px] text-slate-500">IDR · mata uang utama</span>
+            <span className="block fs-16 text-slate-900">Rupiah Indonesia</span>
+            <span className="fs-13 text-slate-500">IDR · mata uang utama</span>
           </span>
         </li>
         {list === null ? (
-          <li className="px-5 py-4 text-[14px] text-slate-400">Memuat…</li>
+          <li className="px-5 py-4 fs-14 text-slate-400">Memuat…</li>
         ) : (
           list
             .filter((c) => c.code !== 'IDR')
             .map((c) => (
               <li key={c.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[15px] font-semibold text-slate-700">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white fs-15 font-semibold text-slate-700">
                   {c.symbol || <Coins size={18} />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] text-slate-900">{c.name}</span>
-                  <span className="text-[13px] text-slate-500">{c.code}</span>
+                  <span className="block truncate fs-16 text-slate-900">{c.name}</span>
+                  <span className="fs-13 text-slate-500">{c.code}</span>
                 </span>
                 <button
                   type="button"
@@ -1046,7 +1039,7 @@ export function MataUangView({ onAdd }: { onAdd: () => void }) {
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white"
       >
         <Plus size={17} /> Tambah mata uang
       </button>

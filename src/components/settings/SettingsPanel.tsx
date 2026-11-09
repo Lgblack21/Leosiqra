@@ -77,6 +77,7 @@ import { EmoneyScanner } from '@/components/emoney/EmoneyScanner';
 import { CsvView } from './CsvView';
 import { RemindersView } from './RemindersView';
 import { AppearanceView, THEME_LABEL } from './AppearanceView';
+import { TEXT_SIZE_LABEL, useTextSize } from '@/lib/textSize';
 import { PermissionsView, AssistantMemoryView } from './PrivacyViews';
 import { analyticsEnabled, setAnalyticsEnabled } from '@/lib/analyticsPref';
 import { useTheme } from '@/context/ThemeContext';
@@ -245,12 +246,12 @@ const Row = ({
             <Icon size={21} className="shrink-0 text-slate-600" strokeWidth={1.8} />
           )))}
       <span className="min-w-0 flex-1">
-        <span className="block text-[16px] font-medium text-slate-900">{title}</span>
-        {desc && <span className="block truncate text-[13px] text-slate-500">{desc}</span>}
+        <span className="block fs-16 font-medium text-slate-900">{title}</span>
+        {desc && <span className="block truncate fs-13 text-slate-500">{desc}</span>}
       </span>
-      {value && <span className="shrink-0 text-[14px] text-slate-500">{value}</span>}
+      {value && <span className="shrink-0 fs-14 text-slate-500">{value}</span>}
       {badge ? (
-        <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[12px] font-bold text-white">
+        <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 fs-12 font-bold text-white">
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
@@ -296,8 +297,8 @@ const ToggleRow = ({
   >
     <Icon size={21} className="shrink-0 text-slate-600" strokeWidth={1.8} />
     <span className="min-w-0 flex-1">
-      <span className="block text-[16px] font-medium text-slate-900">{title}</span>
-      {desc && <span className="block text-[13px] leading-snug text-slate-500">{desc}</span>}
+      <span className="block fs-16 font-medium text-slate-900">{title}</span>
+      {desc && <span className="block fs-13 leading-snug text-slate-500">{desc}</span>}
     </span>
     <span
       className={cn(
@@ -338,8 +339,8 @@ const Tile = ({
     <>
       <Icon size={22} className="shrink-0 text-slate-600" strokeWidth={1.8} />
       <span className="min-w-0">
-        <span className="block truncate text-[16px] font-medium text-slate-900">{title}</span>
-        {desc && <span className="block truncate text-[13px] text-slate-500">{desc}</span>}
+        <span className="block truncate fs-16 font-medium text-slate-900">{title}</span>
+        {desc && <span className="block truncate fs-13 text-slate-500">{desc}</span>}
       </span>
     </>
   );
@@ -383,14 +384,14 @@ const StatTile = ({
         </span>
       ))}
     <span className="min-w-0">
-      <span className="block text-[12px] font-medium text-slate-500">{title}</span>
-      <span className="block truncate text-[16px] font-bold text-slate-900">{value}</span>
+      <span className="block fs-12 font-medium text-slate-500">{title}</span>
+      <span className="block truncate fs-16 font-bold text-slate-900">{value}</span>
     </span>
   </button>
 );
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="px-1 pt-1 text-[13px] font-semibold text-slate-400">{children}</p>
+  <p className="px-1 pt-1 fs-13 font-semibold text-slate-400">{children}</p>
 );
 
 // Ikon aplikasi bertumpuk di baris "Aplikasi terhubung".
@@ -475,7 +476,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
               type="button"
               onClick={() => setTab(t)}
               className={cn(
-                'rounded-full px-6 py-2 text-[15px] font-semibold transition-colors',
+                'rounded-full px-6 py-2 fs-15 font-semibold transition-colors',
                 tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
               )}
             >
@@ -498,11 +499,11 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
             <LeoMascot mood={pro ? 'happy' : 'idle'} size={140} season={leo.seasonal ? season : null} />
           )}
         </div>
-        <p className="relative mt-1 flex items-center gap-1.5 text-[15px] font-semibold text-slate-500">
+        <p className="relative mt-1 flex items-center gap-1.5 fs-15 font-semibold text-slate-500">
           {pro ? <Sparkles size={15} className="text-violet-500" /> : null}
           {pro ? 'PRO' : 'Gratis'}
         </p>
-        <h3 className="relative mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-slate-900">
+        <h3 className="relative mt-1 fsh-26 font-extrabold leading-tight tracking-tight text-slate-900">
           {pro ? (
             <>
               Dompet bersama lebih lega,
@@ -517,7 +518,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
             </>
           )}
         </h3>
-        <p className="relative mt-1 text-[15px] text-slate-500">
+        <p className="relative mt-1 fs-15 text-slate-500">
           {current
             ? isPro && expiry
               ? `Paketmu sekarang · aktif sampai ${expiry}`
@@ -532,16 +533,16 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
       <div className="mt-4 grid grid-cols-3 divide-x divide-slate-200 rounded-[20px] bg-slate-50 py-4 text-center">
         <div className="px-2">
-          <p className="text-[18px] font-bold text-slate-900">{pro ? '5' : '1'}</p>
-          <p className="text-[12px] text-slate-500">Dompet bersama</p>
+          <p className="fs-18 font-bold text-slate-900">{pro ? '5' : '1'}</p>
+          <p className="fs-12 text-slate-500">Dompet bersama</p>
         </div>
         <div className="px-2">
-          <p className="text-[18px] font-bold text-slate-900">{pro ? '10' : '3'}</p>
-          <p className="text-[12px] text-slate-500">Anggota/dompet</p>
+          <p className="fs-18 font-bold text-slate-900">{pro ? '10' : '3'}</p>
+          <p className="fs-12 text-slate-500">Anggota/dompet</p>
         </div>
         <div className="px-2">
-          <p className="text-[18px] font-bold text-slate-900">{pro ? 'Baca + catat' : 'Baca'}</p>
-          <p className="text-[12px] text-slate-500">Lewat AI luar</p>
+          <p className="fs-18 font-bold text-slate-900">{pro ? 'Baca + catat' : 'Baca'}</p>
+          <p className="fs-12 text-slate-500">Lewat AI luar</p>
         </div>
       </div>
 
@@ -560,8 +561,8 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
         ).map((r) => (
           <div key={r.t} className="flex items-center gap-4 px-5 py-4 text-left">
             <span className="min-w-0 flex-1">
-              <span className="block text-[16px] font-medium text-slate-900">{r.t}</span>
-              <span className="block text-[13px] text-slate-500">{r.d}</span>
+              <span className="block fs-16 font-medium text-slate-900">{r.t}</span>
+              <span className="block fs-13 text-slate-500">{r.d}</span>
             </span>
             <span
               className={cn(
@@ -577,22 +578,22 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
       {PLAN_TABLE.map((g) => (
         <div key={g.section} className="mt-4 rounded-[22px] bg-slate-50 px-5 py-2 text-left">
-          <p className="border-b border-slate-200/70 py-2.5 text-[14px] text-slate-500">{g.section}</p>
+          <p className="border-b border-slate-200/70 py-2.5 fs-14 text-slate-500">{g.section}</p>
           {g.rows.map((r) => {
             const v = pro ? r.pro : r.free;
             return (
               <div key={r.label} className="flex items-center justify-between gap-3 py-3">
-                <span className={cn('text-[15px]', v === false ? 'text-slate-400' : 'text-slate-900')}>{r.label}</span>
+                <span className={cn('fs-15', v === false ? 'text-slate-400' : 'text-slate-900')}>{r.label}</span>
                 {v === true ? (
-                  <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[13px] text-slate-600">
+                  <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1 fs-13 text-slate-600">
                     <Check size={14} className="text-emerald-600" /> Termasuk
                   </span>
                 ) : v === false ? (
-                  <span className="flex items-center gap-1 text-[13px] text-slate-400">
+                  <span className="flex items-center gap-1 fs-13 text-slate-400">
                     <Minus size={14} /> Tidak termasuk
                   </span>
                 ) : (
-                  <span className="rounded-full bg-white px-3 py-1 text-[13px] text-slate-600">{v}</span>
+                  <span className="rounded-full bg-white px-3 py-1 fs-13 text-slate-600">{v}</span>
                 )}
               </div>
             );
@@ -602,30 +603,30 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
       {pro && (
         <div className="mt-4 rounded-[22px] bg-slate-50 px-5 py-2 text-left">
-          <p className="border-b border-slate-200/70 py-2.5 text-[14px] text-slate-500">Harga</p>
+          <p className="border-b border-slate-200/70 py-2.5 fs-14 text-slate-500">Harga</p>
           {packages === null ? (
-            <p className="py-3 text-[14px] text-slate-400">Memuat…</p>
+            <p className="py-3 fs-14 text-slate-400">Memuat…</p>
           ) : packages.length === 0 ? (
-            <p className="py-3 text-[14px] text-slate-500">Hubungi admin untuk harga terbaru.</p>
+            <p className="py-3 fs-14 text-slate-500">Hubungi admin untuk harga terbaru.</p>
           ) : (
             packages.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-3 py-3">
-                <span className="text-[15px] text-slate-900">
+                <span className="fs-15 text-slate-900">
                   {p.name}
                   {p.isPopular && (
-                    <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                    <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 fs-11 font-semibold text-violet-700">
                       Populer
                     </span>
                   )}
                 </span>
-                <span className="rounded-full bg-white px-3 py-1 text-[13px] text-slate-600">{formatIDR(p.price)}</span>
+                <span className="rounded-full bg-white px-3 py-1 fs-13 text-slate-600">{formatIDR(p.price)}</span>
               </div>
             ))
           )}
         </div>
       )}
 
-      <p className="mt-4 px-2 text-center text-[13px] leading-relaxed text-slate-500">
+      <p className="mt-4 px-2 text-center fs-13 leading-relaxed text-slate-500">
         Pembayaran lewat transfer, lalu diaktifkan admin (maks. 1×24 jam). Kalau masa PRO berakhir, akun kembali ke
         Gratis — datamu tetap aman.
       </p>
@@ -635,7 +636,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
           <Link
             href="/membership/contact"
             onClick={onClose}
-            className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-3.5 text-[16px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.8)]"
+            className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-3.5 fs-16 font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.8)]"
           >
             Pilih paket & bayar
           </Link>
@@ -643,7 +644,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
           <Link
             href="/membership/contact"
             onClick={onClose}
-            className="rounded-full bg-slate-900 px-8 py-3.5 text-[16px] font-bold text-white"
+            className="rounded-full bg-slate-900 px-8 py-3.5 fs-16 font-bold text-white"
           >
             Perpanjang PRO
           </Link>
@@ -651,7 +652,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-900 px-8 py-3.5 text-[16px] font-bold text-white"
+            className="rounded-full bg-slate-900 px-8 py-3.5 fs-16 font-bold text-white"
           >
             {isPro ? 'Tutup' : 'Lanjut dengan Gratis'}
           </button>
@@ -709,6 +710,7 @@ export function SettingsPanel({
   const { tags: tagsPref } = useTags();
   const recording = useRecordingPrefs();
   const { theme } = useTheme();
+  const { size: textSize } = useTextSize();
   const leo = useLeoPrefs();
   const season = currentSeason();
   const [analyticsOn, setAnalyticsOn] = useState(true);
@@ -793,7 +795,7 @@ export function SettingsPanel({
     emoney: 'Kartu e-money',
     csv: 'Impor / ekspor CSV',
     pengingat: 'Pengingat',
-    tema: 'Mode gelap',
+    tema: 'Tampilan',
     izin: 'Izin',
     ingatan: 'Ingatan asisten',
     'app-mcp': 'Claude & ChatGPT',
@@ -837,13 +839,13 @@ export function SettingsPanel({
                   <ChevronLeft size={20} />
                 </button>
               )}
-              <h2 className="flex-1 text-[20px] font-bold text-slate-900">{title}</h2>
+              <h2 className="flex-1 fsh-20 font-bold text-slate-900">{title}</h2>
               {view === 'fitur' && (
                 <button
                   type="button"
                   onClick={() => setEditingFeatures((v) => !v)}
                   className={cn(
-                    'rounded-full px-4 py-2 text-[14px] font-semibold transition-colors',
+                    'rounded-full px-4 py-2 fs-14 font-semibold transition-colors',
                     editingFeatures ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
                   )}
                 >
@@ -876,14 +878,14 @@ export function SettingsPanel({
                       <Avatar user={user} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[19px] font-bold">{user?.name ?? 'Memuat…'}</span>
-                      <span className="block truncate text-[13px] text-indigo-100">
+                      <span className="block truncate fs-19 font-bold">{user?.name ?? 'Memuat…'}</span>
+                      <span className="block truncate fs-13 text-indigo-100">
                         {days ? `Bersama Leosiqra ${days} hari` : (user?.email ?? '')}
                       </span>
                     </span>
                     <span
                       className={cn(
-                        'shrink-0 rounded-full px-3 py-1 text-[12px] font-bold',
+                        'shrink-0 rounded-full px-3 py-1 fs-12 font-bold',
                         isPro ? 'bg-amber-300 text-amber-950' : 'bg-white/20 text-white',
                       )}
                     >
@@ -990,7 +992,7 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={logout}
-                    className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100"
+                    className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 fs-15 font-semibold text-rose-600 hover:bg-rose-100"
                   >
                     <LogOut size={17} /> Keluar
                   </button>
@@ -999,11 +1001,11 @@ export function SettingsPanel({
                     <button
                       type="button"
                       onClick={go('/membership/versi')}
-                      className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                      className="rounded-full bg-indigo-50 px-3 py-1 fs-12 font-semibold text-indigo-700 hover:bg-indigo-100"
                     >
                       Leosiqra {APP_VERSION_LABEL}
                     </button>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-medium text-emerald-700">
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 fs-12 font-medium text-emerald-700">
                       Tersinkron ke akunmu
                     </span>
                   </div>
@@ -1012,20 +1014,18 @@ export function SettingsPanel({
 
               {view === 'profil' && (
                 <div className="space-y-4">
-                  <p className="px-1 text-[14px] text-slate-500">Profil kamu</p>
+                  <p className="px-1 fs-14 text-slate-500">Profil kamu</p>
                   <Group>
                     <div className="flex items-center gap-4 px-5 py-4">
                       <Avatar user={user} size={60} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[18px] font-semibold text-slate-900">
-                          {user?.name ?? '—'}
-                        </span>
-                        <span className="block truncate text-[14px] text-slate-500">{user?.email ?? ''}</span>
+                        <span className="block truncate fs-18 font-semibold text-slate-900">{user?.name ?? '—'}</span>
+                        <span className="block truncate fs-14 text-slate-500">{user?.email ?? ''}</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => setView('ubah-profil')}
-                        className="shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
+                        className="shrink-0 rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
                       >
                         Ubah profil
                       </button>
@@ -1041,7 +1041,7 @@ export function SettingsPanel({
                     <Row title="Kelola langganan" onClick={() => setView('paket')} />
                   </Group>
                   <CoinProfileRows go={setView} />
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Akun</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Akun</p>
                   <Group>
                     <Row title="Kontak (HP & alamat)" onClick={() => setView('kontak')} />
                     <Row title="Kata sandi & 2 langkah" onClick={() => setView('privasi')} />
@@ -1056,7 +1056,7 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={logout}
-                    className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100"
+                    className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 fs-15 font-semibold text-rose-600 hover:bg-rose-100"
                   >
                     <LogOut size={17} /> Keluar
                   </button>
@@ -1065,7 +1065,7 @@ export function SettingsPanel({
                       <button
                         type="button"
                         onClick={() => setView('paket')}
-                        className="w-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[16px] font-bold text-white"
+                        className="w-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 fs-16 font-bold text-white"
                       >
                         Upgrade ke PRO
                       </button>
@@ -1084,7 +1084,7 @@ export function SettingsPanel({
 
               {view === 'umum' && (
                 <div className="space-y-4">
-                  <p className="px-1 text-[14px] text-slate-500">Uang</p>
+                  <p className="px-1 fs-14 text-slate-500">Uang</p>
                   <Group>
                     <Row icon={Tags} title="Kategori & Anggaran" onClick={() => setView('kategori')} />
                     <Row
@@ -1113,7 +1113,7 @@ export function SettingsPanel({
                       onClick={() => setView('tag')}
                     />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Mencatat</p>
                   <Group>
                     <Row
                       icon={PlusCircle}
@@ -1155,7 +1155,7 @@ export function SettingsPanel({
                       onClick={go('/membership/aplikasi')}
                     />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Impor & ekspor</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Impor & ekspor</p>
                   <Group>
                     <Row
                       icon={UploadCloud}
@@ -1171,9 +1171,14 @@ export function SettingsPanel({
                       onClick={() => setView('csv')}
                     />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Tampilan</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Tampilan</p>
                   <Group>
-                    <Row icon={Moon} title="Mode gelap" value={THEME_LABEL[theme]} onClick={() => setView('tema')} />
+                    <Row
+                      icon={Moon}
+                      title="Tampilan"
+                      value={`${THEME_LABEL[theme]} · Teks ${TEXT_SIZE_LABEL[textSize]}`}
+                      onClick={() => setView('tema')}
+                    />
                     <ToggleRow
                       icon={PawPrint}
                       title="Tampilkan Leo"
@@ -1193,11 +1198,11 @@ export function SettingsPanel({
                       onChange={(v) => void leo.save({ seasonal: v })}
                     />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Perangkat lain</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Perangkat lain</p>
                   <Group>
                     <Row icon={Smartphone} title="Pasang di ponsel" value="iPhone · Android" onClick={go('/install')} />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Pengingat & notifikasi</p>
+                  <p className="px-1 pt-2 fs-14 text-slate-500">Pengingat & notifikasi</p>
                   <Group>
                     <Row
                       icon={AlarmClock}
@@ -1245,7 +1250,7 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={() => setView('lainnya')}
-                    className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-[15px] font-medium text-rose-600 hover:text-rose-700"
+                    className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 fs-15 font-medium text-rose-600 hover:text-rose-700"
                   >
                     <RotateCcw size={16} /> Atur ulang data
                   </button>

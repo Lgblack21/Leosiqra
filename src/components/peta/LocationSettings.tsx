@@ -95,8 +95,8 @@ export function LocationSettings({
             <ShieldCheck size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[17px] font-black">Lokasi &amp; privasi</p>
-            <p className="text-[12px] text-slate-500">Kamu yang pegang kendali lokasimu.</p>
+            <p className="fs-17 font-black">Lokasi &amp; privasi</p>
+            <p className="fs-12 text-slate-500">Kamu yang pegang kendali lokasimu.</p>
           </div>
           <button
             type="button"
@@ -112,7 +112,7 @@ export function LocationSettings({
           {msg ? (
             <p
               className={cn(
-                'rounded-2xl px-3.5 py-2.5 text-[12.5px] font-semibold',
+                'rounded-2xl px-3.5 py-2.5 fs-12.5 font-semibold',
                 msg.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-700',
               )}
             >
@@ -123,8 +123,8 @@ export function LocationSettings({
           <section className="rounded-[22px] bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[14.5px] font-black">Lokasi otomatis saat mencatat</p>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-slate-500">
+                <p className="fs-14.5 font-black">Lokasi otomatis saat mencatat</p>
+                <p className="mt-0.5 fs-12.5 leading-relaxed text-slate-500">
                   Saat mencatat pengeluaran <b>hari ini</b>, posisimu diambil sekali dan ditempel ke transaksi itu —
                   bisa kamu hapus sebelum menyimpan. Tidak ada pelacakan di latar belakang. Berlaku di perangkat ini.
                 </p>
@@ -152,8 +152,8 @@ export function LocationSettings({
           </section>
 
           <section className="rounded-[22px] bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-            <p className="text-[14.5px] font-black">Zona privat</p>
-            <p className="mt-0.5 text-[12.5px] leading-relaxed text-slate-500">
+            <p className="fs-14.5 font-black">Zona privat</p>
+            <p className="mt-0.5 fs-12.5 leading-relaxed text-slate-500">
               Di dalam zona ini, lokasi otomatis <b>tidak menyimpan koordinat</b>. Titik &amp; radiusnya hanya ada di
               perangkat ini — server Leosiqra tidak pernah tahu letak rumahmu.
             </p>
@@ -165,15 +165,15 @@ export function LocationSettings({
                 return (
                   <div key={id} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
                     <div className="flex items-center gap-3">
-                      <span className="text-[22px]">{meta.emoji}</span>
+                      <span className="fsh-22">{meta.emoji}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-bold">{meta.label}</p>
-                        <p className="text-[12px] text-slate-500">{z ? `Radius ${z.radius} m` : 'Belum diatur'}</p>
+                        <p className="fs-14 font-bold">{meta.label}</p>
+                        <p className="fs-12 text-slate-500">{z ? `Radius ${z.radius} m` : 'Belum diatur'}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setPickZone(id)}
-                        className="h-8 rounded-full bg-slate-900 px-3 text-[12.5px] font-bold text-white dark:bg-white dark:text-slate-900"
+                        className="h-8 rounded-full bg-slate-900 px-3 fs-12.5 font-bold text-white dark:bg-white dark:text-slate-900"
                       >
                         {z ? 'Pindah titik' : 'Atur'}
                       </button>
@@ -202,7 +202,7 @@ export function LocationSettings({
                               refreshZones();
                             }}
                             className={cn(
-                              'h-8 rounded-full px-3 text-[12.5px] font-bold',
+                              'h-8 rounded-full px-3 fs-12.5 font-bold',
                               z.radius === r
                                 ? 'bg-emerald-600 text-white'
                                 : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
@@ -216,7 +216,7 @@ export function LocationSettings({
                             type="button"
                             disabled={busy}
                             onClick={() => void clearInZone(z)}
-                            className="h-8 rounded-full px-2 text-[12px] font-bold text-rose-600 disabled:opacity-50"
+                            className="h-8 rounded-full px-2 fs-12 font-bold text-rose-600 disabled:opacity-50"
                           >
                             Hapus {stale} lokasi lama di zona ini
                           </button>
@@ -227,32 +227,30 @@ export function LocationSettings({
                 );
               })}
             </div>
-            <p className="mt-2 text-[11.5px] text-slate-400">Saran: 200 m. GPS di dalam rumah bisa meleset 30–100 m.</p>
+            <p className="mt-2 fs-11.5 text-slate-400">Saran: 200 m. GPS di dalam rumah bisa meleset 30–100 m.</p>
           </section>
 
           <section className="rounded-[22px] bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-            <p className="text-[14.5px] font-black">Data lokasimu</p>
-            <p className="mt-0.5 text-[12.5px] leading-relaxed text-slate-500">
+            <p className="fs-14.5 font-black">Data lokasimu</p>
+            <p className="mt-0.5 fs-12.5 leading-relaxed text-slate-500">
               {items.length} transaksi punya lokasi. Lokasi hanya terlihat olehmu dan ikut terhapus bersama
               transaksinya.
             </p>
             {confirmAll ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-[12.5px] font-semibold text-rose-700">
-                  Hapus semua lokasi? Transaksinya tetap ada.
-                </span>
+                <span className="fs-12.5 font-semibold text-rose-700">Hapus semua lokasi? Transaksinya tetap ada.</span>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => void removeAll()}
-                  className="h-9 rounded-full bg-rose-600 px-4 text-[13px] font-bold text-white disabled:opacity-60"
+                  className="h-9 rounded-full bg-rose-600 px-4 fs-13 font-bold text-white disabled:opacity-60"
                 >
                   {busy ? 'Menghapus…' : 'Ya, hapus'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmAll(false)}
-                  className="h-9 rounded-full px-3 text-[13px] font-bold text-slate-500"
+                  className="h-9 rounded-full px-3 fs-13 font-bold text-slate-500"
                 >
                   Batal
                 </button>
@@ -262,7 +260,7 @@ export function LocationSettings({
                 type="button"
                 disabled={!items.length}
                 onClick={() => setConfirmAll(true)}
-                className="mt-3 h-10 rounded-full px-4 text-[13px] font-bold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40 dark:ring-rose-500/30 dark:hover:bg-rose-500/10"
+                className="mt-3 h-10 rounded-full px-4 fs-13 font-bold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40 dark:ring-rose-500/30 dark:hover:bg-rose-500/10"
               >
                 Hapus semua lokasiku
               </button>

@@ -9,6 +9,30 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ── Ukuran teks (Pengaturan → Tampilan → Ukuran teks; disimpan per perangkat, src/lib/textSize.ts) ──
+   --fs   = skala teks biasa, --fs-h = skala judul (≥20px) yang sengaja lebih ramping.
+   Semua ukuran teks memakai skala ini: fs-N / fsh-N (N px) dan text-xs…text-9xl (di @theme di bawah). */
+:root {
+  --fs: 0.95;
+  --fs-h: 0.88;
+}
+:root[data-teks='kecil'] {
+  --fs: 0.9;
+  --fs-h: 0.82;
+}
+:root[data-teks='besar'] {
+  --fs: 1.06;
+  --fs-h: 1;
+}
+/* Teks biasa: N px × skala, tapi tidak pernah di bawah 9px (atau N kalau N < 9) supaya tetap terbaca. */
+@utility fs-* {
+  font-size: max(calc(--value(number) * 1px * var(--fs, 1)), min(calc(--value(number) * 1px), 9px));
+}
+/* Judul & angka besar (≥20px). */
+@utility fsh-* {
+  font-size: calc(--value(number) * 1px * var(--fs-h, 1));
+}
+
 :root {
   --background: #f9f8f6;
   --foreground: #111827;
@@ -16,6 +40,23 @@ html {
   --font-geist-sans: var(--font-jakarta), 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
   --font-geist-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   --font-serif: var(--font-serif-display), 'DM Serif Display', 'Georgia', 'Times New Roman', serif;
+}
+
+/* Skala ukuran teks bawaan Tailwind ikut setelan Ukuran teks. */
+@theme {
+  --text-xs: calc(0.75rem * var(--fs, 1));
+  --text-sm: calc(0.875rem * var(--fs, 1));
+  --text-base: calc(1rem * var(--fs, 1));
+  --text-lg: calc(1.125rem * var(--fs, 1));
+  --text-xl: calc(1.25rem * var(--fs, 1));
+  --text-2xl: calc(1.5rem * var(--fs-h, 1));
+  --text-3xl: calc(1.875rem * var(--fs-h, 1));
+  --text-4xl: calc(2.25rem * var(--fs-h, 1));
+  --text-5xl: calc(3rem * var(--fs-h, 1));
+  --text-6xl: calc(3.75rem * var(--fs-h, 1));
+  --text-7xl: calc(4.5rem * var(--fs-h, 1));
+  --text-8xl: calc(6rem * var(--fs-h, 1));
+  --text-9xl: calc(8rem * var(--fs-h, 1));
 }
 
 @theme inline {
@@ -31,10 +72,10 @@ html {
      `text-label`, `text-caption` alih-alih nilai arbitrary ([20px], [10px]). */
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
-  --text-label: 0.625rem;
+  --text-label: max(calc(0.625rem * var(--fs, 1)), 9px);
   --text-label--line-height: 1rem;
   --text-label--letter-spacing: 0.1em;
-  --text-caption: 0.6875rem;
+  --text-caption: max(calc(0.6875rem * var(--fs, 1)), 9px);
   --text-caption--line-height: 1rem;
 }
 

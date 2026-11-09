@@ -155,7 +155,7 @@ const APPS: Record<AppId, AppInfo> = {
 
 const StatusChip = ({ on }: { on: boolean }) =>
   on ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 fs-12 font-semibold text-emerald-700">
       <Check size={12} strokeWidth={3} /> Terhubung
     </span>
   ) : null;
@@ -188,30 +188,30 @@ function AppCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[17px] font-bold text-slate-900 sm:text-[18px]">{app.name}</span>
+            <span className="fs-17 font-bold text-slate-900 sm:fs-18">{app.name}</span>
             {app.beta && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 fs-11 font-bold uppercase tracking-wide text-amber-700">
                 Beta
               </span>
             )}
             <StatusChip on={Boolean(connected)} />
           </div>
-          {price && <p className="mt-1 text-[12px] font-semibold text-indigo-600">{price}</p>}
-          <p className="mt-1 text-[14px] leading-snug text-slate-500">{app.tagline}</p>
-          {disabledNote && <p className="mt-1 text-[12px] font-medium text-rose-500">{disabledNote}</p>}
+          {price && <p className="mt-1 fs-12 font-semibold text-indigo-600">{price}</p>}
+          <p className="mt-1 fs-14 leading-snug text-slate-500">{app.tagline}</p>
+          {disabledNote && <p className="mt-1 fs-12 font-medium text-rose-500">{disabledNote}</p>}
         </div>
         <ChevronRight size={20} className="mt-3 shrink-0 text-slate-300 sm:hidden" />
       </div>
       <ul className="mt-4 hidden flex-1 space-y-2 sm:block">
         {app.bullets.map((b) => (
-          <li key={b} className="flex items-start gap-2 text-[14px] text-slate-600">
+          <li key={b} className="flex items-start gap-2 fs-14 text-slate-600">
             <Check size={16} className="mt-0.5 shrink-0 text-indigo-500" /> {b}
           </li>
         ))}
       </ul>
       <span
         className={cn(
-          'mt-5 hidden items-center justify-center gap-1.5 rounded-full sm:inline-flex py-2.5 text-[14px] font-bold transition-colors',
+          'mt-5 hidden items-center justify-center gap-1.5 rounded-full sm:inline-flex py-2.5 fs-14 font-bold transition-colors',
           connected
             ? 'bg-slate-100 text-slate-800 group-hover:bg-slate-200'
             : 'bg-slate-900 text-white group-hover:bg-indigo-600',
@@ -246,10 +246,10 @@ const LinkCard = ({
       <Icon size={22} strokeWidth={1.9} />
     </span>
     <span className="min-w-0 flex-1">
-      <span className="block text-[16px] font-semibold text-slate-900">{title}</span>
-      <span className="block text-[13px] leading-snug text-slate-500">{desc}</span>
+      <span className="block fs-16 font-semibold text-slate-900">{title}</span>
+      <span className="block fs-13 leading-snug text-slate-500">{desc}</span>
     </span>
-    <span className="hidden shrink-0 rounded-full bg-slate-100 px-4 py-2 text-[13px] font-semibold text-slate-800 sm:block">
+    <span className="hidden shrink-0 rounded-full bg-slate-100 px-4 py-2 fs-13 font-semibold text-slate-800 sm:block">
       {action}
     </span>
     <ChevronRight size={18} className="shrink-0 text-slate-400 sm:hidden" />
@@ -274,11 +274,11 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex items-center gap-6">
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Aplikasi terhubung</p>
-            <h1 className="mt-2 text-[28px] font-extrabold leading-tight tracking-tight md:text-[38px]">
+            <p className="fs-13 font-semibold uppercase tracking-[0.18em] text-indigo-200">Aplikasi terhubung</p>
+            <h1 className="mt-2 fsh-28 font-extrabold leading-tight tracking-tight md:fsh-38">
               Biar Leosiqra kerja sendiri.
             </h1>
-            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-indigo-100">
+            <p className="mt-2 max-w-xl fs-15 leading-relaxed text-indigo-100">
               Sambungkan aplikasi yang sudah kamu pakai. Leosiqra bisa menaruh jadwal keuanganmu di kalender, membaca
               email pembayaran, dan menjawab pertanyaan keuanganmu dari asisten AI.
             </p>
@@ -292,7 +292,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
                 return (
                   <span
                     key={label as string}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[13px] font-medium backdrop-blur"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 fs-13 font-medium backdrop-blur"
                   >
                     <I size={14} /> {label as string}
                   </span>
@@ -308,8 +308,8 @@ function Hub({ open }: { open: (id: AppId) => void }) {
       </section>
 
       <section>
-        <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
-        <p className="mb-4 text-[14px] text-slate-500">
+        <h2 className="mb-1 fs-18 font-bold text-slate-900">Otomatis dari aplikasimu</h2>
+        <p className="mb-4 fs-14 text-slate-500">
           Lewat mitra koneksi Composio — kamu masuk di situs Google, Notion atau Slack langsung, Leosiqra tidak pernah
           melihat kata sandimu.
         </p>
@@ -353,14 +353,14 @@ function Hub({ open }: { open: (id: AppId) => void }) {
       </section>
 
       <section>
-        <h2 className="mb-4 text-[18px] font-bold text-slate-900">Asisten AI</h2>
+        <h2 className="mb-4 fs-18 font-bold text-slate-900">Asisten AI</h2>
         <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
           <AppCard app={APPS.mcp} onOpen={() => open('mcp')} />
         </div>
       </section>
 
       <section>
-        <h2 className="mb-4 text-[18px] font-bold text-slate-900">Catat lebih cepat</h2>
+        <h2 className="mb-4 fs-18 font-bold text-slate-900">Catat lebih cepat</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <LinkCard
             href="/input-cepat"
@@ -381,7 +381,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         </div>
       </section>
 
-      <p className="flex items-start gap-2 px-1 text-[13px] leading-relaxed text-slate-400">
+      <p className="flex items-start gap-2 px-1 fs-13 leading-relaxed text-slate-400">
         <ShieldCheck size={16} className="mt-0.5 shrink-0" />
         Koneksi dijaga Composio (SOC 2 Type II). Leosiqra tidak pernah melihat kata sandimu, dan kamu bisa memutus
         aplikasi kapan saja.
@@ -398,7 +398,7 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
       <button
         type="button"
         onClick={back}
-        className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+        className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
       >
         <ArrowLeft size={16} /> Aplikasi terhubung
       </button>
@@ -408,14 +408,14 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[32px]">{app.name}</h1>
+            <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-32">{app.name}</h1>
             {app.beta && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 fs-11 font-bold uppercase tracking-wide text-amber-700">
                 Beta
               </span>
             )}
           </div>
-          <p className="text-[15px] text-slate-500">{app.tagline}</p>
+          <p className="fs-15 text-slate-500">{app.tagline}</p>
         </div>
       </div>
 
@@ -447,21 +447,21 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
         </div>
         <aside className="space-y-4">
           <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-100">
-            <p className="text-[15px] font-bold text-slate-900">Fungsinya</p>
+            <p className="fs-15 font-bold text-slate-900">Fungsinya</p>
             <ul className="mt-3 space-y-2.5">
               {app.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2 text-[14px] text-slate-600">
+                <li key={b} className="flex items-start gap-2 fs-14 text-slate-600">
                   <Check size={16} className="mt-0.5 shrink-0 text-indigo-500" /> {b}
                 </li>
               ))}
             </ul>
           </div>
           <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-100">
-            <p className="text-[15px] font-bold text-slate-900">Cara pakai</p>
+            <p className="fs-15 font-bold text-slate-900">Cara pakai</p>
             <ol className="mt-3 space-y-3">
               {app.steps.map((s, i) => (
-                <li key={s} className="flex gap-3 text-[14px] leading-snug text-slate-600">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[12px] font-bold text-indigo-700">
+                <li key={s} className="flex gap-3 fs-14 leading-snug text-slate-600">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-50 fs-12 font-bold text-indigo-700">
                     {i + 1}
                   </span>
                   {s}

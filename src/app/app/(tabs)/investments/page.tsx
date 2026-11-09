@@ -100,7 +100,7 @@ export default function AppInvestmentsPage() {
         delay={0.05}
         className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 shadow-lg shadow-blue-200/50 dark:shadow-none"
       >
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Nilai portofolio</p>
+        <p className="fs-10 font-bold uppercase tracking-wider text-white/80">Nilai portofolio</p>
         <p className="mt-1 text-3xl font-black tabular-nums">
           <AnimatedNumber value={aset} format={formatIDR} />
         </p>
@@ -127,7 +127,7 @@ export default function AppInvestmentsPage() {
                   <div key={a.key} className={a.bar} style={{ width: `${(a.value / aset) * 100}%` }} />
                 ))}
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-white/85">
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 fs-11 text-white/85">
               {alloc
                 .filter((a) => a.value > 0)
                 .map((a) => (
@@ -216,7 +216,7 @@ export default function AppInvestmentsPage() {
                       {i.stockCode ? `${i.stockCode} · ` : ''}
                       {i.name}
                     </span>
-                    <span className="block text-[11px] text-slate-400 truncate">
+                    <span className="block fs-11 text-slate-400 truncate">
                       {i.platform || i.type}
                       {i.transactionType ? ` · ${i.transactionType}` : ''}
                       {isDeposit && i.targetDate ? ` · jatuh tempo ${fmtDate(i.targetDate)}` : ''}
@@ -230,7 +230,7 @@ export default function AppInvestmentsPage() {
                     {invested > 0 && Math.abs(diff) >= 0.005 && (
                       <span
                         className={cn(
-                          'block text-[11px] font-bold tabular-nums',
+                          'block fs-11 font-bold tabular-nums',
                           diff >= 0 ? 'text-emerald-600' : 'text-rose-500',
                         )}
                       >

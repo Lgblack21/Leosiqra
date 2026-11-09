@@ -164,12 +164,8 @@ export default function RecurringPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">
-              Transaksi berulang
-            </h1>
-            <p className="text-[14px] text-slate-500">
-              Dicatat otomatis tiap jatuh tempo — saldo rekening ikut berubah.
-            </p>
+            <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Transaksi berulang</h1>
+            <p className="fs-14 text-slate-500">Dicatat otomatis tiap jatuh tempo — saldo rekening ikut berubah.</p>
           </div>
           <HeaderSlot className="sm:hidden" />
         </div>
@@ -177,7 +173,7 @@ export default function RecurringPage() {
           <button
             type="button"
             onClick={() => openNew()}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 fs-14 font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"
           >
             <Plus size={16} strokeWidth={2.5} /> Tambah jadwal
           </button>
@@ -200,8 +196,8 @@ export default function RecurringPage() {
           },
         ].map((t) => (
           <div key={t.label} className={cn('rounded-[22px] p-4 md:p-5', t.bg)}>
-            <p className="text-[13px] text-slate-600">{t.label}</p>
-            <p className={cn('mt-1 text-[20px] font-extrabold tabular-nums md:text-[22px]', t.cls)}>
+            <p className="fs-13 text-slate-600">{t.label}</p>
+            <p className={cn('mt-1 fsh-20 font-extrabold tabular-nums md:fsh-22', t.cls)}>
               {t.sign}
               {formatCurrency(Math.round(t.abs ? Math.abs(t.value) : t.value), 'IDR')}
             </p>
@@ -209,14 +205,12 @@ export default function RecurringPage() {
         ))}
       </div>
       {hasForeign && (
-        <p className="-mt-3 px-1 text-[12px] text-slate-500">
-          Jadwal di rekening non-IDR tidak dijumlahkan di ringkasan.
-        </p>
+        <p className="-mt-3 px-1 fs-12 text-slate-500">Jadwal di rekening non-IDR tidak dijumlahkan di ringkasan.</p>
       )}
 
       {soon.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 px-1 text-[16px] font-bold text-slate-900">
+          <h2 className="flex items-center gap-2 px-1 fs-16 font-bold text-slate-900">
             <CalendarClock size={18} className="text-indigo-600" /> 7 hari ke depan
           </h2>
           <div className="flex gap-3 overflow-x-auto pb-1">
@@ -233,14 +227,14 @@ export default function RecurringPage() {
                       daysUntil(r.nextDate) <= 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700',
                     )}
                   >
-                    <span className="text-[10px] uppercase">{weekday(r.nextDate)}</span>
-                    <span className="text-[17px] font-extrabold">{r.nextDate.getDate()}</span>
+                    <span className="fs-10 uppercase">{weekday(r.nextDate)}</span>
+                    <span className="fs-17 font-extrabold">{r.nextDate.getDate()}</span>
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-semibold text-slate-900">{r.name}</span>
+                    <span className="block truncate fs-14 font-semibold text-slate-900">{r.name}</span>
                     <span
                       className={cn(
-                        'block text-[13px] font-bold tabular-nums',
+                        'block fs-13 font-bold tabular-nums',
                         income ? 'text-emerald-600' : r.type === 'Tabungan' ? 'text-indigo-600' : 'text-slate-700',
                       )}
                     >
@@ -264,7 +258,7 @@ export default function RecurringPage() {
               onClick={() => setFilter(f.id)}
               aria-pressed={filter === f.id}
               className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[14px] transition',
+                'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 fs-14 transition',
                 filter === f.id
                   ? 'bg-slate-900 font-semibold text-white'
                   : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
@@ -273,7 +267,7 @@ export default function RecurringPage() {
               {f.label}
               <span
                 className={cn(
-                  'rounded-full px-1.5 text-[12px] tabular-nums',
+                  'rounded-full px-1.5 fs-12 tabular-nums',
                   filter === f.id ? 'bg-white/20' : 'bg-slate-100',
                 )}
               >
@@ -285,14 +279,14 @@ export default function RecurringPage() {
       )}
 
       {items === null ? (
-        <p className="py-12 text-center text-[14px] text-slate-400">Memuat…</p>
+        <p className="py-12 text-center fs-14 text-slate-400">Memuat…</p>
       ) : all.length === 0 ? (
         <div className="rounded-[28px] border-2 border-dashed border-slate-200 bg-white/60 p-6 text-center md:p-10">
-          <p className="text-[32px]" aria-hidden>
+          <p className="fsh-32" aria-hidden>
             🔁
           </p>
-          <p className="mt-1 text-[17px] font-bold text-slate-900">Belum ada transaksi berulang</p>
-          <p className="mx-auto mt-1 max-w-[420px] text-[14px] text-slate-500">
+          <p className="mt-1 fs-17 font-bold text-slate-900">Belum ada transaksi berulang</p>
+          <p className="mx-auto mt-1 max-w-[420px] fs-14 text-slate-500">
             Catat sekali, Leosiqra yang mencatat tiap jatuh tempo. Mulai dari salah satu ini:
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -301,7 +295,7 @@ export default function RecurringPage() {
                 key={p.name}
                 type="button"
                 onClick={() => openNew(p)}
-                className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[14px] font-medium text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300"
+                className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 fs-14 font-medium text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300"
               >
                 <span aria-hidden>{p.emoji}</span> {p.name}
               </button>
@@ -309,7 +303,7 @@ export default function RecurringPage() {
           </div>
         </div>
       ) : shown.length === 0 ? (
-        <p className="py-10 text-center text-[14px] text-slate-500">Tidak ada jadwal di filter ini.</p>
+        <p className="py-10 text-center fs-14 text-slate-500">Tidak ada jadwal di filter ini.</p>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((r) => {
@@ -331,7 +325,7 @@ export default function RecurringPage() {
                 <div className="flex items-start gap-3">
                   <span
                     className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[20px]',
+                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fsh-20',
                       v.tile,
                       paused && 'grayscale',
                     )}
@@ -340,14 +334,14 @@ export default function RecurringPage() {
                     {v.emoji}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-bold text-slate-900">{r.name}</p>
-                    <p className="truncate text-[12px] text-slate-500">
+                    <p className="truncate fs-15 font-bold text-slate-900">{r.name}</p>
+                    <p className="truncate fs-12 text-slate-500">
                       {saving ? `Tabungan · ${r.category}` : r.category || 'Tanpa kategori'}
                     </p>
                   </div>
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                      'shrink-0 rounded-full px-2.5 py-1 fs-11 font-semibold',
                       paused
                         ? 'bg-amber-50 text-amber-700'
                         : n <= 0
@@ -362,7 +356,7 @@ export default function RecurringPage() {
                 </div>
                 <p
                   className={cn(
-                    'mt-3 text-[22px] font-extrabold tabular-nums',
+                    'mt-3 fsh-22 font-extrabold tabular-nums',
                     paused
                       ? 'text-slate-400'
                       : income
@@ -375,7 +369,7 @@ export default function RecurringPage() {
                   {income ? '+' : '−'}
                   {formatCurrency(r.amount, currencyOf(r.accountId))}
                 </p>
-                <p className="text-[12px] text-slate-500">
+                <p className="fs-12 text-slate-500">
                   {INTERVAL_LABEL[r.interval as RecurringInterval] ?? r.interval} · {income ? 'ke' : 'dari'}{' '}
                   {accountName(r.accountId)}
                 </p>
@@ -383,7 +377,7 @@ export default function RecurringPage() {
                   {saving ? (
                     <Link
                       href="/membership/kekayaan#tabungan"
-                      className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-indigo-600 hover:text-indigo-700"
+                      className="flex flex-1 items-center gap-1.5 fs-13 font-semibold text-indigo-600 hover:text-indigo-700"
                     >
                       <PiggyBank size={15} /> Atur di Tabungan <ArrowRight size={14} />
                     </Link>
@@ -391,7 +385,7 @@ export default function RecurringPage() {
                     <button
                       type="button"
                       onClick={() => setModal({ open: true, item: r })}
-                      className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-slate-700 hover:text-indigo-600"
+                      className="flex flex-1 items-center gap-1.5 fs-13 font-semibold text-slate-700 hover:text-indigo-600"
                     >
                       <Pencil size={14} /> Ubah
                     </button>
@@ -401,7 +395,7 @@ export default function RecurringPage() {
                     onClick={() => void togglePause(r)}
                     disabled={busy === r.id}
                     aria-label={paused ? `Lanjutkan ${r.name}` : `Jeda ${r.name}`}
-                    className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-full px-3 py-1.5 fs-13 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
                   >
                     {paused ? <Play size={14} /> : <Pause size={14} />} {paused ? 'Lanjut' : 'Jeda'}
                   </button>
@@ -426,7 +420,7 @@ export default function RecurringPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
               <Plus size={20} />
             </span>
-            <span className="text-[14px] font-semibold">Tambah jadwal</span>
+            <span className="fs-14 font-semibold">Tambah jadwal</span>
           </button>
         </div>
       )}

@@ -124,7 +124,7 @@ export function RingkasView({
     <div className="space-y-4">
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#047857_0%,#064e3b_35%,#0b1220_80%)] p-5 text-white md:p-6">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[13px] font-semibold text-white/60">Cuan bulan ini</p>
+          <p className="fs-13 font-semibold text-white/60">Cuan bulan ini</p>
           {!editing && (
             <button
               type="button"
@@ -132,18 +132,18 @@ export function RingkasView({
                 setDraft(target ? String(target) : '');
                 setEditing(true);
               }}
-              className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold text-white/80 hover:bg-white/20"
+              className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 fs-11 font-bold text-white/80 hover:bg-white/20"
             >
               <Pencil size={11} /> {target ? 'Target' : 'Pasang target'}
             </button>
           )}
         </div>
-        <p className="mt-1 text-[32px] font-extrabold leading-none tracking-tight tabular-nums md:text-[40px]">
+        <p className="mt-1 fsh-32 font-extrabold leading-none tracking-tight tabular-nums md:fsh-40">
           {formatIDR(Math.round(total))}
         </p>
         {editing ? (
           <div className="mt-3 flex gap-2">
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-semibold">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 fs-14 font-semibold">
               <span className="text-white/50">Rp</span>
               <input
                 autoFocus
@@ -160,7 +160,7 @@ export function RingkasView({
                 type="button"
                 onClick={() => save(0)}
                 disabled={busy}
-                className="rounded-full bg-white/10 px-3 text-[12px] font-bold"
+                className="rounded-full bg-white/10 px-3 fs-12 font-bold"
               >
                 Hapus
               </button>
@@ -185,7 +185,7 @@ export function RingkasView({
           </div>
         ) : target > 0 ? (
           <>
-            <p className="mt-2 text-[13px] text-white/60">
+            <p className="mt-2 fs-13 text-white/60">
               {total >= target
                 ? `🎉 Target ${formatIDR(target)} tercapai!`
                 : `dari target ${formatIDR(target)} · kurang ${formatIDR(Math.round(target - total))}`}
@@ -208,9 +208,7 @@ export function RingkasView({
             </div>
           </>
         ) : (
-          <p className="mt-2 text-[13px] text-white/60">
-            Dari penjualan Usahaku & barang yang laku — gaji tidak dihitung.
-          </p>
+          <p className="mt-2 fs-13 text-white/60">Dari penjualan Usahaku & barang yang laku — gaji tidak dihitung.</p>
         )}
       </section>
 
@@ -231,8 +229,8 @@ export function RingkasView({
                 <Icon size={20} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-extrabold text-slate-900 dark:text-white">{w.title}</span>
-                <span className="block text-[12px] text-slate-500 dark:text-slate-400">{w.sub}</span>
+                <span className="block fs-15 font-extrabold text-slate-900 dark:text-white">{w.title}</span>
+                <span className="block fs-12 text-slate-500 dark:text-slate-400">{w.sub}</span>
               </span>
               <ChevronRight size={18} className="shrink-0 text-slate-300 md:hidden" />
             </button>
@@ -241,9 +239,9 @@ export function RingkasView({
       </section>
 
       <section className={cn(card, 'p-4')}>
-        <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Uang masuk bulan ini</h3>
+        <h3 className="fs-15 font-extrabold text-slate-900 dark:text-white">Uang masuk bulan ini</h3>
         {month.length === 0 ? (
-          <p className="py-5 text-center text-[13px] text-slate-500 dark:text-slate-400">
+          <p className="py-5 text-center fs-13 text-slate-500 dark:text-slate-400">
             Belum ada. Catat penjualan pertamamu di Usahaku, atau jual barang nganggur.
           </p>
         ) : (
@@ -261,16 +259,16 @@ export function RingkasView({
                   {t.relatedType === 'shop' ? <Store size={16} /> : <Tag size={16} />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">
+                  <span className="block truncate fs-13 font-bold text-slate-900 dark:text-white">
                     {(t.note || '').replace(/^\[([^\]]+)\]\s*(.*)$/, '$2 · $1') || 'Penjualan'}
                   </span>
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="block fs-11 text-slate-500 dark:text-slate-400">
                     {new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(
                       new Date(t.date),
                     )}
                   </span>
                 </span>
-                <span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+                <span className="shrink-0 fs-13 font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
                   +{formatIDR(Math.round(amt(t)))}
                 </span>
               </li>

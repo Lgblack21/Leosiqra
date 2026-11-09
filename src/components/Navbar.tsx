@@ -66,7 +66,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
 
         <div className="hidden lg:flex items-center gap-8 mx-4">
           <div
-            className={`flex items-center gap-7 text-[13px] font-bold tracking-wide uppercase ${dark ? 'text-[#9a958c]' : 'text-slate-500/80'}`}
+            className={`flex items-center gap-7 fs-13 font-bold tracking-wide uppercase ${dark ? 'text-[#9a958c]' : 'text-slate-500/80'}`}
           >
             {SECTIONS.map((s) => (
               <button

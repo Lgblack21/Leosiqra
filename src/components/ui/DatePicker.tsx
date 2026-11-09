@@ -129,7 +129,7 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
 
             <div className="grid grid-cols-7 gap-1 mb-1">
               {WEEKDAY_LABELS.map((w) => (
-                <span key={w} className="text-center text-[9px] font-black text-slate-400 uppercase py-1">
+                <span key={w} className="text-center fs-9 font-black text-slate-400 uppercase py-1">
                   {w}
                 </span>
               ))}
@@ -145,7 +145,7 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
                     key={i}
                     onClick={() => selectDay(c.day, c.month, c.year)}
                     className={cn(
-                      'py-2 rounded-lg text-[11px] font-bold transition-all',
+                      'py-2 rounded-lg fs-11 font-bold transition-all',
                       isSelected
                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 font-black'
                         : c.inCurrentMonth
@@ -162,7 +162,7 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
 
             <button
               onClick={goToToday}
-              className="w-full mt-3 py-2 rounded-xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-widest"
+              className="w-full mt-3 py-2 rounded-xl fs-10 font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-widest"
             >
               Hari Ini
             </button>

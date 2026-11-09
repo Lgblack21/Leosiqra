@@ -66,13 +66,13 @@ export function TabBelajar() {
       ],
       extra: floating ? (
         <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-[11px] font-semibold text-slate-500">{floating.code}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[14px] font-bold">
+          <p className="fs-11 font-semibold text-slate-500">{floating.code}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 fs-14 font-bold">
             <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">BI {pct(BI_RATE.rate)}</span> +
             <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-700">
               spread {pct(Math.round((floating.coupon - BI_RATE.rate) * 100) / 100)}
             </span>{' '}
-            =<span className="text-[17px] text-slate-900">{pct(floating.coupon)}</span>
+            =<span className="fs-17 text-slate-900">{pct(floating.coupon)}</span>
           </p>
         </div>
       ) : undefined,
@@ -99,7 +99,7 @@ export function TabBelajar() {
       ],
       extra: top ? (
         <div className="space-y-2 rounded-2xl bg-slate-50 p-3">
-          <p className="text-[11px] font-semibold text-slate-500">Rp10 jt sebulan, setelah pajak</p>
+          <p className="fs-11 font-semibold text-slate-500">Rp10 jt sebulan, setelah pajak</p>
           {[
             {
               label: `${top.code} · ${pct(top.coupon)}`,
@@ -113,7 +113,7 @@ export function TabBelajar() {
             },
           ].map((r, i, arr) => (
             <div key={r.label}>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between fs-13">
                 <span className="text-slate-700">{r.label}</span>
                 <span className="font-bold text-slate-900 tabular-nums">{formatIDR(r.value)}</span>
               </div>
@@ -150,8 +150,8 @@ export function TabBelajar() {
             ['Valas', LPS.valas],
           ].map(([l, v]) => (
             <div key={l as string}>
-              <p className="text-[11px] text-slate-500">{l}</p>
-              <p className="text-[18px] font-extrabold text-slate-900">{pct(v as number)}</p>
+              <p className="fs-11 text-slate-500">{l}</p>
+              <p className="fs-18 font-extrabold text-slate-900">{pct(v as number)}</p>
             </div>
           ))}
         </div>
@@ -197,11 +197,11 @@ export function TabBelajar() {
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${c.tone}`}>
               <c.icon size={20} />
             </span>
-            <h3 className="text-[18px] font-bold tracking-tight text-slate-900">{c.title}</h3>
+            <h3 className="fs-18 font-bold tracking-tight text-slate-900">{c.title}</h3>
           </div>
           <ul className="space-y-2">
             {c.points.map((p) => (
-              <li key={p} className="flex gap-2.5 text-[14px] leading-relaxed text-slate-700">
+              <li key={p} className="flex gap-2.5 fs-14 leading-relaxed text-slate-700">
                 <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${DOT[c.tone] ?? 'bg-slate-400'}`} />
                 {p}
               </li>
@@ -215,7 +215,7 @@ export function TabBelajar() {
                 href={l.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-900"
+                className="inline-flex items-center gap-1 fs-12 text-slate-500 hover:text-slate-900"
               >
                 <ExternalLink size={12} /> {l.label}
               </a>

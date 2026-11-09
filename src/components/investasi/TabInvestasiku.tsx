@@ -197,16 +197,16 @@ export function TabInvestasiku({
             />
             <div className="relative flex flex-wrap items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold uppercase tracking-wide text-white/60">Nilai investasi</p>
-                <p className="text-[30px] font-extrabold leading-tight tracking-tight tabular-nums md:text-[34px]">
+                <p className="fs-12 font-semibold uppercase tracking-wide text-white/60">Nilai investasi</p>
+                <p className="fsh-30 font-extrabold leading-tight tracking-tight tabular-nums md:fsh-34">
                   {formatIDR(totalNilai)}
                 </p>
-                <p className="text-[13px] text-white/70 tabular-nums">Modal {short(totalModal)}</p>
+                <p className="fs-13 text-white/70 tabular-nums">Modal {short(totalModal)}</p>
               </div>
               {totalModal > 0 && (
                 <span
                   className={cn(
-                    'flex items-center gap-1 rounded-full px-3 py-1 text-[13px] font-bold tabular-nums',
+                    'flex items-center gap-1 rounded-full px-3 py-1 fs-13 font-bold tabular-nums',
                     selisih >= 0 ? 'bg-emerald-400/20 text-emerald-300' : 'bg-rose-400/20 text-rose-300',
                   )}
                 >
@@ -237,7 +237,7 @@ export function TabInvestasiku({
                       key={a.k}
                       type="button"
                       onClick={() => setTab(a.k)}
-                      className="flex items-center gap-1.5 text-[12px] text-white/75 hover:text-white"
+                      className="flex items-center gap-1.5 fs-12 text-white/75 hover:text-white"
                     >
                       <span className="h-2 w-2 rounded-full" style={{ background: KIND[a.k].color }} />
                       {KIND[a.k].label}{' '}
@@ -253,7 +253,7 @@ export function TabInvestasiku({
 
           <section className="overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
             <div className="px-5 pt-5 text-center md:px-6">
-              <p className="text-[13px] text-slate-500">Mau taruh berapa?</p>
+              <p className="fs-13 text-slate-500">Mau taruh berapa?</p>
               <div className="mt-1 flex items-center justify-center gap-3">
                 <button
                   type="button"
@@ -272,15 +272,15 @@ export function TabInvestasiku({
                     onBlur={() => setEditing(false)}
                     onKeyDown={(e) => e.key === 'Enter' && setEditing(false)}
                     aria-label="Nominal simulasi"
-                    className="w-full min-w-0 max-w-[260px] bg-transparent text-center text-[30px] font-extrabold tracking-tight text-slate-900 outline-none md:text-[36px]"
+                    className="w-full min-w-0 max-w-[260px] bg-transparent text-center fsh-30 font-extrabold tracking-tight text-slate-900 outline-none md:fsh-36"
                   />
                 ) : (
                   <button
                     type="button"
                     onClick={() => setEditing(true)}
-                    className="min-w-0 truncate text-[30px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[36px]"
+                    className="min-w-0 truncate fsh-30 font-extrabold tracking-tight text-slate-900 tabular-nums md:fsh-36"
                   >
-                    <span className="mr-1 text-[18px] font-semibold text-slate-400">Rp</span>
+                    <span className="mr-1 fs-18 font-semibold text-slate-400">Rp</span>
                     {amount.toLocaleString('id-ID')}
                   </button>
                 )}
@@ -293,7 +293,7 @@ export function TabInvestasiku({
                   <Plus size={18} />
                 </button>
               </div>
-              <p className="text-[11px] text-slate-400">Ketuk angkanya untuk mengubah</p>
+              <p className="fs-11 text-slate-400">Ketuk angkanya untuk mengubah</p>
             </div>
 
             <div className="mt-4 flex gap-1.5 overflow-x-auto px-5 pb-1 no-scrollbar md:px-6">
@@ -303,7 +303,7 @@ export function TabInvestasiku({
                   type="button"
                   onClick={() => setPresetId(p.id)}
                   className={cn(
-                    'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1 transition-colors',
+                    'shrink-0 rounded-full px-3 py-1.5 fs-12 font-semibold ring-1 transition-colors',
                     p.id === preset.id
                       ? 'bg-slate-900 text-white ring-slate-900'
                       : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50',
@@ -318,16 +318,16 @@ export function TabInvestasiku({
             <div className="px-5 pt-4 md:px-6">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="text-[12px] text-slate-500">Saldo kamu nanti</p>
-                  <p className="text-[24px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[28px]">
+                  <p className="fs-12 text-slate-500">Saldo kamu nanti</p>
+                  <p className="fsh-24 font-extrabold tracking-tight text-slate-900 tabular-nums md:fsh-28">
                     {formatIDR(amount + gain)}
                   </p>
-                  <p className="text-[12px] text-slate-500">
+                  <p className="fs-12 text-slate-500">
                     {endDate} · <span className="font-semibold text-emerald-600">+{formatIDR(gain)}</span> setelah pajak{' '}
                     {preset.tax}%
                   </p>
                 </div>
-                <label className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] text-slate-500 ring-1 ring-slate-200">
+                <label className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 fs-12 text-slate-500 ring-1 ring-slate-200">
                   Bunga
                   <input
                     inputMode="decimal"
@@ -360,11 +360,11 @@ export function TabInvestasiku({
                   />
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-slate-400">
+              <p className="mt-2 fs-11 text-slate-400">
                 Hitungan: {preset.note}, bunga sederhana. Bunga bisa kamu ubah sesuai produk yang kamu lihat.
               </p>
               {preset.id !== 'dep' && preset.tax > 0 && (
-                <p className="mt-1 text-[12px] text-slate-600">
+                <p className="mt-1 fs-12 text-slate-600">
                   Deposito LPS {LPS.bankUmum}% di waktu yang sama:{' '}
                   <span className="font-semibold">
                     +
@@ -397,7 +397,7 @@ export function TabInvestasiku({
                   type="button"
                   onClick={() => setPeriodId(p.id)}
                   className={cn(
-                    'flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors',
+                    'flex-1 rounded-full py-2 fs-13 font-semibold transition-colors',
                     p.id === period.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800',
                   )}
                 >
@@ -409,7 +409,7 @@ export function TabInvestasiku({
 
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Portofolio</h2>
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Portofolio</h2>
               <div className="flex gap-1.5">
                 {(Object.keys(KIND) as Kind[]).map((k) => (
                   <button
@@ -417,7 +417,7 @@ export function TabInvestasiku({
                     type="button"
                     onClick={() => openModal(KIND[k].modal)}
                     aria-label={`Tambah ${KIND[k].label}`}
-                    className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 fs-12 font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                   >
                     <Plus size={13} /> {KIND[k].label}
                   </button>
@@ -431,7 +431,7 @@ export function TabInvestasiku({
                   type="button"
                   onClick={() => setTab(t)}
                   className={cn(
-                    'flex-1 rounded-full py-1.5 text-[13px] font-semibold',
+                    'flex-1 rounded-full py-1.5 fs-13 font-semibold',
                     tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
                   )}
                 >
@@ -447,10 +447,10 @@ export function TabInvestasiku({
               </div>
             ) : shown.length === 0 ? (
               <div className="rounded-[20px] bg-white p-6 text-center ring-1 ring-slate-100">
-                <p className="text-[15px] font-semibold text-slate-900">
+                <p className="fs-15 font-semibold text-slate-900">
                   Belum ada {tab === 'Semua' ? 'investasi' : tab.toLowerCase()}
                 </p>
-                <p className="mt-1 text-[13px] text-slate-500">
+                <p className="mt-1 fs-13 text-slate-500">
                   Catat saham, deposito, emas, reksa dana, atau kripto yang kamu punya.
                 </p>
               </div>
@@ -469,7 +469,7 @@ export function TabInvestasiku({
                     >
                       <Link href={KIND[kind].href} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
                         <span
-                          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[18px]"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl fs-18"
                           style={{ background: `${KIND[kind].color}1a` }}
                         >
                           {inv.logoUrl ? (
@@ -484,8 +484,8 @@ export function TabInvestasiku({
                           )}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-semibold text-slate-900">{inv.name}</p>
-                          <p className="truncate text-[12px] text-slate-500">
+                          <p className="truncate fs-14 font-semibold text-slate-900">{inv.name}</p>
+                          <p className="truncate fs-12 text-slate-500">
                             {KIND[kind].label}
                             {inv.platform ? ` · ${inv.platform}` : ''}
                             {kind === 'Saham' && inv.sharesCount
@@ -495,10 +495,10 @@ export function TabInvestasiku({
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-[14px] font-bold text-slate-900 tabular-nums">{short(idrCurrent(inv))}</p>
+                          <p className="fs-14 font-bold text-slate-900 tabular-nums">{short(idrCurrent(inv))}</p>
                           <p
                             className={cn(
-                              'text-[12px] font-semibold tabular-nums',
+                              'fs-12 font-semibold tabular-nums',
                               diff >= 0 ? 'text-emerald-600' : 'text-rose-600',
                             )}
                           >
@@ -519,11 +519,11 @@ export function TabInvestasiku({
         <aside className="min-w-0 space-y-4">
           <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kabar minggu ini</h2>
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Kabar minggu ini</h2>
               <button
                 type="button"
                 onClick={() => go('kabar')}
-                className="flex items-center gap-0.5 text-[12px] font-semibold text-indigo-600 hover:underline"
+                className="flex items-center gap-0.5 fs-12 font-semibold text-indigo-600 hover:underline"
               >
                 Lihat semua <ChevronRight size={14} />
               </button>
@@ -533,13 +533,13 @@ export function TabInvestasiku({
           <div id="pasar" className="scroll-mt-20" />
           <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Harga pasar</h2>
+              <h2 className="fs-17 font-bold tracking-tight text-slate-900">Harga pasar</h2>
               <button
                 type="button"
                 onClick={() => void m.refresh()}
                 disabled={m.loading}
                 aria-label="Perbarui harga"
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+                className="flex items-center gap-1 rounded-full px-2 py-1 fs-11 font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
               >
                 <RefreshCw size={13} className={m.loading ? 'animate-spin' : ''} />
                 {m.lastUpdated
@@ -547,17 +547,17 @@ export function TabInvestasiku({
                   : '…'}
               </button>
             </div>
-            {m.error && <p className="mb-2 rounded-xl bg-rose-50 px-3 py-2 text-[12px] text-rose-600">{m.error}</p>}
+            {m.error && <p className="mb-2 rounded-xl bg-rose-50 px-3 py-2 fs-12 text-rose-600">{m.error}</p>}
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 p-3">
-                <p className="text-[11px] font-semibold text-amber-700">🥇 Emas / gram</p>
-                <p className="mt-0.5 text-[15px] font-extrabold text-slate-900 tabular-nums">
+                <p className="fs-11 font-semibold text-amber-700">🥇 Emas / gram</p>
+                <p className="mt-0.5 fs-15 font-extrabold text-slate-900 tabular-nums">
                   {goldGram ? short(goldGram) : '—'}
                 </p>
                 {m.gold && (
                   <p
                     className={cn(
-                      'text-[11px] font-semibold tabular-nums',
+                      'fs-11 font-semibold tabular-nums',
                       m.gold.change_24h >= 0 ? 'text-emerald-600' : 'text-rose-600',
                     )}
                   >
@@ -567,22 +567,22 @@ export function TabInvestasiku({
                 )}
               </div>
               <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-sky-100/60 p-3">
-                <p className="text-[11px] font-semibold text-sky-700">💵 USD / IDR</p>
-                <p className="mt-0.5 text-[15px] font-extrabold text-slate-900 tabular-nums">
+                <p className="fs-11 font-semibold text-sky-700">💵 USD / IDR</p>
+                <p className="mt-0.5 fs-15 font-extrabold text-slate-900 tabular-nums">
                   {m.usdIdrRate ? Math.round(m.usdIdrRate).toLocaleString('id-ID') : '—'}
                 </p>
-                <p className="text-[11px] text-slate-500">kurs tengah</p>
+                <p className="fs-11 text-slate-500">kurs tengah</p>
               </div>
             </div>
           </section>
 
           <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-slate-900">Kripto</h3>
+              <h3 className="fs-15 font-bold text-slate-900">Kripto</h3>
               <button
                 type="button"
                 onClick={() => m.setShowWatchlistModal(true)}
-                className="flex items-center gap-1 text-[12px] font-semibold text-indigo-600 hover:underline"
+                className="flex items-center gap-1 fs-12 font-semibold text-indigo-600 hover:underline"
               >
                 <Settings2 size={13} /> Pilih koin
               </button>
@@ -594,7 +594,7 @@ export function TabInvestasiku({
                 ))}
               </div>
             ) : m.cryptoData.length === 0 ? (
-              <p className="py-4 text-center text-[13px] text-slate-500">Data kripto belum tersedia.</p>
+              <p className="py-4 text-center fs-13 text-slate-500">Data kripto belum tersedia.</p>
             ) : (
               <ul className="space-y-1">
                 {m.cryptoData.map((c) => (
@@ -606,18 +606,18 @@ export function TabInvestasiku({
                       className="h-8 w-8 shrink-0 rounded-full border border-slate-100 bg-white object-contain"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-slate-900">{c.name}</p>
-                      <p className="text-[11px] text-slate-400">{c.symbol}</p>
+                      <p className="truncate fs-13 font-semibold text-slate-900">{c.name}</p>
+                      <p className="fs-11 text-slate-400">{c.symbol}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[13px] font-bold text-slate-900 tabular-nums">
+                      <p className="fs-13 font-bold text-slate-900 tabular-nums">
                         {m.usdIdrRate
                           ? short(c.current_price * m.usdIdrRate)
                           : `$${c.current_price.toLocaleString('en-US')}`}
                       </p>
                       <p
                         className={cn(
-                          'text-[11px] font-semibold tabular-nums',
+                          'fs-11 font-semibold tabular-nums',
                           c.price_change_percentage_24h >= 0 ? 'text-emerald-600' : 'text-rose-600',
                         )}
                       >
@@ -632,9 +632,9 @@ export function TabInvestasiku({
           </section>
 
           <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
-            <h3 className="mb-2 text-[15px] font-bold text-slate-900">Kurs ke Rupiah</h3>
+            <h3 className="mb-2 fs-15 font-bold text-slate-900">Kurs ke Rupiah</h3>
             {m.exchangeRates.length === 0 ? (
-              <p className="py-3 text-center text-[13px] text-slate-500">
+              <p className="py-3 text-center fs-13 text-slate-500">
                 {m.loading ? 'Memuat…' : 'Data kurs belum tersedia.'}
               </p>
             ) : (
@@ -643,11 +643,11 @@ export function TabInvestasiku({
                   const code = /\(([A-Z]{3,5})\)/.exec(r.from)?.[1] ?? r.from;
                   return (
                     <li key={r.from} className="flex items-center justify-between py-2">
-                      <span className="text-[13px] text-slate-600">
+                      <span className="fs-13 text-slate-600">
                         <span className="font-semibold text-slate-900">{code}</span>{' '}
                         {r.from.replace(/\s*\([A-Z]+\)$/, '')}
                       </span>
-                      <span className="text-[13px] font-bold text-slate-900 tabular-nums">
+                      <span className="fs-13 font-bold text-slate-900 tabular-nums">
                         {r.rate >= 100
                           ? Math.round(r.rate).toLocaleString('id-ID')
                           : r.rate.toLocaleString('id-ID', { maximumFractionDigits: 2 })}
@@ -657,7 +657,7 @@ export function TabInvestasiku({
                 })}
               </ul>
             )}
-            <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+            <p className="mt-2 flex items-center gap-1 fs-11 text-slate-400">
               <ShieldCheck size={12} /> Sumber: CoinGecko & Open Exchange Rates · perbarui otomatis tiap menit
             </p>
           </section>

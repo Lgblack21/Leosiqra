@@ -58,7 +58,7 @@ export function CsvView({ openImport }: { openImport: () => void }) {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <p className="flex items-center gap-2 px-1 text-[14px] text-slate-500">
+        <p className="flex items-center gap-2 px-1 fs-14 text-slate-500">
           <Download size={15} /> Ekspor
         </p>
         <div className="space-y-4 rounded-[22px] bg-white p-4 ring-1 ring-slate-200">
@@ -69,7 +69,7 @@ export function CsvView({ openImport }: { openImport: () => void }) {
                 type="button"
                 onClick={() => pick(p)}
                 className={cn(
-                  'rounded-full px-3.5 py-1.5 text-[13px] font-semibold ring-1',
+                  'rounded-full px-3.5 py-1.5 fs-13 font-semibold ring-1',
                   preset === p.id ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200',
                 )}
               >
@@ -80,21 +80,21 @@ export function CsvView({ openImport }: { openImport: () => void }) {
           <div className="grid grid-cols-2 gap-2">
             {(['Dari', 'Sampai'] as const).map((label, i) => (
               <label key={label} className="block rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-                <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <span className="flex items-center gap-1 fs-11 font-semibold uppercase tracking-wide text-slate-400">
                   <CalendarRange size={12} /> {label}
                 </span>
                 <input
                   type="date"
                   value={(i === 0 ? from : to) ?? ''}
                   onChange={(e) => setDate(i as 0 | 1, e.target.value)}
-                  className="w-full bg-transparent text-[15px] font-semibold text-slate-900 outline-none"
+                  className="w-full bg-transparent fs-15 font-semibold text-slate-900 outline-none"
                   aria-label={`Tanggal ${label.toLowerCase()}`}
                 />
               </label>
             ))}
           </div>
           {invalid && (
-            <p className="text-[13px] font-semibold text-rose-600">
+            <p className="fs-13 font-semibold text-rose-600">
               Tanggal &quot;Dari&quot; harus sebelum &quot;Sampai&quot;.
             </p>
           )}
@@ -102,13 +102,13 @@ export function CsvView({ openImport }: { openImport: () => void }) {
             href={invalid ? undefined : href}
             aria-disabled={invalid}
             className={cn(
-              'flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white',
+              'flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-15 font-bold text-white',
               invalid && 'pointer-events-none opacity-40',
             )}
           >
             <Download size={16} /> Unduh CSV
           </a>
-          <p className="text-[12px] leading-relaxed text-slate-500">
+          <p className="fs-12 leading-relaxed text-slate-500">
             {from || to ? `${from ?? 'Awal'} s/d ${to ?? 'hari ini'}` : 'Semua transaksi'} · maks. 5.000 transaksi
             terbaru. Kolom: {COLUMNS.join(', ')}. Bisa dibuka di Excel/Google Sheets.
           </p>
@@ -116,11 +116,11 @@ export function CsvView({ openImport }: { openImport: () => void }) {
       </section>
 
       <section className="space-y-3">
-        <p className="flex items-center gap-2 px-1 text-[14px] text-slate-500">
+        <p className="flex items-center gap-2 px-1 fs-14 text-slate-500">
           <UploadCloud size={15} /> Impor
         </p>
         <div className="space-y-3 rounded-[22px] bg-white p-4 ring-1 ring-slate-200">
-          <p className="text-[14px] leading-snug text-slate-600">
+          <p className="fs-14 leading-snug text-slate-600">
             Kolom yang dikenali: <b>Tanggal</b>, <b>Keterangan</b>, dan <b>Nominal</b> (minus = keluar) — atau{' '}
             <b>Debit/Kredit</b>, atau Nominal + kolom <b>Jenis</b> (masuk/keluar). Kolom lain bisa dipetakan manual.
           </p>
@@ -128,19 +128,19 @@ export function CsvView({ openImport }: { openImport: () => void }) {
             <button
               type="button"
               onClick={openImport}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-3 text-[15px] font-bold text-white"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-3 fs-15 font-bold text-white"
             >
               <UploadCloud size={16} /> Impor CSV / Excel <ArrowRight size={15} />
             </button>
             <a
               href={`data:text/csv;charset=utf-8,${encodeURIComponent(IMPORT_CSV_TEMPLATE)}`}
               download="template-impor-leosiqra.csv"
-              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 px-4 py-3 text-[14px] font-semibold text-slate-700"
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 px-4 py-3 fs-14 font-semibold text-slate-700"
             >
               <FileSpreadsheet size={15} /> Template
             </a>
           </div>
-          <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-500">
+          <p className="flex items-start gap-2 fs-12 leading-relaxed text-slate-500">
             <Info size={14} className="mt-0.5 shrink-0" /> Satu file = satu rekening. Baris dicek dobel & ditinjau dulu;
             impor tidak mengubah saldo dan bisa dibatalkan. Dari Money Manager, Money Lover, dll: ekspor ke CSV/Excel,
             lalu impor per dompet.

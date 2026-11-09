@@ -251,7 +251,7 @@ export default function OtherInvestmentsPage() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Investasi Lainnya</h1>
-            <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
+            <p className="fs-10 md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Lacak seluruh aset investasi alternatif Anda.
             </p>
           </div>
@@ -266,7 +266,7 @@ export default function OtherInvestmentsPage() {
               syncLivePrices(cryptoPositions, true);
             }}
             disabled={syncingPrices}
-            className="px-4 py-3 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-3 bg-white border border-slate-100 rounded-xl fs-11 font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2"
           >
             <RefreshCw size={14} className={syncingPrices ? 'animate-spin' : ''} />
             <span className="hidden md:inline">Refresh Harga Crypto</span>
@@ -291,13 +291,13 @@ export default function OtherInvestmentsPage() {
             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
               <PieChart size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Nilai Aset</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Total Nilai Aset</p>
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">
               Rp {formatRp(Math.round(animatedTotalCurrent))}
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+            <p className="fs-10 font-bold text-slate-400 mt-1 uppercase tracking-wider">
               {filteredInvestments.length} posisi aktif
             </p>
           </div>
@@ -312,7 +312,7 @@ export default function OtherInvestmentsPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <TrendingUp size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Return</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Total Return</p>
           </div>
           <div>
             <h3
@@ -321,7 +321,7 @@ export default function OtherInvestmentsPage() {
               {animatedTotalReturn >= 0 ? '+' : ''}
               {animatedTotalReturn.toFixed(2)}%
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1">Unrealized Gain / Loss</p>
+            <p className="fs-10 font-bold text-slate-400 mt-1">Unrealized Gain / Loss</p>
           </div>
         </div>
       </div>
@@ -342,49 +342,49 @@ export default function OtherInvestmentsPage() {
             <table className="w-full text-left border-collapse min-w-[1300px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     No
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Jam
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Tanggal
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Produk Investasi
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Logo
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Mata Uang
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
                     Kuantitas
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Satuan
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">
                     Harga / 1 Satuan
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap text-right">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap text-right">
                     Nilai Sekarang
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Tipe Transaksi
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Kategori
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Rekening
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                     Platform
                   </th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                  <th className="px-4 md:px-6 py-5 fs-10 font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
                     Aksi
                   </th>
                 </tr>
@@ -416,7 +416,7 @@ export default function OtherInvestmentsPage() {
                       />
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
-                      <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                      <span className="fs-10 font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">
                         {inv.currency || 'IDR'}
                       </span>
                     </td>
@@ -434,7 +434,7 @@ export default function OtherInvestmentsPage() {
                         {formatAmount(inv.currentValue || 0, inv.currency)}
                       </p>
                       <p
-                        className={`text-[10px] font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
+                        className={`fs-10 font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
                       >
                         {inv.returnPercentage >= 0 ? '+' : ''}
                         {inv.returnPercentage.toFixed(2)}%
@@ -462,7 +462,7 @@ export default function OtherInvestmentsPage() {
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${getAssetColor(inv.platform)}`}
+                        className={`px-3 py-1 fs-9 font-black rounded-lg uppercase tracking-widest ${getAssetColor(inv.platform)}`}
                       >
                         {inv.platform || '-'}
                       </span>
@@ -488,7 +488,7 @@ export default function OtherInvestmentsPage() {
                           className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group/sell relative"
                         >
                           <TrendingUp size={14} className="rotate-180" />
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white fs-9 px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">
                             Jual Aset
                           </span>
                         </button>

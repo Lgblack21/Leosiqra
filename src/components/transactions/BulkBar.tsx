@@ -61,11 +61,11 @@ export function BulkActionBar({
             className="pointer-events-auto flex w-full max-w-2xl items-center gap-1.5 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)] ring-1 ring-white/10"
           >
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-bold leading-tight">
+              <p className="fs-14 font-bold leading-tight">
                 {count > 0 ? `${count} dipilih` : 'Ketuk transaksi untuk memilih'}
               </p>
               {count > 0 && (
-                <p className="truncate text-[12px] text-white/60 tabular-nums">
+                <p className="truncate fs-12 text-white/60 tabular-nums">
                   {out > 0 && (
                     <>
                       keluar <span className="font-semibold text-white">{short(out)}</span>
@@ -85,7 +85,7 @@ export function BulkActionBar({
               type="button"
               onClick={onSelectAll}
               disabled={Boolean(busy)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 fs-13 font-semibold text-white/85 hover:bg-white/10 disabled:opacity-40"
             >
               <CheckCheck size={16} />{' '}
               <span className="hidden sm:inline">{allSelected ? 'Batal semua' : `Semua ${total}`}</span>
@@ -95,7 +95,7 @@ export function BulkActionBar({
               onClick={onCategory}
               disabled={count === 0 || Boolean(busy) || Boolean(categoryDisabledReason)}
               title={categoryDisabledReason ?? 'Pindahkan ke kategori lain'}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[13px] font-semibold hover:bg-white/15 disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 fs-13 font-semibold hover:bg-white/15 disabled:opacity-40"
             >
               <Tags size={16} /> <span className="hidden sm:inline">Kategori</span>
             </button>
@@ -103,7 +103,7 @@ export function BulkActionBar({
               type="button"
               onClick={onDelete}
               disabled={count === 0 || Boolean(busy)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-rose-500 px-3 py-2 text-[13px] font-bold hover:bg-rose-600 disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-rose-500 px-3 py-2 fs-13 font-bold hover:bg-rose-600 disabled:opacity-40"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               <span className="hidden sm:inline">{busy ?? 'Hapus'}</span>
@@ -160,7 +160,7 @@ export function BulkCategorySheet({
   return (
     <Modal isOpen onClose={onClose} title={`Pindahkan ${count} transaksi`} maxWidth="max-w-md">
       <div className="space-y-4">
-        <p className="text-[13px] text-slate-500">
+        <p className="fs-13 text-slate-500">
           Pilih kategori {kind === 'pemasukan' ? 'pemasukan' : 'pengeluaran'} baru. Nominal & saldo tidak berubah —
           hanya kategorinya.
         </p>
@@ -169,9 +169,7 @@ export function BulkCategorySheet({
             <Loader2 className="animate-spin text-slate-300" />
           </div>
         ) : list.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 py-6 text-center text-[14px] text-slate-500">
-            Belum ada kategori {kind}.
-          </p>
+          <p className="rounded-2xl bg-slate-50 py-6 text-center fs-14 text-slate-500">Belum ada kategori {kind}.</p>
         ) : (
           <div className="grid max-h-[46vh] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
             {list.map((r) => {
@@ -189,13 +187,13 @@ export function BulkCategorySheet({
                   )}
                 >
                   <span
-                    className={cn('flex h-11 w-11 items-center justify-center rounded-2xl text-[22px]', v.tile)}
+                    className={cn('flex h-11 w-11 items-center justify-center rounded-2xl fsh-22', v.tile)}
                     aria-hidden
                   >
                     {v.emoji}
                   </span>
-                  <span className="line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800">{r.name}</span>
-                  {same && <span className="text-[10px] font-semibold text-slate-400">sekarang</span>}
+                  <span className="line-clamp-2 fs-13 font-semibold leading-tight text-slate-800">{r.name}</span>
+                  {same && <span className="fs-10 font-semibold text-slate-400">sekarang</span>}
                   {active && (
                     <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
                       <Check size={13} />
@@ -210,7 +208,7 @@ export function BulkCategorySheet({
           type="button"
           onClick={() => void save()}
           disabled={!picked || saving}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white disabled:opacity-40"
         >
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Tags size={16} />}
           {picked ? `Pindahkan ke ${picked}` : 'Pilih kategori'}

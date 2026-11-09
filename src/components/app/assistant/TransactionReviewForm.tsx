@@ -148,7 +148,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
       <TxTypeToggle value={type} onChange={setType} />
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-6">
-        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <label className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
           Nominal {selectedAccount ? `(${selectedAccount.currency})` : ''}
         </label>
         <div className="flex items-baseline gap-2 mt-2">
@@ -167,9 +167,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
       <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} />
 
       <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-700 dark:bg-slate-800">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Tanggal
-        </span>
+        <span className="fs-10 font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Tanggal</span>
         <input
           type="date"
           value={date}
@@ -181,7 +179,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
           <button
             type="button"
             onClick={() => setDate(today)}
-            className="shrink-0 text-[11px] font-bold text-indigo-600 dark:text-indigo-400"
+            className="shrink-0 fs-11 font-bold text-indigo-600 dark:text-indigo-400"
           >
             Hari ini
           </button>

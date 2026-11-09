@@ -70,7 +70,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
             <div className="relative">
               <select
                 value={formData.type}
@@ -88,9 +88,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Kategori Budget
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Budget</label>
             <div className="relative">
               <select
                 value={formData.category}
@@ -114,9 +112,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              Nominal Limit
-            </label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Limit</label>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
               <NumberInput
@@ -129,7 +125,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Periode</label>
+            <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Periode</label>
             <div className="relative">
               <select
                 value={formData.period}

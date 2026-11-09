@@ -175,7 +175,7 @@ export default function AdminDashboard() {
               onChange={(e) => setCommandQuery(e.target.value)}
               onKeyDown={handleQuickCommand}
               placeholder="Cari member, tekan Enter..."
-              className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-medium placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+              className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl fs-13 font-medium placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
         }
@@ -222,19 +222,19 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Sinyal Prioritas</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-5 rounded-xl bg-rose-50/60 space-y-1">
-                <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Tekanan Verifikasi</p>
+                <p className="fs-10 font-black text-rose-400 uppercase tracking-widest">Tekanan Verifikasi</p>
                 <p className="text-xl font-black text-rose-600">{pendingTickets} tiket</p>
-                <p className="text-[11px] font-bold text-rose-500/80">Rp {pendingRevenue.toLocaleString()} antrian</p>
+                <p className="fs-11 font-bold text-rose-500/80">Rp {pendingRevenue.toLocaleString()} antrian</p>
               </div>
               <div className="p-5 rounded-xl bg-indigo-50/60 space-y-1">
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Konversi Pro</p>
+                <p className="fs-10 font-black text-indigo-400 uppercase tracking-widest">Konversi Pro</p>
                 <p className="text-xl font-black text-indigo-600">{conversionRate}%</p>
-                <p className="text-[11px] font-bold text-indigo-500/80">Member vs Pro</p>
+                <p className="fs-11 font-bold text-indigo-500/80">Member vs Pro</p>
               </div>
               <div className="p-5 rounded-xl bg-amber-50/60 space-y-1">
-                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">User Baru Hari Ini</p>
+                <p className="fs-10 font-black text-amber-500 uppercase tracking-widest">User Baru Hari Ini</p>
                 <p className="text-xl font-black text-amber-600">{newUsersToday}</p>
-                <p className="text-[11px] font-bold text-amber-600/80">Momentum pertumbuhan</p>
+                <p className="fs-11 font-bold text-amber-600/80">Momentum pertumbuhan</p>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Tren Mingguan</h3>
-              <p className="text-[11px] font-bold text-slate-400">
+              <p className="fs-11 font-bold text-slate-400">
                 {weeklyChartData.reduce((s, d) => s + (d.val > 0 ? 1 : 0), 0)} hari aktif
               </p>
             </div>
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
                       style={{ height: bar.val > 0 ? `${Math.min((bar.val / 100000) * 100, 100)}%` : '0%' }}
                     />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500">{bar.day}</span>
+                  <span className="fs-10 font-black text-slate-500">{bar.day}</span>
                 </div>
               ))}
             </div>
@@ -272,15 +272,15 @@ export default function AdminDashboard() {
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Aktivitas Terbaru</h3>
               <button
                 onClick={() => router.push('/admin/laporan')}
-                className="text-[11px] font-black text-indigo-600 hover:underline flex items-center gap-1"
+                className="fs-11 font-black text-indigo-600 hover:underline flex items-center gap-1"
               >
                 Lihat Semua <ChevronRight size={12} />
               </button>
             </div>
             {loading ? (
-              <p className="text-[12px] text-slate-400 italic py-6 text-center">Memuat aktivitas...</p>
+              <p className="fs-12 text-slate-400 italic py-6 text-center">Memuat aktivitas...</p>
             ) : logs.length === 0 ? (
-              <p className="text-[12px] text-slate-400 italic py-6 text-center">Belum ada aktivitas tercatat.</p>
+              <p className="fs-12 text-slate-400 italic py-6 text-center">Belum ada aktivitas tercatat.</p>
             ) : (
               <div className="space-y-2">
                 {logs.map((log, i) => (
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className={cn(
-                          'px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0',
+                          'px-2.5 py-1 rounded-lg fs-9 font-black uppercase tracking-widest shrink-0',
                           log.color === 'indigo'
                             ? 'bg-indigo-50 text-indigo-600'
                             : log.color === 'orange'
@@ -305,9 +305,9 @@ export default function AdminDashboard() {
                       >
                         {log.action}
                       </span>
-                      <span className="text-[12px] font-medium text-slate-400 truncate">{log.admin_email}</span>
+                      <span className="fs-12 font-medium text-slate-400 truncate">{log.admin_email}</span>
                     </div>
-                    <span className="text-[11px] font-bold text-slate-300 shrink-0">
+                    <span className="fs-11 font-bold text-slate-300 shrink-0">
                       {log.created_at
                         ? new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                         : ''}
@@ -332,8 +332,8 @@ export default function AdminDashboard() {
                   <action.icon size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-black text-slate-900">{action.label}</p>
-                  <p className="text-[11px] font-medium text-slate-400 truncate">{action.note}</p>
+                  <p className="fs-13 font-black text-slate-900">{action.label}</p>
+                  <p className="fs-11 font-medium text-slate-400 truncate">{action.note}</p>
                 </div>
                 <ChevronRight
                   size={14}
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Member Terbaru</h3>
             {latestUsers.length === 0 ? (
-              <p className="text-[12px] text-slate-400 italic text-center py-6">Belum ada member terdaftar.</p>
+              <p className="fs-12 text-slate-400 italic text-center py-6">Belum ada member terdaftar.</p>
             ) : (
               <div className="space-y-2">
                 {latestUsers.map((member, i) => (
@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                     ) : (
                       <div
                         className={cn(
-                          'w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-black text-white shrink-0',
+                          'w-9 h-9 rounded-lg flex items-center justify-center fs-11 font-black text-white shrink-0',
                           member.plan === 'PRO' ? 'bg-indigo-600' : 'bg-slate-400',
                         )}
                       >
@@ -377,10 +377,10 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-black text-slate-900 truncate">
+                      <span className="fs-13 font-black text-slate-900 truncate">
                         {member.name || 'User Anonymous'}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      <span className="fs-10 font-bold text-slate-400 uppercase tracking-wide">
                         {member.plan || 'FREE'} &middot; {member.status || 'AKTIF'}
                       </span>
                     </div>
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
             )}
             <button
               onClick={() => router.push('/admin/user')}
-              className="w-full py-3 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
+              className="w-full py-3 rounded-xl bg-slate-900 text-white fs-11 font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
             >
               Lihat Semua Member
             </button>
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
 
           {activePro > 0 && (
             <div className="p-6 rounded-2xl bg-indigo-600 text-white space-y-1">
-              <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Member Pro Aktif</p>
+              <p className="fs-10 font-black text-indigo-200 uppercase tracking-widest">Member Pro Aktif</p>
               <p className="text-3xl font-black">{activePro}</p>
             </div>
           )}

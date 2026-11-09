@@ -92,7 +92,7 @@ export function NotificationReaderView({
   return (
     <div className="space-y-5">
       <div className="rounded-[24px] bg-gradient-to-br from-amber-50 via-white to-indigo-50 p-4 ring-1 ring-amber-100">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-amber-700">
+        <div className="flex items-center gap-2 fs-13 font-semibold text-amber-700">
           <BellRing size={15} /> Cara kerjanya
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -105,7 +105,7 @@ export function NotificationReaderView({
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100">
                 <s.icon size={20} />
               </span>
-              <span className="text-[12px] leading-tight text-slate-600">{s.label}</span>
+              <span className="fs-12 leading-tight text-slate-600">{s.label}</span>
               {i < 2 && <ArrowRight size={14} className="absolute -right-2 top-3.5 text-slate-300" />}
             </div>
           ))}
@@ -113,7 +113,7 @@ export function NotificationReaderView({
       </div>
 
       <div className="space-y-3">
-        <p className="px-1 text-[14px] text-slate-500">Jalur yang bisa dipakai</p>
+        <p className="px-1 fs-14 text-slate-500">Jalur yang bisa dipakai</p>
         {ways.map((w) => (
           <div key={w.id} className="flex gap-3 rounded-[22px] bg-white p-4 ring-1 ring-slate-200">
             <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white', w.tint)}>
@@ -121,21 +121,21 @@ export function NotificationReaderView({
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[15px] font-bold text-slate-900">{w.title}</span>
+                <span className="fs-15 font-bold text-slate-900">{w.title}</span>
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                    'rounded-full px-2 py-0.5 fs-11 font-semibold',
                     w.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500',
                   )}
                 >
                   {w.status}
                 </span>
               </div>
-              <p className="mt-0.5 text-[13px] leading-snug text-slate-500">{w.desc}</p>
+              <p className="mt-0.5 fs-13 leading-snug text-slate-500">{w.desc}</p>
               <button
                 type="button"
                 onClick={w.onClick}
-                className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-indigo-600 hover:underline"
+                className="mt-2 inline-flex items-center gap-1 fs-13 font-semibold text-indigo-600 hover:underline"
               >
                 {w.cta} <ArrowRight size={13} />
               </button>
@@ -145,8 +145,8 @@ export function NotificationReaderView({
       </div>
 
       <div className="rounded-[22px] bg-slate-50 p-4 ring-1 ring-slate-200">
-        <p className="text-[15px] font-bold text-slate-900">Tempel teks notifikasi</p>
-        <p className="mt-0.5 text-[13px] leading-snug text-slate-500">
+        <p className="fs-15 font-bold text-slate-900">Tempel teks notifikasi</p>
+        <p className="mt-0.5 fs-13 leading-snug text-slate-500">
           Belum pasang otomasi, atau pakai Android? Salin teks notifikasinya, tempel di sini, lalu Leosiqra mengisi
           formnya.
         </p>
@@ -156,13 +156,13 @@ export function NotificationReaderView({
           rows={3}
           placeholder={SAMPLE}
           aria-label="Teks notifikasi"
-          className="mt-3 w-full resize-none rounded-2xl bg-white p-3 text-[14px] text-slate-800 ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300"
+          className="mt-3 w-full resize-none rounded-2xl bg-white p-3 fs-14 text-slate-800 ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300"
         />
         <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void paste()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 fs-13 font-semibold text-slate-700 ring-1 ring-slate-200"
           >
             <ClipboardPaste size={14} /> Tempel
           </button>
@@ -170,7 +170,7 @@ export function NotificationReaderView({
             <button
               type="button"
               onClick={() => setText(SAMPLE)}
-              className="rounded-full px-3 py-2 text-[13px] font-medium text-slate-500 hover:text-slate-700"
+              className="rounded-full px-3 py-2 fs-13 font-medium text-slate-500 hover:text-slate-700"
             >
               Pakai contoh
             </button>
@@ -179,14 +179,14 @@ export function NotificationReaderView({
             type="button"
             disabled={!tryText}
             onClick={() => openHref(`/input-cepat?teks=${encodeURIComponent(tryText)}`)}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 fs-13 font-semibold text-white disabled:opacity-40"
           >
             Baca & isi form <ArrowRight size={14} />
           </button>
         </div>
       </div>
 
-      <div className="flex gap-2.5 px-1 text-[12px] leading-relaxed text-slate-500">
+      <div className="flex gap-2.5 px-1 fs-12 leading-relaxed text-slate-500">
         <Info size={15} className="mt-0.5 shrink-0 text-slate-400" />
         <p>
           {platform === 'android' ? (

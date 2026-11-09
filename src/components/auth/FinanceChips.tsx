@@ -25,7 +25,7 @@ export function VoiceChip({ className = '' }: { className?: string }) {
           ))}
         </div>
       </div>
-      <p className="mt-3 text-[14px] font-semibold text-slate-700">“parkir lima ribu”</p>
+      <p className="mt-3 fs-14 font-semibold text-slate-700">“parkir lima ribu”</p>
     </div>
   );
 }
@@ -38,10 +38,10 @@ export function TxChip({ className = '' }: { className?: string }) {
           <Check size={18} strokeWidth={3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold text-slate-900">Parkir</p>
-          <p className="text-[11px] font-bold text-emerald-600">Tercatat · Transportasi</p>
+          <p className="fs-14 font-semibold text-slate-900">Parkir</p>
+          <p className="fs-11 font-bold text-emerald-600">Tercatat · Transportasi</p>
         </div>
-        <p className="text-[14px] font-bold text-slate-900">−Rp5.000</p>
+        <p className="fs-14 font-bold text-slate-900">−Rp5.000</p>
       </div>
     </div>
   );
@@ -68,9 +68,9 @@ export function BudgetChip({ className = '' }: { className?: string }) {
           />
         </svg>
         <div>
-          <p className="text-[12px] font-semibold text-slate-500">Budget makan</p>
-          <p className="text-[18px] font-extrabold tracking-tight text-slate-900">{pct}%</p>
-          <p className="text-[11px] text-slate-400">sisa Rp280.000</p>
+          <p className="fs-12 font-semibold text-slate-500">Budget makan</p>
+          <p className="fs-18 font-extrabold tracking-tight text-slate-900">{pct}%</p>
+          <p className="fs-11 text-slate-400">sisa Rp280.000</p>
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ export function BudgetChip({ className = '' }: { className?: string }) {
 export function ScanChip({ className = '' }: { className?: string }) {
   return (
     <div aria-hidden className={`${chip} w-52 ${className}`} style={float('3deg', '-1.5s')}>
-      <div className="flex items-center gap-2 text-[12px] font-bold text-slate-500">
+      <div className="flex items-center gap-2 fs-12 font-bold text-slate-500">
         <Camera size={14} /> Scan struk
       </div>
       <div className="relative mt-3 overflow-hidden rounded-xl bg-slate-50 p-3">
@@ -89,7 +89,7 @@ export function ScanChip({ className = '' }: { className?: string }) {
         ))}
         <span className="scan-line absolute inset-x-0 h-0.5 bg-indigo-500 shadow-[0_0_12px_2px_rgba(99,102,241,0.6)]" />
       </div>
-      <p className="mt-2.5 flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+      <p className="mt-2.5 flex items-center gap-1.5 fs-13 font-semibold text-slate-800">
         <ScanLine size={14} className="text-indigo-600" /> 4 item · Rp86.500
       </p>
     </div>
@@ -99,8 +99,8 @@ export function ScanChip({ className = '' }: { className?: string }) {
 export function BalanceChip({ className = '' }: { className?: string }) {
   return (
     <div aria-hidden className={`${chip} w-56 ${className}`} style={float('-4deg', '-3.2s')}>
-      <p className="text-[12px] font-semibold text-slate-500">Total saldo</p>
-      <p className="mt-0.5 text-[20px] font-extrabold tracking-tight text-slate-900">Rp12.480.000</p>
+      <p className="fs-12 font-semibold text-slate-500">Total saldo</p>
+      <p className="mt-0.5 fsh-20 font-extrabold tracking-tight text-slate-900">Rp12.480.000</p>
       <div className="mt-2 flex items-end justify-between">
         <svg viewBox="0 0 120 32" className="h-8 w-28">
           <path
@@ -112,7 +112,7 @@ export function BalanceChip({ className = '' }: { className?: string }) {
             strokeLinejoin="round"
           />
         </svg>
-        <span className="flex items-center gap-1 text-[12px] font-bold text-emerald-600">
+        <span className="flex items-center gap-1 fs-12 font-bold text-emerald-600">
           <TrendingUp size={13} /> 4,2%
         </span>
       </div>

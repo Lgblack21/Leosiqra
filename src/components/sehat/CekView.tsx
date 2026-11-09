@@ -99,9 +99,7 @@ function ProfileSheet({
         </PrimaryButton>
       }
     >
-      {err ? (
-        <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 text-[13px] font-semibold text-rose-700">{err}</p>
-      ) : null}
+      {err ? <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 fs-13 font-semibold text-rose-700">{err}</p> : null}
       <Field label="Tahun lahir">
         <input
           inputMode="numeric"
@@ -112,7 +110,7 @@ function ProfileSheet({
         />
       </Field>
       <div>
-        <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Jenis kelamin</span>
+        <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">Jenis kelamin</span>
         <div className="flex gap-2">
           {(
             [
@@ -125,7 +123,7 @@ function ProfileSheet({
               type="button"
               onClick={() => setSex(v)}
               className={cn(
-                'flex-1 rounded-xl py-2.5 text-[14px] font-bold',
+                'flex-1 rounded-xl py-2.5 fs-14 font-bold',
                 sex === v
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -143,14 +141,14 @@ function ProfileSheet({
           onChange={(e) => setCatin(e.target.checked)}
           className="h-5 w-5 accent-teal-600"
         />
-        <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+        <span className="fs-13 font-semibold text-slate-700 dark:text-slate-200">
           Saya calon pengantin
-          <span className="block text-[11.5px] font-medium text-slate-500">
+          <span className="block fs-11.5 font-medium text-slate-500">
             Menampilkan pemeriksaan khusus calon pengantin.
           </span>
         </span>
       </label>
-      <p className="text-[12px] text-slate-500">
+      <p className="fs-12 text-slate-500">
         Dipakai hanya untuk menyaring daftar cek sesuai usia & jenis kelamin. Hanya kamu yang melihatnya.
       </p>
     </SheetShell>
@@ -175,11 +173,11 @@ function TrendChart({ field, points }: { field: ResultField; points: { date: str
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
       <div className="flex items-baseline justify-between">
-        <span className="text-[12px] font-bold text-slate-500">{field.label}</span>
-        <span className="text-[13px] font-black text-slate-800 dark:text-slate-100">
-          {fmt(last.v)} <span className="text-[11px] font-semibold text-slate-400">{field.unit}</span>
+        <span className="fs-12 font-bold text-slate-500">{field.label}</span>
+        <span className="fs-13 font-black text-slate-800 dark:text-slate-100">
+          {fmt(last.v)} <span className="fs-11 font-semibold text-slate-400">{field.unit}</span>
           {diff !== null && diff !== 0 ? (
-            <span className="ml-1.5 text-[11px] font-bold text-slate-500">
+            <span className="ml-1.5 fs-11 font-bold text-slate-500">
               {diff > 0 ? '▲' : '▼'} {fmt(Math.abs(diff))}
             </span>
           ) : null}
@@ -208,7 +206,7 @@ function TrendChart({ field, points }: { field: ResultField; points: { date: str
           </circle>
         ))}
       </svg>
-      <div className="flex justify-between text-[10.5px] text-slate-400">
+      <div className="flex justify-between fs-10.5 text-slate-400">
         <span>{dmy(points[0].date)}</span>
         {points.length > 1 ? <span>{dmy(last.date)}</span> : null}
       </div>
@@ -306,20 +304,16 @@ function CheckSheet({
         </PrimaryButton>
       }
     >
-      {err ? (
-        <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 text-[13px] font-semibold text-rose-700">{err}</p>
-      ) : null}
-      {item.desc ? (
-        <p className="text-[13.5px] leading-relaxed text-slate-600 dark:text-slate-300">{item.desc}</p>
-      ) : null}
+      {err ? <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 fs-13 font-semibold text-rose-700">{err}</p> : null}
+      {item.desc ? <p className="fs-13.5 leading-relaxed text-slate-600 dark:text-slate-300">{item.desc}</p> : null}
       {!vaccine ? (
-        <div className="rounded-2xl bg-teal-50 p-3.5 text-[12.5px] leading-relaxed text-teal-900 dark:bg-teal-500/10 dark:text-teal-100">
+        <div className="rounded-2xl bg-teal-50 p-3.5 fs-12.5 leading-relaxed text-teal-900 dark:bg-teal-500/10 dark:text-teal-100">
           <b>Termasuk Cek Kesehatan Gratis</b> — setahun sekali di puskesmas/fasilitas kesehatan tingkat pertama.
           {item.minAge ? ` Mulai usia ${item.minAge} tahun.` : ''}
           {item.note ? ` ${item.note}` : ''}
         </div>
       ) : (
-        <p className="rounded-2xl bg-slate-50 p-3.5 text-[12.5px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+        <p className="rounded-2xl bg-slate-50 p-3.5 fs-12.5 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Jadwal & jumlah dosis mengikuti anjuran dokter/tenaga kesehatanmu.
         </p>
       )}
@@ -355,7 +349,7 @@ function CheckSheet({
           onChange={(e) => setFree(e.target.checked)}
           className="h-5 w-5 accent-teal-600"
         />
-        <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">
+        <span className="fs-13 font-bold text-slate-700 dark:text-slate-200">
           {vaccine ? 'Gratis (program pemerintah)' : 'Lewat Cek Kesehatan Gratis'}
         </span>
       </label>
@@ -374,7 +368,7 @@ function CheckSheet({
                 ))}
               </select>
             ) : (
-              <span className="block pt-2 text-[12px] text-slate-500">Tambah rekening dulu.</span>
+              <span className="block pt-2 fs-12 text-slate-500">Tambah rekening dulu.</span>
             )}
           </Field>
         </div>
@@ -402,19 +396,19 @@ function CheckSheet({
             ))}
           </div>
           {bmi ? (
-            <p className="mt-2 text-[12.5px] text-slate-600 dark:text-slate-300">
+            <p className="mt-2 fs-12.5 text-slate-600 dark:text-slate-300">
               IMT <b>{bmi.toLocaleString('id-ID')}</b> · {bmiClass(bmi)}{' '}
               <span className="text-slate-400">(klasifikasi Kemenkes untuk dewasa)</span>
             </p>
           ) : null}
-          <p className="mt-1.5 text-[11.5px] text-slate-400">
+          <p className="mt-1.5 fs-11.5 text-slate-400">
             Angka dicatat untuk melihat tren. Artinya untukmu, tanyakan ke tenaga kesehatan.
           </p>
         </div>
       ) : null}
       {history.length ? (
         <div className="space-y-2">
-          <h3 className="text-[13px] font-black text-slate-800 dark:text-slate-100">Tren hasil</h3>
+          <h3 className="fs-13 font-black text-slate-800 dark:text-slate-100">Tren hasil</h3>
           {fields.map((f) => (
             <TrendChart
               key={f.key}
@@ -443,7 +437,7 @@ function CheckSheet({
       </Field>
       {records.length ? (
         <div>
-          <h3 className="mb-2 text-[13px] font-black text-slate-800 dark:text-slate-100">Riwayat</h3>
+          <h3 className="mb-2 fs-13 font-black text-slate-800 dark:text-slate-100">Riwayat</h3>
           <div className="space-y-1.5">
             {records.map((r) => (
               <div
@@ -451,11 +445,11 @@ function CheckSheet({
                 className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-800/60"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">
+                  <div className="fs-13 font-bold text-slate-800 dark:text-slate-100">
                     {dmy(r.date)}
                     {r.dose ? ` · dosis ${r.dose}` : ''}
                   </div>
-                  <div className="truncate text-[12px] text-slate-500">
+                  <div className="truncate fs-12 text-slate-500">
                     {[
                       fields
                         .filter((f) => r.results?.[f.key] != null)
@@ -540,13 +534,11 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
   return (
     <div className="space-y-7">
       {notReady ? (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           Catatan cek sedang disiapkan di server — info Cek Kesehatan Gratis sudah bisa dibaca.
         </p>
       ) : null}
-      {error ? (
-        <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">{error}</p>
-      ) : null}
+      {error ? <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700">{error}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-teal-600 via-emerald-500 to-lime-400 p-5 text-white shadow-xl shadow-emerald-500/20 md:p-6">
@@ -555,7 +547,7 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
             <button
               type="button"
               onClick={() => setSheet({ t: 'profile' })}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[12px] font-bold backdrop-blur hover:bg-white/30"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 fs-12 font-bold backdrop-blur hover:bg-white/30"
             >
               <UserRound size={13} />
               {profile
@@ -581,24 +573,22 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[26px] font-black leading-none">{doneCount}</span>
-                  <span className="text-[11px] font-semibold text-white/85">dari {applicable.length}</span>
+                  <span className="fsh-26 font-black leading-none">{doneCount}</span>
+                  <span className="fs-11 font-semibold text-white/85">dari {applicable.length}</span>
                 </div>
               </div>
               <div className="min-w-0">
-                <div className="text-[18px] font-black leading-tight">Rapor cek tahunanmu</div>
-                <p className="mt-1 text-[13px] text-white/90">
+                <div className="fs-18 font-black leading-tight">Rapor cek tahunanmu</div>
+                <p className="mt-1 fs-13 text-white/90">
                   {doneCount === 0
                     ? 'Belum ada cek yang dicatat dalam setahun terakhir.'
                     : `${doneCount} cek masih berlaku${lateCount ? ` · ${lateCount} sudah lewat setahun` : ''}.`}
                 </p>
-                {!profile ? (
-                  <p className="mt-1 text-[12px] text-white/80">Isi usia supaya daftarnya pas untukmu.</p>
-                ) : null}
+                {!profile ? <p className="mt-1 fs-12 text-white/80">Isi usia supaya daftarnya pas untukmu.</p> : null}
               </div>
             </div>
             <div className="mt-5 space-y-1.5">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-white/75">Berikutnya</div>
+              <div className="fs-11 font-bold uppercase tracking-widest text-white/75">Berikutnya</div>
               {upcoming.map(({ item, st }) => (
                 <button
                   key={item.key}
@@ -607,8 +597,8 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
                   onClick={() => setSheet({ t: 'item', item })}
                   className="flex w-full items-center justify-between gap-2 rounded-2xl bg-white/15 px-3.5 py-2.5 text-left backdrop-blur hover:bg-white/25 disabled:opacity-70"
                 >
-                  <span className="truncate text-[13.5px] font-bold">{item.label}</span>
-                  <span className="shrink-0 text-[11.5px] font-semibold text-white/85">
+                  <span className="truncate fs-13.5 font-bold">{item.label}</span>
+                  <span className="shrink-0 fs-11.5 font-semibold text-white/85">
                     {st.s === 'none' ? 'belum pernah' : st.s === 'late' ? 'lewat setahun' : st.next ? dmy(st.next) : ''}
                   </span>
                 </button>
@@ -623,8 +613,8 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
               <Gift size={20} />
             </span>
             <div>
-              <h2 className="text-[16px] font-black text-slate-900 dark:text-white">Cek Kesehatan Gratis (CKG)</h2>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400">
+              <h2 className="fs-16 font-black text-slate-900 dark:text-white">Cek Kesehatan Gratis (CKG)</h2>
+              <p className="fs-12 text-slate-500 dark:text-slate-400">
                 Setahun sekali · jadwal kamu pilih sendiri · di puskesmas
               </p>
             </div>
@@ -636,11 +626,11 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
               ['Datang', 'Bawa KTP/KK, tiket dari SATUSEHAT/WA, dan Buku Kesehatan Lansia bila punya.'],
             ].map(([t, d], i) => (
               <li key={t} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-[12px] font-black text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 fs-12 font-black text-white">
                   {i + 1}
                 </span>
-                <div className="mt-1.5 text-[13px] font-bold text-slate-800 dark:text-slate-100">{t}</div>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">{d}</p>
+                <div className="mt-1.5 fs-13 font-bold text-slate-800 dark:text-slate-100">{t}</div>
+                <p className="mt-0.5 fs-12 leading-relaxed text-slate-500 dark:text-slate-400">{d}</p>
               </li>
             ))}
           </ol>
@@ -649,7 +639,7 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
               href="https://wa.me/6281278878812"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-[12.5px] font-bold text-white"
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 fs-12.5 font-bold text-white"
             >
               <MessageCircle size={14} /> WA Chatbot 0812-7887-8812
             </a>
@@ -657,12 +647,12 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
               href={CKG_SOURCE.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[12.5px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 fs-12.5 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               <ExternalLink size={14} /> Petunjuk teknis resmi
             </a>
           </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+          <p className="mt-3 fs-11 leading-relaxed text-slate-400">
             Sumber: {CKG_SOURCE.title}, dibaca {CKG_SOURCE.readAt.split('-').reverse().join('/')}. Panduan umum — tenaga
             kesehatan bisa menyarankan pemeriksaan lain sesuai kondisimu.
           </p>
@@ -672,15 +662,15 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
       <section>
         <div className="mb-3 flex items-end justify-between gap-3 px-1">
           <div>
-            <h2 className="text-[18px] font-black tracking-tight text-slate-900 dark:text-white">Cek rutin</h2>
-            <p className="text-[12px] text-slate-500 dark:text-slate-400">
+            <h2 className="fs-18 font-black tracking-tight text-slate-900 dark:text-white">Cek rutin</h2>
+            <p className="fs-12 text-slate-500 dark:text-slate-400">
               Isi paket CKG {age !== null && age >= 60 ? 'lansia' : 'dewasa'} · tap untuk mencatat
             </p>
           </div>
           <button
             type="button"
             onClick={() => setShowAll((v) => !v)}
-            className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             {showAll ? 'Sesuai profilku' : 'Tampilkan semua'}
           </button>
@@ -688,7 +678,7 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
         <div className="space-y-5">
           {groups.map((g) => (
             <div key={g}>
-              <div className="mb-2 px-1 text-[11.5px] font-bold uppercase tracking-widest text-slate-400">{g}</div>
+              <div className="mb-2 px-1 fs-11.5 font-bold uppercase tracking-widest text-slate-400">{g}</div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {items
                   .filter((i) => i.group === g)
@@ -705,10 +695,10 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
                       >
                         <span className={cn('absolute inset-y-0 left-0 w-1.5', style.bar)} aria-hidden />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+                          <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
                             {i.label}
                           </span>
-                          <span className="block truncate text-[11.5px] text-slate-500 dark:text-slate-400">
+                          <span className="block truncate fs-11.5 text-slate-500 dark:text-slate-400">
                             {[
                               i.minAge ? `mulai ${i.minAge} th` : null,
                               i.sex === 'p' ? 'perempuan' : null,
@@ -718,7 +708,7 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
                               .join(' · ')}
                           </span>
                         </span>
-                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold', style.chip)}>
+                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 fs-10.5 font-bold', style.chip)}>
                           {style.label(st.next)}
                         </span>
                       </button>
@@ -732,10 +722,10 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
 
       <section>
         <div className="mb-3 px-1">
-          <h2 className="flex items-center gap-2 text-[18px] font-black tracking-tight text-slate-900 dark:text-white">
+          <h2 className="flex items-center gap-2 fs-18 font-black tracking-tight text-slate-900 dark:text-white">
             <Syringe size={18} className="text-teal-600" /> Kartu vaksinku
           </h2>
-          <p className="text-[12px] text-slate-500 dark:text-slate-400">
+          <p className="fs-12 text-slate-500 dark:text-slate-400">
             Catat dosis yang sudah kamu terima · jadwal ikuti anjuran dokter
           </p>
         </div>
@@ -755,12 +745,12 @@ export function CekView({ onToast }: { onToast: (m: string) => void }) {
                     : 'bg-white ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800',
                 )}
               >
-                <div className="line-clamp-2 text-[13px] font-bold leading-tight text-slate-900 dark:text-white">
+                <div className="line-clamp-2 fs-13 font-bold leading-tight text-slate-900 dark:text-white">
                   {v.label}
                 </div>
                 <div
                   className={cn(
-                    'mt-1.5 flex items-center gap-1 text-[11.5px] font-semibold',
+                    'mt-1.5 flex items-center gap-1 fs-11.5 font-semibold',
                     doses.length ? 'text-teal-700 dark:text-teal-300' : 'text-slate-400',
                   )}
                 >

@@ -30,7 +30,7 @@ export function AccountPicker({ accounts, value, onChange, label = 'Akun / Reken
       className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 relative"
       ref={ref}
     >
-      <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+      <label className="flex items-center gap-2 fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
         <Wallet size={12} /> {label}
       </label>
       {accounts.length === 0 ? (

@@ -11,6 +11,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { FadeIn } from '@/components/app/FadeIn';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
+import { TEXT_SIZES, useTextSize } from '@/lib/textSize';
 import { lightTap } from '@/lib/haptics';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
 import { APP_VERSION_LABEL } from '@/lib/version';
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { size: textSize, setSize: setTextSize } = useTextSize();
 
   const user = auth.currentUser;
 
@@ -110,13 +112,13 @@ export default function ProfilePage() {
         <h1 className="text-lg font-black text-slate-900 dark:text-white mt-3">{displayName}</h1>
         <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{user?.email}</p>
         {profile?.plan && (
-          <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black mt-3">
+          <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 fs-11 font-black mt-3">
             <Star size={12} fill="currentColor" /> {profile.plan === 'PRO' ? 'Premium' : 'Free'}
           </div>
         )}
         {remainingDays !== null && (
           <p
-            className={`mt-2 text-[12px] font-bold ${remainingDays <= 3 ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}
+            className={`mt-2 fs-12 font-bold ${remainingDays <= 3 ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}
           >
             {remainingDays === 0 ? 'Masa aktif berakhir hari ini' : `Masa aktif sisa ${remainingDays} hari`}
           </p>
@@ -124,7 +126,7 @@ export default function ProfilePage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
+        <h2 className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
           Preferensi
         </h2>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
@@ -140,7 +142,7 @@ export default function ProfilePage() {
                     lightTap();
                     setTheme(value);
                   }}
-                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-[11px] font-bold transition-colors ${
+                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border fs-11 font-bold transition-colors ${
                     active
                       ? 'bg-indigo-600 border-indigo-600 text-white'
                       : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400'
@@ -148,6 +150,35 @@ export default function ProfilePage() {
                 >
                   <Icon size={16} />
                   {label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="block pt-1 text-sm font-bold text-slate-700 dark:text-slate-300">Ukuran teks</span>
+          <div className="grid grid-cols-3 gap-2">
+            {TEXT_SIZES.map((t) => {
+              const active = textSize === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    lightTap();
+                    setTextSize(t.id);
+                  }}
+                  className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border fs-11 font-bold transition-colors ${
+                    active
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <span
+                    style={{ fontSize: t.id === 'kecil' ? 13 : t.id === 'sedang' ? 16 : 19 }}
+                    className="font-black leading-none"
+                  >
+                    Aa
+                  </span>
+                  {t.label}
                 </button>
               );
             })}
@@ -162,7 +193,7 @@ export default function ProfilePage() {
                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">
                     Laporan bulanan via email
                   </span>
-                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+                  <span className="fs-11 font-medium text-slate-400 dark:text-slate-500 block">
                     Ringkasan keuangan tiap awal bulan
                   </span>
                 </div>
@@ -182,13 +213,13 @@ export default function ProfilePage() {
                 />
               </button>
             </div>
-            {reportError && <p className="text-[11px] font-bold text-rose-500 mt-2">{reportError}</p>}
+            {reportError && <p className="fs-11 font-bold text-rose-500 mt-2">{reportError}</p>}
           </div>
         )}
       </FadeIn>
 
       <FadeIn delay={0.08}>
-        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
+        <h2 className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
           AI agent
         </h2>
         <McpConnectCard />
@@ -205,10 +236,7 @@ export default function ProfilePage() {
           {loggingOut ? 'Keluar...' : 'Keluar'}
         </button>
       </FadeIn>
-      <Link
-        href="/app/versi"
-        className="block pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500"
-      >
+      <Link href="/app/versi" className="block pb-2 text-center fs-11 font-bold text-slate-400 dark:text-slate-500">
         Leosiqra {APP_VERSION_LABEL} · <span className="text-indigo-500 dark:text-indigo-400">Riwayat versi</span>
       </Link>
     </div>

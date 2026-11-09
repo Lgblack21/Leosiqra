@@ -227,7 +227,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.div
             {...heroItem(0)}
-            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-indigo-600 shadow-sm backdrop-blur"
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-1.5 fs-10 font-bold uppercase tracking-[0.25em] text-indigo-600 shadow-sm backdrop-blur"
           >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
@@ -295,7 +295,7 @@ export default function LandingPage() {
               <CreditCard size={17} />
             </span>
             <span className="leading-tight">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
+              <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
               <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
             </span>
           </motion.div>
@@ -309,7 +309,7 @@ export default function LandingPage() {
               <Check size={17} />
             </span>
             <span className="leading-tight">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
+              <span className="block fs-10 font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
               <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
             </span>
           </motion.div>
@@ -338,7 +338,7 @@ export default function LandingPage() {
       <section id="produk" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Produk</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Produk</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Semua yang Anda miliki, dalam satu pandangan.
             </h2>
@@ -382,12 +382,12 @@ export default function LandingPage() {
                 Tagihan tercetak, minimum bayar, dan hitung mundur jatuh tempo.
               </p>
               <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between fs-11 text-slate-500">
                   <span>Tagihan tercetak</span>
                   <span className="text-amber-600">3 hari lagi</span>
                 </div>
                 <p className="mt-1 font-serif text-2xl tabular-nums">Rp 4.250.000</p>
-                <p className="mt-1 text-[11px] text-slate-500">Minimum Rp 425.000</p>
+                <p className="mt-1 fs-11 text-slate-500">Minimum Rp 425.000</p>
               </div>
             </Reveal>
 
@@ -449,7 +449,7 @@ export default function LandingPage() {
         />
         <div className="mx-auto grid grid-cols-1 max-w-7xl items-center gap-16 lg:grid-cols-2">
           <Reveal>
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Input Cepat</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Input Cepat</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Catat dalam hitungan detik. Dengan cara Anda.
             </h2>
@@ -491,7 +491,7 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Fitur</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Fitur</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Lengkap, tanpa terasa rumit.</h2>
           </Reveal>
           <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-[28px] border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
@@ -520,7 +520,7 @@ export default function LandingPage() {
             className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.12),transparent)]"
           />
           <div className="relative">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pajak Center</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Pajak Center</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               SPT tahunan, disiapkan dari catatan Anda.
             </h2>
@@ -569,7 +569,7 @@ export default function LandingPage() {
       <section className="relative px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Prinsip kami</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Prinsip kami</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Dibangun untuk dipercaya.</h2>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -587,7 +587,7 @@ export default function LandingPage() {
       <section id="cara-kerja" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Cara mulai</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Cara mulai</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
               Tiga langkah menuju keuangan yang tenang.
             </h2>
@@ -617,7 +617,7 @@ export default function LandingPage() {
       <section id="harga" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-5xl">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Harga</p>
+            <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Harga</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Coba dulu. Lanjutkan kalau cocok.</h2>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -687,7 +687,7 @@ export default function LandingPage() {
                 className="object-cover"
               />
             </div>
-            <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-600">Di balik Leosiqra</p>
+            <p className="mt-6 fs-10 font-bold uppercase tracking-[0.3em] text-indigo-600">Di balik Leosiqra</p>
             {developer.name && <h3 className="mt-2 font-serif text-3xl">{developer.name}</h3>}
             {developer.quote && (
               <p className="mt-5 font-serif text-xl italic leading-relaxed text-slate-600">

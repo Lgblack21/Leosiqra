@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.16.1 live, run #187)
+Terakhir diperbarui: 2026-11-09 (3.17.0 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,17 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.17.0 Ukuran teks — BELUM DEPLOY. Tanpa SQL. Diff besar (±257 file) tapi mekanis.**
+  - Codemod: SEMUA `text-[Npx]` (4.244×) → `fs-N` (N<20) / `fsh-N` (N≥20). Utility di globals.css:
+    `fs-*` = N px × `--fs` (min 9px), `fsh-*` = N px × `--fs-h`. `--text-xs…9xl`, `text-label/caption` juga ×skala.
+    **Mulai sekarang tulis `fs-13` / `fsh-24`, bukan `text-[13px]`** (yang lama tidak ikut setelan).
+  - Skala: sedang (bawaan, baru) --fs .95 / --fs-h .88; kecil .9/.82; besar 1.06/1. `:root[data-teks=…]`.
+  - `src/lib/textSizeBoot.ts` (skrip <head> di root layout, tanpa React) + `src/lib/textSize.ts` (`useTextSize`,
+    useSyncExternalStore). UI: AppearanceView (judul baris Pengaturan → "Tampilan"), /app/profile Preferensi.
+  - tailwind-merge: classGroups font-size + `fs`/`fsh` (utils.ts) → `cn('fs-13','text-sm')` menyisakan terakhir.
+  - Dites Playwright: h1 Ringkasan 31,7px (sedang) / 29,5 (kecil) / 36 (besar), klik Kecil di Pengaturan & Besar di
+    Profil HP tersimpan, 0 error JS. Belum dicek halaman satu per satu (mungkin ada teks yang sekarang terlalu kecil).
 
 - **2026-11-09 — 3.16.1 LIVE (run #187, commit 2b04b06). Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
   semua tab + pitch, lapisan kepadatan `tempat-heat` (heatmap), Lokasiku (GPS sekali, marker `.peta-me`, tidak

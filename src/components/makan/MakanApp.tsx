@@ -54,8 +54,8 @@ function KcalRing({ value, target }: { value: number; target: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <div className="text-[28px] font-black leading-none tracking-tight">{num(value)}</div>
-        <div className="mt-1 text-[11px] font-semibold text-white/85">dari {num(target)} kkal</div>
+        <div className="fsh-28 font-black leading-none tracking-tight">{num(value)}</div>
+        <div className="mt-1 fs-11 font-semibold text-white/85">dari {num(target)} kkal</div>
       </div>
     </div>
   );
@@ -65,7 +65,7 @@ function MacroBar({ label, value, goal, color }: { label: string; value: number;
   const pct = Math.min(100, goal ? (value / goal) * 100 : 0);
   return (
     <div>
-      <div className="flex items-baseline justify-between text-[12px]">
+      <div className="flex items-baseline justify-between fs-12">
         <span className="font-semibold text-white/90">{label}</span>
         <span className="font-bold">
           {num(value)}
@@ -111,8 +111,8 @@ function MealCard({ meal, index, onOpen }: { meal: Meal; index: number; onOpen: 
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-bold text-slate-900 dark:text-white">{meal.name}</span>
-        <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">
+        <span className="block truncate fs-15 font-bold text-slate-900 dark:text-white">{meal.name}</span>
+        <span className="mt-0.5 block fs-12 text-slate-500 dark:text-slate-400">
           {meal.time} · {slot.label}
           {meal.protein != null || meal.carbs != null || meal.fat != null
             ? ` · P ${num(meal.protein ?? 0)} · K ${num(meal.carbs ?? 0)} · L ${num(meal.fat ?? 0)} g`
@@ -121,7 +121,7 @@ function MealCard({ meal, index, onOpen }: { meal: Meal; index: number; onOpen: 
         {meal.price ? (
           <span
             className={cn(
-              'mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold',
+              'mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 fs-11 font-bold',
               meal.recorded
                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
@@ -132,10 +132,10 @@ function MealCard({ meal, index, onOpen }: { meal: Meal; index: number; onOpen: 
         ) : null}
       </span>
       <span className="shrink-0 text-right">
-        <span className="block text-[17px] font-black text-slate-900 dark:text-white">
+        <span className="block fs-17 font-black text-slate-900 dark:text-white">
           {meal.kcal != null ? num(meal.kcal) : '–'}
         </span>
-        <span className="block text-[11px] font-semibold text-slate-400">kkal</span>
+        <span className="block fs-11 font-semibold text-slate-400">kkal</span>
       </span>
     </button>
   );
@@ -234,8 +234,8 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             <ArrowLeft size={18} />
           </Link>
           <div className="min-w-0 text-center">
-            <h1 className="text-[20px] font-black tracking-tight text-slate-900 dark:text-white">Sehatku · Makan</h1>
-            <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">
+            <h1 className="fsh-20 font-black tracking-tight text-slate-900 dark:text-white">Sehatku · Makan</h1>
+            <p className="truncate fs-12 text-slate-500 dark:text-slate-400">
               Foto piringmu, Leo hitung gizi & belanjanya
             </p>
           </div>
@@ -255,7 +255,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
         <button
           type="button"
           onClick={() => setDate(today)}
-          className="rounded-full bg-white px-4 py-2 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
+          className="rounded-full bg-white px-4 py-2 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
         >
           {date === today ? 'Hari ini · ' : ''}
           {longDate(date)}
@@ -272,12 +272,12 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
       </div>
 
       {notReady ? (
-        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           Sehatku sedang disiapkan di server — sebentar lagi bisa dipakai.
         </p>
       ) : null}
       {error ? (
-        <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </p>
       ) : null}
@@ -295,7 +295,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                 <MacroBar label="Lemak" value={totals.fat} goal={goal.fat} color="bg-lime-200" />
               </div>
             </div>
-            <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[12px] font-bold">
+            <div className="relative mt-4 flex flex-wrap items-center gap-2 fs-12 font-bold">
               <span className="rounded-full bg-white/18 px-3 py-1 backdrop-blur">🍽️ {items.length}× makan</span>
               <span className="rounded-full bg-white/18 px-3 py-1 backdrop-blur">💸 {formatIDR(totals.spend)}</span>
               {data?.streak ? (
@@ -311,10 +311,10 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                     value={targetDraft}
                     onChange={(e) => setTargetDraft(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && void saveTarget()}
-                    className="w-16 bg-transparent px-1 text-[13px] font-bold outline-none"
+                    className="w-16 bg-transparent px-1 fs-13 font-bold outline-none"
                     aria-label="Target kalori harian"
                   />
-                  <span className="text-[11px] text-slate-500">kkal</span>
+                  <span className="fs-11 text-slate-500">kkal</span>
                   <button
                     type="button"
                     onClick={() => void saveTarget()}
@@ -344,7 +344,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                 type="button"
                 disabled={notReady}
                 onClick={() => camRef.current?.click()}
-                className="col-span-2 flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-900 sm:col-span-1 text-[15px] font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-slate-900"
+                className="col-span-2 flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-900 sm:col-span-1 fs-15 font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-slate-900"
               >
                 <Camera size={19} /> Foto makananmu
               </button>
@@ -352,7 +352,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                 type="button"
                 disabled={notReady}
                 onClick={() => galRef.current?.click()}
-                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-[14px] font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
+                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 fs-14 font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
               >
                 <ImagePlus size={18} /> Galeri
               </button>
@@ -360,7 +360,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                 type="button"
                 disabled={notReady}
                 onClick={() => setSheet({ mode: 'new' })}
-                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-[14px] font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
+                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 fs-14 font-bold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
               >
                 <PenLine size={18} /> Tulis
               </button>
@@ -387,7 +387,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
               }}
             />
             {ai ? (
-              <p className="mt-2.5 flex flex-wrap items-center justify-center gap-x-1.5 text-center text-[12px] text-slate-500 dark:text-slate-400">
+              <p className="mt-2.5 flex flex-wrap items-center justify-center gap-x-1.5 text-center fs-12 text-slate-500 dark:text-slate-400">
                 <Sparkles size={13} className="text-amber-500" />
                 {aiLeft > 0 ? (
                   <span>
@@ -406,10 +406,10 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             {items.length === 0 ? (
               <div className="flex flex-col items-center rounded-[28px] border-2 border-dashed border-slate-200 px-6 py-10 text-center dark:border-slate-800">
                 <LeoBadge topic="makan" size={72} />
-                <p className="mt-3 text-[15px] font-bold text-slate-700 dark:text-slate-200">
+                <p className="mt-3 fs-15 font-bold text-slate-700 dark:text-slate-200">
                   {date === today ? 'Belum ada makanan hari ini' : 'Tidak ada catatan makan di hari ini'}
                 </p>
-                <p className="mt-1 max-w-xs text-[13px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 max-w-xs fs-13 text-slate-500 dark:text-slate-400">
                   Foto piringmu begitu makanan datang — Leo kenali menunya, kalorinya, dan bisa langsung catat
                   belanjanya.
                 </p>
@@ -417,9 +417,9 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             ) : (
               SLOTS.filter((s) => items.some((m) => m.slot === s.id)).map((s) => (
                 <div key={s.id}>
-                  <div className="mb-2 flex items-center gap-2 px-1 text-[13px] font-bold text-slate-600 dark:text-slate-300">
+                  <div className="mb-2 flex items-center gap-2 px-1 fs-13 font-bold text-slate-600 dark:text-slate-300">
                     <span>{s.emoji}</span> {s.label}
-                    <span className="ml-auto text-[12px] font-semibold text-slate-400">
+                    <span className="ml-auto fs-12 font-semibold text-slate-400">
                       {num(items.filter((m) => m.slot === s.id).reduce((a, m) => a + (m.kcal ?? 0), 0))} kkal
                     </span>
                   </div>
@@ -439,10 +439,8 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
         <aside className="space-y-4">
           <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[16px] font-black text-slate-900 dark:text-white">Minggu ini</h2>
-              <span className="text-[12px] font-semibold text-slate-400">
-                {week.reduce((a, d) => a + d.count, 0)}× makan
-              </span>
+              <h2 className="fs-16 font-black text-slate-900 dark:text-white">Minggu ini</h2>
+              <span className="fs-12 font-semibold text-slate-400">{week.reduce((a, d) => a + d.count, 0)}× makan</span>
             </div>
             <div className="relative mt-4 flex h-36 items-end gap-2">
               <div
@@ -484,7 +482,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
                 <span
                   key={d.date}
                   className={cn(
-                    'flex-1 text-center text-[11px] font-semibold',
+                    'flex-1 text-center fs-11 font-semibold',
                     d.date === date ? 'text-slate-900 dark:text-white' : 'text-slate-400',
                   )}
                 >
@@ -494,16 +492,14 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Rata-rata</div>
-                <div className="text-[16px] font-black text-slate-900 dark:text-white">{num(weekAvg)} kkal</div>
-                <div className="text-[11px] text-slate-400">per hari tercatat</div>
+                <div className="fs-11 font-semibold text-slate-500 dark:text-slate-400">Rata-rata</div>
+                <div className="fs-16 font-black text-slate-900 dark:text-white">{num(weekAvg)} kkal</div>
+                <div className="fs-11 text-slate-400">per hari tercatat</div>
               </div>
               <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Belanja makan</div>
-                <div className="text-[16px] font-black text-slate-900 dark:text-white">
-                  {short(data?.foodSpendWeek ?? 0)}
-                </div>
-                <div className="truncate text-[11px] text-slate-400">{short(weekMealSpend)} dari catatan makan</div>
+                <div className="fs-11 font-semibold text-slate-500 dark:text-slate-400">Belanja makan</div>
+                <div className="fs-16 font-black text-slate-900 dark:text-white">{short(data?.foodSpendWeek ?? 0)}</div>
+                <div className="truncate fs-11 text-slate-400">{short(weekMealSpend)} dari catatan makan</div>
               </div>
             </div>
           </section>
@@ -513,8 +509,8 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
               <div className="flex items-start gap-3">
                 <LeoBadge topic="makan" size={40} />
                 <div>
-                  <div className="text-[13px] font-black text-amber-900 dark:text-amber-200">Kata Leo</div>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-amber-900/80 dark:text-amber-100/80">
+                  <div className="fs-13 font-black text-amber-900 dark:text-amber-200">Kata Leo</div>
+                  <p className="mt-0.5 fs-13 leading-relaxed text-amber-900/80 dark:text-amber-100/80">
                     {[...items].reverse().find((m) => m.tip)?.tip}
                   </p>
                 </div>
@@ -522,7 +518,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             </section>
           ) : null}
 
-          <p className="px-2 text-center text-[11.5px] leading-relaxed text-slate-400">
+          <p className="px-2 text-center fs-11.5 leading-relaxed text-slate-400">
             Kalori & gizi adalah perkiraan AI dari foto, bukan saran medis. Foto disimpan di akunmu dan hanya kamu yang
             bisa melihatnya; menghapus catatan makan ikut menghapus fotonya.
           </p>
@@ -549,7 +545,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
 
       {toast ? (
         <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[90] flex justify-center px-4">
-          <div className="rounded-full bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white shadow-xl dark:bg-white dark:text-slate-900">
+          <div className="rounded-full bg-slate-900 px-4 py-2.5 fs-13 font-semibold text-white shadow-xl dark:bg-white dark:text-slate-900">
             {toast}
           </div>
         </div>

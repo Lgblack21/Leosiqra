@@ -406,28 +406,26 @@ export default function PajakCenterPage() {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
       {/* 0. Print-Only Report — layout terinspirasi format SPT Tahunan 1770 */}
-      <div className="hidden print:block font-sans text-slate-800 p-8 text-[11px] leading-relaxed">
+      <div className="hidden print:block font-sans text-slate-800 p-8 fs-11 leading-relaxed">
         <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
           <div className="flex items-center gap-3">
             <Image src="/images/Logo-new.png" alt="Leosiqra" width={40} height={40} className="rounded-lg" />
             <div>
               <p className="text-sm font-black tracking-tight">Leosiqra</p>
-              <p className="text-[9px] text-slate-400 uppercase tracking-widest">
-                Personal Finance &amp; Tax Assistant
-              </p>
+              <p className="fs-9 text-slate-400 uppercase tracking-widest">Personal Finance &amp; Tax Assistant</p>
             </div>
           </div>
           <div className="text-right">
             <h1 className="text-base font-black uppercase tracking-tight">
               Draft Perhitungan Pajak Penghasilan Orang Pribadi
             </h1>
-            <p className="text-[9px] text-slate-400">
+            <p className="fs-9 text-slate-400">
               Tahun Pajak {selectedYear} &middot; Dicetak {generatedAt}
             </p>
           </div>
         </div>
 
-        <p className="text-[9px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-6">
+        <p className="fs-9 text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-6">
           Dokumen ini adalah <strong>draft perhitungan pribadi</strong> berdasarkan data yang Anda catat di Leosiqra,
           dibuat mengikuti struktur SPT Tahunan 1770 sebagai alat bantu. Ini{' '}
           <strong>bukan dokumen resmi Direktorat Jenderal Pajak</strong> dan tidak menggantikan pelaporan SPT yang sah
@@ -493,7 +491,7 @@ export default function PajakCenterPage() {
                 <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(ptkp)})</td>
               </tr>
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest">
                   Penghasilan Kena Pajak (PKP)
                 </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(pkp)}</td>
@@ -541,7 +539,7 @@ export default function PajakCenterPage() {
               <tr className="bg-slate-100">
                 <td
                   colSpan={3}
-                  className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                  className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest"
                 >
                   Total PPh Terutang Setahun
                 </td>
@@ -558,7 +556,7 @@ export default function PajakCenterPage() {
                   <tr className="bg-slate-100">
                     <td
                       colSpan={3}
-                      className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                      className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest"
                     >
                       {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
                     </td>
@@ -570,7 +568,7 @@ export default function PajakCenterPage() {
               )}
             </tbody>
           </table>
-          <p className="text-[9px] text-slate-500 italic mt-1.5">
+          <p className="fs-9 text-slate-500 italic mt-1.5">
             {pphTerutang > 0
               ? 'Berdasarkan perhitungan di atas, terdapat PPh Orang Pribadi yang berpotensi terutang untuk tahun pajak ini.'
               : 'Berdasarkan perhitungan di atas, tidak ada PPh Orang Pribadi yang terutang untuk tahun pajak ini (PKP nihil).'}
@@ -608,7 +606,7 @@ export default function PajakCenterPage() {
               <tr className="bg-slate-100">
                 <td
                   colSpan={2}
-                  className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                  className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest"
                 >
                   Total Harta
                 </td>
@@ -645,7 +643,7 @@ export default function PajakCenterPage() {
                 ))
               )}
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest">
                   Total Utang
                 </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalUtang)}</td>
@@ -681,7 +679,7 @@ export default function PajakCenterPage() {
                 ))
               )}
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest">
                   Total Piutang
                 </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalPiutang)}</td>
@@ -709,7 +707,7 @@ export default function PajakCenterPage() {
                 <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(totalUtang)})</td>
               </tr>
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase fs-10 tracking-widest">
                   Harta Bersih
                 </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black">
@@ -721,12 +719,12 @@ export default function PajakCenterPage() {
         </div>
 
         <div className="pt-4 border-t border-slate-300 flex items-center justify-between">
-          <p className="text-[9px] text-slate-400 max-w-md">
+          <p className="fs-9 text-slate-400 max-w-md">
             Dihasilkan otomatis oleh Leosiqra berdasarkan data yang Anda catat sendiri. Bukan dokumen resmi DJP/Coretax
             &mdash; lapor SPT resmi melalui <strong>coretaxdjp.pajak.go.id</strong>.
           </p>
           <div className="text-right">
-            <p className="text-[9px] text-slate-400">Dicetak melalui</p>
+            <p className="fs-9 text-slate-400">Dicetak melalui</p>
             <p className="text-xs font-black">Leosiqra.com</p>
           </div>
         </div>
@@ -739,7 +737,7 @@ export default function PajakCenterPage() {
           </div>
           <div>
             <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <p className="fs-10 md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Draft Ringkasan SPT · Tahun Pajak {selectedYear}
             </p>
           </div>
@@ -748,14 +746,14 @@ export default function PajakCenterPage() {
         <div className="flex flex-wrap items-center gap-3 print:hidden">
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl fs-10 font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 transition-all"
           >
             <FileSpreadsheet size={14} />
             Excel
           </button>
           <button
             onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl fs-10 font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-all"
           >
             <Printer size={14} />
             PDF / Print
@@ -770,7 +768,7 @@ export default function PajakCenterPage() {
       {showDisclaimer && (
         <div className="flex items-start gap-4 p-5 rounded-[20px] bg-amber-50 border border-amber-100 print:hidden">
           <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-[11px] md:text-xs text-amber-800 leading-relaxed font-medium flex-1">
+          <p className="fs-11 md:text-xs text-amber-800 leading-relaxed font-medium flex-1">
             <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>,
             bukan posisi resmi per 31 Desember {selectedYear}
             {!isCurrentYear && (
@@ -806,9 +804,7 @@ export default function PajakCenterPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
         <div className="p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white space-y-2 shadow-xl shadow-slate-200/50">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Penghasilan Neto {selectedYear}
-          </p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Penghasilan Neto {selectedYear}</p>
           <h3
             className={cn(
               'text-2xl font-black tracking-tight tabular-nums',
@@ -817,23 +813,23 @@ export default function PajakCenterPage() {
           >
             {formatIDRShort(animatedNetIncome)}
           </h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+          <p className="fs-11 text-slate-400 leading-relaxed font-medium">
             Total pemasukan dikurangi pengeluaran sepanjang tahun {selectedYear}.
           </p>
         </div>
 
         <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Harta (Aset)</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Total Harta (Aset)</p>
           <h3 className="text-2xl font-black tracking-tight text-slate-900 tabular-nums">
             {formatIDRShort(animatedTotalHarta)}
           </h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+          <p className="fs-11 text-slate-400 leading-relaxed font-medium">
             Saldo rekening + nilai portofolio investasi, posisi terkini.
           </p>
         </div>
 
         <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kewajiban (Utang)</p>
+          <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Total Kewajiban (Utang)</p>
           <h3
             className={cn(
               'text-2xl font-black tracking-tight tabular-nums',
@@ -842,7 +838,7 @@ export default function PajakCenterPage() {
           >
             {formatIDRShort(animatedTotalUtang)}
           </h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+          <p className="fs-11 text-slate-400 leading-relaxed font-medium">
             Hutang belum lunas dari menu Hutang &amp; Piutang.
           </p>
         </div>
@@ -858,7 +854,7 @@ export default function PajakCenterPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Pernikahan</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Status Pernikahan</p>
             <div className="flex gap-2">
               {(['TK', 'K'] as const).map((s) => (
                 <button
@@ -878,7 +874,7 @@ export default function PajakCenterPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Jumlah Tanggungan</p>
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">Jumlah Tanggungan</p>
             <div className="flex gap-2">
               {[0, 1, 2, 3].map((n) => (
                 <button
@@ -898,7 +894,7 @@ export default function PajakCenterPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <p className="fs-10 font-black text-slate-400 uppercase tracking-widest">
               PPh 21 Sudah Dipotong Pemberi Kerja (Opsional)
             </p>
             <input
@@ -909,7 +905,7 @@ export default function PajakCenterPage() {
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-700 transition-all"
             />
-            <p className="text-[9px] font-medium text-slate-400 leading-relaxed">
+            <p className="fs-9 font-medium text-slate-400 leading-relaxed">
               Isi kalau kamu karyawan dan sudah dipotong PPh 21 bulanan (lihat slip gaji/bukti potong 1721-A1) — dipakai
               untuk hitung PPh Kurang/Lebih Bayar, bukan PPh Terutang Setahun.
             </p>
@@ -935,11 +931,11 @@ export default function PajakCenterPage() {
               Estimasi PPh Terutang (Pasal 17 UU HPP)
             </h4>
             {pphTerutang > 0 ? (
-              <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-widest border border-rose-500/30">
+              <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 fs-9 font-black uppercase tracking-widest border border-rose-500/30">
                 Ada PPh Terutang
               </span>
             ) : (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-widest border border-emerald-500/30">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 fs-9 font-black uppercase tracking-widest border border-emerald-500/30">
                 Tidak Ada PPh Terutang
               </span>
             )}
@@ -947,15 +943,15 @@ export default function PajakCenterPage() {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Penghasilan Neto</p>
+              <p className="fs-9 font-bold text-slate-400 uppercase tracking-widest mb-1">Penghasilan Neto</p>
               <p className="text-sm font-black tabular-nums">{formatIDRShort(netIncome)}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PTKP</p>
+              <p className="fs-9 font-bold text-slate-400 uppercase tracking-widest mb-1">PTKP</p>
               <p className="text-sm font-black tabular-nums">{formatIDRShort(ptkp)}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PKP</p>
+              <p className="fs-9 font-bold text-slate-400 uppercase tracking-widest mb-1">PKP</p>
               <p className="text-sm font-black tabular-nums">{formatIDRShort(pkp)}</p>
             </div>
           </div>
@@ -968,7 +964,7 @@ export default function PajakCenterPage() {
             ) : (
               <div className="space-y-1.5">
                 {pphBreakdown.map((b, i) => (
-                  <div key={i} className="flex justify-between items-center text-[11px]">
+                  <div key={i} className="flex justify-between items-center fs-11">
                     <span className="text-slate-300">
                       Lapisan {formatIDRShort(b.min)} &ndash; {b.max === Infinity ? 'ke atas' : formatIDRShort(b.max)} @{' '}
                       {(b.rate * 100).toFixed(0)}%
@@ -991,7 +987,7 @@ export default function PajakCenterPage() {
 
           {pph21WithheldNum > 0 && (
             <div className="pt-3 border-t border-white/10 space-y-1.5">
-              <div className="flex justify-between items-center text-[11px]">
+              <div className="flex justify-between items-center fs-11">
                 <span className="text-slate-300">PPh 21 Sudah Dipotong</span>
                 <span className="font-bold tabular-nums">{formatIDRShort(pph21WithheldNum)}</span>
               </div>
@@ -1038,7 +1034,7 @@ export default function PajakCenterPage() {
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-100">
+                    <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 fs-9 font-black uppercase tracking-widest border border-slate-100">
                       {harta.type}
                     </span>
                   </div>
@@ -1071,7 +1067,7 @@ export default function PajakCenterPage() {
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-500 text-[9px] font-black uppercase tracking-widest border border-rose-100">
+                    <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-500 fs-9 font-black uppercase tracking-widest border border-rose-100">
                       KEWAJIBAN
                     </span>
                   </div>
@@ -1106,7 +1102,7 @@ export default function PajakCenterPage() {
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-sky-50 text-sky-600 text-[9px] font-black uppercase tracking-widest border border-sky-100">
+                    <span className="px-2.5 py-1 rounded-full bg-sky-50 text-sky-600 fs-9 font-black uppercase tracking-widest border border-sky-100">
                       PIUTANG
                     </span>
                   </div>
@@ -1120,22 +1116,22 @@ export default function PajakCenterPage() {
 
         <div className="p-8 rounded-[32px] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">
+            <p className="fs-10 font-black text-emerald-200 uppercase tracking-widest mb-1">
               Total Harta Bersih (Harta + Piutang − Utang)
             </p>
             <p className="text-3xl font-black tabular-nums">Rp {Math.round(animatedHartaBersih).toLocaleString()}</p>
           </div>
           <div className="flex gap-6 text-right">
             <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Harta</p>
+              <p className="fs-9 font-bold text-emerald-200 uppercase tracking-widest">Harta</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalHarta).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Piutang</p>
+              <p className="fs-9 font-bold text-emerald-200 uppercase tracking-widest">Piutang</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalPiutang).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Utang</p>
+              <p className="fs-9 font-bold text-emerald-200 uppercase tracking-widest">Utang</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalUtang).toLocaleString()}</p>
             </div>
           </div>

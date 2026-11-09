@@ -12,9 +12,7 @@ export function DueDateInput({ value, onChange }: { value: DebtDue | null; onCha
   const mode = !value ? 'none' : 'date' in value ? 'once' : 'monthly';
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-        Jatuh tempo (opsional)
-      </label>
+      <label className="fs-10 font-black text-slate-400 uppercase tracking-widest pl-1">Jatuh tempo (opsional)</label>
       <div className="grid grid-cols-2 gap-3">
         <select
           value={mode}
@@ -56,7 +54,7 @@ export function DueDateInput({ value, onChange }: { value: DebtDue | null; onCha
           </select>
         )}
       </div>
-      {value && <p className="text-[11px] text-slate-400 pl-1">Pengingat dikirim 3 hari & 1 hari sebelumnya.</p>}
+      {value && <p className="fs-11 text-slate-400 pl-1">Pengingat dikirim 3 hari & 1 hari sebelumnya.</p>}
     </div>
   );
 }

@@ -284,9 +284,9 @@ export const AccountModal = ({
     }
   };
   const balanceNum = parseFloat(formData.balance) || 0;
-  const label = 'pl-1 text-[12px] font-semibold text-slate-500';
+  const label = 'pl-1 fs-12 font-semibold text-slate-500';
   const field =
-    'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-800 ring-1 ring-transparent transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
+    'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 fs-15 font-semibold text-slate-800 ring-1 ring-transparent transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialData ? 'Ubah rekening' : title} maxWidth="max-w-lg">
@@ -313,7 +313,7 @@ export const AccountModal = ({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               aria-label={formData.logoUrl ? 'Ganti logo' : 'Unggah logo'}
-              className="group relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-[22px] ring-2 ring-white/30"
+              className="group relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white fsh-22 ring-2 ring-white/30"
             >
               {uploading ? (
                 <Loader2 className="animate-spin text-slate-400" size={18} />
@@ -332,15 +332,15 @@ export const AccountModal = ({
               </span>
             </button>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[17px] font-bold">{formData.name || 'Nama rekening'}</p>
-              <p className="text-[12px] text-white/70">
+              <p className="truncate fs-17 font-bold">{formData.name || 'Nama rekening'}</p>
+              <p className="fs-12 text-white/70">
                 {typeMeta(formData.type).label || 'Jenis rekening'}
                 {formData.currency !== 'IDR' ? ` · ${formData.currency}` : ''}
               </p>
             </div>
           </div>
-          <p className="relative mt-5 text-[11px] text-white/60">{isCredit ? 'Tagihan terpakai' : 'Saldo'}</p>
-          <p className="relative text-[26px] font-extrabold tabular-nums leading-tight">
+          <p className="relative mt-5 fs-11 text-white/60">{isCredit ? 'Tagihan terpakai' : 'Saldo'}</p>
+          <p className="relative fsh-26 font-extrabold tabular-nums leading-tight">
             {formatMoney(isCredit ? -balanceNum : balanceNum, formData.currency)}
           </p>
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
@@ -363,10 +363,10 @@ export const AccountModal = ({
                     active ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100',
                   )}
                 >
-                  <span aria-hidden className="text-[20px] leading-none">
+                  <span aria-hidden className="fsh-20 leading-none">
                     {meta.emoji}
                   </span>
-                  <span className="line-clamp-1 text-[12px] font-semibold">{meta.label}</span>
+                  <span className="line-clamp-1 fs-12 font-semibold">{meta.label}</span>
                 </button>
               );
             })}
@@ -418,7 +418,7 @@ export const AccountModal = ({
                   type="button"
                   onClick={() => pickName(n)}
                   className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[12px] font-semibold ring-1 transition-colors',
+                    'flex shrink-0 items-center gap-1.5 rounded-full py-1 pl-1 pr-3 fs-12 font-semibold ring-1 transition-colors',
                     formData.name === n
                       ? 'bg-slate-900 text-white ring-slate-900'
                       : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50',
@@ -461,14 +461,14 @@ export const AccountModal = ({
                       : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50',
                   )}
                 >
-                  <span aria-hidden className="text-[20px] leading-none">
+                  <span aria-hidden className="fsh-20 leading-none">
                     {emoji}
                   </span>
                   <span>
-                    <span className="block text-[13px] font-bold">{t}</span>
+                    <span className="block fs-13 font-bold">{t}</span>
                     <span
                       className={cn(
-                        'block text-[11px] leading-snug',
+                        'block fs-11 leading-snug',
                         formData.purpose === v ? 'text-white/60' : 'text-slate-400',
                       )}
                     >
@@ -489,7 +489,7 @@ export const AccountModal = ({
                 value={formData.balance}
                 onChange={(val) => setFormData({ ...formData, balance: val })}
                 placeholder="0"
-                className={cn(field, 'py-3.5 text-[22px] font-extrabold tabular-nums')}
+                className={cn(field, 'py-3.5 fsh-22 font-extrabold tabular-nums')}
               />
             </div>
             <CurrencySelect
@@ -499,7 +499,7 @@ export const AccountModal = ({
               className="w-[104px] shrink-0 [&>div]:h-full"
             />
           </div>
-          <p className="pl-1 text-[12px] leading-relaxed text-slate-400">
+          <p className="pl-1 fs-12 leading-relaxed text-slate-400">
             {isCredit
               ? 'Isi 0 kalau belum ada. Belanja pakai kartu ini otomatis menambah tagihan.'
               : 'Samakan dengan saldo di aplikasi bank/dompet. Transaksi berikutnya mengubahnya otomatis.'}
@@ -562,7 +562,7 @@ export const AccountModal = ({
               title="Otomatis sesuai jenis"
               aria-label="Warna otomatis"
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-[10px] font-bold text-slate-400',
+                'flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-slate-300 fs-10 font-bold text-slate-400',
                 !formData.cardColor && 'ring-2 ring-slate-900 ring-offset-2',
               )}
             >
@@ -591,7 +591,7 @@ export const AccountModal = ({
           type="button"
           onClick={handleCreate}
           disabled={saving || !formData.name || !formData.type}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-[15px] font-bold text-white transition-all hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 fs-15 font-bold text-white transition-all hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
         >
           {saving && <Loader2 className="animate-spin" size={16} />}
           {saving ? 'Menyimpan…' : initialData ? 'Simpan perubahan' : 'Simpan rekening'}

@@ -75,7 +75,7 @@ function CatalogPicker({
           onChange={(e) => setQ(e.target.value)}
           placeholder="Netflix, Spotify, IndiHome, PLN…"
           aria-label="Cari layanan"
-          className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+          className="min-w-0 flex-1 bg-transparent fs-15 font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
         />
       </label>
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 no-scrollbar">
@@ -85,7 +85,7 @@ function CatalogPicker({
             type="button"
             onClick={() => setCat(c)}
             className={cn(
-              'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold',
+              'shrink-0 rounded-full px-3 py-1.5 fs-12 font-bold',
               cat === c
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -104,12 +104,10 @@ function CatalogPicker({
           <Plus size={20} />
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">
+          <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
             {needle ? `Tambah “${q.trim()}” sendiri` : 'Layanan lain (tulis sendiri)'}
           </span>
-          <span className="block text-[12px] text-slate-500 dark:text-slate-400">
-            Gym, arisan, sewa, iuran, apa saja
-          </span>
+          <span className="block fs-12 text-slate-500 dark:text-slate-400">Gym, arisan, sewa, iuran, apa saja</span>
         </span>
       </button>
       <ul className="max-h-[52vh] space-y-1 overflow-y-auto pr-1">
@@ -122,8 +120,8 @@ function CatalogPicker({
             >
               <SubLogo name={c.name} domain={c.domain} color={c.color} size={44} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{c.name}</span>
-                <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">
+                <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{c.name}</span>
+                <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
                   {c.category} · mulai ±{formatIDR(c.price)}
                   {c.cycle === 'tahunan' ? '/thn' : '/bln'}
                 </span>
@@ -132,14 +130,12 @@ function CatalogPicker({
           </li>
         ))}
         {list.length === 0 && (
-          <li className="py-6 text-center text-[13px] text-slate-500">
+          <li className="py-6 text-center fs-13 text-slate-500">
             Tidak ada di katalog — pakai “tulis sendiri” di atas.
           </li>
         )}
       </ul>
-      <p className="px-1 text-[11px] text-slate-400">
-        Harga katalog = perkiraan paket umum, bisa diubah sesuai tagihanmu.
-      </p>
+      <p className="px-1 fs-11 text-slate-400">Harga katalog = perkiraan paket umum, bisa diubah sesuai tagihanmu.</p>
     </div>
   );
 }
@@ -240,12 +236,12 @@ function SubForm({
     }
   };
 
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   const chip = (on: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
       on
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
@@ -257,7 +253,7 @@ function SubForm({
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
+          className="flex items-center gap-1 fs-13 font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"
         >
           <ArrowLeft size={15} /> Pilih layanan lain
         </button>
@@ -265,7 +261,7 @@ function SubForm({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -279,27 +275,25 @@ function SubForm({
           placeholder="Nama langganan"
           aria-label="Nama langganan"
           maxLength={60}
-          className={cn(input, 'text-[17px] font-bold')}
+          className={cn(input, 'fs-17 font-bold')}
           autoFocus={!entry && !sub}
         />
       </div>
 
       <div className="rounded-3xl bg-slate-50 p-4 text-center dark:bg-slate-800/60">
-        <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Harga per tagihan</span>
+        <span className="fs-12 font-semibold text-slate-500 dark:text-slate-400">Harga per tagihan</span>
         <label className="mt-1 flex items-baseline justify-center gap-1.5">
-          <span className="text-[18px] font-bold text-slate-400">Rp</span>
+          <span className="fs-18 font-bold text-slate-400">Rp</span>
           <input
             value={group(amount)}
             onChange={(e) => setAmount(digits(e.target.value))}
             inputMode="numeric"
             placeholder="0"
             aria-label="Harga"
-            className="w-[60%] bg-transparent text-center text-[34px] font-extrabold tabular-nums text-slate-900 outline-none dark:text-white"
+            className="w-[60%] bg-transparent text-center fsh-34 font-extrabold tabular-nums text-slate-900 outline-none dark:text-white"
           />
         </label>
-        {entry && !sub && (
-          <p className="text-[11px] text-slate-400">Perkiraan paket umum — sesuaikan dengan tagihanmu.</p>
-        )}
+        {entry && !sub && <p className="fs-11 text-slate-400">Perkiraan paket umum — sesuaikan dengan tagihanmu.</p>}
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           {CYCLES.map((c) => (
             <button key={c} type="button" onClick={() => setCycle(c)} className={chip(cycle === c)}>
@@ -332,7 +326,7 @@ function SubForm({
         </label>
       </div>
       {nextLabel && status !== 'batal' && (
-        <p className="-mt-2 px-1 text-[12px] font-semibold text-indigo-600 dark:text-indigo-400">
+        <p className="-mt-2 px-1 fs-12 font-semibold text-indigo-600 dark:text-indigo-400">
           {next === today ? 'Ditagih hari ini.' : `Tagihan berikutnya ${nextLabel} — diingatkan sehari sebelumnya.`}
         </p>
       )}
@@ -357,7 +351,7 @@ function SubForm({
               onChange={(e) => setTrialEnd(e.target.value)}
               className={input}
             />
-            <span className="mt-1 block px-1 text-[11px] text-slate-400">
+            <span className="mt-1 block px-1 fs-11 text-slate-400">
               Diingatkan 2 hari sebelumnya, biar sempat batal kalau tidak mau lanjut.
             </span>
           </label>
@@ -391,7 +385,7 @@ function SubForm({
         type="button"
         onClick={save}
         disabled={busy || !name.trim()}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}{' '}
         {sub ? 'Simpan perubahan' : `Simpan${amount ? ` · ${formatIDR(Number(amount))}` : ''}`}
@@ -413,7 +407,7 @@ function SubForm({
             onClick={remove}
             disabled={busy}
             className={cn(
-              'ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold',
+              'ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 fs-12 font-bold',
               confirmDelete
                 ? 'bg-rose-500 text-white'
                 : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',

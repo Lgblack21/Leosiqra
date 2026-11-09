@@ -5,8 +5,14 @@ import { WORLD_CURRENCIES } from '@/lib/data/worldCurrencies';
 // Daftarkan token font-size custom dari globals.css (@theme) — tanpa ini
 // tailwind-merge menganggap `text-label` sebagai warna teks dan membuangnya
 // kalau ada `text-slate-500` dll di class yang sama.
+// fs-N / fsh-N = ukuran teks N px yang mengikuti setelan Ukuran teks (globals.css) — didaftarkan sebagai
+// font-size supaya `cn('fs-13', 'text-sm')` menyisakan yang terakhir, sama seperti text-[13px] dulu.
+const isPx = (v: string) => /^\d+(\.\d+)?$/.test(v);
 const twMerge = extendTailwindMerge({
-  extend: { theme: { text: ['label', 'caption'], radius: ['card', 'control'] } },
+  extend: {
+    theme: { text: ['label', 'caption'], radius: ['card', 'control'] },
+    classGroups: { 'font-size': [{ fs: [isPx] }, { fsh: [isPx] }] },
+  },
 });
 
 export function cn(...inputs: ClassValue[]) {

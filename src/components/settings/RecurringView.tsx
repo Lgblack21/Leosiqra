@@ -105,28 +105,28 @@ export function RecurringView({ openTarget }: { openTarget: () => void }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-[20px] bg-emerald-50 p-4">
-          <p className="text-[12px] text-emerald-700">Masuk / bulan</p>
-          <p className="mt-0.5 text-[18px] font-extrabold tabular-nums text-emerald-700">
+          <p className="fs-12 text-emerald-700">Masuk / bulan</p>
+          <p className="mt-0.5 fs-18 font-extrabold tabular-nums text-emerald-700">
             +{formatCurrency(Math.round(inMonth), 'IDR')}
           </p>
         </div>
         <div className="rounded-[20px] bg-rose-50 p-4">
-          <p className="text-[12px] text-rose-700">Keluar / bulan</p>
-          <p className="mt-0.5 text-[18px] font-extrabold tabular-nums text-rose-700">
+          <p className="fs-12 text-rose-700">Keluar / bulan</p>
+          <p className="mt-0.5 fs-18 font-extrabold tabular-nums text-rose-700">
             −{formatCurrency(Math.round(outMonth), 'IDR')}
           </p>
         </div>
       </div>
 
       {items === null ? (
-        <p className="py-8 text-center text-[14px] text-slate-400">Memuat…</p>
+        <p className="py-8 text-center fs-14 text-slate-400">Memuat…</p>
       ) : list.length === 0 ? (
         <div className="rounded-[22px] border-2 border-dashed border-slate-200 px-5 py-8 text-center">
-          <p className="text-[28px]" aria-hidden>
+          <p className="fsh-28" aria-hidden>
             🔁
           </p>
-          <p className="mt-1 text-[15px] font-semibold text-slate-900">Belum ada transaksi rutin</p>
-          <p className="mx-auto mt-1 max-w-[300px] text-[13px] text-slate-500">
+          <p className="mt-1 fs-15 font-semibold text-slate-900">Belum ada transaksi rutin</p>
+          <p className="mx-auto mt-1 max-w-[300px] fs-13 text-slate-500">
             Gaji, langganan, kos, atau cicilan — catat sekali, Leosiqra yang mencatat tiap jatuh tempo.
           </p>
         </div>
@@ -145,38 +145,35 @@ export function RecurringView({ openTarget }: { openTarget: () => void }) {
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
                   <span
-                    className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[20px]',
-                      v.tile,
-                    )}
+                    className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl fsh-20', v.tile)}
                     aria-hidden
                   >
                     {v.emoji}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="truncate text-[15px] font-semibold text-slate-900">{r.name}</span>
+                      <span className="truncate fs-15 font-semibold text-slate-900">{r.name}</span>
                       {paused && (
-                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 fs-11 font-semibold text-amber-700">
                           Dijeda
                         </span>
                       )}
                     </span>
-                    <span className="block truncate text-[12px] text-slate-500">
+                    <span className="block truncate fs-12 text-slate-500">
                       {INTERVAL_LABEL[r.interval as RecurringInterval] ?? r.interval} · {accountName(r.accountId)}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
                     <span
                       className={cn(
-                        'block text-[15px] font-bold tabular-nums',
+                        'block fs-15 font-bold tabular-nums',
                         income ? 'text-emerald-600' : 'text-slate-900',
                       )}
                     >
                       {income ? '+' : '−'}
                       {formatCurrency(Number(r.amount), currencyOf(r.accountId))}
                     </span>
-                    <span className="block text-[12px] text-slate-500">{paused ? '—' : whenLabel(next)}</span>
+                    <span className="block fs-12 text-slate-500">{paused ? '—' : whenLabel(next)}</span>
                   </span>
                 </button>
                 <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
@@ -212,7 +209,7 @@ export function RecurringView({ openTarget }: { openTarget: () => void }) {
           className="flex w-full items-center gap-3 rounded-[20px] bg-slate-50 px-4 py-3 text-left hover:bg-slate-100"
         >
           <PiggyBank size={18} className="shrink-0 text-indigo-600" />
-          <span className="flex-1 text-[14px] text-slate-700">
+          <span className="flex-1 fs-14 text-slate-700">
             {savingsCount} setoran tabungan otomatis ada di <b>Target</b>
           </span>
           <ChevronRight size={16} className="text-slate-400" />
@@ -222,7 +219,7 @@ export function RecurringView({ openTarget }: { openTarget: () => void }) {
       <button
         type="button"
         onClick={() => setModal({ open: true, item: null })}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800"
       >
         <Plus size={17} strokeWidth={2.6} /> Tambah transaksi rutin
       </button>

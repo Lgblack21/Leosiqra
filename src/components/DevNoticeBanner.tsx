@@ -57,7 +57,7 @@ export default function DevNoticeBanner({
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-slate-900">
           <Hammer size={14} />
         </span>
-        <p className="min-w-0 flex-1 text-[12px] leading-snug">
+        <p className="min-w-0 flex-1 fs-12 leading-snug">
           <b>Leosiqra sedang dikembangkan.</b> Tampilan & fitur bisa berubah.{' '}
           <Link href={saranHref} className="font-semibold text-amber-300 underline">
             Kasih masukan
@@ -85,7 +85,7 @@ export default function DevNoticeBanner({
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-slate-900">
         <Hammer size={13} />
       </span>
-      <p className="min-w-0 flex-1 truncate text-[12px] text-slate-700 dark:text-slate-200 md:text-[13px]">
+      <p className="min-w-0 flex-1 truncate fs-12 text-slate-700 dark:text-slate-200 md:fs-13">
         <b className="text-slate-900 dark:text-white">Leosiqra masih dikembangkan</b>
         <span className="hidden sm:inline"> — tampilan bisa berubah, datamu tetap aman</span>.{' '}
         <Link

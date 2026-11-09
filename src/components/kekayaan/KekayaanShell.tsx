@@ -150,17 +150,15 @@ export function KekayaanShell() {
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Kekayaan</h1>
-            <p className="text-[14px] text-slate-500">
-              Semua yang kamu punya dan yang masih harus dibayar, di satu tempat.
-            </p>
+            <h1 className="fsh-26 font-extrabold tracking-tight text-slate-900 md:fsh-30">Kekayaan</h1>
+            <p className="fs-14 text-slate-500">Semua yang kamu punya dan yang masih harus dibayar, di satu tempat.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-label="Tambah"
-              className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-full bg-slate-900 text-[13px] font-bold text-white shadow-sm hover:bg-slate-800 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
+              className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-full bg-slate-900 fs-13 font-bold text-white shadow-sm hover:bg-slate-800 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
             >
               <Plus size={17} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah</span>
             </button>
@@ -183,7 +181,7 @@ export function KekayaanShell() {
                   aria-selected={active}
                   onClick={() => go(t.id)}
                   className={cn(
-                    'relative flex flex-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-[12.5px] font-semibold md:flex-none md:px-4 md:text-[13px]',
+                    'relative flex flex-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 fs-12.5 font-semibold md:flex-none md:px-4 md:fs-13',
                     active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700',
                   )}
                 >
@@ -225,13 +223,13 @@ export function KekayaanShell() {
                 <a.icon size={19} />
               </span>
               <span className="min-w-0">
-                <span className={cn('block text-[14px] font-bold', a.on ? 'text-slate-900' : 'text-slate-400')}>
+                <span className={cn('block fs-14 font-bold', a.on ? 'text-slate-900' : 'text-slate-400')}>
                   {a.label}
                 </span>
-                <span className="block text-[11px] leading-snug text-slate-400">{a.desc}</span>
+                <span className="block fs-11 leading-snug text-slate-400">{a.desc}</span>
               </span>
               {!a.on && (
-                <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700">
+                <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-1.5 py-0.5 fs-9 font-bold uppercase text-amber-700">
                   Segera
                 </span>
               )}

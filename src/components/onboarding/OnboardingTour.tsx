@@ -240,7 +240,7 @@ export const OnboardingTour = () => {
             <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               {isLast ? <PartyPopper size={20} /> : <Icon size={20} />}
             </div>
-            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+            <p className="fs-10 font-black text-indigo-500 uppercase tracking-widest">
               Keliling Aplikasi · {step + 1}/{STOPS.length}
             </p>
           </div>
@@ -254,15 +254,15 @@ export const OnboardingTour = () => {
         </div>
 
         <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">{stop.title}</h3>
-        <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-3">{stop.content}</p>
+        <p className="fs-13 font-medium text-slate-500 leading-relaxed mb-3">{stop.content}</p>
         <FeatureDemo kind={stop.demo} />
-        <p className="mt-3 mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
+        <p className="mt-3 mb-1.5 fs-10 font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
         <HowTo steps={stop.how} />
         {isLast && (
           <Link
             href="/install"
             onClick={finish}
-            className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-indigo-50 py-3 text-[13px] font-black text-indigo-700 hover:bg-indigo-100"
+            className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-indigo-50 py-3 fs-13 font-black text-indigo-700 hover:bg-indigo-100"
           >
             📱 Pasang Leosiqra & Input Cepat di HP
           </Link>
@@ -278,7 +278,7 @@ export const OnboardingTour = () => {
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={finish}
-            className="text-[12px] font-bold text-slate-400 hover:text-slate-600 transition-colors px-2 py-2"
+            className="fs-12 font-bold text-slate-400 hover:text-slate-600 transition-colors px-2 py-2"
           >
             Lewati
           </button>
@@ -294,7 +294,7 @@ export const OnboardingTour = () => {
             )}
             <button
               onClick={() => (isLast ? finish() : goTo(step + 1))}
-              className="px-5 h-11 rounded-xl text-[13px] font-black text-white flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-600/20"
+              className="px-5 h-11 rounded-xl fs-13 font-black text-white flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-600/20"
             >
               {isLast ? 'Selesai' : 'Lanjut'}
               {!isLast && <ChevronRight size={16} />}

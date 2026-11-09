@@ -63,7 +63,7 @@ export function InvestShell() {
         <Link
           href="/membership/dashboard"
           aria-label="Kembali ke Ringkasan"
-          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800"
+          className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 fs-13 font-semibold text-white shadow-sm hover:bg-slate-800"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5">
             <ArrowLeft size={16} />
@@ -79,10 +79,8 @@ export function InvestShell() {
             transition={{ duration: 0.18 }}
             className="min-w-0 text-center"
           >
-            <h1 className="truncate text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[24px]">
-              {current.title}
-            </h1>
-            {tab === 'investasiku' && <p className="text-[12px] text-slate-500">Portofolio, simulasi & harga pasar</p>}
+            <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24">{current.title}</h1>
+            {tab === 'investasiku' && <p className="fs-12 text-slate-500">Portofolio, simulasi & harga pasar</p>}
           </motion.div>
         </AnimatePresence>
         <LeoGuide topic="investasi" />
@@ -120,7 +118,7 @@ export function InvestShell() {
                 aria-label={t.label}
                 transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 className={cn(
-                  'relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold',
+                  'relative flex h-12 items-center justify-center gap-2 rounded-full fs-13 font-bold',
                   active ? 'px-4' : 'w-12 hover:bg-white/10',
                 )}
               >

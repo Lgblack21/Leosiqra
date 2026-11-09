@@ -217,7 +217,7 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
           >
             {busy ? 'Menyimpan...' : kind === 'Deposito' ? 'Tempatkan Deposito' : `Catat Pembelian`}
           </button>
-          <p className="mt-2 text-center text-[11px] text-slate-400">
+          <p className="mt-2 text-center fs-11 text-slate-400">
             Saldo {account?.name ?? 'rekening'} berkurang {formatMoney(total, currency)}.
           </p>
         </div>
@@ -302,7 +302,7 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
                 <NumberField value={price} onChange={setPrice} placeholder="9000" ariaLabel="Harga per lembar" />
               </Field>
             </div>
-            <p className="text-[11px] text-slate-400 px-1">Di bursa Indonesia 1 lot = 100 lembar.</p>
+            <p className="fs-11 text-slate-400 px-1">Di bursa Indonesia 1 lot = 100 lembar.</p>
           </>
         )}
 
@@ -334,13 +334,11 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
               </Field>
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tenor</p>
+              <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tenor</p>
               <Chips options={TENORS} value={tenor} onChange={setTenor} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">
-                Saat jatuh tempo
-              </p>
+              <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Saat jatuh tempo</p>
               <Chips options={MATURITY} value={maturity} onChange={setMaturity} />
             </div>
             {n(principal) > 0 && (

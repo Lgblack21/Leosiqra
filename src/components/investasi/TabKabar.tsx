@@ -92,7 +92,7 @@ export function KabarList({
     );
   if (kabar.items.length === 0)
     return (
-      <p className="py-4 text-center text-[13px] text-slate-500">
+      <p className="py-4 text-center fs-13 text-slate-500">
         {kabar.error ? 'Kabar belum bisa dimuat. Coba lagi nanti.' : 'Belum ada kabar minggu ini.'}
       </p>
     );
@@ -109,8 +109,8 @@ export function KabarList({
                   <t.icon size={16} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-900">{k.title}</span>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="line-clamp-2 fs-13 font-semibold leading-snug text-slate-900">{k.title}</span>
+                  <span className="fs-11 text-slate-400">
                     {t.label} · {k.source} · {fmtDate(k.date)}
                   </span>
                 </span>
@@ -197,15 +197,15 @@ export function TabKabar({
         </div>
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-300">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 fs-11 font-bold uppercase tracking-[0.14em] text-emerald-300">
               <Radar size={13} /> Radar Leo ·{' '}
               {fmtDate(new Date().toISOString(), { weekday: 'long', day: 'numeric', month: 'short' })}
             </p>
-            <h2 className="mt-3 text-[26px] font-extrabold leading-tight tracking-tight md:text-[34px]">
+            <h2 className="mt-3 fsh-26 font-extrabold leading-tight tracking-tight md:fsh-34">
               Kabar yang nyentuh dompetmu
             </h2>
             {kabar.items && kabar.scanned ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
+              <div className="mt-3 flex flex-wrap items-center gap-2 fs-13">
                 <span className="rounded-full bg-white/10 px-3 py-1 tabular-nums">{kabar.scanned} berita dipindai</span>
                 <span className="text-white/40">→</span>
                 <span className="rounded-full bg-white/10 px-3 py-1 tabular-nums">
@@ -217,7 +217,7 @@ export function TabKabar({
                 </span>
               </div>
             ) : (
-              <p className="mt-2 max-w-md text-[13px] text-white/70">
+              <p className="mt-2 max-w-md fs-13 text-white/70">
                 Leo memilah berita minggu ini — hiburan, promosi & berita kembar dibuang.
               </p>
             )}
@@ -235,9 +235,9 @@ export function TabKabar({
               transition={{ delay: 0.1 + i * 0.05 }}
               className="w-[148px] shrink-0 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 backdrop-blur md:w-auto"
             >
-              <p className="text-[11px] text-white/55">{c.label}</p>
-              <p className="text-[18px] font-extrabold tracking-tight tabular-nums">{c.value}</p>
-              <p className="truncate text-[11px] text-white/40">{c.sub}</p>
+              <p className="fs-11 text-white/55">{c.label}</p>
+              <p className="fs-18 font-extrabold tracking-tight tabular-nums">{c.value}</p>
+              <p className="truncate fs-11 text-white/40">{c.sub}</p>
             </motion.div>
           ))}
         </div>
@@ -252,10 +252,10 @@ export function TabKabar({
       ) : all.length === 0 ? (
         <div className="rounded-[24px] bg-white p-8 text-center ring-1 ring-slate-100">
           <Newspaper className="mx-auto text-slate-300" />
-          <p className="mt-2 text-[15px] font-semibold text-slate-900">
+          <p className="mt-2 fs-15 font-semibold text-slate-900">
             {kabar.error ? 'Kabar belum bisa dimuat' : 'Belum ada kabar penting minggu ini'}
           </p>
-          <p className="mt-1 text-[13px] text-slate-500">Coba buka lagi nanti.</p>
+          <p className="mt-1 fs-13 text-slate-500">Coba buka lagi nanti.</p>
         </div>
       ) : (
         <>
@@ -276,7 +276,7 @@ export function TabKabar({
                     aria-selected={active}
                     onClick={() => setFilter(t)}
                     className={cn(
-                      'relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors',
+                      'relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 fs-13 font-semibold transition-colors',
                       active ? 'text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
                     )}
                   >
@@ -292,7 +292,7 @@ export function TabKabar({
                       {meta?.label ?? 'Semua'}
                       <span
                         className={cn(
-                          'rounded-full px-1.5 text-[11px] tabular-nums',
+                          'rounded-full px-1.5 fs-11 tabular-nums',
                           active ? 'bg-white/20' : 'bg-slate-100 text-slate-500',
                         )}
                       >
@@ -331,7 +331,7 @@ export function TabKabar({
           </AnimatePresence>
         </>
       )}
-      <p className="text-center text-[12px] text-slate-400">
+      <p className="text-center fs-12 text-slate-400">
         Judul & cuplikan disalin apa adanya dari sumber berita. Angka BI-Rate, LPS & SBN dari lembaga resmi.
       </p>
     </div>
@@ -350,26 +350,19 @@ function Story({ k, lead, forYou, go }: { k: KabarItem; lead?: boolean; forYou: 
     >
       <div className="flex min-w-0 flex-col">
         <div className="flex items-center justify-between gap-2">
-          <span
-            className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold', t.tone)}
-          >
+          <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 fs-12 font-semibold', t.tone)}>
             <t.icon size={13} /> {t.label}
             {lead && ' · paling penting'}
           </span>
-          <span className="flex items-center gap-2 text-[12px] text-slate-400">
+          <span className="flex items-center gap-2 fs-12 text-slate-400">
             <Relevance score={k.score} /> {fmtDate(k.date)}
           </span>
         </div>
-        <h3
-          className={cn(
-            'mt-2 font-bold leading-snug text-slate-900',
-            lead ? 'text-[20px] md:text-[24px]' : 'text-[16px]',
-          )}
-        >
+        <h3 className={cn('mt-2 font-bold leading-snug text-slate-900', lead ? 'fsh-20 md:fsh-24' : 'fs-16')}>
           {k.title}
         </h3>
         {k.summary && (
-          <p className={cn('mt-1 text-[14px] leading-relaxed text-slate-600', lead ? 'line-clamp-5' : 'line-clamp-3')}>
+          <p className={cn('mt-1 fs-14 leading-relaxed text-slate-600', lead ? 'line-clamp-5' : 'line-clamp-3')}>
             {k.summary}
           </p>
         )}
@@ -378,15 +371,15 @@ function Story({ k, lead, forYou, go }: { k: KabarItem; lead?: boolean; forYou: 
             href={k.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-500 hover:text-slate-900"
+            className="flex min-w-0 items-center gap-1.5 fs-13 text-slate-500 hover:text-slate-900"
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 fs-10 font-bold text-white">
               {k.source[0]?.toUpperCase()}
             </span>
             <span className="truncate">{k.source}</span> <ExternalLink size={13} className="shrink-0" />
           </a>
           {k.related ? (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 fs-11 font-semibold text-slate-500">
               +{k.related} berita serupa digabung
             </span>
           ) : null}
@@ -395,11 +388,11 @@ function Story({ k, lead, forYou, go }: { k: KabarItem; lead?: boolean; forYou: 
       <div className={cn('mt-3 space-y-2', lead && 'md:mt-0')}>
         <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50 p-2.5">
           <Wallet size={14} className="text-slate-400" />
-          <span className="text-[11px] font-semibold text-slate-500">Berpengaruh ke</span>
+          <span className="fs-11 font-semibold text-slate-500">Berpengaruh ke</span>
           {(AFFECTS[k.topic] ?? AFFECTS.ekonomi).map((a) => (
             <span
               key={a}
-              className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200"
+              className="rounded-full bg-white px-2 py-0.5 fs-11 font-semibold text-slate-700 ring-1 ring-slate-200"
             >
               {a}
             </span>
@@ -409,12 +402,12 @@ function Story({ k, lead, forYou, go }: { k: KabarItem; lead?: boolean; forYou: 
           <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-50 p-2.5">
             <LeoMascot mood="happy" size={40} />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700/70">Buat kamu</p>
-              <p className="text-[13px] font-semibold text-slate-800">{forYou}</p>
+              <p className="fs-10 font-bold uppercase tracking-wide text-emerald-700/70">Buat kamu</p>
+              <p className="fs-13 font-semibold text-slate-800">{forYou}</p>
               <button
                 type="button"
                 onClick={() => go('sbn')}
-                className="mt-1 text-[12px] font-bold text-emerald-700 hover:underline"
+                className="mt-1 fs-12 font-bold text-emerald-700 hover:underline"
               >
                 Bandingkan di SBN →
               </button>
@@ -425,7 +418,7 @@ function Story({ k, lead, forYou, go }: { k: KabarItem; lead?: boolean; forYou: 
           <button
             type="button"
             onClick={() => go('belajar')}
-            className="w-full rounded-2xl bg-rose-50 px-3 py-2 text-left text-[12px] font-bold text-rose-700 hover:bg-rose-100"
+            className="w-full rounded-2xl bg-rose-50 px-3 py-2 text-left fs-12 font-bold text-rose-700 hover:bg-rose-100"
           >
             Cara cek legalitas sebelum transfer →
           </button>

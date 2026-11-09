@@ -113,7 +113,7 @@ export default function WalletPage() {
       ) : (
         grouped.map((group) => (
           <div key={group.key}>
-            <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 px-1">
+            <h2 className="fs-10 font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 px-1">
               {group.label}
             </h2>
             <StaggerList className="space-y-2">
@@ -125,7 +125,7 @@ export default function WalletPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.name}</p>
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                      <p className="fs-11 font-medium text-slate-400 dark:text-slate-500">
                         {acc.type} &middot; {acc.currency}
                       </p>
                     </div>

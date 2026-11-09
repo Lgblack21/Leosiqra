@@ -139,7 +139,7 @@ export function ProfileEditView({
             type="button"
             onClick={() => setCfg((c) => ({ ...c, mode: 'leo' }))}
             className={cn(
-              'rounded-full px-5 py-2 text-[14px] font-semibold',
+              'rounded-full px-5 py-2 fs-14 font-semibold',
               leo ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
             )}
           >
@@ -149,7 +149,7 @@ export function ProfileEditView({
             type="button"
             onClick={() => (photo ? setCfg((c) => ({ ...c, mode: 'photo' })) : fileRef.current?.click())}
             className={cn(
-              'rounded-full px-5 py-2 text-[14px] font-semibold',
+              'rounded-full px-5 py-2 fs-14 font-semibold',
               !leo ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
             )}
           >
@@ -168,7 +168,7 @@ export function ProfileEditView({
       {leo ? (
         <>
           <section>
-            <p className="px-1 pb-2.5 text-[15px] text-slate-500">Bulu</p>
+            <p className="px-1 pb-2.5 fs-15 text-slate-500">Bulu</p>
             <div className="flex flex-wrap gap-3">
               {Object.entries(AVATAR_FURS).map(([key, f]) => (
                 <button
@@ -186,7 +186,7 @@ export function ProfileEditView({
             </div>
           </section>
           <section>
-            <p className="px-1 pb-2.5 text-[15px] text-slate-500">Aksesori</p>
+            <p className="px-1 pb-2.5 fs-15 text-slate-500">Aksesori</p>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {AVATAR_ACCS.map((a) => (
                 <button
@@ -194,7 +194,7 @@ export function ProfileEditView({
                   type="button"
                   onClick={() => setCfg((c) => ({ ...c, acc: a.key }))}
                   className={cn(
-                    'flex flex-col items-center gap-2 rounded-[20px] bg-slate-50 px-2 py-3 text-[13px] ring-1 transition-colors',
+                    'flex flex-col items-center gap-2 rounded-[20px] bg-slate-50 px-2 py-3 fs-13 ring-1 transition-colors',
                     cfg.acc === a.key
                       ? 'font-semibold text-slate-900 ring-2 ring-slate-900'
                       : 'text-slate-500 ring-transparent hover:bg-slate-100',
@@ -207,7 +207,7 @@ export function ProfileEditView({
             </div>
           </section>
           <section>
-            <p className="px-1 pb-2.5 text-[15px] text-slate-500">Latar</p>
+            <p className="px-1 pb-2.5 fs-15 text-slate-500">Latar</p>
             <div className="flex flex-wrap gap-3">
               {Object.entries(AVATAR_BGS).map(([key, color]) => (
                 <button
@@ -235,14 +235,14 @@ export function ProfileEditView({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-medium text-slate-900">{photo ? 'Foto profilmu' : 'Belum ada foto'}</p>
-            <p className="text-[13px] text-slate-500">JPG/PNG, otomatis dikecilkan.</p>
+            <p className="fs-15 font-medium text-slate-900">{photo ? 'Foto profilmu' : 'Belum ada foto'}</p>
+            <p className="fs-13 text-slate-500">JPG/PNG, otomatis dikecilkan.</p>
           </div>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 fs-14 font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60"
           >
             {uploading ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}{' '}
             {photo ? 'Ganti' : 'Unggah'}
@@ -252,17 +252,17 @@ export function ProfileEditView({
 
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
         <label className="block">
-          <span className="px-1 text-[14px] text-slate-500">Nama</span>
+          <span className="px-1 fs-14 text-slate-500">Nama</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={60}
             placeholder="Nama kamu"
-            className="mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="mt-1.5 w-full rounded-2xl bg-white px-4 py-3 fs-16 ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
           />
         </label>
         <label className="block">
-          <span className="px-1 text-[14px] text-slate-500">Username</span>
+          <span className="px-1 fs-14 text-slate-500">Username</span>
           <span
             className={cn(
               'mt-1.5 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 focus-within:ring-2',
@@ -283,12 +283,12 @@ export function ProfileEditView({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full bg-transparent py-3 text-[16px] outline-none"
+              className="w-full bg-transparent py-3 fs-16 outline-none"
             />
           </span>
           <span
             className={cn(
-              'mt-1.5 block px-1 text-[13px]',
+              'mt-1.5 block px-1 fs-13',
               usernameError || !usernameValid ? 'text-rose-600' : 'text-slate-500',
             )}
           >
@@ -305,7 +305,7 @@ export function ProfileEditView({
           type="button"
           onClick={save}
           disabled={!dirty || saving || uploading}
-          className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:bg-slate-100 disabled:text-slate-400"
+          className="w-full rounded-full bg-slate-900 py-3.5 fs-16 font-bold text-white disabled:bg-slate-100 disabled:text-slate-400"
         >
           {saving ? 'Menyimpan…' : 'Simpan'}
         </button>

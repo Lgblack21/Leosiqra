@@ -245,12 +245,12 @@ export function ItemEditor({
     }
   };
 
-  const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+  const label = 'mb-1.5 block fs-12 font-semibold text-slate-500 dark:text-slate-400';
   const input =
-    'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+    'w-full rounded-2xl bg-slate-100 px-4 py-3 fs-15 font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
   const chip = (on: boolean) =>
     cn(
-      'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors',
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
       on
         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
@@ -262,7 +262,7 @@ export function ItemEditor({
       {error && (
         <div
           role="alert"
-          className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
         >
           {error}
         </div>
@@ -299,21 +299,21 @@ export function ItemEditor({
             placeholder="Nama barang, mis. iPhone 15"
             aria-label="Nama barang"
             maxLength={80}
-            className={cn(input, 'text-[16px] font-bold')}
+            className={cn(input, 'fs-16 font-bold')}
             autoFocus={!item}
           />
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => camRef.current?.click()}
-              className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+              className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
             >
               <Camera size={15} /> Kamera
             </button>
             <button
               type="button"
               onClick={() => galRef.current?.click()}
-              className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+              className="flex items-center justify-center gap-1.5 rounded-2xl bg-slate-100 py-2.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
             >
               <ImagePlus size={15} /> Galeri
             </button>
@@ -343,7 +343,7 @@ export function ItemEditor({
       </div>
 
       {(scanning || aiNote || photo) && (
-        <div className="flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2.5 text-[12px] font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
+        <div className="flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2.5 fs-12 font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
           {scanning ? (
             <Loader2 size={15} className="shrink-0 animate-spin" />
           ) : (
@@ -358,7 +358,7 @@ export function ItemEditor({
             <button
               type="button"
               onClick={() => void runScan(photo.base64)}
-              className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-violet-700"
+              className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 fs-11 font-bold text-white hover:bg-violet-700"
             >
               {aiNote ? 'Ulangi' : 'Isi otomatis'}
             </button>
@@ -390,7 +390,7 @@ export function ItemEditor({
                 </span>
                 <span
                   className={cn(
-                    'text-[11px] font-bold leading-tight',
+                    'fs-11 font-bold leading-tight',
                     on ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400',
                   )}
                 >
@@ -400,7 +400,7 @@ export function ItemEditor({
             );
           })}
         </div>
-        <p className="mt-1.5 px-1 text-[11px] text-slate-400">{CATEGORY_META[category].hint}</p>
+        <p className="mt-1.5 px-1 fs-11 text-slate-400">{CATEGORY_META[category].hint}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -480,23 +480,21 @@ export function ItemEditor({
             value={warranty}
             onChange={(e) => setWarranty(e.target.value)}
             aria-label="Tanggal garansi habis"
-            className={cn(input, 'w-auto flex-1 py-2 text-[13px]')}
+            className={cn(input, 'w-auto flex-1 py-2 fs-13')}
           />
         </div>
-        {warranty && (
-          <p className="mt-1.5 px-1 text-[11px] text-slate-400">Diingatkan 30 & 7 hari sebelum garansi habis.</p>
-        )}
+        {warranty && <p className="mt-1.5 px-1 fs-11 text-slate-400">Diingatkan 30 & 7 hari sebelum garansi habis.</p>}
       </div>
 
       <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-800/60">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Nilai sekarang</span>
-          <span className="text-[20px] font-extrabold tabular-nums text-slate-900 dark:text-white">
+          <span className="fs-12 font-semibold text-slate-500 dark:text-slate-400">Nilai sekarang</span>
+          <span className="fsh-20 font-extrabold tabular-nums text-slate-900 dark:text-white">
             {formatIDR(estimate)}
           </span>
         </div>
         {mode === 'auto' && priceNum > 0 && (
-          <p className="text-right text-[11px] text-slate-400">
+          <p className="text-right fs-11 text-slate-400">
             {dropPct > 0 ? `≈ turun ${dropPct}% dari harga beli` : 'Masih seharga belinya'}
           </p>
         )}
@@ -511,7 +509,7 @@ export function ItemEditor({
               }}
               aria-pressed={mode === v.id}
               className={cn(
-                'rounded-xl px-2 py-2 text-[12px] font-bold',
+                'rounded-xl px-2 py-2 fs-12 font-bold',
                 mode === v.id
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                   : 'text-slate-500 dark:text-slate-400',
@@ -521,7 +519,7 @@ export function ItemEditor({
             </button>
           ))}
         </div>
-        <p className="mt-1.5 px-1 text-[11px] text-slate-400">
+        <p className="mt-1.5 px-1 fs-11 text-slate-400">
           {VALUE_MODES.find((v) => v.id === mode)?.desc}. Ikut dihitung di Kekayaan bersih.
         </p>
         {mode === 'manual' && (
@@ -561,7 +559,7 @@ export function ItemEditor({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full bg-slate-100 px-5 py-3.5 text-[14px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            className="rounded-full bg-slate-100 px-5 py-3.5 fs-14 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Batal
           </button>
@@ -570,7 +568,7 @@ export function ItemEditor({
           type="button"
           onClick={save}
           disabled={busy || !name.trim()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-15 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-indigo-600"
         >
           {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}{' '}
           {item ? 'Simpan perubahan' : 'Simpan barang'}
@@ -584,7 +582,7 @@ export function ItemEditor({
               <>
                 <Link
                   href={`${pathname.startsWith('/app') ? '/app/ladang' : '/membership/ladang'}?item=${item.id}`}
-                  className="flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-emerald-700"
+                  className="flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-emerald-700"
                 >
                   <Sprout size={13} /> Jual di Ladangku
                 </Link>
@@ -605,7 +603,7 @@ export function ItemEditor({
               onClick={remove}
               disabled={busy}
               className={cn(
-                'ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold',
+                'ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 fs-12 font-bold',
                 confirmDelete
                   ? 'bg-rose-500 text-white'
                   : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',

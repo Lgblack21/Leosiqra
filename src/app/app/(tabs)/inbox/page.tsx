@@ -44,7 +44,7 @@ function AppInbox() {
         </Link>
         <h1 className="text-xl font-black text-slate-900 dark:text-white">Kotak Masuk</h1>
       </FadeIn>
-      <p className="text-[13px] text-slate-500 dark:text-slate-400">
+      <p className="fs-13 text-slate-500 dark:text-slate-400">
         Usulan transaksi dari email & Slack. Tidak ada yang tercatat sebelum kamu menekan Simpan.
       </p>
 
@@ -54,8 +54,8 @@ function AppInbox() {
         (items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-[22px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-6 py-10 text-center">
             <Inbox size={28} className="text-slate-300 dark:text-slate-600" />
-            <p className="text-[15px] font-semibold text-slate-700 dark:text-slate-200">Kotak Masuk kosong</p>
-            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="fs-15 font-semibold text-slate-700 dark:text-slate-200">Kotak Masuk kosong</p>
+            <p className="fs-13 text-slate-500 dark:text-slate-400">
               Usulan baru muncul di sini setelah email atau pesan Slack dibaca.
             </p>
           </div>

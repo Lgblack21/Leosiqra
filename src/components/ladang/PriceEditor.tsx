@@ -95,7 +95,7 @@ export function PriceEditor({
 
   const seg = (on: boolean) =>
     cn(
-      'flex-1 rounded-full py-2 text-[12px] font-bold transition-colors',
+      'flex-1 rounded-full py-2 fs-12 font-bold transition-colors',
       on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400',
     );
   return (
@@ -134,8 +134,8 @@ export function PriceEditor({
                     : 'bg-white ring-slate-100 hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-800',
                 )}
               >
-                <span className="block text-[13px] font-extrabold text-slate-900 dark:text-white">{t}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{d}</span>
+                <span className="block fs-13 font-extrabold text-slate-900 dark:text-white">{t}</span>
+                <span className="mt-0.5 block fs-11 leading-snug text-slate-500 dark:text-slate-400">{d}</span>
               </button>
             ))}
           </div>
@@ -158,12 +158,12 @@ export function PriceEditor({
               onToast={onToast}
             />
           )}
-          <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="px-1 fs-11 text-slate-500 dark:text-slate-400">
             Mau berjalan sendiri tiap hari? Jadwalkan perintah ini di fitur tugas terjadwal aplikasi AI-mu (kalau
             tersedia), atau pakai sambungan website otomatis di Kelola › Sambungkan website.
           </p>
           {shop.catalogSyncedAt && (
-            <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+            <p className="rounded-2xl bg-sky-50 px-3 py-2 fs-12 font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
               Terakhir diperbarui otomatis: {ago(shop.catalogSyncedAt)}
             </p>
           )}
@@ -171,14 +171,14 @@ export function PriceEditor({
       ) : (
         <>
           {shop.catalogSyncedAt && (
-            <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+            <p className="rounded-2xl bg-sky-50 px-3 py-2 fs-12 font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
               🌐 Harga diperbarui otomatis dari website: {ago(shop.catalogSyncedAt)}
             </p>
           )}
           {error && (
             <p
               role="alert"
-              className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+              className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
             >
               {error}
             </p>
@@ -190,7 +190,7 @@ export function PriceEditor({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cari produk…"
               aria-label="Cari produk"
-              className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 outline-none dark:text-white"
+              className="min-w-0 flex-1 bg-transparent fs-13 font-semibold text-slate-900 outline-none dark:text-white"
             />
             {query && (
               <button
@@ -212,26 +212,26 @@ export function PriceEditor({
                   onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, '').slice(0, 5))}
                   inputMode="decimal"
                   aria-label="Persen"
-                  className="w-full min-w-0 bg-transparent text-[13px] font-bold tabular-nums outline-none dark:text-white"
+                  className="w-full min-w-0 bg-transparent fs-13 font-bold tabular-nums outline-none dark:text-white"
                 />
                 %
               </span>
               <button
                 type="button"
                 onClick={() => bulk(1)}
-                className="flex flex-1 items-center justify-center gap-1 rounded-full bg-rose-50 py-2 text-[12px] font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+                className="flex flex-1 items-center justify-center gap-1 rounded-full bg-rose-50 py-2 fs-12 font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
               >
                 <Plus size={13} /> Naikkan
               </button>
               <button
                 type="button"
                 onClick={() => bulk(-1)}
-                className="flex flex-1 items-center justify-center gap-1 rounded-full bg-emerald-50 py-2 text-[12px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                className="flex flex-1 items-center justify-center gap-1 rounded-full bg-emerald-50 py-2 fs-12 font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
               >
                 <Minus size={13} /> Turunkan
               </button>
             </div>
-            <label className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <label className="mt-2 flex items-center gap-2 fs-11 font-semibold text-slate-500 dark:text-slate-400">
               <input
                 type="checkbox"
                 checked={round}
@@ -248,7 +248,7 @@ export function PriceEditor({
               return (
                 <div key={group || 'lain'}>
                   {(groups.length > 1 || group) && (
-                    <p className="mb-1 px-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    <p className="mb-1 px-1 fs-11 font-bold uppercase tracking-wide text-slate-400">
                       {group || 'Lainnya'}
                     </p>
                   )}
@@ -258,13 +258,13 @@ export function PriceEditor({
                       return (
                         <li key={i} className="flex items-center gap-2 rounded-xl px-1 py-1">
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[13px] font-bold text-slate-800 dark:text-slate-100">
+                            <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
                               {p.name}
                             </span>
                             {diff !== 0 && (
                               <span
                                 className={cn(
-                                  'block text-[11px] font-semibold',
+                                  'block fs-11 font-semibold',
                                   diff > 0 ? 'text-rose-600' : 'text-emerald-600',
                                 )}
                               >
@@ -280,7 +280,7 @@ export function PriceEditor({
                               diff !== 0 && 'ring-amber-400',
                             )}
                           >
-                            <span className="text-[11px] text-slate-400">Rp</span>
+                            <span className="fs-11 text-slate-400">Rp</span>
                             <input
                               value={prices[i] ? prices[i].toLocaleString('id-ID') : ''}
                               onChange={(e) => {
@@ -289,7 +289,7 @@ export function PriceEditor({
                               }}
                               inputMode="numeric"
                               aria-label={`Harga ${p.name}`}
-                              className="w-full min-w-0 bg-transparent text-right text-[13px] font-bold tabular-nums outline-none"
+                              className="w-full min-w-0 bg-transparent text-right fs-13 font-bold tabular-nums outline-none"
                             />
                           </span>
                         </li>
@@ -304,7 +304,7 @@ export function PriceEditor({
             type="button"
             onClick={save}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600"
           >
             {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan
             {changed ? ` ${changed} perubahan` : ''}

@@ -84,7 +84,7 @@ export default function InstallPage() {
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pasang aplikasi</p>
+          <p className="fs-11 font-bold uppercase tracking-[0.3em] text-indigo-600">Pasang aplikasi</p>
           <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">
             Leosiqra di <span className="lp-shine italic">layar utama</span> HP-mu
           </h1>
@@ -155,7 +155,7 @@ export default function InstallPage() {
                       <Image src={info.icon} alt={`Ikon ${info.name}`} fill sizes="64px" className="object-cover" />
                     </span>
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-600">{meta.tagline}</p>
+                      <p className="fs-11 font-bold uppercase tracking-[0.2em] text-indigo-600">{meta.tagline}</p>
                       <h2 className="font-serif text-3xl leading-tight">{info.name}</h2>
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export default function InstallPage() {
                       className="object-cover"
                     />
                   </span>
-                  <span className="text-[10px] font-bold text-white drop-shadow">{APP_INFO[app].name}</span>
+                  <span className="fs-10 font-bold text-white drop-shadow">{APP_INFO[app].name}</span>
                 </motion.div>
               ))}
             </div>

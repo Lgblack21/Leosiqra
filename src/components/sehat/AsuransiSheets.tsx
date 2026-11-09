@@ -22,16 +22,16 @@ import { newRequestId } from '@/lib/meals';
 import { cn, formatIDR } from '@/lib/utils';
 
 export const inputCls =
-  'w-full rounded-xl bg-slate-100 px-3 py-2.5 text-[14px] font-semibold text-slate-800 outline-none placeholder:font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-teal-300 dark:bg-slate-800 dark:text-slate-100';
+  'w-full rounded-xl bg-slate-100 px-3 py-2.5 fs-14 font-semibold text-slate-800 outline-none placeholder:font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-teal-300 dark:bg-slate-800 dark:text-slate-100';
 const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0;
 const fmt = (n: number) => (n ? new Intl.NumberFormat('id-ID').format(n) : '');
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-[11.5px] text-slate-400">{hint}</span> : null}
+      {hint ? <span className="mt-1 block fs-11.5 text-slate-400">{hint}</span> : null}
     </label>
   );
 }
@@ -47,7 +47,7 @@ export function MoneyInput({
 }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 fs-14 font-bold text-slate-400">
         Rp
       </span>
       <input
@@ -138,7 +138,7 @@ export function SheetShell({
         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
       >
         <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4">
-          <h2 className="text-[17px] font-black text-slate-900 dark:text-white">{title}</h2>
+          <h2 className="fs-17 font-black text-slate-900 dark:text-white">{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -176,7 +176,7 @@ export function PrimaryButton({
       type="button"
       disabled={busy || disabled}
       onClick={onClick}
-      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-[15px] font-bold text-white shadow-lg shadow-emerald-500/25 disabled:opacity-60"
+      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 fs-15 font-bold text-white shadow-lg shadow-emerald-500/25 disabled:opacity-60"
     >
       {busy ? <Loader2 size={18} className="animate-spin" /> : null}
       {children}
@@ -194,7 +194,7 @@ function AccountSelect({
   onChange: (v: string) => void;
 }) {
   if (!accounts.length)
-    return <p className="text-[12.5px] text-slate-500">Tambah rekening Rupiah dulu supaya bisa dicatat.</p>;
+    return <p className="fs-12.5 text-slate-500">Tambah rekening Rupiah dulu supaya bisa dicatat.</p>;
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Rekening" className={inputCls}>
       {accounts.map((a) => (
@@ -207,7 +207,7 @@ function AccountSelect({
 }
 function Err({ msg }: { msg: string }) {
   return msg ? (
-    <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 text-[13px] font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+    <p className="rounded-2xl bg-rose-50 px-3.5 py-2.5 fs-13 font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
       {msg}
     </p>
   ) : null;
@@ -229,7 +229,7 @@ function Chips<T extends string>({
           type="button"
           onClick={() => onChange(i.id)}
           className={cn(
-            'rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors',
+            'rounded-full px-3 py-1.5 fs-13 font-bold transition-colors',
             value === i.id
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
               : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
@@ -297,7 +297,7 @@ export function CostSheet({
         <MoneyInput value={amount} onChange={setAmount} />
       </Field>
       <div>
-        <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Untuk</span>
+        <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">Untuk</span>
         <Chips items={COST_SUBS.map((s) => ({ id: s, label: s }))} value={sub} onChange={setSub} />
       </div>
       <Field label="Keterangan (opsional)">
@@ -317,7 +317,7 @@ export function CostSheet({
           <AccountSelect accounts={accounts} value={acc} onChange={setAcc} />
         </Field>
       </div>
-      <p className="text-[12px] text-slate-500 dark:text-slate-400">
+      <p className="fs-12 text-slate-500 dark:text-slate-400">
         Masuk ke Transaksi sebagai pengeluaran kategori Kesehatan, dan saldo rekeningnya ikut berkurang.
       </p>
     </SheetShell>
@@ -356,8 +356,8 @@ function InsurerPicker({
           >
             <InsurerTile insurer={i} name={i.name} size={40} />
             <span className="min-w-0">
-              <span className="block truncate text-[14px] font-bold text-slate-800 dark:text-slate-100">{i.name}</span>
-              <span className="block text-[12px] text-slate-500">{i.tags.join(' · ')}</span>
+              <span className="block truncate fs-14 font-bold text-slate-800 dark:text-slate-100">{i.name}</span>
+              <span className="block fs-12 text-slate-500">{i.tags.join(' · ')}</span>
             </span>
           </button>
         ))}
@@ -365,7 +365,7 @@ function InsurerPicker({
           <button
             type="button"
             onClick={() => onPick(null, q.trim())}
-            className="w-full rounded-2xl bg-slate-50 p-3 text-left text-[13px] font-bold text-teal-700 dark:bg-slate-800 dark:text-teal-300"
+            className="w-full rounded-2xl bg-slate-50 p-3 text-left fs-13 font-bold text-teal-700 dark:bg-slate-800 dark:text-teal-300"
           >
             + Pakai “{q.trim()}”
           </button>
@@ -477,7 +477,7 @@ export function PolicySheet({
                 type="button"
                 disabled={busy}
                 onClick={() => void remove()}
-                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 text-[14px] font-bold text-white"
+                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 fs-14 font-bold text-white"
               >
                 <Trash2 size={16} /> Yakin hapus
               </button>
@@ -512,7 +512,7 @@ export function PolicySheet({
         </button>
       </Field>
       <div>
-        <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Jenis</span>
+        <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">Jenis</span>
         <Chips items={POLICY_KINDS} value={kind} onChange={setKind} />
       </div>
       <Field label="Produk">
@@ -567,7 +567,7 @@ export function PolicySheet({
         className="rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/50"
         open={Boolean(policy?.call_center || policy?.claim_note)}
       >
-        <summary className="cursor-pointer text-[13px] font-bold text-slate-700 dark:text-slate-200">
+        <summary className="cursor-pointer fs-13 font-bold text-slate-700 dark:text-slate-200">
           Catatan pribadi (agen, cara klaim, RS langganan)
         </summary>
         <div className="mt-3 space-y-3">
@@ -671,7 +671,7 @@ export function PaySheet({
       <Field label="Dari rekening">
         <AccountSelect accounts={accounts} value={acc} onChange={setAcc} />
       </Field>
-      <p className="text-[12px] text-slate-500 dark:text-slate-400">
+      <p className="fs-12 text-slate-500 dark:text-slate-400">
         Dicatat sebagai pengeluaran Kesehatan › Asuransi, saldo berkurang, dan jatuh temponya maju satu periode.
       </p>
     </SheetShell>
@@ -763,7 +763,7 @@ export function ClaimSheet({
                 type="button"
                 disabled={busy}
                 onClick={() => void remove()}
-                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 text-[14px] font-bold text-white"
+                className="flex h-12 items-center gap-1.5 rounded-2xl bg-rose-600 px-4 fs-14 font-bold text-white"
               >
                 <Trash2 size={16} /> Yakin hapus
               </button>
@@ -829,13 +829,13 @@ export function ClaimSheet({
         </>
       ) : (
         <>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400">
+          <p className="fs-13 text-slate-500 dark:text-slate-400">
             Diklaim {formatIDR(claim.amount)}
             {claim.insurer_name ? ` · ${claim.insurer_name}` : ''} · diajukan{' '}
             {claim.submitted_at.split('-').reverse().join('/')}
           </p>
           <div>
-            <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">Status</span>
+            <span className="mb-1 block fs-11 font-bold uppercase tracking-widest text-slate-400">Status</span>
             <Chips
               items={[...CLAIM_STEPS, { id: 'ditolak' as ClaimStatus, label: 'Ditolak' }]}
               value={status}
@@ -853,7 +853,7 @@ export function ClaimSheet({
             </Field>
           ) : null}
           {claim.recorded ? (
-            <p className="rounded-2xl bg-emerald-50 px-3.5 py-2.5 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <p className="rounded-2xl bg-emerald-50 px-3.5 py-2.5 fs-13 font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
               Uang klaim sudah tercatat sebagai pemasukan.
             </p>
           ) : null}
@@ -903,10 +903,7 @@ export function InsurerSheet({
         <InsurerTile insurer={insurer} name={insurer.name} size={56} />
         <div className="flex flex-wrap gap-1.5">
           {insurer.tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-full bg-white/20 px-2.5 py-0.5 text-[12px] font-bold text-white backdrop-blur"
-            >
+            <span key={t} className="rounded-full bg-white/20 px-2.5 py-0.5 fs-12 font-bold text-white backdrop-blur">
               {t}
             </span>
           ))}
@@ -922,13 +919,13 @@ export function InsurerSheet({
             className="flex flex-col items-center gap-1 rounded-2xl bg-slate-50 px-2 py-3 text-center ring-1 ring-slate-100 hover:bg-slate-100 dark:bg-slate-800/60 dark:ring-slate-800"
           >
             <a.icon size={19} className="text-teal-600 dark:text-teal-300" />
-            <span className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{a.label}</span>
-            <span className="w-full truncate text-[11px] text-slate-500">{a.sub}</span>
+            <span className="fs-13 font-bold text-slate-800 dark:text-slate-100">{a.label}</span>
+            <span className="w-full truncate fs-11 text-slate-500">{a.sub}</span>
           </a>
         ))}
       </div>
       {insurer.phoneNote || insurer.hours || insurer.whatsappNote ? (
-        <div className="space-y-1 text-[13px] text-slate-600 dark:text-slate-300">
+        <div className="space-y-1 fs-13 text-slate-600 dark:text-slate-300">
           {insurer.phoneNote ? <p>📞 {insurer.phoneNote}</p> : null}
           {insurer.hours ? <p>🕘 {insurer.hours}</p> : null}
           {insurer.whatsappNote ? <p>💬 WhatsApp: {insurer.whatsappNote}</p> : null}
@@ -944,7 +941,7 @@ export function InsurerSheet({
               className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/60"
             >
               <ExternalLink size={18} className="text-teal-600" />
-              <span className="flex-1 text-[14px] font-bold text-slate-800 dark:text-slate-100">
+              <span className="flex-1 fs-14 font-bold text-slate-800 dark:text-slate-100">
                 Cara & formulir klaim (resmi)
               </span>
             </a>
@@ -957,7 +954,7 @@ export function InsurerSheet({
               className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/60"
             >
               <Building2 size={18} className="text-teal-600" />
-              <span className="flex-1 text-[14px] font-bold text-slate-800 dark:text-slate-100">
+              <span className="flex-1 fs-14 font-bold text-slate-800 dark:text-slate-100">
                 Daftar rumah sakit rekanan
               </span>
             </a>
@@ -966,13 +963,13 @@ export function InsurerSheet({
       ) : null}
       {insurer.facts?.length ? (
         <div>
-          <h3 className="mb-2 text-[14px] font-black text-slate-900 dark:text-white">Angka yang dipublikasikan</h3>
+          <h3 className="mb-2 fs-14 font-black text-slate-900 dark:text-white">Angka yang dipublikasikan</h3>
           <div className="grid grid-cols-2 gap-2">
             {insurer.facts.map((f) => (
               <div key={f.label} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div className="text-[11.5px] text-slate-500">{f.label}</div>
-                <div className="text-[17px] font-black text-slate-900 dark:text-white">{f.value}</div>
-                {f.note ? <div className="mt-0.5 text-[11px] text-slate-400">{f.note}</div> : null}
+                <div className="fs-11.5 text-slate-500">{f.label}</div>
+                <div className="fs-17 font-black text-slate-900 dark:text-white">{f.value}</div>
+                {f.note ? <div className="mt-0.5 fs-11 text-slate-400">{f.note}</div> : null}
               </div>
             ))}
           </div>
@@ -981,14 +978,14 @@ export function InsurerSheet({
       {insurer.notes?.length ? (
         <ul className="space-y-2">
           {insurer.notes.map((n) => (
-            <li key={n} className="relative pl-4 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+            <li key={n} className="relative pl-4 fs-13 leading-relaxed text-slate-600 dark:text-slate-300">
               <span className="absolute left-0 top-[0.6em] h-1.5 w-1.5 rounded-full bg-teal-500" aria-hidden />
               {n}
             </li>
           ))}
         </ul>
       ) : null}
-      <p className="text-[11.5px] leading-relaxed text-slate-400">
+      <p className="fs-11.5 leading-relaxed text-slate-400">
         {insurer.readNote
           ? insurer.readNote
           : insurer.verified

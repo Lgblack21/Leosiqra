@@ -170,7 +170,7 @@ export default function LoginPage() {
         footer="Dilindungi password terenkripsi, cookie aman, dan verifikasi 2 langkah bila diaktifkan."
       >
         <motion.div animate={card}>
-          <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Masuk</h2>
+          <h2 className="fsh-26 font-extrabold tracking-tight text-slate-900">Masuk</h2>
           <p className="mt-1 text-sm text-slate-500">
             Belum punya akun?{' '}
             <Link href={withNext('/auth/register', next)} className="font-bold text-indigo-600 hover:underline">
@@ -182,7 +182,7 @@ export default function LoginPage() {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600"
+              className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600"
               role="alert"
             >
               <AlertCircle size={16} className="mt-px shrink-0" /> {error}
@@ -191,7 +191,7 @@ export default function LoginPage() {
 
           <a
             href={googleHref}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-[15px] font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 fs-15 font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
           >
             <GoogleIcon size={19} />
             Lanjutkan dengan Google
@@ -227,12 +227,9 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 flex items-center justify-between pl-1 text-[13px] font-semibold text-slate-600">
+              <span className="mb-1.5 flex items-center justify-between pl-1 fs-13 font-semibold text-slate-600">
                 Password
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700"
-                >
+                <Link href="/auth/forgot-password" className="fs-13 font-bold text-indigo-600 hover:text-indigo-700">
                   Lupa password?
                 </Link>
               </span>
@@ -272,7 +269,7 @@ export default function LoginPage() {
                 whileTap={{ scale: 0.98 }}
                 className={
                   done
-                    ? 'flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-[15px] font-bold text-white shadow-lg shadow-emerald-500/30'
+                    ? 'flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 fs-15 font-bold text-white shadow-lg shadow-emerald-500/30'
                     : authPrimaryBtn
                 }
               >
