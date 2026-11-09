@@ -7,7 +7,8 @@ import type { Map as MlMap } from 'maplibre-gl';
 import { PlaceMap, type MapLib, type MapMarker } from '@/components/peta/PlaceMap';
 import { JejakPanel, useReplay } from '@/components/peta/JejakView';
 import { LocationSettings } from '@/components/peta/LocationSettings';
-import { RekapPanel, ThreeDToggle, useAreaLayer, useAreas } from '@/components/peta/RekapView';
+import { RekapPanel, useAreaLayer, useAreas } from '@/components/peta/RekapView';
+import { MapControls, usePlaceLayers } from '@/components/peta/MapControls';
 import { LocationPicker, type PickedPlace } from '@/components/peta/LocationPicker';
 import { dayTrips, groupAreas, groupPlaces, idrOf, placeService, type Place, type PlacedTx } from '@/lib/places';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
@@ -43,6 +44,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const [err, setErr] = useState('');
   const [tab, setTab] = useState<'peta' | 'jejak' | 'rekap'>('peta');
   const [threeD, setThreeD] = useState(false);
+  const [heat, setHeat] = useState(false);
   const [areaSel, setAreaSel] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
@@ -89,11 +91,16 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [allPlaces]);
   const term = q.trim().toLowerCase();
-  const places = allPlaces.filter(
-    (p) =>
-      (!cat || p.category === cat) &&
-      (!term || `${p.name} ${p.address ?? ''} ${p.category}`.toLowerCase().includes(term)),
+  const places = useMemo(
+    () =>
+      allPlaces.filter(
+        (p) =>
+          (!cat || p.category === cat) &&
+          (!term || `${p.name} ${p.address ?? ''} ${p.category}`.toLowerCase().includes(term)),
+      ),
+    [allPlaces, cat, term],
   );
+  usePlaceLayers(mapInst, tab === 'peta' ? places : null, { threeD, heat });
   const total = places.reduce((s, p) => s + p.total, 0);
   const visits = places.reduce((s, p) => s + p.visits, 0);
   const langganan = [...places]
@@ -461,9 +468,17 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           tab === 'jejak' ? `j:${trip?.day ?? ''}` : tab === 'rekap' ? `r:${days}:${rekap.groups.length}` : 'peta'
         }
         onMapReady={onMapReady}
+        controls={false}
       />
       {replay.hud}
-      {tab === 'rekap' && rekap.groups.length ? <ThreeDToggle on={threeD} onChange={setThreeD} /> : null}
+      <MapControls
+        map={mapInst}
+        threeD={threeD}
+        onThreeD={setThreeD}
+        heat={tab === 'peta' ? heat : null}
+        onHeat={setHeat}
+        focusZoomOnThreeD={tab === 'rekap' ? (rekap.groups[0] ?? null) : tab === 'peta' ? (places[0] ?? null) : null}
+      />
     </div>
   );
   return (

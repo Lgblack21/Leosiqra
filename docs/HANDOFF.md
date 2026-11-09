@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.16.0 live, run #186)
+Terakhir diperbarui: 2026-11-09 (3.16.1 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,13 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.16.1 — BELUM DEPLOY. Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
+  semua tab + pitch, lapisan kepadatan `tempat-heat` (heatmap), Lokasiku (GPS sekali, marker `.peta-me`, tidak
+  disimpan), kompas saat miring), `usePlaceLayers` (tiang `tempat-3d` per tempat, memudar zoom 13→14,5 karena
+  `building-3d` gaya liberty muncul zoom ≥14). PlaceMap: `attributionControl:false` + kredit kecil sendiri
+  (OpenFreeMap © OpenMapTiles © OpenStreetMap — WAJIB tetap ada, lisensi), prop `controls` (+/− hanya di picker).
+  ThreeDToggle Rekap dihapus (pakai MapControls). Dites Playwright 1440 + Pixel 7, 0 error JS.
 
 - **2026-11-09 — 3.16.0 Peta Belanja Rilis 3 (Rekap + 3D) LIVE (run #186, commit 2ca4aed; termasuk 3.15.1). Tanpa SQL.**
   - Worker: `POST /api/member/places/areas {points}` → `{areas, pending}`; reverse Nominatim zoom 14, kunci koordinat

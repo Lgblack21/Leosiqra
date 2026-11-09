@@ -35,8 +35,11 @@ export function PlaceMap({
   focus,
   fitKey,
   onMapReady,
+  controls = true,
   className,
 }: {
+  /** Tombol +/− bawaan. Peta Belanja memakai tumpukan tombol sendiri (MapControls). */
+  controls?: boolean;
   markers: MapMarker[];
   onMarker?: (key: string) => void;
   picker?: { onMove: (lat: number, lng: number) => void };
@@ -54,6 +57,7 @@ export function PlaceMap({
   const [failed, setFailed] = useState(false);
   const fitted = useRef<string | null>(null);
   const readyCb = useRef(onMapReady);
+  const controlsRef = useRef(controls);
   useEffect(() => {
     readyCb.current = onMapReady;
   });
@@ -83,9 +87,10 @@ export function PlaceMap({
         style: style ?? FALLBACK,
         center: JAKARTA,
         zoom: 10,
-        attributionControl: { compact: true },
+        // Kredit peta ditulis sendiri (kecil di pojok) — tetap wajib menurut lisensi OSM/OpenMapTiles.
+        attributionControl: false,
       });
-      m.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
+      if (controlsRef.current) m.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
       m.on('load', () => {
         if (!alive || !m) return;
         setReady(true);
@@ -167,6 +172,19 @@ export function PlaceMap({
           📍
         </div>
       ) : null}
+      <p className="pointer-events-auto absolute bottom-1 right-2 z-10 text-[9.5px] leading-tight text-slate-500/80 [text-shadow:0_0_3px_#fff] dark:text-slate-400/80">
+        <a href="https://openfreemap.org" target="_blank" rel="noreferrer">
+          OpenFreeMap
+        </a>{' '}
+        ©{' '}
+        <a href="https://www.openmaptiles.org/" target="_blank" rel="noreferrer">
+          OpenMapTiles
+        </a>{' '}
+        ©{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+          OpenStreetMap
+        </a>
+      </p>
       {failed ? (
         <p className="absolute bottom-2 left-2 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-500 shadow">
           Peta jalan sedang tidak bisa dimuat — pin tetap di posisinya.

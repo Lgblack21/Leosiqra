@@ -77,6 +77,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.15.0 | 9 Nov 2026 | Jejak & lokasi otomatis |
 | 3.15.1 | 9 Nov 2026 | AI Scan pakai tanggal & rekening dari struk |
 | 3.16.0 | 9 Nov 2026 | Rekap per wilayah & peta 3D |
+| 3.16.1 | 9 Nov 2026 | Tombol peta baru & 3D di tab Peta |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -90,6 +91,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.16.1 — 2026-11-09 — Tombol peta baru & 3D di tab Peta
+
+- **3D kini ada di semua tab Peta Belanja**, bukan hanya Rekap. Di tab Peta, tiap tempat jadi tiang setinggi
+  nominal belanjanya. Saat diperbesar sampai level jalan, gedung-gedung tampil 3D.
+- **Tombol peta baru** di pojok kanan:
+  - **3D** untuk memiringkan peta.
+  - **Lapisan kepadatan** untuk melihat area yang paling sering dan paling besar belanjanya.
+  - **Lokasiku** untuk melihat posisimu sekarang. Hanya ditampilkan, tidak disimpan.
+  - **Kompas** untuk kembali menghadap utara.
+- Peta lebih bersih: tombol +/− dan bar keterangan besar diganti satu baris kredit kecil di pojok.
 
 ## 3.16.0 — 2026-11-09 — Rekap per wilayah & peta 3D
 

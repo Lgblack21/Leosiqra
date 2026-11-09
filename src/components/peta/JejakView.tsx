@@ -213,7 +213,7 @@ export function useReplay(trip: DayTrip | null, map: { m: MlMap; ml: MapLib } | 
   const current = live.kind === 'run' || live.kind === 'pause' ? live.step : null;
   const hud =
     !trip || live.kind === 'idle' ? null : (
-      <div className="pointer-events-auto absolute inset-x-3 top-3 z-20 mx-auto max-w-md overflow-hidden rounded-[22px] bg-slate-950/85 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur-md">
+      <div className="pointer-events-auto absolute left-3 right-[68px] top-3 z-20 max-w-md overflow-hidden rounded-[22px] bg-slate-950/85 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur-md">
         <div className="flex items-center gap-3 px-3.5 py-3">
           {live.kind === 'done' ? (
             <>

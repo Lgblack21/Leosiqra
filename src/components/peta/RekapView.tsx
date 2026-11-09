@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { GeoJSONSource, Map as MlMap } from 'maplibre-gl';
 import type { MapLib } from '@/components/peta/PlaceMap';
 import { fmtKm } from '@/components/peta/JejakView';
@@ -83,7 +83,6 @@ const HEX = (lat: number, lng: number, m: number) => {
 
 // Lapisan peta Rekap: lingkaran intensitas (2D) atau tiang 3D setinggi nominal belanja per wilayah.
 export function useAreaLayer(map: { m: MlMap; ml: MapLib } | null, groups: AreaGroup[] | null, threeD: boolean) {
-  const prev3d = useRef(false);
   useEffect(() => {
     if (!map) return;
     const { m } = map;
@@ -154,25 +153,6 @@ export function useAreaLayer(map: { m: MlMap; ml: MapLib } | null, groups: AreaG
     } catch {
       /* gaya peta belum siap */
     }
-    if (groups && threeD !== prev3d.current) {
-      const top = groups[0];
-      m.easeTo(
-        threeD
-          ? {
-              pitch: 58,
-              bearing: -18,
-              duration: 900,
-              // Dekatkan ke wilayah teratas supaya tiangnya terbaca (di HP peta awalnya satu kota penuh).
-              ...(top && m.getZoom() < 11.6 ? { center: [top.lng, top.lat] as [number, number], zoom: 11.6 } : {}),
-            }
-          : { pitch: 0, bearing: 0, duration: 700 },
-      );
-      prev3d.current = threeD;
-    }
-    if (!groups && prev3d.current) {
-      m.easeTo({ pitch: 0, bearing: 0, duration: 500 });
-      prev3d.current = false;
-    }
   }, [map, groups, threeD]);
 
   // Lepas lapisan saat komponen hilang.
@@ -188,29 +168,6 @@ export function useAreaLayer(map: { m: MlMap; ml: MapLib } | null, groups: AreaG
       }
     },
     [map],
-  );
-}
-
-export function ThreeDToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="pointer-events-auto absolute left-3 top-3 z-10 flex rounded-full bg-white/95 p-1 shadow-lg ring-1 ring-slate-200 dark:bg-slate-900/95 dark:ring-slate-700">
-      {[
-        [false, '2D'],
-        [true, '3D'],
-      ].map(([v, l]) => (
-        <button
-          key={String(l)}
-          type="button"
-          onClick={() => onChange(Boolean(v))}
-          className={cn(
-            'h-8 w-11 rounded-full text-[12.5px] font-black',
-            on === v ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500',
-          )}
-        >
-          {l}
-        </button>
-      ))}
-    </div>
   );
 }
 
