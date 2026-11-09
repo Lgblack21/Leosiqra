@@ -25,7 +25,10 @@ Baca `CLAUDE.md` di root repo, `promo/TEAMS.md` (otak tim + Tower), dan
 ### 0. Siapkan
 ```bash
 npm ci --no-audit --no-fund
+# Clone routine sering shallow → git log --since / merge-base / merge-tree diam-diam kosong/gagal.
+if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then git fetch --unshallow origin; fi
 git fetch origin main && git checkout main && git pull --ff-only
+git rev-parse --is-shallow-repository   # wajib "false" sebelum audit & antrean merge
 ```
 Baca `otak/developer` dan koleksi `dev` di Tower (ArtifactData, lihat
 TEAMS.md): status `disetujui` = tugas fitur dari Bos; temuan lama yang masih

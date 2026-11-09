@@ -28,6 +28,9 @@ ke Tower lewat `ArtifactData`) lebih dulu.
 
 ### 1. Ukur (nyata)
 ```bash
+# Clone routine sering shallow → git log --since / merge-base / merge-tree diam-diam kosong/gagal.
+if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then git fetch --unshallow origin; fi
+git rev-parse --is-shallow-repository   # wajib "false" sebelum memakai riwayat git
 export PROMO_API_URL=https://membersite-leosiqra.leowendry.workers.dev
 node promo/tower.mjs metrik        # member, video, posting, views
 node promo/growth.mjs all          # audit 12+ halaman, kata kunci, PageSpeed (kalau API mau)
