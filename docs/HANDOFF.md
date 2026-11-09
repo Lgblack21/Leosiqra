@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.21.0 siap deploy — termasuk 3.20.1; live: 3.20.0 run #189)
+Terakhir diperbarui: 2026-11-09 (3.21.0 di-deploy dari main db04713 — termasuk 3.20.1; cek /membership/versi)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.21.0 Teduh baru (+3.20.1 pelafalan Alkitab) — DEPLOY dipicu (Bos "gas"; main = db04713). Tanpa SQL.**
+  - Kalau session mati sebelum dicek: lihat run terakhir deploy-main.yml & /membership/versi harus 3.21.0.
+  - Masih menunggu Bos: pilihan suara natural Alkitab (A TTS neural Azure/Google cache R2 · B FCBH TSI · C tunggu LAI);
+    konfirmasi API Indonesia di produksi (tanggal merah, jadwal sholat Kota Bogor, Alkitab Yohanes 3); kunci QF
+    opsional (audio sudah jalan via CDN quran.com); kirim surat LAI & SABDA.
+  - Ide lanjutan: Teduh Hindu/Buddha/Konghucu saat sumber berizin ada; TSI sebagai versi alternatif.
   - Teduh layar penuh (`/membership/teduh` masuk FULLSCREEN_PATHS) + dock; bahan UI bersama di
     `components/teduh/ui.tsx` (TeduhShell, LangitHero langit per waktu, AngkaNaik, CincinProgres, JedaSejenak,
     LembarTab, NomorAyat, CatatanPribadi). Animasi framer-motion, hormati `useReducedMotion`. JANGAN pasang
