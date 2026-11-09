@@ -89,6 +89,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.22.1 | 9 Nov 2026 | Halaman daftar tidak lagi langsung lompat ke langkah terakhir |
 | 3.23.0 | 9 Nov 2026 | Halaman daftar & masuk baru |
 | 3.23.1 | 9 Nov 2026 | Langit Teduh mengikuti jam |
+| 3.23.2 | 9 Nov 2026 | Halaman Mulai senada tampilan baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -102,6 +103,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.2 — 2026-11-09 — Halaman Mulai senada tampilan baru
+
+- Halaman Mulai (pengenalan sebelum daftar) kini memakai panel biru-emas yang sama dengan halaman Daftar & Masuk,
+  dengan mockup HP yang bersinar dan logo baru di pojok kiri.
 
 ## 3.23.1 — 2026-11-09 — Langit Teduh mengikuti jam
 

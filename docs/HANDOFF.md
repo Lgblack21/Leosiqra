@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.1 Langit Teduh + 3.23.2 /mulai senada — BELUM DEPLOY, menunggu "gas" (satu rangkaian dengan
+  3.22.1 & 3.23.0). Tanpa SQL.** Rantai branch: mulai-lanjut → daftar-baru → teduh-langit → `claude/mulai-baru-20261109`
+  (paling ujung, berisi semuanya).
+  - Teduh `LangitHero` (ui.tsx): warna langit diinterpolasi dari tabel `LANGIT` (jam → 3 warna), matahari terbit 5.85 /
+    terbenam 17.95 di busur kanan, tenggelam di balik 3 lapis bukit SVG, bulan sabit SVG (mask), bintang & bintang jatuh
+    sesuai `gelap`, update tiap menit. `faseLangit` dihapus. Sapaan `sapaWaktu()` dipakai TeduhApp & AlkitabHome
+    (sore sampai 18.15, lalu malam). Dites jam 05:30–21:00 dengan clock Playwright (Islam; Kristen tidak dites karena
+    Alkitab butuh API).
+  - /mulai: aside = gradien navy + `Aurora` (diekspor dari AuthLayout), sticky di laptop; frame HP bercahaya emas;
+    logo tile putih + wordmark Leo/siqra; progress bar sampai emas. Dites web 1440 & HP 390, 0 error JS.
+
 - **2026-11-09 — 3.23.0 Halaman daftar & masuk baru — BELUM DEPLOY, menunggu "gas" (bersama 3.22.1). Tanpa SQL.**
   Branch `claude/daftar-baru-20261109` (di atas `claude/mulai-lanjut-20261109`).
   - Hanya tampilan `components/auth/AuthLayout.tsx` (dipakai /auth/register & /auth/login): laptop = 2 kolom, panel

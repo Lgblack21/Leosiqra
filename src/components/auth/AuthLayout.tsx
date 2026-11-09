@@ -16,7 +16,7 @@ const PERKS = [
   { icon: ShieldCheck, title: 'Datamu aman', sub: 'Login terlindungi, verifikasi 2 langkah tersedia.' },
 ];
 
-function Aurora() {
+export function Aurora() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="auth-aurora absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-indigo-600/40 blur-[90px]" />

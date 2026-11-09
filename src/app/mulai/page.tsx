@@ -24,7 +24,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
-import { BalanceChip, BrandBackdrop, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
+import { BalanceChip, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
+import { Aurora } from '@/components/auth/AuthLayout';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { resolveNext, sanitizeNext, withNext } from '@/lib/authNext';
 import { parseQuickText } from '@/lib/quick/parse';
@@ -173,8 +174,12 @@ export default function MulaiPage() {
         <header className="flex h-12 items-center justify-between">
           {step === 0 ? (
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/images/Logo-new.png" alt="Leosiqra" width={30} height={30} />
-              <span className="fs-19 font-extrabold tracking-tight">Leosiqra</span>
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_6px_16px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/70">
+                <Image src="/images/Logo-new.png" alt="Leosiqra" width={36} height={36} className="scale-125" />
+              </span>
+              <span className="fs-19 font-extrabold tracking-tight">
+                Leo<span className="text-amber-500">siqra</span>
+              </span>
             </Link>
           ) : (
             <button
@@ -191,7 +196,7 @@ export default function MulaiPage() {
         {step > 0 && step < LAST && (
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-indigo-50">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-violet-500 to-amber-400 transition-all duration-500"
               style={{ width: `${(step / 4) * 100}%` }}
             />
           </div>
@@ -547,8 +552,8 @@ export default function MulaiPage() {
         </div>
       </section>
 
-      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] lg:m-4 lg:min-h-0">
-        <BrandBackdrop />
+      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] lg:sticky lg:top-4 lg:m-4 lg:h-[calc(100vh-2rem)] lg:min-h-0">
+        <Aurora />
         {step === 0 ? (
           <WelcomeScene />
         ) : (
@@ -589,7 +594,7 @@ function WelcomeScene() {
 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_80px_-30px_rgba(30,27,75,0.6)] sm:w-[300px]">
+    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_90px_-30px_rgba(0,0,0,0.8),0_0_80px_-20px_rgba(251,191,36,0.35)] ring-1 ring-white/15 sm:w-[300px]">
       <div className="relative h-[560px] overflow-hidden rounded-[38px] bg-[#f6f7fb] sm:h-[600px]">
         <div className="absolute left-1/2 top-2 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-slate-900" />
         {children}
