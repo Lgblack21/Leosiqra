@@ -36,6 +36,11 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   OPENROUTER_API_KEY?: string;
+  /** Quran Foundation Content API (audio murattal Teduh). Rahasia — set lewat `wrangler secret put`. */
+  QF_CLIENT_ID?: string;
+  QF_CLIENT_SECRET?: string;
+  /** "prelive" = server uji Quran Foundation; kosong = produksi. */
+  QF_ENV?: string;
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
@@ -13277,6 +13282,97 @@ async function handleMemberPlaces(request: Request, env: Env, url: URL) {
   }
 }
 
+// ── Teduh: audio murattal (Quran Foundation Content API) ───────────────────
+// Teks Al-Qur'an & terjemahan disajikan statis (public/teduh/quran, lihat scripts/teduh/build-quran.mjs).
+// Audio: daftar URL per ayat dari Quran Foundation (OAuth client credentials, kunci HANYA di Worker).
+// Ketentuan QF: konten hanya ditampilkan di aplikasi, cache maks 1 minggu (di sini 1 hari), tidak dijual ulang.
+// GET /api/member/teduh/reciters          → { items: [{ id, name, style }] }
+// GET /api/member/teduh/audio?surah=&reciter= → { reciter, items: [{ key, url }] }
+let qfToken: { value: string; exp: number } | null = null;
+const qfHosts = (env: Env) =>
+  env.QF_ENV === "prelive"
+    ? { auth: "https://prelive-oauth2.quran.foundation", api: "https://apis-prelive.quran.foundation" }
+    : { auth: "https://oauth2.quran.foundation", api: "https://apis.quran.foundation" };
+async function qfAccessToken(env: Env, fresh = false) {
+  if (!fresh && qfToken && qfToken.exp > Date.now() + 60_000) return qfToken.value;
+  const res = await fetch(`${qfHosts(env).auth}/oauth2/token`, {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${btoa(`${env.QF_CLIENT_ID}:${env.QF_CLIENT_SECRET}`)}`,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials&scope=content",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`QF token ${res.status}`);
+  const body = (await res.json()) as { access_token?: string; expires_in?: number };
+  if (!body.access_token) throw new Error("QF token kosong");
+  qfToken = { value: body.access_token, exp: Date.now() + (body.expires_in ?? 3600) * 1000 };
+  return qfToken.value;
+}
+async function qfGet(env: Env, path: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const token = await qfAccessToken(env, attempt > 0);
+    const res = await fetch(`${qfHosts(env).api}/content/api/v4${path}`, {
+      headers: { "x-auth-token": token, "x-client-id": env.QF_CLIENT_ID!, accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status === 401 && attempt === 0) continue; // token kedaluwarsa → minta ulang sekali
+    if (!res.ok) throw new Error(`QF ${path} ${res.status}`);
+    return (await res.json()) as Record<string, unknown>;
+  }
+  throw new Error("QF tidak bisa diakses");
+}
+const qfAudioUrl = (u: string) =>
+  /^https?:\/\//.test(u) ? u : u.startsWith("//") ? `https:${u}` : `https://verses.quran.foundation/${u.replace(/^\/+/, "")}`;
+async function handleMemberTeduh(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (request.method !== "GET") return json({ error: "Not found" }, { status: 404 });
+  if (!env.QF_CLIENT_ID || !env.QF_CLIENT_SECRET) {
+    return json({ error: "Audio murattal sedang disiapkan.", code: "audio_unconfigured" }, { status: 503 });
+  }
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cached = async (key: string, make: () => Promise<unknown>) => {
+    const req = new Request(`https://cache.leosiqra.internal/teduh/${key}`);
+    const hit = await cache.match(req);
+    if (hit) return new Response(hit.body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    const data = await make();
+    await cache.put(req, new Response(JSON.stringify(data), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400" } }));
+    return json(data);
+  };
+  try {
+    if (url.pathname === "/api/member/teduh/reciters") {
+      return await cached("reciters", async () => {
+        const body = await qfGet(env, "/resources/recitations?language=id");
+        const list = (body.recitations as { id: number; reciter_name?: string; style?: string | null; translated_name?: { name?: string } }[]) ?? [];
+        return { items: list.map((r) => ({ id: r.id, name: r.translated_name?.name || r.reciter_name || `Qari ${r.id}`, style: r.style ?? null })) };
+      });
+    }
+    if (url.pathname === "/api/member/teduh/audio") {
+      const surah = Number(url.searchParams.get("surah"));
+      const reciter = Number(url.searchParams.get("reciter") || 7);
+      if (!Number.isInteger(surah) || surah < 1 || surah > 114 || !Number.isInteger(reciter) || reciter < 1 || reciter > 100000) {
+        return json({ error: "Permintaan tidak valid." }, { status: 400 });
+      }
+      return await cached(`audio-${reciter}-${surah}`, async () => {
+        const items: { key: string; url: string }[] = [];
+        for (let page = 1; page <= 10; page++) {
+          const body = await qfGet(env, `/recitations/${reciter}/by_chapter/${surah}?per_page=50&page=${page}`);
+          for (const f of (body.audio_files as { verse_key: string; url: string }[]) ?? []) items.push({ key: f.verse_key, url: qfAudioUrl(f.url) });
+          const next = (body.pagination as { next_page?: number | null } | undefined)?.next_page;
+          if (!next) break;
+        }
+        return { reciter, items };
+      });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    console.error("Teduh audio:", e instanceof Error ? e.message : e);
+    return json({ error: "Audio sedang tidak tersedia. Coba lagi nanti.", code: "audio_unavailable" }, { status: 502 });
+  }
+}
+
 // ── Kanvas (migrasi 0041) ───────────────────────────────────────────────────
 // Papan rencana keuangan (template: nikah, darurat, rumah, ...). Angka "dari catatanmu" dihitung
 // di klien dari data user sendiri; yang disimpan hanya isian user (state_json, disaring ketat).
@@ -16663,7 +16759,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta", "teduh"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -21367,6 +21463,10 @@ const worker = {
 
       if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
         return await handleMemberFocus(request, env, url.pathname);
+      }
+
+      if (url.pathname.startsWith("/api/member/teduh/")) {
+        return await handleMemberTeduh(request, env, url);
       }
 
       if (url.pathname === "/api/member/places" || url.pathname.startsWith("/api/member/places/")) {

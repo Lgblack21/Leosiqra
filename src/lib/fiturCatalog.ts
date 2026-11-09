@@ -11,6 +11,7 @@ import {
   HeartPulse,
   ListOrdered,
   Map as MapIcon,
+  Leaf,
   MessageSquareHeart,
   NotebookPen,
   PieChart,
@@ -252,6 +253,19 @@ export const FITUR: Fitur[] = [
     feature: 'peta',
     since: '3.14.0',
     keywords: 'peta lokasi tempat belanja map gps',
+  },
+  {
+    key: 'teduh',
+    label: 'Teduh',
+    sub: "Kitab suci & ketenangan — mulai dari Al-Qur'an",
+    href: '/membership/teduh',
+    appHref: '/app/teduh',
+    icon: Leaf,
+    goal: 'hidup',
+    feature: 'teduh',
+    since: '3.18.0',
+    keywords:
+      'quran al-quran ayat surah murattal agama islam kristen katolik hindu buddha konghucu alkitab sedekah zakat ibadah',
   },
   {
     key: 'cek',

@@ -79,6 +79,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.16.0 | 9 Nov 2026 | Rekap per wilayah & peta 3D |
 | 3.16.1 | 9 Nov 2026 | Tombol peta baru & 3D di tab Peta |
 | 3.17.0 | 9 Nov 2026 | Ukuran teks & tampilan lebih ramping |
+| 3.18.0 | 9 Nov 2026 | Teduh |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -92,6 +93,25 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.18.0 — 2026-11-09 — Teduh
+
+- **Baru: Teduh** — ruang tenang untuk hatimu, di tengah urusan uang. Dirancang untuk semua agama yang diakui di
+  Indonesia; tahap pertama: **Al-Qur'an lengkap**.
+  - Pilih agamamu saat pertama membuka. Pilihan ini **hanya disimpan di perangkatmu**, tidak dikirim ke server.
+    Kristen, Katolik, Hindu, Buddha, dan Konghucu segera hadir setelah teks kitab dari sumber resmi berizin siap.
+  - **114 surah** dengan teks Arab, terjemahan Kemenag RI, dan catatan kakinya. Cari nama surah atau langsung ke
+    ayat (mis. 2:255).
+  - **Ayat hari ini**, **hari berturut-turut membaca**, dan **progres menuju khatam**. Ayat tercatat dibaca saat
+    kamu membacanya.
+  - **Lanjutkan bacaan** dari ayat terakhir, **tandai ayat** favorit, dan **bagikan** ayat.
+  - **Ayat untuk urusan uangmu**: rezeki, syukur, sedekah & zakat, utang, tidak boros, tenang saat sulit, harta &
+    amanah — lengkap dengan tombol ke fitur keuangan terkait.
+  - **Sedekah bulan ini** dihitung dari catatan keuanganmu, dan bisa langsung dicatat.
+  - **Murattal per ayat**: ayat yang dibacakan tersorot dan layar ikut bergulir, ulangi ayat 3×/5× untuk hafalan,
+    atur kecepatan, dan pilih qari. Audio akan aktif setelah layanannya tersambung.
+  - Sumber: teks Al-Qur'an dari Tanzil Project (tanzil.net) dan terjemahan Kementerian Agama RI dari QuranEnc.com,
+    tanpa diubah.
 
 ## 3.17.0 — 2026-11-09 — Ukuran teks & tampilan lebih ramping
 

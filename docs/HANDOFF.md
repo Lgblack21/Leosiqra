@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.17.0 live, run #188)
+Terakhir diperbarui: 2026-11-09 (3.18.0 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,24 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.18.0 Teduh (Rilis 1: Al-Qur'an) — BELUM DEPLOY. Tanpa SQL.**
+  - Data statis: `scripts/teduh/build-quran.mjs` dari `data/teduh/quran/` (Tanzil Uthmani 1.1 **XML** — basmalah di
+    atribut `bismillah`, bukan bagian ayat 1; metadata Tanzil; QuranEnc `indonesian_affairs` v1.0.1-csv.1) →
+    `public/teduh/quran/surah.json` + `s1..s114.json` (di-commit). Lisensi: Tanzil CC BY 3.0 verbatim + catatan hak
+    cipta ikut di tiap file; QuranEnc: tanpa diubah, cantumkan versi, perbarui bila ada versi baru, tanpa iklan
+    tak pantas. Kredit tampil di bawah halaman.
+  - Pilihan agama & progres/tanda ayat **hanya localStorage** (`leosiqra-teduh-agama`, `leosiqra-teduh-quran`) —
+    agama = data pribadi spesifik (UU PDP). Sinkron ke akun belum ada (butuh persetujuan eksplisit kalau dibuat).
+  - Audio: Worker `GET /api/member/teduh/reciters|audio?surah=&reciter=` → Quran Foundation Content API (OAuth client
+    credentials, cache 1 hari). **Butuh secret `QF_CLIENT_ID` + `QF_CLIENT_SECRET`** (opsional `QF_ENV=prelive`);
+    tanpa itu 503 "Audio murattal sedang disiapkan." **Belum dites dengan API asli** (dites dengan audio tiruan:
+    sorot, lanjut otomatis, ulangi, qari). URL relatif di-resolve ke `https://verses.quran.foundation/` — cek saat
+    kunci ada.
+  - UI: `components/teduh/{TeduhApp,QuranReader}.tsx`, `lib/teduh/{agama,quran}.ts`, rute `/membership/teduh`,
+    `/app/teduh`, fitur id `teduh` (features + PREF_FEATURES + fiturCatalog + /app/more). Font Amiri Quran (OFL).
+  - Agama lain: belum ada teks — Kristen/Katolik (LAI, TB berhak cipta; TL 1954 perlu cek), Hindu, Buddha, Konghucu
+    menunggu sumber berizin. Jangan pakai teks/terjemahan tanpa izin; jangan buat isi kitab dengan AI.
 
 - **2026-11-09 — 3.17.0 Ukuran teks LIVE (run #188, commit e390955). Tanpa SQL. Diff besar (±257 file) tapi mekanis.**
   - Codemod: SEMUA `text-[Npx]` (4.244×) → `fs-N` (N<20) / `fsh-N` (N≥20). Utility di globals.css:
