@@ -103,6 +103,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.27.3 | 10 Nov 2026 | Animasi gerakan |
 | 3.27.4 | 10 Nov 2026 | Video promo juga ke Instagram & Facebook |
 | 3.28.0 | 10 Nov 2026 | Usahaku: pembukuan usaha terpisah |
+| 3.28.1 | 11 Nov 2026 | Usahaku: tarik data per tanggal & bulan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -116,6 +117,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.1 — 2026-11-11 — Usahaku: tarik data per tanggal & bulan
+
+- Beranda Usahaku bisa **tarik data per tanggal & bulan**: Hari ini, Kemarin, Bulan ini, Bulan lalu, pilih bulan,
+  atau rentang tanggal sendiri (maks ±13 bulan). Omzet, laba (dengan rincian potongan & biaya), dan riwayat ikut
+  rentang yang dipilih.
 
 ## 3.28.0 — 2026-11-10 — Usahaku: pembukuan usaha terpisah
 

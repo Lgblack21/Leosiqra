@@ -87,14 +87,16 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
 
   const shop = id ? shops?.find((s) => s.id === id) : undefined;
   const bookOn = Boolean(shop?.bookOn);
+  // Rentang data Beranda (tarik per tanggal/bulan). null = bulan ini (bawaan server).
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const loadBook = useCallback(async () => {
     if (!id || !bookOn) return setBook(null);
     try {
-      setBook(await shopBookService.get(id));
+      setBook(await shopBookService.get(id, range ?? undefined));
     } catch (e) {
       say(e instanceof Error ? e.message : 'Gagal memuat buku usaha.');
     }
-  }, [id, bookOn, say]);
+  }, [id, bookOn, say, range]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- muat buku saat usaha dibuka
     void loadBook();
@@ -211,7 +213,14 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
       <main>
         {tab === 'beranda' &&
           (bookOn && book ? (
-            <BerandaUsaha shop={shop} book={book} variant={variant} onToast={say} onOpenKasir={() => go('kasir')} />
+            <BerandaUsaha
+              shop={shop}
+              book={book}
+              variant={variant}
+              onToast={say}
+              onOpenKasir={() => go('kasir')}
+              onRange={setRange}
+            />
           ) : bookOn ? (
             <div className="h-72 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" />
           ) : shop.bookReady ? (

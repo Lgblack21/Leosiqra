@@ -10305,10 +10305,13 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       const today = todayWIB();
       const to = isRealDateStr(q.get("to")) && q.get("to")! <= today ? q.get("to")! : today;
       const fromRaw = q.get("from");
-      const from = isRealDateStr(fromRaw) && fromRaw <= to ? fromRaw : `${to.slice(0, 8)}01`;
+      let from = isRealDateStr(fromRaw) && fromRaw <= to ? fromRaw : `${to.slice(0, 8)}01`;
+      // Maks ±13 bulan per tarikan supaya tetap ringan (sama dengan laporan).
+      const minFrom = new Date(Date.parse(`${to}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10);
+      if (from < minFrom) from = minFrom;
       const accounts = await listShopAccounts(env, ownerId, shop.id);
       const cols = "id, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, channel, channel_type, pay_method, status, settled_at, category, buyer, reseller, note, payload_json, by_name, created_at";
-      const entries = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC, created_at DESC LIMIT 400`).bind(ownerId, shop.id, from, to).all()).results ?? [];
+      const entries = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC, created_at DESC LIMIT 1000`).bind(ownerId, shop.id, from, to).all()).results ?? [];
       const pending = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND status = 'menunggu' ORDER BY date ASC, created_at ASC LIMIT 200`).bind(ownerId, shop.id).all()).results ?? [];
       // Ringkasan hari ini & bulan ini (omzet kotor, potongan marketplace, biaya).
       const sum = async (a: string, b: string) =>
@@ -10317,7 +10320,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
                   COALESCE(SUM(CASE WHEN type = 'biaya' THEN amount END), 0) AS biaya, COUNT(CASE WHEN type = 'jual' THEN 1 END) AS nota
              FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ?`
         ).bind(ownerId, shop.id, a, b).first<{ omzet: number; fee: number; biaya: number; nota: number }>()) ?? { omzet: 0, fee: 0, biaya: 0, nota: 0 };
-      return json({ ready: true, accounts, entries, pending, range: { from, to }, today: await sum(today, today), month: await sum(`${today.slice(0, 8)}01`, today) });
+      return json({ ready: true, accounts, entries, pending, range: { from, to }, today: await sum(today, today), month: await sum(`${today.slice(0, 8)}01`, today), period: await sum(from, to), truncated: entries.length >= 1000 });
     }
 
     if (action === "accounts") {

@@ -55,6 +55,10 @@ export type ShopBook = {
   pending: BookEntry[];
   today: BookSum;
   month: BookSum;
+  /** Ringkasan rentang yang ditarik (from–to). */
+  period: BookSum;
+  range: { from: string; to: string };
+  truncated: boolean;
 };
 
 type Row = Record<string, unknown>;
@@ -120,6 +124,9 @@ export const shopBookService = {
       pending: ((r.pending as Row[]) ?? []).map(entryFromRow),
       today: sumOf(r.today),
       month: sumOf(r.month),
+      period: sumOf(r.period ?? r.month),
+      range: (r.range as { from: string; to: string }) ?? { from: '', to: '' },
+      truncated: r.truncated === true,
     };
   },
   async createAccount(shopId: string, input: { name: string; kind: string; opening: number; requestId: string }) {

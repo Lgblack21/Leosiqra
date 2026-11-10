@@ -147,19 +147,23 @@ export function BerandaUsaha({
   variant,
   onToast,
   onOpenKasir,
+  onRange,
 }: {
   shop: Shop;
   book: ShopBook;
   variant: 'web' | 'app';
   onToast: (m: string) => void;
   onOpenKasir: () => void;
+  /** Tarik data per tanggal/bulan (null = bulan ini). */
+  onRange: (r: { from: string; to: string } | null) => void;
 }) {
   const [form, setForm] = useState<Form | null>(null);
   const [materials, setMaterials] = useState<StockMaterial[]>([]);
   const kas = book.accounts.filter((a) => !a.archived);
   const totalKas = kas.reduce((a, k) => a + k.balance, 0);
   const pendingTotal = book.pending.reduce((a, e) => a + e.net, 0);
-  const labaBulan = book.month.omzet - book.month.fee - book.month.biaya;
+  const label = periodLabel(book.range);
+  const laba = book.period.omzet - book.period.fee - book.period.biaya;
   const kind = kindOf(shop.kind);
   const accName = (id: string | null) => kas.find((a) => a.id === id)?.name ?? book.accounts.find((a) => a.id === id)?.name ?? '—';
 
@@ -219,13 +223,15 @@ export function BerandaUsaha({
         <ArrowUpRight size={20} />
       </button>
 
+      <PeriodPicker range={book.range} onRange={onRange} />
+
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {stat('Omzet hari ini', formatIDR(book.today.omzet), undefined, `${book.today.nota} nota`)}
+        {stat(`Omzet ${label}`, formatIDR(book.period.omzet), undefined, `${book.period.nota} nota`)}
         {stat(
-          'Laba bulan ini',
-          formatIDR(labaBulan),
-          labaBulan < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300',
-          'omzet − potongan − biaya',
+          `Laba ${label}`,
+          formatIDR(laba),
+          laba < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300',
+          `potongan ${formatIDR(book.period.fee)} · biaya ${formatIDR(book.period.biaya)}`,
         )}
         {stat('Total kas usaha', formatIDR(totalKas))}
         {stat('Belum cair', formatIDR(pendingTotal), pendingTotal ? 'text-orange-600' : undefined, `${book.pending.length} pesanan marketplace`)}
@@ -286,7 +292,7 @@ export function BerandaUsaha({
         </section>
       )}
 
-      <Riwayat entries={book.entries} accName={accName} onRemove={remove} />
+      <Riwayat entries={book.entries} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
 
       {kind && (
         <p className="rounded-2xl bg-slate-50 px-4 py-3 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
@@ -362,21 +368,29 @@ function Riwayat({
   entries,
   accName,
   onRemove,
+  label,
+  truncated,
 }: {
   entries: BookEntry[];
   accName: (id: string | null) => string;
   onRemove: (e: BookEntry) => void;
+  label: string;
+  truncated: boolean;
 }) {
-  const list = entries.filter((e) => !(e.type === 'saldo_awal' && e.amount === 0)).slice(0, 40);
-  if (!list.length)
+  const [all, setAll] = useState(false);
+  const full = entries.filter((e) => !(e.type === 'saldo_awal' && e.amount === 0));
+  const list = all ? full : full.slice(0, 40);
+  if (!full.length)
     return (
       <p className="rounded-[26px] border-2 border-dashed border-slate-200 p-6 text-center fs-13 text-slate-400 dark:border-slate-800">
-        Belum ada catatan bulan ini. Mulai dari kasir.
+        Belum ada catatan {label}.
       </p>
     );
   return (
     <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-      <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Riwayat bulan ini</p>
+      <p className="fs-15 font-extrabold text-slate-900 dark:text-white">
+        Riwayat {label} <span className="fs-12 font-semibold text-slate-400">· {full.length} catatan</span>
+      </p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((e) => {
           const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal';
@@ -445,7 +459,130 @@ function Riwayat({
           );
         })}
       </ul>
+      {!all && full.length > list.length && (
+        <button type="button" onClick={() => setAll(true)} className="mt-2 w-full rounded-full bg-slate-100 py-2.5 fs-13 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          Tampilkan semua ({full.length})
+        </button>
+      )}
+      {truncated && (
+        <p className="mt-2 fs-11 text-slate-400">Ditampilkan 1.000 catatan terbaru — persempit rentang tanggal atau pakai Laporan untuk unduhan lengkap.</p>
+      )}
     </section>
+  );
+}
+
+// ── Pilih rentang: hari ini, kemarin, bulan ini, bulan lalu, pilih bulan, rentang tanggal ──
+const ymd = (d: Date) => toLocalDateString(d);
+const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const fmtDay = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return `${d} ${BULAN[(m || 1) - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
+};
+const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
+const presets = () => {
+  const now = new Date();
+  const today = ymd(now);
+  const yest = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const m0 = `${today.slice(0, 8)}01`;
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const pm = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+  return [
+    { id: 'hari', label: 'Hari ini', r: { from: today, to: today } },
+    { id: 'kemarin', label: 'Kemarin', r: { from: yest, to: yest } },
+    { id: 'bulan', label: 'Bulan ini', r: { from: m0, to: today } },
+    { id: 'lalu', label: 'Bulan lalu', r: { from: `${pm}-01`, to: `${pm}-${lastDay(prev.getFullYear(), prev.getMonth() + 1)}` } },
+  ];
+};
+export const periodLabel = (r: { from: string; to: string }) => {
+  if (!r.from) return 'bulan ini';
+  const p = presets().find((x) => x.r.from === r.from && x.r.to === r.to);
+  if (p) return p.label.toLowerCase();
+  const [y, m] = r.from.split('-').map(Number);
+  if (r.from.endsWith('-01') && r.to === `${r.from.slice(0, 8)}${lastDay(y, m)}`) return `${BULAN[m - 1]} ${y}`;
+  return r.from === r.to ? fmtDay(r.from) : `${fmtDay(r.from)} – ${fmtDay(r.to)}`;
+};
+function PeriodPicker({
+  range,
+  onRange,
+}: {
+  range: { from: string; to: string };
+  onRange: (r: { from: string; to: string } | null) => void;
+}) {
+  const [mode, setMode] = useState<'' | 'bulan' | 'rentang'>('');
+  const [from, setFrom] = useState(range.from);
+  const [to, setTo] = useState(range.to);
+  const today = ymd(new Date());
+  const list = presets();
+  const active = list.find((p) => p.r.from === range.from && p.r.to === range.to)?.id ?? (range.from ? 'lain' : 'bulan');
+  const chip = (on: boolean) =>
+    cn(
+      'shrink-0 rounded-full px-3.5 py-2 fs-12 font-bold',
+      on ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
+    );
+  return (
+    <div className="space-y-2">
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {list.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => {
+              setMode('');
+              onRange(p.id === 'bulan' ? null : p.r);
+            }}
+            className={chip(active === p.id && !mode)}
+          >
+            {p.label}
+          </button>
+        ))}
+        <button type="button" onClick={() => setMode(mode === 'bulan' ? '' : 'bulan')} className={chip(mode === 'bulan')}>
+          Pilih bulan
+        </button>
+        <button type="button" onClick={() => setMode(mode === 'rentang' ? '' : 'rentang')} className={chip(mode === 'rentang' || (active === 'lain' && !mode))}>
+          {active === 'lain' && !mode ? periodLabel(range) : 'Pilih tanggal'}
+        </button>
+      </div>
+      {mode === 'bulan' && (
+        <input
+          type="month"
+          max={today.slice(0, 7)}
+          defaultValue={range.from.slice(0, 7)}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (!/^\d{4}-\d{2}$/.test(v)) return;
+            const [y, m] = v.split('-').map(Number);
+            const end = `${v}-${String(lastDay(y, m)).padStart(2, '0')}`;
+            onRange({ from: `${v}-01`, to: end > today ? today : end });
+            setMode('');
+          }}
+          aria-label="Pilih bulan"
+          className={fieldCls}
+        />
+      )}
+      {mode === 'rentang' && (
+        <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+          <label className="block">
+            <span className={labelCls}>Dari</span>
+            <input type="date" value={from} max={to || today} onChange={(e) => setFrom(e.target.value)} className={fieldCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Sampai</span>
+            <input type="date" value={to} min={from} max={today} onChange={(e) => setTo(e.target.value)} className={fieldCls} />
+          </label>
+          <button
+            type="button"
+            disabled={!from || !to || from > to}
+            onClick={() => {
+              onRange({ from, to });
+              setMode('');
+            }}
+            className="h-12 rounded-full bg-emerald-600 px-4 fs-13 font-bold text-white disabled:opacity-40"
+          >
+            Tarik
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

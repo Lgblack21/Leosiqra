@@ -36,6 +36,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites lokal (wrangler dev --local, D1 dari schema-production + 0027–0033/0036/0045): saldo kas & pribadi cocok
     hitung manual (setor/ambil/pindah/cair/hapus balik), dobel ditolak, user lain 404, tanpa login 401, kasir tim &
     webhook masuk kas utama, laporan + omzet. Playwright web 1280 + Pixel 7 + iPhone 13: 0 error JS.
+  - **3.28.1 (branch, belum deploy)**: Beranda tarik data per tanggal/bulan (`GET …/book?from&to` + `period` sum,
+    maks 400 hari, 1.000 catatan). Akun tim tetap hanya `/tim` (kasir/biaya/stok usaha yang diberikan) — dicek:
+    sesi tim ke `/api/member/*` = 401.
   - **Belum**: Ringkas Ladangku masih hanya menghitung penjualan lama (transaksi pribadi); HPP/laba per produk = R2;
     pesanan/DP/utang-piutang usaha = R3; impor Excel marketplace & neraca = R4. Kasir tim belum bisa pilih cara bayar
     (default tunai). Metrik R1 belum dicek dengan data produksi.
