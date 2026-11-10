@@ -100,6 +100,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.27.0 | 10 Nov 2026 | Olahragaku: shift kerja & coach |
 | 3.27.1 | 10 Nov 2026 | Video gerakan |
 | 3.27.2 | 10 Nov 2026 | Gambar gerakan kembali |
+| 3.27.3 | 10 Nov 2026 | Animasi gerakan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -113,6 +114,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.27.3 — 2026-11-10 — Ilustrasi gerakan bergerak
+
+- 21 gerakan di Olahragaku › Latihan kini punya **ilustrasi yang bergerak** saat dibuka (mis. jalan kaki, sepeda
+  statis, tinju sambil duduk, bird-dog, shoulder press, peregangan). Gerakan lain menampilkan gambar posisi awal,
+  dan semua tetap dilengkapi video contoh.
 
 ## 3.27.2 — 2026-11-10 — Gambar gerakan kembali
 

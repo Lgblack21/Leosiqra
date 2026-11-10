@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (live: 3.27.2 gambar posisi awal gerakan, run #205, commit 50e6514 — tanpa SQL. Sesi Olahragaku selesai — lihat ringkasan di bawah)
+Terakhir diperbarui: 2026-11-10 (3.27.3 animasi gerakan siap di branch, BELUM deploy; live: 3.27.2 run #205. Sesi Olahragaku — lihat ringkasan di bawah)
 
 ## Siapa sedang kerja
 
@@ -37,6 +37,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     Kalau saldo ada & mau lengkap: Admin › Olahragaku → "Buat yang belum ada" cukup frame 1 (frame lain tak dipakai —
     bisa diubah tombolnya agar hanya frame 0), lalu unduh `/api/fit/gerakan/<key>/0`, kecilkan dengan sharp
     (`resize(384).webp({quality:78})`), simpan ke public/olahraga/gerakan, tambah key di `src/lib/olahraga/gambar.ts`.
+  - **3.27.3 (BELUM DEPLOY, tanpa SQL)**: Bos minta ilustrasi bergerak. Semua 138 frame dicek visual satu per satu →
+    21 gerakan dianimasikan dengan frame yang lolos (`ANIMASI_GERAKAN` di `src/lib/olahraga/gambar.ts`, file
+    `public/olahraga/gerakan/<key>-<frame>.webp`, 46 file, 235 KB), 14 tetap statis karena frame lanjutannya salah
+    peraga (plank-lutut, glute-bridge, calf-raise, angkat-kaki-samping, lunge, wall-sit, row-dumbbell, bicep-curl,
+    leg-press, lat-pulldown, seated-row, march-duduk, ayun-lengan-duduk, push-up-dinding). Dites Playwright Pixel 7.
   - **Video**: 38/40 (semua bahasa Inggris, kanal fisioterapis/RS/pelatih). Kosong: naik-turun-tangga, wall-sit.
     Belum ditonton manusia: ayun-lengan-duduk, row-dumbbell, peregangan-dada, tinju-duduk, jalan-cepat, tendang-duduk.
   - **Belum terverifikasi di produksi**: kualitas program/menu/evaluasi/jawaban dari AI asli (belum ada yang beli

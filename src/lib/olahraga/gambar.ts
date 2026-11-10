@@ -39,3 +39,32 @@ export const GAMBAR_GERAKAN: ReadonlySet<string> = new Set([
   'wall-sit',
 ]);
 export const gambarGerakan = (key: string) => (GAMBAR_GERAKAN.has(key) ? `/olahraga/gerakan/${key}.webp` : null);
+
+// Animasi: frame ilustrasi yang dicek visual satu per satu (2026-11-10) — hanya frame dengan orang konsisten & peraga
+// benar; frame salah (mis. plank lutut jadi plank penuh, glute bridge jadi lunge) atau berteks dibuang. Gerakan yang
+// tidak ada di sini cukup gambar posisi awal (statis). File: /olahraga/gerakan/<key>-<frame>.webp (±5 KB).
+export const ANIMASI_GERAKAN: Readonly<Record<string, readonly number[]>> = {
+  'jalan-kaki': [0, 2, 3],
+  'jalan-cepat': [0, 3],
+  'jalan-di-tempat': [3, 1],
+  'sepeda-statis': [0, 2, 3],
+  'naik-turun-tangga': [0, 1],
+  'step-touch': [3, 1],
+  'tinju-duduk': [0, 1, 3, 2],
+  'tendang-duduk': [0, 2],
+  'jumping-jack-low-impact': [0, 1],
+  'treadmill-incline': [0, 2],
+  elliptical: [0, 2],
+  'aqua-walking': [0, 1],
+  'squat-kursi': [2, 3],
+  'bird-dog': [0, 1],
+  'angkat-kaki-duduk': [0, 2],
+  'dead-bug': [1, 2],
+  'shoulder-press-duduk': [0, 3],
+  'goblet-squat': [0, 1],
+  'peregangan-paha-depan': [0, 1],
+  'peregangan-betis': [0, 2],
+  'peregangan-dada': [0, 1],
+};
+export const frameGerakan = (key: string) =>
+  (ANIMASI_GERAKAN[key] ?? []).map((f) => `/olahraga/gerakan/${key}-${f}.webp`);
