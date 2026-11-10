@@ -36,7 +36,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites lokal (wrangler dev --local, D1 dari schema-production + 0027–0033/0036/0045): saldo kas & pribadi cocok
     hitung manual (setor/ambil/pindah/cair/hapus balik), dobel ditolak, user lain 404, tanpa login 401, kasir tim &
     webhook masuk kas utama, laporan + omzet. Playwright web 1280 + Pixel 7 + iPhone 13: 0 error JS.
-  - **3.28.3 (branch, belum deploy)**: `src/components/usahaku/LogoToko.tsx` di Pengaturan — unggah (Cloudinary,
+  - **3.28.3 LIVE**: `src/components/usahaku/LogoToko.tsx` di Pengaturan — unggah (Cloudinary,
     `uploadToCloudinary`) atau logo SVG otomatis (data URL ≤8.000, lolos `safeImageUrl`) → `style.logoUrl`. Logo juga
     di judul toko. Unggah Cloudinary belum dites (tidak ada di lokal); logo otomatis dites Playwright.
   - **3.28.2 LIVE**: daftar toko dirombak (UsahaView: hero gelap + kartu putih, tombol "Buka toko"
