@@ -7,6 +7,7 @@ import { shopBookService, type ShopAccount } from '@/lib/services/shopBookServic
 import { ACCOUNT_KINDS, CHANNEL_SUGGEST, SHOP_KINDS, accountEmoji, channelsOf, kindOf } from '@/lib/usaha/jenis';
 import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
+import { LogoToko } from './LogoToko';
 
 const money = (v: string) => Number(v.replace(/\D/g, '').slice(0, 11) || '0');
 
@@ -22,6 +23,7 @@ export function PengaturanUsaha({
 }) {
   return (
     <div className="space-y-5">
+      <LogoToko shop={shop} onToast={onToast} />
       <JenisToko shop={shop} onToast={onToast} />
       <JalurJualan shop={shop} onToast={onToast} />
       {accounts && <KasUsaha shop={shop} accounts={accounts} onToast={onToast} />}

@@ -105,6 +105,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.0 | 10 Nov 2026 | Usahaku: pembukuan usaha terpisah |
 | 3.28.1 | 11 Nov 2026 | Usahaku: tarik data per tanggal & bulan |
 | 3.28.2 | 11 Nov 2026 | Usahaku: daftar toko baru |
+| 3.28.3 | 11 Nov 2026 | Usahaku: ganti logo toko |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -118,6 +119,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.3 — 2026-11-11 — Usahaku: ganti logo toko
+
+- **Logo toko** kini mudah diganti di Usahaku › ⚙️ Pengaturan: **unggah gambar** dari galeri, atau **Buat logo**
+  otomatis (huruf atau emoji toko, 8 pilihan warna, bentuk kotak/bulat) — sekali ketuk langsung terpasang. Logo
+  tampil di daftar toko, judul toko, kasir, struk, dan laporan.
 
 ## 3.28.2 — 2026-11-11 — Usahaku: daftar toko baru
 

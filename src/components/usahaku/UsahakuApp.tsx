@@ -9,6 +9,7 @@ import { LaporanUsaha } from '@/components/ladang/LaporanUsaha';
 import { StockView } from '@/components/ladang/StockView';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { ShopDetail, UsahaView } from '@/components/ladang/UsahaView';
+import { CatalogImage } from '@/components/ladang/CatalogImage';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { shopService, type Shop } from '@/lib/services/shopService';
 import { shopBookService, type ShopBook } from '@/lib/services/shopBookService';
@@ -192,8 +193,11 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
         <header className="mb-4 grid grid-cols-[auto_1fr_auto] items-center gap-3 md:mb-5">
           {backBtn(`${base}/usahaku`, 'Semua usaha')}
           <div className="min-w-0 text-center">
-            <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24 dark:text-white">
-              {shop.emoji || kind?.emoji || '🏪'} {shop.name}
+            <h1 className="flex items-center justify-center gap-2 fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24 dark:text-white">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl fsh-20 md:h-9 md:w-9">
+                <CatalogImage src={shop.style.logoUrl} alt="" fallback={shop.emoji || kind?.emoji || '🏪'} className="h-full w-full" />
+              </span>
+              <span className="truncate">{shop.name}</span>
             </h1>
             <p className="truncate fs-12 text-slate-500 dark:text-slate-400">
               {kind ? kind.label : 'Usahaku'} · {bookOn ? 'buku usaha terpisah' : 'masih tercatat di keuangan pribadi'}
