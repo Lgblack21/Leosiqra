@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (3.27.2 gambar gerakan siap di branch, BELUM deploy; live: 3.27.1 run #204. Sesi Olahragaku selesai — lihat ringkasan di bawah)
+Terakhir diperbarui: 2026-11-10 (live: 3.27.2 gambar posisi awal gerakan, run #205, commit 50e6514 — tanpa SQL. Sesi Olahragaku selesai — lihat ringkasan di bawah)
 
 ## Siapa sedang kerja
 
@@ -19,8 +19,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 ## Menunggu
 
 - **2026-11-10 — RINGKASAN SESI OLAHRAGAKU (akun ini, 9–10 Nov) — baca ini dulu kalau lanjut Olahragaku.**
-  - **Live**: 3.26.0 (R1+R2, run #202) → 3.27.0 (R3, run #203) → 3.27.1 (video, run #204). **3.27.2 belum deploy**
-    (branch `claude/friendly-galileo-omr8xf`, tanpa SQL): gambar posisi awal statis kembali tampil.
+  - **Live**: 3.26.0 (R1+R2, run #202) → 3.27.0 (R3, run #203) → 3.27.1 (video, run #204) → **3.27.2 (gambar posisi
+    awal statis, run #205, cek live: /olahraga/gerakan/*.webp 200 ±3–6 KB)**. Tidak ada yang menunggu deploy.
   - **SQL**: hanya 0044 (`fit_*`), sudah dijalankan Bos. Shift kerja & pengingat pakai `users.metadata_json`
     (`$.fitKerja`, `$.fitRemind`); target Makanku `$.mealTarget` ikut target program.
   - **Fitur**: profil tubuh + hitungan (hitung.ts), 20 metode + kuis (metode.ts/rules.ts), program 4 minggu AI
