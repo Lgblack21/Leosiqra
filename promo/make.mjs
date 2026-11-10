@@ -314,7 +314,7 @@ const main = async () => {
     `[voice]asplit=2[vk][vm]`,
     `[0:a]volume=0.32[mus]`,
     `[mus][vk]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=350[duck]`,
-    `[duck][vm]amix=inputs=2:normalize=0:duration=longest,loudnorm=I=-14:TP=-1.5:LRA=11,apad=whole_dur=${plan.total},atrim=0:${plan.total}[out]`,
+    `[duck][vm]amix=inputs=2:normalize=0:duration=longest,loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=disabled,apad=whole_dur=${plan.total},atrim=0:${plan.total}[out]`,
   ].join(";");
   run(FFMPEG, ["-y", "-hide_banner", "-loglevel", "error", ...inputs, "-filter_complex", filter, "-map", "[out]", "-ar", "44100", audioPath]);
 
