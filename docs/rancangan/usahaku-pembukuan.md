@@ -1,6 +1,6 @@
 # Rancangan — Usahaku jadi Pembukuan Usaha
 
-Status: **DRAF — menunggu ACC Bos.** Belum ada coding. Dibuat dari chat 2026-11-10.
+Status: **DI-ACC Bos 2026-11-10** (jawaban bagian 10). Belum ada coding — R1 menunggu "gas" Bos.
 
 ## Keputusan Bos (chat 2026-11-10)
 
@@ -42,7 +42,16 @@ Dipilih saat membuat toko (bisa diganti). Menentukan istilah, menu yang muncul, 
 | 🏪 Kelontong / sembako | Warung sembako, toko grosir | Banyak barang, harga ecer & grosir |
 | ✂️ Jasa | Laundry, salon/barber, bengkel, servis HP | Tarif jasa, tanpa stok barang |
 | 🎂 Kue & pesanan rumahan | Kue, frozen food, hampers, catering rumahan | Bahan + resep, pesanan/DP (rilis 3) |
+| 🎮 Top up game & produk digital | Top up game, pulsa/kuota, token listrik, voucher, PPOB | Modal per transaksi (harga beli dari supplier), margin kecil, **saldo deposit supplier** = kas usaha, tanpa stok fisik |
+| 🔁 Dropship / reseller | Jual produk orang lain tanpa stok | Harga beli dari supplier per pesanan, marketplace |
+| 🖨️ Fotokopi & ATK | Fotokopi, print, alat tulis | Jasa per lembar + barang |
+| 🏠 Sewa & rental | Kos-kosan, rental motor/mobil/alat, sewa kamera | Tarif per hari/bulan, penyewa |
+| 🌾 Pertanian & peternakan | Kebun, ternak ayam/ikan | Panen/hasil, biaya pakan & pupuk |
+| 💻 Freelance & jasa online | Desain, editing, jasa digital | Tagihan per klien, tanpa stok |
 | 📦 Lainnya / umum | Usaha campuran | Semua menu bisa dinyalakan manual |
+
+Daftar ini **terbuka** (keputusan Bos: "kalau ada lagi jenis usaha tambah aja") — jenis baru cukup menambah
+satu entri konfigurasi (nama, ikon, menu yang aktif, isian produk), tanpa mengubah alur kasir.
 
 Toko lama otomatis = "Lainnya" (semua fitur yang sekarang tetap ada) sampai Bos/pengguna memilih jenis.
 
@@ -135,9 +144,9 @@ dihitung dari resep × harga bahan yang sudah ada), **stok barang jadi** (untuk 
   dipindah ke buku usaha; semuanya dicek satu per satu saat R1.
 - Web (`/membership`) dan app HP (`/app`) dua-duanya.
 
-## 10. Pertanyaan terbuka untuk Bos
+## 10. Jawaban Bos (2026-11-10)
 
-1. Batas FREE vs PRO di bagian 7 sudah pas?
-2. Saldo Shopee/Tokopedia dianggap **kas usaha** sendiri (uang cair masuk ke situ dulu, lalu "tarik dana" ke
-   bank)? Atau langsung saja cair ke bank usaha? (usul: pilihan, default langsung ke bank biar simpel)
-3. Daftar jenis toko di bagian 2 sudah pas?
+1. Batas FREE vs PRO bagian 7: **setuju**.
+2. Uang marketplace cair: **bisa dipilih** — default langsung ke bank usaha, atau ditampung di kas
+   "Saldo Shopee/Tokopedia" dulu lalu tarik dana.
+3. Jenis toko: **fleksibel, tambah terus** (termasuk top up game dll) — lihat bagian 2.
