@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-10 — POSTING OTOMATIS IG + FACEBOOK (3.27.4, branch claude/friendly-galileo-omr8xf) — BELUM DEPLOY.**
+- **2026-11-10 — POSTING OTOMATIS IG + FACEBOOK — 3.27.4 LIVE (run #207, commit 2328f02). Secret IG_ACCESS_TOKEN/IG_USER_ID/FB_PAGE_ID sudah dipasang Bos; /api/promo/meta-check → enabled ig+yt+fb, IG ok @leosiqra_official, FB ok Halaman Leosiqra.**
   - Setup Meta (dikerjakan Bos, dipandu): app dev **Leosiqra Poster** (ID 971281122297773) di portofolio **Leosiqra**
     (business 1073773095480351, login FB "Leowenry Ganda"). Halaman FB **Leosiqra** (1434319926429016) & IG
     **@leosiqra_official** (IG user id 17841401198522641) MILIK portofolio lain **"Leo Wendry Siagian"**
@@ -30,7 +30,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     finish PUBLISHED). `enabled.fb`, Telegram ikut baris Facebook. `GET /api/promo/meta-check` (x-promo-secret) =
     cek token tanpa posting (baca username IG & nama Halaman). Dites wrangler dev lokal dengan token palsu → Meta 400
     "Invalid OAuth access token" (artinya jalur graph.facebook.com benar), tanpa secret 401.
-  - **Urutan aman**: gas deploy dulu → Bos pasang 3 secret di Cloudflare (tipe *Secret*): `IG_ACCESS_TOKEN`,
+  - (Selesai 10 Nov malam) **Urutan aman**: gas deploy dulu → Bos pasang 3 secret di Cloudflare (tipe *Secret*): `IG_ACCESS_TOKEN`,
     `IG_USER_ID=17841401198522641`, `FB_PAGE_ID=1434319926429016` → cek `/api/promo/meta-check` → video berikutnya
     di antrean (default 19:00 WIB) terposting ke IG + FB + YouTube. Antrean saat ini bersih (30 terposting, 1 batal),
     jadi tidak ada posting massal. Belum terbukti: unggah Reels FB & IG nyata (baru terbukti di posting pertama).
