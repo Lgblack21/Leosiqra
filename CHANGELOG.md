@@ -101,6 +101,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.27.1 | 10 Nov 2026 | Video gerakan |
 | 3.27.2 | 10 Nov 2026 | Gambar gerakan kembali |
 | 3.27.3 | 10 Nov 2026 | Animasi gerakan |
+| 3.27.4 | 10 Nov 2026 | Video promo juga ke Instagram & Facebook |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -114,6 +115,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.27.4 — 2026-11-10 — Video promo juga ke Instagram & Facebook
+
+- Video tips keuangan harian Leosiqra kini bisa terbit otomatis di **Instagram** dan **Halaman Facebook** Leosiqra,
+  selain YouTube. Tidak ada perubahan di aplikasimu.
 
 ## 3.27.3 — 2026-11-10 — Ilustrasi gerakan bergerak
 

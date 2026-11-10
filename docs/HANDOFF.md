@@ -18,6 +18,24 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-10 — POSTING OTOMATIS IG + FACEBOOK (3.27.4, branch claude/friendly-galileo-omr8xf) — BELUM DEPLOY.**
+  - Setup Meta (dikerjakan Bos, dipandu): app dev **Leosiqra Poster** (ID 971281122297773) di portofolio **Leosiqra**
+    (business 1073773095480351, login FB "Leowenry Ganda"). Halaman FB **Leosiqra** (1434319926429016) & IG
+    **@leosiqra_official** (IG user id 17841401198522641) MILIK portofolio lain **"Leo Wendry Siagian"**
+    (734862643700163, login IG) → dibagikan ke Leosiqra sebagai mitra (akses penuh). Pengguna sistem **Leosiqra Poster**
+    (61596122503801, Admin) diberi app + Halaman (Konten/Insight dll) + IG. Token System User (EAA…, tidak kedaluwarsa)
+    sudah dibuat & disimpan Bos di catatan HP — JANGAN minta ditempel di chat.
+  - Kode: `IG_ACCESS_TOKEN` berawalan `EAA` → semua panggilan lewat graph.facebook.com, tanpa ig_refresh_token.
+    `FB_PAGE_ID` (baru) → Reels di Halaman (`stepFacebook`: start + unggah via file_url → cron berikutnya cek status →
+    finish PUBLISHED). `enabled.fb`, Telegram ikut baris Facebook. `GET /api/promo/meta-check` (x-promo-secret) =
+    cek token tanpa posting (baca username IG & nama Halaman). Dites wrangler dev lokal dengan token palsu → Meta 400
+    "Invalid OAuth access token" (artinya jalur graph.facebook.com benar), tanpa secret 401.
+  - **Urutan aman**: gas deploy dulu → Bos pasang 3 secret di Cloudflare (tipe *Secret*): `IG_ACCESS_TOKEN`,
+    `IG_USER_ID=17841401198522641`, `FB_PAGE_ID=1434319926429016` → cek `/api/promo/meta-check` → video berikutnya
+    di antrean (default 19:00 WIB) terposting ke IG + FB + YouTube. Antrean saat ini bersih (30 terposting, 1 batal),
+    jadi tidak ada posting massal. Belum terbukti: unggah Reels FB & IG nyata (baru terbukti di posting pertama).
+  - Metrik FB belum dikumpulkan (IG & YT sudah). `promo/setup-instagram.mjs` = cara lama (Instagram Login), tak dipakai.
+
 - **2026-11-10 — RINGKASAN SESI OLAHRAGAKU (akun ini, 9–10 Nov) — baca ini dulu kalau lanjut Olahragaku.**
   - **Live**: 3.26.0 (R1+R2, run #202) → 3.27.0 (R3, run #203) → 3.27.1 (video, run #204) → **3.27.2 (gambar posisi
     awal statis, run #205, cek live: /olahraga/gerakan/*.webp 200 ±3–6 KB)**. Tidak ada yang menunggu deploy.

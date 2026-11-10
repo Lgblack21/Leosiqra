@@ -42,7 +42,7 @@ export const buildMetrik = (history, queue, stats) => {
     ok: rated.filter((h) => h.rating === 2).length,
     bad: rated.filter((h) => h.rating === 3).length,
     formats: [...byFormat.values()].map((f) => ({ name: f.name, avg: +(f.sum / f.n).toFixed(2), n: f.n })).sort((a, b) => b.avg - a.avg),
-    posts: { ig: queue.filter((q) => q.ig?.id).length, yt: queue.filter((q) => q.yt?.id).length },
+    posts: { ig: queue.filter((q) => q.ig?.id).length, yt: queue.filter((q) => q.yt?.id).length, fb: queue.filter((q) => q.fb?.id).length },
     views7d: views("ig") + views("yt"),
     likes7d: likes("ig") + likes("yt"),
     platform: { ig: { views: views("ig"), likes: likes("ig") }, yt: { views: views("yt"), likes: likes("yt") } },

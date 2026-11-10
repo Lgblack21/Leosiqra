@@ -65,7 +65,10 @@ export interface Env {
   GITHUB_DISPATCH_TOKEN?: string;
   // Posting otomatis video promo (opsional — tanpa ini antrean posting tidak aktif).
   IG_USER_ID?: string;
+  // Token Instagram: "IGAA…" (Instagram Login, diperpanjang otomatis) atau "EAA…" (System User Meta
+  // Business, tidak kedaluwarsa — dipakai juga untuk Halaman Facebook lewat FB_PAGE_ID).
   IG_ACCESS_TOKEN?: string;
+  FB_PAGE_ID?: string;
   YT_CLIENT_ID?: string;
   YT_CLIENT_SECRET?: string;
   YT_REFRESH_TOKEN?: string;
@@ -1772,7 +1775,7 @@ async function handlePromoTelegram(request: Request, env: Env) {
       const rows = [PROMO_RATINGS.map((label, n) => ({ text: label, callback_data: `r:${id}:${n + 1}` }))];
       // Video yang masuk antrean posting otomatis: bisa dibatalkan / dipercepat.
       const on = promoPostingEnabled(env);
-      if (form.get("schedule") === "1" && (on.ig || on.yt)) {
+      if (form.get("schedule") === "1" && (on.ig || on.yt || on.fb)) {
         rows.push([
           { text: "⛔ Batal posting", callback_data: `q:${id}:x` },
           { text: "🚀 Posting sekarang", callback_data: `q:${id}:p` },
@@ -2112,6 +2115,9 @@ const REMINDER_CRON = "* * * * *";
 const PROMO_QUEUE_KEY = "promo/queue.json";
 const PROMO_IG_TOKEN_KEY = "promo/ig-token.json";
 const IG_API = "https://graph.instagram.com/v23.0";
+const FB_GRAPH = "https://graph.facebook.com/v23.0";
+// Token System User Meta Business ("EAA…") lewat graph.facebook.com; token Instagram Login lewat graph.instagram.com.
+const isMetaBusinessToken = (token: string) => token.startsWith("EAA");
 
 type PromoPlatformState = { id?: string; container?: string; url?: string; error?: string; tries?: number; doneAt?: string };
 type PromoQueueItem = {
@@ -2123,12 +2129,15 @@ type PromoQueueItem = {
   createdAt: string;
   ig?: PromoPlatformState;
   yt?: PromoPlatformState;
+  fb?: PromoPlatformState;
   metrics?: { ig?: Record<string, number>; yt?: Record<string, number>; at?: string };
 };
 
 const promoPostingEnabled = (env: Env) => ({
   ig: Boolean(env.IG_USER_ID && env.IG_ACCESS_TOKEN),
   yt: Boolean(env.YT_CLIENT_ID && env.YT_CLIENT_SECRET && env.YT_REFRESH_TOKEN),
+  // Halaman Facebook hanya dengan token System User (token Halaman diturunkan darinya).
+  fb: Boolean(env.FB_PAGE_ID && isMetaBusinessToken(env.IG_ACCESS_TOKEN ?? "")),
 });
 
 const loadPromoQueue = async (env: Env): Promise<PromoQueueItem[]> => {
@@ -2196,7 +2205,7 @@ async function handlePromoQueue(request: Request, env: Env) {
     createdAt: nowIso(),
   };
   const i = items.findIndex((x) => x.id === id);
-  if (i >= 0) items[i] = { ...items[i], ...item, ig: items[i].ig, yt: items[i].yt };
+  if (i >= 0) items[i] = { ...items[i], ...item, ig: items[i].ig, yt: items[i].yt, fb: items[i].fb };
   else items.push(item);
   await savePromoQueue(env, items);
   return json({ ok: true, postAt, enabled: promoPostingEnabled(env) });
@@ -2228,6 +2237,8 @@ const setPromoQueueStatus = async (env: Env, id: string, action: "batal" | "seka
 
 // ── Instagram (Instagram API with Instagram Login) ──
 const instagramToken = async (env: Env) => {
+  // Token System User tidak kedaluwarsa & tidak bisa di-refresh lewat ig_refresh_token.
+  if (isMetaBusinessToken(env.IG_ACCESS_TOKEN ?? "")) return env.IG_ACCESS_TOKEN ?? "";
   const obj = await env.FILES_BUCKET?.get(PROMO_IG_TOKEN_KEY);
   const saved = obj ? (JSON.parse(await obj.text()) as { token: string; refreshedAt: string }) : null;
   let token = saved?.token || env.IG_ACCESS_TOKEN || "";
@@ -2246,9 +2257,10 @@ const instagramToken = async (env: Env) => {
 
 const igCall = async (path: string, token: string, params: Record<string, string> = {}, method: "GET" | "POST" = "GET") => {
   const qs = new URLSearchParams({ ...params, access_token: token });
-  const res = await fetch(`${IG_API}/${path}${method === "GET" ? `?${qs}` : ""}`, method === "POST" ? { method, body: qs } : undefined);
+  const api = isMetaBusinessToken(token) ? FB_GRAPH : IG_API;
+  const res = await fetch(`${api}/${path}${method === "GET" ? `?${qs}` : ""}`, method === "POST" ? { method, body: qs } : undefined);
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } };
-  if (!res.ok || data.error) throw new Error(`Instagram ${res.status}: ${data.error?.message ?? "gagal"}`.slice(0, 200));
+  if (!res.ok || data.error) throw new Error(`Meta ${res.status}: ${data.error?.message ?? "gagal"}`.slice(0, 200));
   return data;
 };
 
@@ -2272,6 +2284,64 @@ const stepInstagram = async (env: Env, item: PromoQueueItem) => {
   st.url = String(info.permalink ?? "");
   st.doneAt = nowIso();
 };
+
+// ── Facebook Reels di Halaman (token Halaman diturunkan dari token System User) ──
+// Tiap cron satu langkah: (1) start + unggah dari URL video, (2) tunggu unggahan selesai lalu terbitkan.
+const facebookPageToken = async (env: Env) => {
+  const d = await igCall(String(env.FB_PAGE_ID), env.IG_ACCESS_TOKEN ?? "", { fields: "access_token" });
+  if (!d.access_token) throw new Error("token Halaman Facebook tidak didapat (cek aset Halaman & izin pages_manage_posts)");
+  return String(d.access_token);
+};
+
+const stepFacebook = async (env: Env, item: PromoQueueItem) => {
+  const st = (item.fb ??= {});
+  if (st.id) return;
+  const token = await facebookPageToken(env);
+  if (!st.container) {
+    const start = await igCall(`${env.FB_PAGE_ID}/video_reels`, token, { upload_phase: "start" }, "POST");
+    const videoId = String(start.video_id ?? "");
+    if (!videoId) throw new Error("Facebook tidak memberi video_id");
+    const up = await fetch(`https://rupload.facebook.com/video-upload/v23.0/${videoId}`, {
+      method: "POST",
+      headers: { authorization: `OAuth ${token}`, file_url: await promoMediaUrl(env, item.id) },
+    });
+    const ud = (await up.json().catch(() => ({}))) as { success?: boolean; error?: { message?: string }; debug_info?: { message?: string } };
+    if (!up.ok || !ud.success) throw new Error(`Facebook unggah ${up.status}: ${ud.error?.message ?? ud.debug_info?.message ?? "gagal"}`.slice(0, 200));
+    st.container = videoId;
+    return;
+  }
+  const v = await igCall(st.container, token, { fields: "status" });
+  const status = (v.status ?? {}) as { video_status?: string; uploading_phase?: { status?: string } };
+  if (status.video_status === "error") throw new Error("Facebook gagal memproses video");
+  if (status.uploading_phase?.status && status.uploading_phase.status !== "complete") return;
+  const fin = await igCall(`${env.FB_PAGE_ID}/video_reels`, token, { upload_phase: "finish", video_id: st.container, video_state: "PUBLISHED", description: item.caption }, "POST");
+  if (!fin.success) throw new Error("Facebook menolak penerbitan Reel");
+  st.id = st.container;
+  const info = await igCall(st.id, token, { fields: "permalink_url" }).catch(() => ({}) as Record<string, unknown>);
+  const link = String(info.permalink_url ?? "");
+  st.url = link ? (link.startsWith("http") ? link : `https://www.facebook.com${link}`) : `https://www.facebook.com/reel/${st.id}`;
+  st.doneAt = nowIso();
+};
+
+// GET /api/promo/meta-check — cek token Meta tanpa memposting: hanya membaca nama akun IG & Halaman FB.
+// Pesan error Meta dikembalikan (tanpa token) supaya setup bisa didiagnosis.
+async function handlePromoMetaCheck(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const token = env.IG_ACCESS_TOKEN ?? "";
+  const out: Record<string, unknown> = { enabled: promoPostingEnabled(env), tokenType: !token ? "kosong" : isMetaBusinessToken(token) ? "system-user" : "instagram-login" };
+  if (env.IG_USER_ID && token) {
+    out.instagram = await igCall(env.IG_USER_ID, await instagramToken(env), { fields: "username" })
+      .then((d) => ({ ok: true, username: d.username }))
+      .catch((e) => ({ ok: false, error: String(e instanceof Error ? e.message : e) }));
+  }
+  if (env.FB_PAGE_ID && isMetaBusinessToken(token)) {
+    out.facebook = await facebookPageToken(env)
+      .then((pt) => igCall(String(env.FB_PAGE_ID), pt, { fields: "name" }))
+      .then((d) => ({ ok: true, name: d.name }))
+      .catch((e) => ({ ok: false, error: String(e instanceof Error ? e.message : e) }));
+  }
+  return json(out);
+}
 
 // ── YouTube (Data API v3, upload resumable) ──
 const youtubeAccessToken = async (env: Env) => {
@@ -2375,7 +2445,7 @@ async function processPromoQueue(env: Env) {
   let changed = false;
   for (const item of items) {
     if (item.status !== "terjadwal" || Date.parse(item.postAt) > Date.now()) continue;
-    for (const [name, enabled, step] of [["ig", on.ig, stepInstagram], ["yt", on.yt, stepYoutube]] as const) {
+    for (const [name, enabled, step] of [["ig", on.ig, stepInstagram], ["yt", on.yt, stepYoutube], ["fb", on.fb, stepFacebook]] as const) {
       const st = (item[name] ??= {});
       if (!enabled || st.id || (st.tries ?? 0) >= 3) continue;
       try {
@@ -2384,11 +2454,11 @@ async function processPromoQueue(env: Env) {
       } catch (error) {
         st.tries = (st.tries ?? 0) + 1;
         st.error = String(error instanceof Error ? error.message : error).slice(0, 200);
-        if (name === "ig") st.container = undefined;
+        if (name !== "yt") st.container = undefined;
       }
       changed = true;
     }
-    const states = [on.ig ? item.ig : null, on.yt ? item.yt : null].filter(Boolean) as PromoPlatformState[];
+    const states = [on.ig ? item.ig : null, on.yt ? item.yt : null, on.fb ? item.fb : null].filter(Boolean) as PromoPlatformState[];
     const finished = states.every((s) => s.id || (s.tries ?? 0) >= 3);
     if (states.length && finished) {
       item.status = states.some((s) => s.id) ? "terposting" : "gagal";
@@ -2397,6 +2467,7 @@ async function processPromoQueue(env: Env) {
         item.status === "terposting" ? `✅ Video promo terposting: "${item.title}"` : `⚠️ Posting video "${item.title}" gagal`,
         on.ig ? `Instagram: ${item.ig?.url || item.ig?.error || "-"}` : "",
         on.yt ? `YouTube: ${item.yt?.url || item.yt?.error || "-"}` : "",
+        on.fb ? `Facebook: ${item.fb?.url || item.fb?.error || "-"}` : "",
       ].filter(Boolean);
       await promoTelegram(env, lines.join("\n"));
     }
@@ -22259,6 +22330,9 @@ const worker = {
       }
       if (url.pathname === "/api/promo/queue" && (request.method === "GET" || request.method === "POST")) {
         return await handlePromoQueue(request, env);
+      }
+      if (url.pathname === "/api/promo/meta-check" && request.method === "GET") {
+        return await handlePromoMetaCheck(request, env);
       }
       if (url.pathname.startsWith("/api/promo/media/") && url.pathname.endsWith(".mp4") && (request.method === "GET" || request.method === "HEAD")) {
         return await handlePromoMedia(request, env, url, url.pathname.slice("/api/promo/media/".length, -".mp4".length));

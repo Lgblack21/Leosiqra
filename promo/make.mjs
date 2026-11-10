@@ -156,7 +156,7 @@ const queuePosting = async (plan, videoPath, id) => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(`queue ${res.status}: ${JSON.stringify(data).slice(0, 150)}`);
     const on = data.enabled || {};
-    log(on.ig || on.yt ? `antrean posting ${data.postAt} (IG ${on.ig ? "aktif" : "belum"}, YouTube ${on.yt ? "aktif" : "belum"})` : "antrean tersimpan; posting otomatis belum aktif (token IG/YouTube belum dipasang)");
+    log(on.ig || on.yt || on.fb ? `antrean posting ${data.postAt} (IG ${on.ig ? "aktif" : "belum"}, YouTube ${on.yt ? "aktif" : "belum"}, Facebook ${on.fb ? "aktif" : "belum"})` : "antrean tersimpan; posting otomatis belum aktif (token IG/YouTube belum dipasang)");
     return data;
   } catch (error) {
     log(`antrean posting gagal (${error.message}) — video tetap dikirim ke Telegram`);
@@ -175,7 +175,7 @@ const sendTelegram = async (plan, videoPath, coverPath, id, queued) => {
       schedule: queued ? "1" : "0",
       video: new Blob([readFileSync(videoPath)], { type: "video/mp4" }),
       thumbnail: new Blob([readFileSync(coverPath)], { type: "image/jpeg" }),
-      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}\n\nNilai pakai tombol di bawah, atau balas video ini dengan catatan — tim konten belajar dari situ besok.${queued && queued.enabled && (queued.enabled.ig || queued.enabled.yt) ? `\n\n📅 Diposting otomatis ${new Date(queued.postAt).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" })} WIB ke ${[queued.enabled.ig && "Instagram", queued.enabled.yt && "YouTube"].filter(Boolean).join(" & ")} — tekan ⛔ kalau tidak mau.` : ""}`,
+      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}\n\nNilai pakai tombol di bawah, atau balas video ini dengan catatan — tim konten belajar dari situ besok.${queued && queued.enabled && (queued.enabled.ig || queued.enabled.yt || queued.enabled.fb) ? `\n\n📅 Diposting otomatis ${new Date(queued.postAt).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" })} WIB ke ${[queued.enabled.ig && "Instagram", queued.enabled.yt && "YouTube", queued.enabled.fb && "Facebook"].filter(Boolean).join(" & ")} — tekan ⛔ kalau tidak mau.` : ""}`,
       width: "1080",
       height: "1920",
       duration: String(Math.round(plan.total)),
