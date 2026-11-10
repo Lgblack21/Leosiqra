@@ -31,6 +31,7 @@ import {
   ScanLine,
   ShieldCheck,
   Sprout,
+  Store,
   Sticker,
   Waypoints,
   Gauge,
@@ -115,6 +116,12 @@ const IN_APP: MenuItem[] = [
     href: '/app/barangku',
     icon: Package,
     color: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
+  },
+  {
+    label: 'Usahaku',
+    href: '/app/usahaku',
+    icon: Store,
+    color: 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400',
   },
   {
     label: 'Ladangku',

@@ -48,8 +48,10 @@ import { TeamManager } from './TeamManager';
 const STARTERS = ['Masakan rumahan', 'Desain', 'Les privat', 'Preloved', 'Kerajinan', 'Foto', 'Top up game'];
 const STAGES = ['Rencana', 'Katalog', 'Online', 'Jualan'] as const;
 const PRODUCTS_MAX = 120; // = SHOP_PRODUCTS_MAX di Worker
-export const kasirHref = (variant: 'web' | 'app', id: string) =>
-  `${variant === 'app' ? '/app' : '/membership'}/ladang/kasir?id=${encodeURIComponent(id)}`;
+// Toko dibuka di layar Usahaku (Beranda · Kasir · Stok · Laporan); #kasir langsung ke kasir.
+export const usahakuHref = (variant: 'web' | 'app', id: string, tab?: 'kasir' | 'laporan' | 'stok') =>
+  `${variant === 'app' ? '/app' : '/membership'}/usahaku?id=${encodeURIComponent(id)}${tab ? `#${tab}` : ''}`;
+export const kasirHref = (variant: 'web' | 'app', id: string) => usahakuHref(variant, id, 'kasir');
 export const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
 export const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 /** Ringkas: Rp45 rb, Rp1,2 jt, −Rp125 rb (minus ikut diringkas supaya tidak terpotong). */
@@ -268,7 +270,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                     : 'Catat penjualan pertama';
               return (
                 <li key={s.id} className={cn(card, 'overflow-hidden')}>
-                  <Link href={kasirHref(variant, s.id)} className="group block">
+                  <Link href={usahakuHref(variant, s.id)} className="group block">
                     <div
                       className={cn(
                         'web-keep flex items-center gap-3 px-4 py-3.5 text-white',
@@ -744,7 +746,7 @@ export function ShopDetail({
               <Store size={16} /> Buka kasir
             </Link>
             <Link
-              href={kasirLink.replace('/ladang/kasir?', '/ladang/laporan?')}
+              href={kasirLink.replace(/#kasir$/, '#laporan')}
               className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 fs-14 font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:ring-emerald-500/30"
             >
               <FileBarChart size={16} /> Laporan & unduh
@@ -1195,12 +1197,21 @@ function ProductList({ products }: { products: ShopProduct[] }) {
 }
 
 function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: string) => void; onCancel: () => void }) {
-  const [list, setList] = useState(shop.products.map((p) => ({ ...p, price: String(p.price), group: p.group ?? '' })));
+  const [list, setList] = useState(
+    shop.products.map((p) => ({
+      ...p,
+      price: String(p.price),
+      group: p.group ?? '',
+      resellerPrice: p.resellerPrice ? String(p.resellerPrice) : '',
+    })),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const set = (i: number, k: 'name' | 'price' | 'unit' | 'group', v: string) =>
+  const set = (i: number, k: 'name' | 'price' | 'unit' | 'group' | 'resellerPrice', v: string) =>
     setList((l) =>
-      l.map((p, j) => (j === i ? { ...p, [k]: k === 'price' ? v.replace(/\D/g, '').slice(0, 10) : v } : p)),
+      l.map((p, j) =>
+        j === i ? { ...p, [k]: k === 'price' || k === 'resellerPrice' ? v.replace(/\D/g, '').slice(0, 10) : v } : p,
+      ),
     );
   const groups = [...new Set(list.map((p) => p.group.trim()).filter(Boolean))];
   const save = async () => {
@@ -1210,6 +1221,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
         price: Number(p.price || '0'),
         unit: p.unit.trim(),
         ...(p.group.trim() ? { group: p.group.trim() } : {}),
+        ...(Number(p.resellerPrice) > 0 ? { resellerPrice: Number(p.resellerPrice) } : {}),
       }))
       .filter((p) => p.name);
     setBusy(true);
@@ -1262,7 +1274,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 <X size={16} />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 pr-[34px]">
+            <div className="grid grid-cols-3 gap-1.5 pr-[34px]">
               <input
                 value={p.group}
                 onChange={(e) => set(i, 'group', e.target.value)}
@@ -1280,6 +1292,14 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 aria-label="Satuan"
                 className={cn(fieldCls, 'px-3 py-1.5 fs-12')}
               />
+              <input
+                value={p.resellerPrice ? Number(p.resellerPrice).toLocaleString('id-ID') : ''}
+                onChange={(e) => set(i, 'resellerPrice', e.target.value)}
+                inputMode="numeric"
+                placeholder="Harga reseller"
+                aria-label="Harga reseller (opsional)"
+                className={cn(fieldCls, 'px-3 py-1.5 fs-12 tabular-nums')}
+              />
             </div>
           </div>
         ))}
@@ -1287,7 +1307,9 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
       {list.length < PRODUCTS_MAX && (
         <button
           type="button"
-          onClick={() => setList((l) => [...l, { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '' }])}
+          onClick={() =>
+            setList((l) => [...l, { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '', resellerPrice: '' }])
+          }
           className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
         >
           <Plus size={14} /> Tambah produk

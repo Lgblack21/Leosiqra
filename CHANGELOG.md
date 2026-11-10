@@ -102,6 +102,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.27.2 | 10 Nov 2026 | Gambar gerakan kembali |
 | 3.27.3 | 10 Nov 2026 | Animasi gerakan |
 | 3.27.4 | 10 Nov 2026 | Video promo juga ke Instagram & Facebook |
+| 3.28.0 | 10 Nov 2026 | Usahaku: pembukuan usaha terpisah |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -115,6 +116,23 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.0 — 2026-11-10 — Usahaku: pembukuan usaha terpisah
+
+- **Usahaku jadi menu sendiri** (layar penuh: Beranda · Kasir · Stok · Laporan · ⚙️ Pengaturan), tidak lagi di
+  dalam Ladangku. Ladangku tinggal Jual barang & Tagih.
+- **Uang usaha terpisah dari uang pribadi.** Aktifkan buku usaha: tiap usaha punya **kas usaha** sendiri (kas toko,
+  rekening bank usaha, saldo marketplace, deposit supplier). Penjualan & biaya masuk kas usaha, tidak lagi tercampur
+  di pemasukan/pengeluaran pribadi. Data lama tetap aman.
+- **Setor modal & ambil uang usaha**: pindahkan uang antara rekening pribadi dan kas usaha (tercatat sebagai
+  transfer, bukan pemasukan/pengeluaran). Bisa juga pindah antar kas usaha.
+- **Kasir 2 tipe jualan**: *Langsung* (IG, WA, offline, website — tanpa biaya, pilih Tunai/Transfer/QRIS/COD) dan
+  *Marketplace* (Shopee, Tokopedia, TikTok Shop, dll) dengan **biaya admin diisi sendiri** per baris, otomatis
+  ditotal. Uang marketplace bisa ditandai "belum cair" lalu **Cair** saat dananya masuk.
+- **Harga reseller** per produk + sakelar "Pembeli reseller" di kasir.
+- **12 jenis usaha** (kuliner, online shop, kelontong, jasa, kue, top up game & produk digital, dropship, fotokopi,
+  sewa, pertanian, freelance, lainnya) dengan jalur jualan & tips yang menyesuaikan.
+- Laporan Usahaku ikut menghitung potongan marketplace; Pajak Center ikut membaca omzet dari buku usaha.
 
 ## 3.27.4 — 2026-11-10 — Video promo juga ke Instagram & Facebook
 

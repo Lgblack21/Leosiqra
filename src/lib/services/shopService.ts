@@ -1,10 +1,12 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
+import type { SaleBookInput } from './shopBookService';
 
 // Usahaku (Ladangku › Usaha) — /api/member/shops (Worker, migrasi 0027).
 // Penjualan = transaksi pemasukan (related_type 'shop', related_id = id usaha).
 
-export type ShopProduct = { name: string; price: number; unit: string; group?: string }; // group = kategori, mis. "Free Fire"
+// group = kategori, mis. "Free Fire"; resellerPrice = harga khusus reseller (opsional).
+export type ShopProduct = { name: string; price: number; unit: string; group?: string; resellerPrice?: number };
 export type ShopPlan = {
   modal: number | null;
   waktu: string;
@@ -93,6 +95,14 @@ export type Shop = {
   catalogSyncedAt?: string;
   /** Jumlah bahan stok hampir habis (Usahaku › Stok). */
   lowStock: number;
+  /** Jenis toko (kuliner, online, topup, …) — null = belum dipilih (fitur lama semua tampil). */
+  kind?: string;
+  /** Jalur jualan yang dipakai toko ini. */
+  channels: ShopChannels;
+  /** false = tabel buku usaha belum ada di server (migrasi 0045 belum jalan). */
+  bookReady: boolean;
+  /** true = usaha ini sudah punya kas usaha → penjualan & biaya masuk buku usaha, bukan rekening pribadi. */
+  bookOn: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -109,6 +119,8 @@ export type ShopInput = Partial<{
   linkUrl: string;
   promoted: boolean;
   style: KasirStyle;
+  kind: string | null;
+  channels: ShopChannels;
 }>;
 
 type Row = Record<string, unknown>;
@@ -120,6 +132,7 @@ const parse = <T>(v: unknown, fallback: T): T => {
     return fallback;
   }
 };
+export type ShopChannels = { langsung: string[]; marketplace: string[] };
 export const shopFromRow = (r: Row): Shop => ({
   id: String(r.id),
   name: String(r.name ?? ''),
@@ -141,6 +154,10 @@ export const shopFromRow = (r: Row): Shop => ({
   hookReady: 'hook_on' in r,
   catalogSyncedAt: str(r.catalog_synced_at),
   lowStock: Number(r.low_stock) || 0,
+  kind: str(r.kind),
+  channels: { langsung: [], marketplace: [], ...parse<Partial<ShopChannels>>(r.channels_json, {}) },
+  bookReady: r.book_ready === true,
+  bookOn: r.book_on === true,
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });
@@ -157,10 +174,22 @@ const toBody = (i: ShopInput) => ({
   ...(i.linkUrl !== undefined ? { link_url: i.linkUrl } : {}),
   ...(i.promoted ? { promoted: true } : {}),
   ...(i.style !== undefined ? { style: i.style } : {}),
+  ...(i.kind !== undefined ? { kind: i.kind } : {}),
+  ...(i.channels !== undefined ? { channels: i.channels } : {}),
 });
 
 /** Jenis pengeluaran usaha (sama dengan SHOP_EXPENSE_KINDS di Worker → sub kategori "Biaya Usaha"). */
-export const SHOP_EXPENSE_KINDS = ['Bahan & Stok', 'Kemasan', 'Operasional', 'Lainnya'] as const;
+export const SHOP_EXPENSE_KINDS = [
+  'Bahan & Stok',
+  'Kemasan',
+  'Operasional',
+  'Ongkir',
+  'Iklan & Promosi',
+  'Gaji',
+  'Sewa',
+  'Listrik & Air',
+  'Lainnya',
+] as const;
 export type ShopExpenseInput = {
   requestId: string;
   amount: number;
@@ -200,7 +229,8 @@ export const shopService = {
     await cloudflareApi(`/api/member/shops/${id}/hook`, { method: 'DELETE' });
     notifyCollectionChanged('shops');
   },
-  async expense(id: string, input: ShopExpenseInput & { accountId: string; date?: string }) {
+  /** accountId = rekening pribadi (usaha tanpa kas usaha) ATAU id kas usaha (usaha dengan buku usaha). */
+  async expense(id: string, input: ShopExpenseInput & { accountId: string; date?: string; book?: boolean }) {
     await cloudflareApi(`/api/member/shops/${id}/expense`, {
       method: 'POST',
       json: {
@@ -208,7 +238,7 @@ export const shopService = {
         amount: input.amount,
         item: input.item,
         kind: input.kind,
-        account_id: input.accountId,
+        ...(input.book ? { shop_account_id: input.accountId } : { account_id: input.accountId }),
         date: input.date,
         ...(input.stock ? { stock: { material_id: input.stock.materialId, qty: input.stock.qty } } : {}),
       },
@@ -216,6 +246,7 @@ export const shopService = {
     notifyCollectionChanged('shop_stock');
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
+    notifyCollectionChanged('shop_book');
   },
   async sale(
     id: string,
@@ -228,8 +259,11 @@ export const shopService = {
       items?: { name: string; price: number; qty: number; key?: string }[];
       accountId: string;
       date?: string;
+      /** Buku usaha: jalur jualan, cara bayar, biaya marketplace, kas usaha tujuan. */
+      book?: SaleBookInput;
     },
   ) {
+    const b = input.book;
     await cloudflareApi(`/api/member/shops/${id}/sale`, {
       method: 'POST',
       json: {
@@ -239,12 +273,23 @@ export const shopService = {
         product: input.product,
         buyer: input.buyer,
         items: input.items,
-        account_id: input.accountId,
         date: input.date,
+        ...(b
+          ? {
+              channel: b.channel,
+              channel_type: b.channelType,
+              pay_method: b.payMethod,
+              fees: b.fees,
+              reseller: b.reseller,
+              settled: b.settled,
+              shop_account_id: b.accountId,
+            }
+          : { account_id: input.accountId }),
       },
     });
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
+    notifyCollectionChanged('shop_book');
   },
 };
 

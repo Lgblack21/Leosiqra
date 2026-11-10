@@ -16,12 +16,12 @@ const QUICK: { label: string; kind: (typeof SHOP_EXPENSE_KINDS)[number] }[] = [
   { label: 'Bahan baku', kind: 'Bahan & Stok' },
   { label: 'Stok barang', kind: 'Bahan & Stok' },
   { label: 'Kemasan', kind: 'Kemasan' },
-  { label: 'Ongkir', kind: 'Operasional' },
-  { label: 'Sewa tempat', kind: 'Operasional' },
-  { label: 'Listrik & air', kind: 'Operasional' },
+  { label: 'Ongkir', kind: 'Ongkir' },
+  { label: 'Sewa tempat', kind: 'Sewa' },
+  { label: 'Listrik & air', kind: 'Listrik & Air' },
   { label: 'Pulsa & internet', kind: 'Operasional' },
-  { label: 'Gaji / upah', kind: 'Operasional' },
-  { label: 'Iklan & promosi', kind: 'Operasional' },
+  { label: 'Gaji / upah', kind: 'Gaji' },
+  { label: 'Iklan & promosi', kind: 'Iklan & Promosi' },
 ];
 const ACC_KEY = 'leosiqra-usaha-biaya-acc';
 
@@ -33,8 +33,11 @@ export function ExpenseForm({
   onCancel,
   materials = [],
   initialMaterialId,
+  kasList,
 }: {
   shop: Shop;
+  /** Usaha dengan buku usaha: bayar dari kas usaha ini (bukan rekening pribadi). */
+  kasList?: { id: string; name: string }[];
   /** Bahan stok usaha ini — pembelian bisa langsung menambah stok. */
   materials?: StockMaterial[];
   /** Buka dari Stok › Beli: bahan ini langsung dipilih. */
@@ -61,6 +64,11 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (locked) return;
+    if (kasList) {
+      setAccounts(kasList);
+      setAccountId((cur) => (kasList.some((a) => a.id === cur) ? cur : (kasList[0]?.id ?? '')));
+      return;
+    }
     accountService
       .getUserAccounts('')
       .then((list) => {
@@ -77,7 +85,8 @@ export function ExpenseForm({
         setAccountId(ok.some((a) => a.id === saved) ? saved : (ok[0]?.id ?? ''));
       })
       .catch(() => setAccounts([]));
-  }, [shop.id, locked]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- kasList berubah identitas tiap render induk; kunci isinya saja
+  }, [shop.id, locked, kasList?.map((a) => `${a.id}:${a.name}`).join('|')]);
 
   const value = Number(amount || '0');
   const save = async () => {
@@ -282,7 +291,7 @@ export function ExpenseForm({
       ) : (
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <label className="block min-w-0">
-            <span className={labelCls}>Dibayar dari</span>
+            <span className={labelCls}>{kasList ? 'Dibayar dari kas usaha' : 'Dibayar dari'}</span>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
@@ -334,7 +343,9 @@ export function ExpenseForm({
         </button>
       </div>
       <p className="text-center fs-11 text-slate-400">
-        Masuk sebagai pengeluaran Biaya Usaha › {kind} — omzet tidak berkurang, laba bersih dihitung otomatis.
+        {kasList
+          ? `Masuk ke buku usaha sebagai biaya ${kind} — terpisah dari keuangan pribadimu.`
+          : `Masuk sebagai pengeluaran Biaya Usaha › ${kind} — omzet tidak berkurang, laba bersih dihitung otomatis.`}
       </p>
     </div>
   );

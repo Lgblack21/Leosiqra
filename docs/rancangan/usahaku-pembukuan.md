@@ -1,6 +1,6 @@
 # Rancangan — Usahaku jadi Pembukuan Usaha
 
-Status: **DI-ACC Bos 2026-11-10** (jawaban bagian 10). Belum ada coding — R1 menunggu "gas" Bos.
+Status: **DI-ACC Bos 2026-11-10** (jawaban bagian 10). **R1 dikerjakan (3.28.0, branch claude/friendly-galileo-omr8xf, migrasi 0045)** — menunggu SQL + "gas".
 
 ## Keputusan Bos (chat 2026-11-10)
 

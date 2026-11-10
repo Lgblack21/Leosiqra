@@ -2,20 +2,21 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LeoGuide } from '@/components/ai/LeoGuide';
 import { ArrowLeft, Camera, ChevronRight, HandCoins, LayoutGrid, Sprout, Store, Tag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SellFlow } from '@/components/ladang/SellFlow';
 import { TagihView } from '@/components/ladang/TagihView';
-import { UsahaView } from '@/components/ladang/UsahaView';
 import { RingkasView } from '@/components/ladang/RingkasView';
 import { itemService, listingService, type Listing } from '@/lib/services/itemService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
-// Tab di hash (#ringkas, #usaha, #jual, #tagih). Tab Target lama dihapus karena ikut menghitung gaji.
+// Tab di hash (#ringkas, #jual, #tagih). Tab Target lama dihapus karena ikut menghitung gaji.
+// "Usaha" kini menu sendiri (Usahaku, layar penuh) — tombolnya & tautan lama #usaha pindah ke sana.
 // ?item=<id> langsung membuka barang itu (tombol di Barangku).
 
 const TABS = [
@@ -29,17 +30,24 @@ type TabId = (typeof TABS)[number]['id'];
 export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?: (m: string) => void }) {
   const [tab, setTab] = useState<TabId>('ringkas');
   const [flash, setFlash] = useState('');
+  const usahaku = `${variant === 'app' ? '/app' : '/membership'}/usahaku`;
+  const router = useRouter();
   useEffect(() => {
     const read = () => {
       const h = window.location.hash.slice(1);
-      if (TABS.some((t) => t.id === h)) setTab(h as TabId);
+      if (h === 'usaha') window.location.replace(usahaku);
+      else if (TABS.some((t) => t.id === h)) setTab(h as TabId);
       else if (new URLSearchParams(window.location.search).has('item')) setTab('jual'); // tombol "Jual" di Barangku
     };
     read(); // hash baru terbaca di klien (static export)
     window.addEventListener('hashchange', read);
     return () => window.removeEventListener('hashchange', read);
-  }, []);
+  }, [usahaku]);
   const go = (t: TabId) => {
+    if (t === 'usaha') {
+      router.push(usahaku);
+      return;
+    }
     setTab(t);
     try {
       window.history.replaceState(null, '', `${window.location.pathname}#${t}`);
@@ -65,7 +73,6 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
         </div>
       )}
       {tab === 'ringkas' && <RingkasView variant={variant} go={go} onToast={say} />}
-      {tab === 'usaha' && <UsahaView variant={variant} onToast={say} />}
       {tab === 'jual' && <JualView variant={variant} onToast={say} />}
       {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
     </>

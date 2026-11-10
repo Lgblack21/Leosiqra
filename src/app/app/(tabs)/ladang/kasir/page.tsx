@@ -1,11 +1,12 @@
 'use client';
 
-import { KasirView } from '@/components/ladang/KasirView';
+import { useEffect } from 'react';
 
-export default function AppKasirPage() {
-  return (
-    <div className="max-w-md mx-auto px-4 pt-6 pb-8">
-      <KasirView variant="app" />
-    </div>
-  );
+// Tautan lama app HP Ladangku › Usahaku › kasir (?id=) → layar Usahaku.
+export default function AppLegacyUsahaKasirPage() {
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    window.location.replace(`/app/usahaku${id ? `?id=${encodeURIComponent(id)}#kasir` : ''}`);
+  }, []);
+  return null;
 }

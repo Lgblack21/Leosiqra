@@ -56,7 +56,7 @@ const jt = (n: number) =>
         ? `${Math.round(n / 1e3)} rb`
         : String(Math.round(n));
 
-export function LaporanUsaha({ variant }: { variant: 'web' | 'app' }) {
+export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | 'app'; embedded?: boolean }) {
   const reduce = useReducedMotion();
   const [id, setId] = useState<string | null>(null);
   const [rangeId, setRangeId] = useState<RangeId>('bulan');
@@ -88,7 +88,7 @@ export function LaporanUsaha({ variant }: { variant: 'web' | 'app' }) {
   const sum = useMemo(() => (data ? summarize(data) : null), [data]);
   const theme = KASIR_THEME[data?.shop.theme ?? 'ungu'] ?? KASIR_THEME.ungu;
   const c = theme.swatch;
-  const back = variant === 'app' ? '/app/ladang' : '/membership/ladang';
+  const back = `${variant === 'app' ? '/app' : '/membership'}/usahaku${id ? `?id=${encodeURIComponent(id)}` : ''}`;
 
   const downloadXlsx = async () => {
     if (!data || !sum) return;
@@ -117,7 +117,7 @@ export function LaporanUsaha({ variant }: { variant: 'web' | 'app' }) {
         };
 
   return (
-    <div className="lap-root min-h-screen bg-[#f5f6fa] pb-16 text-slate-900">
+    <div className={cn('lap-root bg-[#f5f6fa] text-slate-900', embedded ? 'rounded-[28px] pb-6' : 'min-h-screen pb-16')}>
       <style>{`
         @media print {
           @page { size: A4; margin: 11mm; }
@@ -133,15 +133,22 @@ export function LaporanUsaha({ variant }: { variant: 'web' | 'app' }) {
       `}</style>
 
       {/* Toolbar (tidak ikut dicetak) */}
-      <div className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 print:hidden">
+      <div
+        className={cn(
+          'z-20 border-b border-slate-200/70 bg-white/95 print:hidden',
+          embedded ? 'rounded-t-[28px]' : 'sticky top-0',
+        )}
+      >
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-3 md:px-6">
-          <Link
-            href={back}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
-            aria-label="Kembali ke Usahaku"
-          >
-            <ArrowLeft size={18} />
-          </Link>
+          {!embedded && (
+            <Link
+              href={back}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
+              aria-label="Kembali ke Usahaku"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+          )}
           <div className="mr-auto min-w-0">
             <p className="fs-11 font-bold uppercase tracking-[0.14em] text-slate-400">Laporan usaha</p>
             <p className="truncate fs-15 font-extrabold">{data?.shop.name ?? 'Memuat…'}</p>

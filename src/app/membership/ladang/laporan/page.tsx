@@ -1,8 +1,12 @@
 'use client';
 
-import { LaporanUsaha } from '@/components/ladang/LaporanUsaha';
+import { useEffect } from 'react';
 
-// Ladangku › Usahaku › Laporan (?id=<usaha>) — laporan per toko + Unduh PDF/Excel.
+// Tautan lama Ladangku › Usahaku › Laporan (?id=) → layar Usahaku tab Laporan.
 export default function LaporanUsahaPage() {
-  return <LaporanUsaha variant="web" />;
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    window.location.replace(`/membership/usahaku${id ? `?id=${encodeURIComponent(id)}#laporan` : ''}`);
+  }, []);
+  return null;
 }

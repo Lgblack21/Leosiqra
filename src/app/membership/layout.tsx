@@ -28,6 +28,7 @@ const ONBOARDING_PATH = '/membership/onboarding';
 const FULLSCREEN_PATHS = [
   '/membership/investment',
   '/membership/ladang',
+  '/membership/usahaku',
   '/membership/fokus',
   '/membership/cerita',
   '/membership/sehat',

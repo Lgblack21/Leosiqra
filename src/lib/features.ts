@@ -12,6 +12,7 @@ import {
   Repeat,
   ShieldCheck,
   Sprout,
+  Store,
   Sticker,
   Timer,
   TrendingUp,
@@ -41,6 +42,7 @@ export type FeatureId =
   | 'jejak'
   | 'langganan'
   | 'ladang'
+  | 'usahaku'
   | 'fokus'
   | 'cerita'
   | 'sehat'
@@ -89,6 +91,13 @@ export const FEATURES: Feature[] = [
     href: '/membership/langganan',
     icon: Radar,
     tint: 'from-violet-50 to-violet-100 text-violet-600',
+  },
+  {
+    id: 'usahaku',
+    label: 'Usahaku',
+    href: '/membership/usahaku',
+    icon: Store,
+    tint: 'from-teal-50 to-emerald-100 text-teal-600',
   },
   {
     id: 'ladang',
@@ -186,6 +195,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'investasi',
   'jejak',
   'langganan',
+  'usahaku',
   'ladang',
   'fokus',
   'cerita',
@@ -208,6 +218,8 @@ export const normalizeFeatures = (ids: readonly string[]): FeatureId[] => {
     // 'makan' (3.3.0, Makanku) kini bagian dari Olahragaku (dulu Sehatku).
     const id = (raw === 'hutang' ? 'tabungan' : raw === 'makan' ? 'olahraga' : raw) as FeatureId;
     if (BY_ID.has(id) && !out.includes(id)) out.push(id);
+    // Usahaku keluar dari Ladangku (R1 pembukuan usaha) — yang menyalakan Ladangku tetap dapat Usahaku.
+    if (raw === 'ladang' && !ids.includes('usahaku') && !out.includes('usahaku')) out.push('usahaku');
   }
   return out;
 };

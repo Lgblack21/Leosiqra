@@ -18,6 +18,28 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-10 — USAHAKU R1 PEMBUKUAN (3.28.0) — BELUM DEPLOY. Butuh SQL `cloudflare/migrations/0045_usaha_buku.sql`
+  (Bos jalankan di D1 Console; tanpa SQL kode tetap jalan cara lama: book_ready=false).** Rancangan & keputusan Bos:
+  `docs/rancangan/usahaku-pembukuan.md`.
+  - Worker: tabel `shop_accounts` (kas usaha) + `shop_entries` (jual/biaya/setor/ambil/pindah/saldo_awal; amount=omzet
+    kotor, fee=potongan marketplace, net=masuk kas, status menunggu=belum cair), kolom `shops.kind`/`channels_json`.
+    Usaha dengan ≥1 kas usaha → `recordShopSale/Expense` menulis ke buku usaha (tidak ke transaksi pribadi); tanpa kas
+    = cara lama. Kasir tim & webhook website → kas utama (is_default). Endpoint `/api/member/shops/:id/{book,accounts,
+    transfer,entries/:eid[/settle]}`, `/api/member/shops/omzet?year=` (Pajak). Setor/ambil = transaksi pribadi type
+    `transfer` (payload.shopEntryId) — dikunci dari hapus/ubah nominal di halaman transaksi (409) selama entri ada.
+    Hapus usaha ditolak kalau kas masih bersaldo. Semua mutasi saldo bersyarat baris buku ada (entry_key unik → anti dobel).
+  - UI: `src/components/usahaku/{UsahakuApp,BerandaUsaha,PengaturanUsaha,UsahaSheet}.tsx`, rute `/membership/usahaku` &
+    `/app/usahaku` (FULLSCREEN), fitur baru `usahaku` (Worker PREF_FEATURES; pengguna Ladangku otomatis dapat Usahaku).
+    Kasir (`KasirView` embedded, `Struk` + `BookSaleFields`): Langsung/Marketplace, biaya per baris, cair nanti, kas,
+    harga reseller. `src/lib/usaha/jenis.ts` = 12 jenis toko (daftar terbuka). Tautan lama `/ladang/kasir|laporan` &
+    `#usaha` dialihkan.
+  - Dites lokal (wrangler dev --local, D1 dari schema-production + 0027–0033/0036/0045): saldo kas & pribadi cocok
+    hitung manual (setor/ambil/pindah/cair/hapus balik), dobel ditolak, user lain 404, tanpa login 401, kasir tim &
+    webhook masuk kas utama, laporan + omzet. Playwright web 1280 + Pixel 7 + iPhone 13: 0 error JS.
+  - **Belum**: Ringkas Ladangku masih hanya menghitung penjualan lama (transaksi pribadi); HPP/laba per produk = R2;
+    pesanan/DP/utang-piutang usaha = R3; impor Excel marketplace & neraca = R4. Kasir tim belum bisa pilih cara bayar
+    (default tunai). Metrik R1 belum dicek dengan data produksi.
+
 - **2026-11-10 — POSTING OTOMATIS IG + FACEBOOK — 3.27.4 LIVE (run #207, commit 2328f02). Secret IG_ACCESS_TOKEN/IG_USER_ID/FB_PAGE_ID sudah dipasang Bos; /api/promo/meta-check → enabled ig+yt+fb, IG ok @leosiqra_official, FB ok Halaman Leosiqra.**
   - Setup Meta (dikerjakan Bos, dipandu): app dev **Leosiqra Poster** (ID 971281122297773) di portofolio **Leosiqra**
     (business 1073773095480351, login FB "Leowenry Ganda"). Halaman FB **Leosiqra** (1434319926429016) & IG

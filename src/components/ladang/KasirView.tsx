@@ -45,6 +45,8 @@ import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { isCreditAccountType } from '@/lib/creditCard';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
+import { shopBookService, type ShopAccount, type ShopBook } from '@/lib/services/shopBookService';
+import { FEE_CHIPS, PAY_METHODS, accountEmoji, channelsOf } from '@/lib/usaha/jenis';
 import { ShopDetail, amt, fieldCls, initials, labelCls, monthKey, productLabel, short, toneOf } from './UsahaView';
 
 // Struk → satu transaksi pemasukan atomik di server (request_id anti dobel).
@@ -55,10 +57,19 @@ const ACC_KEY = 'leosiqra-kasir-acc-v1';
 
 const themeOf = (s: KasirStyle) => KASIR_THEME[s.theme] ?? KASIR_THEME.ungu;
 
-export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToast?: (m: string) => void }) {
+export function KasirView({
+  variant,
+  onToast,
+  embedded = false,
+}: {
+  variant: 'web' | 'app';
+  onToast?: (m: string) => void;
+  /** Di dalam layar Usahaku (tab Kasir): tanpa tombol kembali sendiri. */
+  embedded?: boolean;
+}) {
   const app = variant === 'app';
   const router = useRouter();
-  const back = `${app ? '/app' : '/membership'}/ladang#usaha`;
+  const back = `${app ? '/app' : '/membership'}/usahaku`;
   const [id, setId] = useState<string | null>(null);
   const [shops, setShops] = useState<Shop[] | null>(null);
   const [tx, setTx] = useState<Transaction[]>([]);
@@ -145,9 +156,30 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       u2();
     };
   }, [loadStock]);
+  // Buku usaha (kas usaha terpisah) — hanya untuk usaha yang sudah punya kas usaha.
+  const [book, setBook] = useState<ShopBook | null>(null);
+  const bookOn = Boolean(shops?.find((s) => s.id === id)?.bookOn);
+  const loadBook = useCallback(async () => {
+    if (!id || !bookOn) return;
+    try {
+      setBook(await shopBookService.get(id));
+    } catch {
+      /* tetap tampilkan data terakhir */
+    }
+  }, [id, bookOn]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- muat buku saat usaha dibuka
+    void loadBook();
+    return subscribeToCollectionChanges('shop_book', loadBook);
+  }, [loadBook]);
+  const [reseller, setReseller] = useState(false);
   const activeMaterials = (stock?.materials ?? []).filter((m) => !m.archived_at);
   const lowCount = activeMaterials.filter(isLow).length;
-  const shopTx = useMemo(() => tx.filter((t) => t.relatedType === 'shop' && t.relatedId === id), [tx, id]);
+  // Setor/ambil (type transfer) bukan penjualan/biaya — tidak ikut dihitung.
+  const shopTx = useMemo(
+    () => tx.filter((t) => t.relatedType === 'shop' && t.relatedId === id && t.type !== 'transfer'),
+    [tx, id],
+  );
   const sales = useMemo(() => shopTx.filter((t) => t.type === 'pemasukan'), [shopTx]);
   const today = toLocalDateString();
   const isToday = (t: Transaction) => toLocalDateString(new Date(t.date)) === today;
@@ -157,13 +189,25 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const monthNet = Math.round(monthTx.reduce((x, t) => x + (t.type === 'pengeluaran' ? -amt(t) : amt(t)), 0));
 
   const [lines, setLines] = useState<Line[]>([]);
+  // Harga reseller: dipakai kalau sakelar "Pembeli reseller" menyala dan produk punya harga reseller.
+  const priceFor = (p: ShopProduct, r: boolean) => (r && p.resellerPrice ? p.resellerPrice : p.price);
   const add = (p: ShopProduct) =>
     setLines((l) => {
       const k = lineKey(p);
       return l.some((x) => x.key === k)
         ? l.map((x) => (x.key === k ? { ...x, qty: Math.min(9999, x.qty + 1) } : x))
-        : [...l, { key: k, name: p.name, group: p.group, price: p.price, qty: 1 }];
+        : [...l, { key: k, name: p.name, group: p.group, price: priceFor(p, reseller), qty: 1 }];
     });
+  const toggleReseller = (on: boolean) => {
+    setReseller(on);
+    const list = shops?.find((s) => s.id === id)?.products ?? [];
+    setLines((l) =>
+      l.map((x) => {
+        const p = list.find((q) => lineKey(q) === x.key);
+        return p ? { ...x, price: priceFor(p, on) } : x;
+      }),
+    );
+  };
   const setQty = (k: string, q: number) =>
     setLines((l) =>
       q < 1 ? l.filter((x) => x.key !== k) : l.map((x) => (x.key === k ? { ...x, qty: Math.min(9999, q) } : x)),
@@ -204,8 +248,22 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
     else setSheet(true);
   };
-  const todayTotal = Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
-  const todayCost = Math.round(todayCosts.reduce((x, t) => x + amt(t), 0));
+  const todayTotal = book ? book.today.omzet : Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
+  const todayCost = book
+    ? book.today.biaya + book.today.fee
+    : Math.round(todayCosts.reduce((x, t) => x + amt(t), 0));
+  const monthNetShown = book ? book.month.omzet - book.month.fee - book.month.biaya : monthNet;
+  const todayBook = (book?.entries ?? [])
+    .filter((e) => e.date === today && (e.type === 'jual' || e.type === 'biaya'))
+    .map((e) => ({
+      id: e.id,
+      type: e.type === 'jual' ? 'pemasukan' : 'pengeluaran',
+      amount: e.amount,
+      note: [e.product || e.note || (e.type === 'jual' ? 'Penjualan' : 'Biaya'), e.channel, e.status === 'menunggu' ? 'belum cair' : '']
+        .filter(Boolean)
+        .join(' · '),
+      createdAt: e.createdAt,
+    }));
   // HP: ikon di atas label (5 tombol muat satu baris); layar lebar: pil sebaris.
   const actBtn =
     'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 fs-11 font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:fs-12';
@@ -255,7 +313,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     setSpending(true);
   };
   const saveExpense = (input: ShopExpenseInput & { accountId?: string; date?: string }) =>
-    shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '' });
+    shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '', book: Boolean(book) });
+  const kasList = book ? book.accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name })) : undefined;
   const strukLeft = shop.style.strukSide === 'kiri';
   const strukFor = (inSheet: boolean) => (
     <Struk
@@ -269,11 +328,13 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       onDone={say}
       inSheet={inSheet}
       onNew={() => setSheet(false)}
+      book={book ? { accounts: book.accounts.filter((a) => !a.archived) } : undefined}
+      reseller={shop.products.some((p) => p.resellerPrice) ? { on: reseller, set: toggleReseller } : undefined}
     />
   );
 
   return (
-    <div className={cn('space-y-4', app ? 'pb-44' : 'pb-28 lg:pb-0')}>
+    <div className={cn('space-y-4', app || embedded ? 'pb-44' : 'pb-28 lg:pb-0')}>
       {flash && (
         <div
           role="status"
@@ -291,13 +352,15 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         )}
       >
         <div className="flex items-center gap-3">
-          <Link
-            href={back}
-            aria-label="Kembali ke Usahaku"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-          >
-            <ArrowLeft size={17} />
-          </Link>
+          {!embedded && (
+            <Link
+              href={back}
+              aria-label="Kembali ke Usahaku"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+              <ArrowLeft size={17} />
+            </Link>
+          )}
           {!compactHead && (
             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
               <CatalogImage
@@ -320,7 +383,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             </h1>
             {compactHead && shop.style.showStats ? (
               <p className="truncate fs-11 text-white/70">
-                Hari ini {short(todayTotal)} · {todaySales.length} transaksi
+                Hari ini {short(todayTotal)} · {book ? book.today.nota : todaySales.length} transaksi
                 {todayCost ? ` · biaya ${short(todayCost)}` : ''}
               </p>
             ) : (
@@ -338,7 +401,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             {[
               ['Omzet hari ini', short(todayTotal)],
               ['Biaya hari ini', short(-todayCost)],
-              ['Bersih bulan ini', short(monthNet)],
+              ['Bersih bulan ini', short(monthNetShown)],
             ].map(([k, v]) => (
               <div
                 key={k}
@@ -413,7 +476,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <div
           className={cn(
             'fixed inset-x-3 z-40 mx-auto max-w-md',
-            app ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]' : 'bottom-4 lg:hidden',
+            app ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]' : embedded ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:hidden' : 'bottom-4 lg:hidden',
           )}
         >
           <button
@@ -475,6 +538,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                 shop={shop}
                 materials={activeMaterials}
                 initialMaterialId={buyMat}
+                kasList={kasList}
                 onSave={saveExpense}
                 onDone={(m) => {
                   setSpending(false);
@@ -538,6 +602,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               shop={shop}
               materials={activeMaterials}
               initialMaterialId={buyMat}
+              kasList={kasList}
               onSave={saveExpense}
               onDone={(m) => {
                 setSpending(false);
@@ -573,7 +638,20 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </>
       )}
 
-      {shop.style.showRecent && <RecentSales sales={[...todaySales, ...todayCosts]} />}
+      {shop.style.showRecent && (
+        <RecentSales
+          sales={[
+            ...todayBook,
+            ...[...todaySales, ...todayCosts].map((t) => ({
+              id: t.id ?? '',
+              type: t.type,
+              amount: amt(t),
+              note: t.note,
+              createdAt: String(new Date(t.createdAt ?? t.date).getTime() || 0),
+            })),
+          ]}
+        />
+      )}
     </div>
   );
 }
@@ -932,6 +1010,8 @@ export function Struk({
   inSheet,
   onNew,
   staff,
+  book,
+  reseller,
 }: {
   shop: Shop;
   lines: Line[];
@@ -943,7 +1023,27 @@ export function Struk({
   inSheet: boolean;
   onNew: () => void;
   staff?: { accountName: string | null; sell: StaffSell };
+  /** Usaha dengan kas usaha: pilih jalur jualan (langsung / marketplace + biaya), cara bayar, kas tujuan. */
+  book?: { accounts: ShopAccount[] };
+  /** Sakelar harga reseller (hanya kalau ada produk berharga reseller). */
+  reseller?: { on: boolean; set: (on: boolean) => void };
 }) {
+  const channels = channelsOf(shop);
+  const [chType, setChType] = useState<'langsung' | 'marketplace'>('langsung');
+  const [channel, setChannel] = useState(channels.langsung[0] ?? 'Offline');
+  const [payMethod, setPayMethod] = useState<string>('tunai');
+  const [kasId, setKasId] = useState('');
+  const [fees, setFees] = useState<{ label: string; amount: string }[]>([]);
+  const [settled, setSettled] = useState(false);
+  const kasDefault = book?.accounts.find((a) => a.isDefault)?.id ?? book?.accounts[0]?.id ?? '';
+  const kas = kasId && book?.accounts.some((a) => a.id === kasId) ? kasId : kasDefault;
+  const feeTotal = fees.reduce((a, f) => a + (Number(f.amount) || 0), 0);
+  const pickType = (t: 'langsung' | 'marketplace') => {
+    setChType(t);
+    setChannel((t === 'langsung' ? channels.langsung[0] : channels.marketplace[0]) ?? (t === 'langsung' ? 'Offline' : 'Shopee'));
+    setFees([]);
+    setSettled(false);
+  };
   const needBuyer = shop.style.buyer === 'wajib'; // Tampilan › Data pembeli (mis. ID game / no. HP)
   const [buyer, setBuyer] = useState('');
   const [override, setOverride] = useState<string | null>(null); // total diketik manual (diskon)
@@ -998,8 +1098,16 @@ export function Struk({
       setError('Isi data pembeli dulu.');
       return;
     }
-    if (!staff && !accountId) {
+    if (!staff && !book && !accountId) {
       setError('Pilih rekening tujuan.');
+      return;
+    }
+    if (book && (chType === 'langsung' || settled) && !kas) {
+      setError('Pilih kas usaha tujuan.');
+      return;
+    }
+    if (book && chType === 'marketplace' && feeTotal > total) {
+      setError('Total biaya lebih besar dari harga jual.');
       return;
     }
     if (staff && !staff.accountName) {
@@ -1023,7 +1131,26 @@ export function Struk({
         })),
       };
       if (staff) await staff.sell(base);
-      else {
+      else if (book) {
+        await shopService.sale(shop.id, {
+          ...base,
+          accountId: '',
+          date,
+          book: {
+            channel,
+            channelType: chType,
+            payMethod: chType === 'langsung' ? payMethod : null,
+            fees: chType === 'marketplace'
+              ? fees
+                  .filter((f) => Number(f.amount) > 0)
+                  .map((f) => ({ label: f.label.trim() || `Biaya admin ${channel}`, amount: Number(f.amount) }))
+              : [],
+            reseller: Boolean(reseller?.on),
+            settled: chType === 'langsung' || settled,
+            accountId: chType === 'langsung' || settled ? kas : null,
+          },
+        });
+      } else {
         await shopService.sale(shop.id, { ...base, accountId, date });
         try {
           localStorage.setItem(`${ACC_KEY}:${shop.id}`, accountId);
@@ -1046,7 +1173,13 @@ export function Struk({
         shop.style.receiptFooter || 'Terima kasih sudah belanja! 🙏',
       ].join('\n');
       setDone({ text, amount: total, buyer: buyer.trim() });
-      onDone(`Penjualan ${formatIDR(total)} tercatat & masuk rekening.`);
+      onDone(
+        book
+          ? chType === 'marketplace' && !settled
+            ? `Penjualan ${channel} ${formatIDR(total)} tercatat · menunggu cair.`
+            : `Penjualan ${formatIDR(total)} tercatat di kas usaha.`
+          : `Penjualan ${formatIDR(total)} tercatat & masuk rekening.`,
+      );
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'Gagal mencatat.');
     }
@@ -1058,6 +1191,8 @@ export function Struk({
     setOverride(null);
     setDone(null);
     setError('');
+    setFees([]);
+    setSettled(false);
     setRequestId(crypto.randomUUID());
     if (inSheet) onNew();
   };
@@ -1234,10 +1369,48 @@ export function Struk({
           className={fieldCls}
         />
       </label>
+      {reseller && (
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-amber-50 px-3 py-2.5 dark:bg-amber-500/10">
+          <span>
+            <span className="block fs-13 font-bold text-amber-900 dark:text-amber-200">Pembeli reseller</span>
+            <span className="block fs-11 text-amber-800/70 dark:text-amber-300/70">Harga pindah ke harga reseller</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={reseller.on}
+            onChange={(e) => {
+              reseller.set(e.target.checked);
+              setOverride(null);
+            }}
+            className="h-5 w-5 accent-amber-600"
+          />
+        </label>
+      )}
       {staff ? (
         <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Masuk ke <b>{staff.accountName ?? '— belum ditentukan pemilik'}</b> · hari ini
         </p>
+      ) : book ? (
+        <BookSaleFields
+          channels={channels}
+          chType={chType}
+          pickType={pickType}
+          channel={channel}
+          setChannel={setChannel}
+          payMethod={payMethod}
+          setPayMethod={setPayMethod}
+          accounts={book.accounts}
+          kas={kas}
+          setKas={setKasId}
+          fees={fees}
+          setFees={setFees}
+          feeTotal={feeTotal}
+          total={total}
+          settled={settled}
+          setSettled={setSettled}
+          date={date}
+          setDate={setDate}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
@@ -1269,7 +1442,9 @@ export function Struk({
       )}
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
-          <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">Total diterima</span>
+          <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">
+            {book && chType === 'marketplace' ? 'Harga jual' : 'Total diterima'}
+          </span>
           <span className="flex min-w-0 items-center gap-1 fsh-22 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
             <span className="fs-14">Rp</span>
             <input
@@ -1301,16 +1476,199 @@ export function Struk({
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Bayar & catat
       </button>
-      <p className="text-center fs-11 text-slate-400">Masuk sebagai pemasukan Usaha & Freelance › Penjualan.</p>
+      <p className="text-center fs-11 text-slate-400">
+        {book
+          ? 'Masuk ke buku usaha — terpisah dari keuangan pribadimu.'
+          : 'Masuk sebagai pemasukan Usaha & Freelance › Penjualan.'}
+      </p>
     </div>
   );
 }
 
-function RecentSales({ sales }: { sales: Transaction[] }) {
+// Kasir buku usaha: Langsung (tanpa biaya: pilih cara bayar & kas) atau Marketplace (biaya diisi sendiri per
+// baris, ditotal; uang bisa "belum cair" dulu). Keputusan Bos 2026-11-10.
+function BookSaleFields(p: {
+  channels: { langsung: string[]; marketplace: string[] };
+  chType: 'langsung' | 'marketplace';
+  pickType: (t: 'langsung' | 'marketplace') => void;
+  channel: string;
+  setChannel: (v: string) => void;
+  payMethod: string;
+  setPayMethod: (v: string) => void;
+  accounts: ShopAccount[];
+  kas: string;
+  setKas: (v: string) => void;
+  fees: { label: string; amount: string }[];
+  setFees: (f: { label: string; amount: string }[]) => void;
+  feeTotal: number;
+  total: number;
+  settled: boolean;
+  setSettled: (v: boolean) => void;
+  date: string;
+  setDate: (v: string) => void;
+}) {
+  const list = p.chType === 'langsung' ? p.channels.langsung : p.channels.marketplace;
+  const chip = (on: boolean) =>
+    cn(
+      'rounded-full px-3 py-1.5 fs-12 font-bold transition-colors',
+      on
+        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300',
+    );
+  const kasSelect = (
+    <label className="block">
+      <span className={labelCls}>Masuk ke kas</span>
+      <select value={p.kas} onChange={(e) => p.setKas(e.target.value)} className={fieldCls}>
+        {p.accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {accountEmoji(a.kind)} {a.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <div className="space-y-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/50">
+      <div>
+        <span className={labelCls}>Jual lewat</span>
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+          {(['langsung', 'marketplace'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => p.pickType(t)}
+              aria-pressed={p.chType === t}
+              className={cn(
+                'rounded-full py-2 fs-13 font-bold',
+                p.chType === t
+                  ? t === 'langsung'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-orange-500 text-white'
+                  : 'text-slate-500 dark:text-slate-400',
+              )}
+            >
+              {t === 'langsung' ? 'Langsung' : 'Marketplace'}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(list.length ? list : [p.chType === 'langsung' ? 'Offline' : 'Shopee']).map((c) => (
+            <button key={c} type="button" onClick={() => p.setChannel(c)} className={chip(p.channel === c)}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+      {p.chType === 'langsung' ? (
+        <>
+          <div>
+            <span className={labelCls}>Cara bayar</span>
+            <div className="flex flex-wrap gap-1.5">
+              {PAY_METHODS.map((m) => (
+                <button key={m.id} type="button" onClick={() => p.setPayMethod(m.id)} className={chip(p.payMethod === m.id)}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {kasSelect}
+            <label className="block">
+              <span className={labelCls}>Tanggal</span>
+              <input type="date" value={p.date} max={toLocalDateString()} onChange={(e) => p.setDate(e.target.value)} className={fieldCls} />
+            </label>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <span className={labelCls}>Biaya {p.channel} (isi sendiri)</span>
+            <ul className="space-y-1.5">
+              {p.fees.map((f, i) => (
+                <li key={i} className="grid grid-cols-[1fr_110px_auto] gap-1.5">
+                  <input
+                    value={f.label}
+                    onChange={(e) => p.setFees(p.fees.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                    maxLength={60}
+                    aria-label="Nama biaya"
+                    className={cn(fieldCls, 'px-3 py-2 fs-13')}
+                  />
+                  <input
+                    value={f.amount ? Number(f.amount).toLocaleString('id-ID') : ''}
+                    onChange={(e) =>
+                      p.setFees(p.fees.map((x, j) => (j === i ? { ...x, amount: e.target.value.replace(/\D/g, '').slice(0, 10) } : x)))
+                    }
+                    inputMode="numeric"
+                    placeholder="Rp"
+                    aria-label={`Nominal ${f.label || 'biaya'}`}
+                    className={cn(fieldCls, 'px-3 py-2 fs-13 tabular-nums')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => p.setFees(p.fees.filter((_, j) => j !== i))}
+                    aria-label={`Hapus ${f.label || 'biaya'}`}
+                    className="flex w-9 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <X size={15} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {FEE_CHIPS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() =>
+                    p.setFees([...p.fees, { label: c === 'Biaya admin' ? `Biaya admin ${p.channel}` : c, amount: '' }].slice(0, 12))
+                  }
+                  className="flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 fs-11 font-bold text-orange-700 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-300"
+                >
+                  <Plus size={11} /> {c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <dl className="space-y-1 rounded-xl bg-white p-2.5 fs-13 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+            <div className="flex justify-between text-slate-500 dark:text-slate-400">
+              <dt>Total potongan</dt>
+              <dd className="font-bold tabular-nums text-rose-600 dark:text-rose-400">−{formatIDR(p.feeTotal)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="font-bold text-slate-700 dark:text-slate-200">Uang diterima</dt>
+              <dd className="font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
+                {formatIDR(Math.max(0, p.total - p.feeTotal))}
+              </dd>
+            </div>
+          </dl>
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span>
+              <span className="block fs-13 font-bold text-slate-800 dark:text-slate-100">Uang sudah cair</span>
+              <span className="block fs-11 text-slate-500 dark:text-slate-400">
+                Belum? Biarkan mati — tandai cair nanti di Beranda.
+              </span>
+            </span>
+            <input type="checkbox" checked={p.settled} onChange={(e) => p.setSettled(e.target.checked)} className="h-5 w-5 accent-emerald-600" />
+          </label>
+          <div className={cn('grid gap-2', p.settled ? 'grid-cols-2' : 'grid-cols-1')}>
+            {p.settled && kasSelect}
+            <label className="block">
+              <span className={labelCls}>Tanggal</span>
+              <input type="date" value={p.date} max={toLocalDateString()} onChange={(e) => p.setDate(e.target.value)} className={fieldCls} />
+            </label>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+type RecentRow = { id: string; type: string; amount: number; note?: string | null; createdAt: string };
+function RecentSales({ sales }: { sales: RecentRow[] }) {
   if (!sales.length) return null;
-  const list = [...sales]
-    .sort((a, b) => new Date(b.createdAt ?? b.date).getTime() - new Date(a.createdAt ?? a.date).getTime())
-    .slice(0, 10);
+  // createdAt: ISO (buku usaha) atau epoch ms dalam string (transaksi lama).
+  const ms = (v: string) => (/^\d+$/.test(v) ? Number(v) : new Date(v).getTime() || 0);
+  const list = [...sales].sort((a, b) => ms(b.createdAt) - ms(a.createdAt)).slice(0, 10);
   return (
     <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
       <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Hari ini</p>
@@ -1341,7 +1699,7 @@ function RecentSales({ sales }: { sales: Transaction[] }) {
                 )}
               >
                 {out ? '−' : '+'}
-                {formatIDR(Math.round(amt(t)))}
+                {formatIDR(Math.round(t.amount))}
               </span>
             </li>
           );

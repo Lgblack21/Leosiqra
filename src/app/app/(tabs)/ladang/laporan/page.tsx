@@ -1,7 +1,12 @@
 'use client';
 
-import { LaporanUsaha } from '@/components/ladang/LaporanUsaha';
+import { useEffect } from 'react';
 
-export default function AppLaporanUsahaPage() {
-  return <LaporanUsaha variant="app" />;
+// Tautan lama app HP Ladangku › Usahaku › laporan (?id=) → layar Usahaku.
+export default function AppLegacyUsahaLaporanPage() {
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    window.location.replace(`/app/usahaku${id ? `?id=${encodeURIComponent(id)}#laporan` : ''}`);
+  }, []);
+  return null;
 }

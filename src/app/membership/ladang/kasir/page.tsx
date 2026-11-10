@@ -1,14 +1,12 @@
 'use client';
 
-import { KasirView } from '@/components/ladang/KasirView';
-import { useFeedback } from '@/components/ui/Feedback';
+import { useEffect } from 'react';
 
-// Ladangku › Usahaku › Kasir (?id=<usaha>) — katalog toko + struk penjualan.
+// Tautan lama Ladangku › Usahaku › Kasir (?id=) → layar Usahaku tab Kasir.
 export default function KasirPage() {
-  const { toast } = useFeedback();
-  return (
-    <div className="mx-auto min-h-screen max-w-6xl px-4 pb-24 pt-4 md:px-8 md:pt-6">
-      <KasirView variant="web" onToast={(m) => toast.success(m)} />
-    </div>
-  );
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    window.location.replace(`/membership/usahaku${id ? `?id=${encodeURIComponent(id)}#kasir` : ''}`);
+  }, []);
+  return null;
 }

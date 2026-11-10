@@ -30,6 +30,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
+import { shopBookService } from '@/lib/services/shopBookService';
 import { useCountUp } from '@/lib/hooks/useCountUp';
 import { cn, formatIDR } from '@/lib/utils';
 import {
@@ -174,6 +175,17 @@ export function PajakCenter() {
     };
   }, [year]);
 
+  // Buku usaha Usahaku (kas usaha terpisah, 3.28.0+) tidak lagi masuk transaksi pribadi → ambil omzet bruto
+  // & biaya per bulan dari buku usaha lalu dijumlahkan dengan catatan lama.
+  const [bookMonths, setBookMonths] = useState<{ month: number; omzet: number; biaya: number }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void shopBookService.omzet(year).then((m) => alive && setBookMonths(m));
+    return () => {
+      alive = false;
+    };
+  }, [year]);
+
   // ── Angka otomatis dari catatan
   const auto = useMemo(() => {
     const omzet = Array(12).fill(0) as number[];
@@ -191,8 +203,12 @@ export function PajakCenter() {
         if (/zakat/i.test(`${cat} ${t.subCategory ?? ''} ${t.note ?? ''}`)) zakat += v;
       }
     }
+    for (const m of bookMonths) {
+      if (m.month >= 1 && m.month <= 12) omzet[m.month - 1] += m.omzet;
+      biayaUsaha += m.biaya;
+    }
     return { omzet, gaji, biayaUsaha, zakat };
-  }, [tx]);
+  }, [tx, bookMonths]);
 
   const omzet = useMemo(() => auto.omzet.map((v, i) => s.omzetManual[pad(i + 1)] ?? v), [auto.omzet, s.omzetManual]);
   const omzetSetahun = omzet.reduce((a, b) => a + b, 0);
