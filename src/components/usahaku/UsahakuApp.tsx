@@ -159,7 +159,7 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
           {backBtn(app ? '/app/more' : '/membership/dashboard', app ? 'Kembali' : 'Ringkasan')}
           <div className="min-w-0 text-center">
             <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-24 dark:text-white">Usahaku</h1>
-            <p className="truncate fs-12 text-slate-500 dark:text-slate-400">Kasir & pembukuan usaha, terpisah dari uang pribadi</p>
+            <p className="truncate fs-12 text-slate-500 dark:text-slate-400">Toko & pembukuan usaha, terpisah dari uang pribadi</p>
           </div>
           <span className="w-11" />
         </header>

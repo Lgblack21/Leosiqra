@@ -103,6 +103,8 @@ export type Shop = {
   bookReady: boolean;
   /** true = usaha ini sudah punya kas usaha → penjualan & biaya masuk buku usaha, bukan rekening pribadi. */
   bookOn: boolean;
+  /** Ringkasan buku usaha (bulan ini): total saldo kas, omzet hari ini & bulan ini, biaya + potongan. */
+  book: { kas: number; day: number; month: number; cost: number };
   createdAt: string;
   updatedAt: string;
 };
@@ -158,6 +160,12 @@ export const shopFromRow = (r: Row): Shop => ({
   channels: { langsung: [], marketplace: [], ...parse<Partial<ShopChannels>>(r.channels_json, {}) },
   bookReady: r.book_ready === true,
   bookOn: r.book_on === true,
+  book: {
+    kas: Number(r.book_kas) || 0,
+    day: Number(r.book_day) || 0,
+    month: Number(r.book_month) || 0,
+    cost: Number(r.book_cost) || 0,
+  },
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });

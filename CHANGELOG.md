@@ -104,6 +104,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.27.4 | 10 Nov 2026 | Video promo juga ke Instagram & Facebook |
 | 3.28.0 | 10 Nov 2026 | Usahaku: pembukuan usaha terpisah |
 | 3.28.1 | 11 Nov 2026 | Usahaku: tarik data per tanggal & bulan |
+| 3.28.2 | 11 Nov 2026 | Usahaku: daftar toko baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -117,6 +118,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.2 — 2026-11-11 — Usahaku: daftar toko baru
+
+- Halaman daftar Usahaku dirombak: ringkasan semua toko (omzet, laba bulan ini, total kas usaha) dan kartu toko
+  yang lebih rapi — jenis usaha, status "Kas usaha terpisah", stok menipis, omzet hari ini/bulan ini & laba, plus
+  tombol **Buka toko**. Angka toko yang sudah pakai kas usaha kini ikut terhitung.
 
 ## 3.28.1 — 2026-11-11 — Usahaku: tarik data per tanggal & bulan
 

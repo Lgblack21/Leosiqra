@@ -11143,11 +11143,28 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
         // Buku usaha (migrasi 0045): book_ready = tabel ada; book_on = usaha sudah punya kas usaha.
         let bookReady = true;
         let kasCount: Record<string, number> = {};
+        let kasSum: Record<string, number> = {};
+        let sums: Record<string, { day: number; month: number; cost: number }> = {};
         try {
-          const rows = (await env.DB.prepare("SELECT shop_id, COUNT(*) AS n FROM shop_accounts WHERE owner_id = ? AND archived_at IS NULL GROUP BY shop_id").bind(userId).all<{ shop_id: string; n: number }>()).results ?? [];
+          const rows = (await env.DB.prepare("SELECT shop_id, COUNT(*) AS n, COALESCE(SUM(balance), 0) AS bal FROM shop_accounts WHERE owner_id = ? AND archived_at IS NULL GROUP BY shop_id").bind(userId).all<{ shop_id: string; n: number; bal: number }>()).results ?? [];
           kasCount = Object.fromEntries(rows.map((r) => [r.shop_id, r.n]));
+          kasSum = Object.fromEntries(rows.map((r) => [r.shop_id, r.bal]));
+          // Ringkasan buku usaha per toko: omzet hari ini & bulan ini, biaya + potongan bulan ini.
+          const today = todayWIB();
+          const s = (await env.DB.prepare(
+            `SELECT shop_id, COALESCE(SUM(CASE WHEN type = 'jual' AND date = ? THEN amount END), 0) AS day,
+                    COALESCE(SUM(CASE WHEN type = 'jual' THEN amount END), 0) AS month,
+                    COALESCE(SUM(CASE WHEN type = 'biaya' THEN amount WHEN type = 'jual' THEN fee END), 0) AS cost
+               FROM shop_entries WHERE owner_id = ? AND date BETWEEN ? AND ? GROUP BY shop_id`
+          ).bind(today, userId, `${today.slice(0, 8)}01`, today).all<{ shop_id: string; day: number; month: number; cost: number }>()).results ?? [];
+          sums = Object.fromEntries(s.map((r) => [r.shop_id, { day: r.day, month: r.month, cost: r.cost }]));
         } catch (e) { if (bookTableMissing(e)) bookReady = false; else throw e; }
-        return json({ items: items.map((r) => ({ ...r, low_stock: low[String(r.id)] ?? 0, book_ready: bookReady, book_on: (kasCount[String(r.id)] ?? 0) > 0 })) });
+        return json({
+          items: items.map((r) => {
+            const sid = String(r.id);
+            return { ...r, low_stock: low[sid] ?? 0, book_ready: bookReady, book_on: (kasCount[sid] ?? 0) > 0, book_kas: kasSum[sid] ?? 0, book_day: sums[sid]?.day ?? 0, book_month: sums[sid]?.month ?? 0, book_cost: sums[sid]?.cost ?? 0 };
+          }),
+        });
       }
       if (request.method === "POST") {
         const parsed = sanitizeShopFields(await parseJson<Record<string, unknown>>(request), true);
