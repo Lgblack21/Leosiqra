@@ -33,7 +33,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - (Selesai 10 Nov malam) **Urutan aman**: gas deploy dulu → Bos pasang 3 secret di Cloudflare (tipe *Secret*): `IG_ACCESS_TOKEN`,
     `IG_USER_ID=17841401198522641`, `FB_PAGE_ID=1434319926429016` → cek `/api/promo/meta-check` → video berikutnya
     di antrean (default 19:00 WIB) terposting ke IG + FB + YouTube. Antrean saat ini bersih (30 terposting, 1 batal),
-    jadi tidak ada posting massal. Belum terbukti: unggah Reels FB & IG nyata (baru terbukti di posting pertama).
+    jadi tidak ada posting massal. **TERBUKTI 10 Nov 22:40 WIB**: video "Perjalanan Leosiqra" (naskah manual
+    `promo/out/draft-perjalanan.json`, seed 1164027366) terbit ke YT (shorts/8ImMGKUtA_E), IG (reel/DfkO3aHE7EG),
+    FB (reel/2365031984249809) — 2 putaran cron (container/unggah → publish). make.mjs kini pakai alimiter setelah
+    loudnorm (render pertama gagal QA clipping -0.1 dBFS).
   - Metrik FB belum dikumpulkan (IG & YT sudah). `promo/setup-instagram.mjs` = cara lama (Instagram Login), tak dipakai.
 
 - **2026-11-10 — RINGKASAN SESI OLAHRAGAKU (akun ini, 9–10 Nov) — baca ini dulu kalau lanjut Olahragaku.**
