@@ -48,7 +48,8 @@ export async function auditPage(url) {
   const ld = [...h.matchAll(/"@type"\s*:\s*"([A-Za-z]+)"/g)].map((m) => m[1]);
   const words = strip(h).split(" ").filter(Boolean).length;
   const imgs = [...h.matchAll(/<img\b[^>]*>/gi)].map((m) => m[0]);
-  const noAlt = imgs.filter((t) => !/\balt=["'][^"']+["']/i.test(t)).length;
+  // alt="" sah untuk gambar dekoratif (mis. logo di samping teks nama) — hitung hanya <img> tanpa atribut alt.
+  const noAlt = imgs.filter((t) => !/\balt=(["'])[^"']*\1/i.test(t)).length;
   const links = [...h.matchAll(/<a\b[^>]+href=["']([^"'#]+)["']/gi)].map((m) => m[1]);
   const internal = links.filter((l) => l.startsWith("/") || l.includes("leosiqra.com")).length;
   if (r.status !== 200) issues.push(`HTTP ${r.status}`);

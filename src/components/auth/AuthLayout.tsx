@@ -90,12 +90,16 @@ export function AuthLayout({
             <span aria-hidden className="auth-shine" />
             <Sparkles size={14} className="auth-twinkle" /> Gratis 14 hari · tanpa kartu kredit
           </span>
-          <h1
+          {/* Satu <h1> per halaman = yang di pita HP (dibaca Googlebot mobile-first). Versi laptop
+              tetap heading level 1 bagi pembaca layar lewat role/aria-level. */}
+          <p
+            role="heading"
+            aria-level={1}
             style={d(1)}
             className="auth-enter mt-5 max-w-lg fsh-44 font-extrabold leading-[1.05] tracking-[-0.03em] xl:fsh-52 [@media(max-height:760px)]:mt-4 [@media(max-height:760px)]:fsh-40"
           >
             {headline}
-          </h1>
+          </p>
           <p
             style={d(2)}
             className="auth-enter mt-4 max-w-md fs-16 leading-relaxed text-slate-500 [@media(max-height:760px)]:hidden"
