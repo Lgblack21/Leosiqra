@@ -13945,18 +13945,26 @@ const writeFitKerja = (env: Env, userId: string, k: FitKerja) =>
   env.DB.prepare("UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.fitKerja', json(?)) WHERE id = ?")
     .bind(JSON.stringify(k), userId).run();
 // Potong koin atomik (idem). "dup" = idem sudah tercatat (klik ganda), "kurang" = saldo tidak cukup.
-const fitCharge = async (env: Env, userId: string, amount: number, kind: string, idem: string, note: string): Promise<"ok" | "dup" | "kurang"> => {
+// Percobaan yang sudah di-refund tidak mengunci: tiap refund `refund:<idem>…` menaikkan akhiran (#1, #2, …), jadi coba lagi
+// dengan request_id/minggu yang sama memotong ulang sekali, sedangkan klik ganda yang berbarengan tetap berbagi idem → "dup".
+// Pakai `idem` yang dikembalikan untuk fitRefund.
+const fitCharge = async (env: Env, userId: string, amount: number, kind: string, baseIdem: string, note: string): Promise<{ c: "ok" | "dup" | "kurang"; idem: string }> => {
+  let idem = baseIdem;
   try {
+    const prefix = `refund:${baseIdem}`;
+    const refunds = await env.DB.prepare("SELECT COUNT(*) AS n FROM coin_ledger WHERE user_id = ? AND substr(idem_key, 1, ?) = ?")
+      .bind(userId, prefix.length, prefix).first<{ n: number }>();
+    if (refunds?.n) idem = `${baseIdem}#${refunds.n}`;
     const r = await env.DB.prepare(
       `INSERT OR IGNORE INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
        SELECT ?, ?, ?, ?, 0, ?, ?, ? WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
     ).bind(generateId(), userId, -amount, kind, idem, note, nowIso(), userId, amount).run();
-    if (r.meta.changes) return "ok";
+    if (r.meta.changes) return { c: "ok", idem };
   } catch (e) {
-    if (coinTableMissing(e)) return "kurang";
+    if (coinTableMissing(e)) return { c: "kurang", idem };
     throw e;
   }
-  return (await env.DB.prepare("SELECT 1 FROM coin_ledger WHERE idem_key = ?").bind(idem).first()) ? "dup" : "kurang";
+  return { c: (await env.DB.prepare("SELECT 1 FROM coin_ledger WHERE idem_key = ?").bind(idem).first()) ? "dup" : "kurang", idem };
 };
 const fitRefund = (env: Env, userId: string, amount: number, kind: string, idem: string, note: string) =>
   grantCoins(env, userId, amount, `${kind}_refund`, `refund:${idem}`, note).catch((e) => console.error("Refund Olahragaku gagal:", e));
@@ -14019,9 +14027,10 @@ async function handleFitMenu(request: Request, env: Env, userId: string, today: 
   const fp = await readFitProfile(env, userId, today);
   if (!fp) return json({ error: "Isi profil tubuhmu dulu." }, { status: 400 });
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
-  const idem = `fit_menu:${userId}:${requestId}`;
+  let idem = `fit_menu:${userId}:${requestId}`;
   if (ulang) {
-    const c = await fitCharge(env, userId, FIT_MENU_ULANG_PRICE, "fit_menu", idem, "Menu harian ulang · Olahragaku");
+    const { c, idem: used } = await fitCharge(env, userId, FIT_MENU_ULANG_PRICE, "fit_menu", idem, "Menu harian ulang · Olahragaku");
+    idem = used;
     if (c === "dup") return json({ error: "Menu sedang disusun. Tunggu sebentar.", code: "in_progress" }, { status: 409 });
     if (c === "kurang") return noCoins(env, userId, FIT_MENU_ULANG_PRICE);
   }
@@ -14073,8 +14082,8 @@ async function handleFitEval(request: Request, env: Env, userId: string, today: 
   const fp = await readFitProfile(env, userId, today);
   if (!fp) return json({ error: "Isi profil tubuhmu dulu." }, { status: 400 });
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
-  const idem = `fit_eval:${userId}:${week}`; // satu bayar per minggu, walau request_id berbeda
-  const c = await fitCharge(env, userId, FIT_EVAL_PRICE, "fit_eval", idem, "Evaluasi mingguan · Olahragaku");
+  // Satu bayar per minggu, walau request_id berbeda; percobaan yang di-refund dapat idem baru (lihat fitCharge).
+  const { c, idem } = await fitCharge(env, userId, FIT_EVAL_PRICE, "fit_eval", `fit_eval:${userId}:${week}`, "Evaluasi mingguan · Olahragaku");
   if (c === "dup") return json({ error: "Evaluasi minggu ini sedang disusun. Tunggu sebentar lalu muat ulang.", code: "in_progress" }, { status: 409 });
   if (c === "kurang") return noCoins(env, userId, FIT_EVAL_PRICE);
   const from = shiftDateStr(today, -6);
@@ -14134,9 +14143,10 @@ async function handleFitAsk(request: Request, env: Env, userId: string, today: s
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
   const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM fit_coach WHERE user_id = ? AND kind = 'ask' AND week_start = ?").bind(userId, today).first<{ n: number }>();
   const bayar = (n?.n ?? 0) >= FIT_ASK_FREE;
-  const idem = `fit_ask:${userId}:${requestId}`;
+  let idem = `fit_ask:${userId}:${requestId}`;
   if (bayar) {
-    const c = await fitCharge(env, userId, FIT_ASK_PRICE, "fit_ask", idem, "Tanya coach · Olahragaku");
+    const { c, idem: used } = await fitCharge(env, userId, FIT_ASK_PRICE, "fit_ask", idem, "Tanya coach · Olahragaku");
+    idem = used;
     if (c === "dup") return json({ error: "Pertanyaanmu sedang dijawab.", code: "in_progress" }, { status: 409 });
     if (c === "kurang") return noCoins(env, userId, FIT_ASK_PRICE);
   }

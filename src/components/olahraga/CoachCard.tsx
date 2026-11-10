@@ -195,7 +195,11 @@ export function CoachCard({
         <div className="mt-3 flex gap-2">
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              // Pertanyaan baru = request_id baru (yang lama mungkin sudah terpotong koin tanpa jawaban → 409 kalau dipakai ulang).
+              setAskId(crypto.randomUUID());
+            }}
             maxLength={300}
             placeholder="Mis. boleh minum kopi saat puasa?"
             className="h-11 min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 fs-14 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
