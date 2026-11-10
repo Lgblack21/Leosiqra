@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-10 — USAHAKU R1 PEMBUKUAN (3.28.0) — BELUM DEPLOY. Butuh SQL `cloudflare/migrations/0045_usaha_buku.sql`
+- **2026-11-10 — USAHAKU R1 PEMBUKUAN — 3.28.0 LIVE (run #208), 3.28.1 LIVE (filter tanggal). SQL 0045: Bos diminta jalankan (belum dikonfirmasi dengan query). Butuh SQL `cloudflare/migrations/0045_usaha_buku.sql`
   (Bos jalankan di D1 Console; tanpa SQL kode tetap jalan cara lama: book_ready=false).** Rancangan & keputusan Bos:
   `docs/rancangan/usahaku-pembukuan.md`.
   - Worker: tabel `shop_accounts` (kas usaha) + `shop_entries` (jual/biaya/setor/ambil/pindah/saldo_awal; amount=omzet
@@ -36,7 +36,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites lokal (wrangler dev --local, D1 dari schema-production + 0027–0033/0036/0045): saldo kas & pribadi cocok
     hitung manual (setor/ambil/pindah/cair/hapus balik), dobel ditolak, user lain 404, tanpa login 401, kasir tim &
     webhook masuk kas utama, laporan + omzet. Playwright web 1280 + Pixel 7 + iPhone 13: 0 error JS.
-  - **3.28.1 (branch, belum deploy)**: Beranda tarik data per tanggal/bulan (`GET …/book?from&to` + `period` sum,
+  - **3.28.1 LIVE**: Beranda tarik data per tanggal/bulan (`GET …/book?from&to` + `period` sum,
     maks 400 hari, 1.000 catatan). Akun tim tetap hanya `/tim` (kasir/biaya/stok usaha yang diberikan) — dicek:
     sesi tim ke `/api/member/*` = 401.
   - **Belum**: Ringkas Ladangku masih hanya menghitung penjualan lama (transaksi pribadi); HPP/laba per produk = R2;
