@@ -204,6 +204,8 @@ export type ShopExpenseInput = {
   item: string;
   kind: string;
   stock?: { materialId: string; qty: number } | null;
+  /** Belum dibayar (utang ke supplier, PRO, buku usaha): tanpa kas. */
+  tempo?: { party: string; due?: string } | null;
 };
 
 export const shopService = {
@@ -249,6 +251,7 @@ export const shopService = {
         ...(input.book ? { shop_account_id: input.accountId } : { account_id: input.accountId }),
         date: input.date,
         ...(input.stock ? { stock: { material_id: input.stock.materialId, qty: input.stock.qty } } : {}),
+        ...(input.tempo ? { tempo: input.tempo } : {}),
       },
     });
     notifyCollectionChanged('shop_stock');

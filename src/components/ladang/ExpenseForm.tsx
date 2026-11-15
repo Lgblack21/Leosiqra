@@ -29,6 +29,7 @@ export function ExpenseForm({
   shop,
   onSave,
   locked,
+  allowTempo = false,
   onDone,
   onCancel,
   materials = [],
@@ -45,6 +46,8 @@ export function ExpenseForm({
   onSave: (input: ShopExpenseInput & { accountId?: string; date?: string }) => Promise<void>;
   /** Akun tim: rekening dikunci pemilik, tanggal hari ini. */
   locked?: { accountName: string | null };
+  /** Buku usaha + PRO: boleh dicatat "belum dibayar" (utang ke supplier). */
+  allowTempo?: boolean;
   onDone: (m: string) => void;
   onCancel?: () => void;
 }) {
@@ -61,6 +64,7 @@ export function ExpenseForm({
   const [stockId, setStockId] = useState(initialMat?.id ?? '');
   const [stockQty, setStockQty] = useState('');
   const mat = materials.find((m) => m.id === stockId);
+  const [tempo, setTempo] = useState({ on: false, party: '', due: '' });
 
   useEffect(() => {
     if (locked) return;
@@ -102,7 +106,11 @@ export function ExpenseForm({
       setError('Pemilik usaha belum menentukan rekening untuk akunmu.');
       return;
     }
-    if (!locked && !accountId) {
+    if (tempo.on && !tempo.party.trim()) {
+      setError('Isi nama supplier.');
+      return;
+    }
+    if (!locked && !tempo.on && !accountId) {
       setError('Pilih rekening yang dipakai bayar.');
       return;
     }
@@ -120,6 +128,7 @@ export function ExpenseForm({
         item: item.trim(),
         kind,
         stock: mat ? { materialId: mat.id, qty: sq } : null,
+        ...(tempo.on ? { tempo: { party: tempo.party.trim(), ...(tempo.due ? { due: tempo.due } : {}) } } : {}),
         ...(locked ? {} : { accountId, date }),
       });
       if (!locked) {
@@ -130,8 +139,11 @@ export function ExpenseForm({
         }
       }
       onDone(
-        `Pengeluaran ${formatIDR(value)} (${item.trim()}) tercatat${mat ? ` · stok ${mat.name} +${fmtQty(sq)} ${mat.unit}` : ''}.`,
+        tempo.on
+          ? `Utang ke ${tempo.party.trim()} ${formatIDR(value)} tercatat (${item.trim()})${mat ? ` · stok ${mat.name} +${fmtQty(sq)} ${mat.unit}` : ''}.`
+          : `Pengeluaran ${formatIDR(value)} (${item.trim()}) tercatat${mat ? ` · stok ${mat.name} +${fmtQty(sq)} ${mat.unit}` : ''}.`,
       );
+      setTempo({ on: false, party: '', due: '' });
       setItem('');
       setAmount('');
       setStockId('');
@@ -284,7 +296,31 @@ export function ExpenseForm({
           )}
         </div>
       )}
-      {locked ? (
+      {allowTempo && !locked && (
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/50">
+          <span>
+            <span className="block fs-13 font-bold text-slate-800 dark:text-slate-100">Belum dibayar (utang ke supplier)</span>
+            <span className="block fs-11 text-slate-500 dark:text-slate-400">Barang/jasa sudah diterima, bayarnya nanti. Kas belum berkurang.</span>
+          </span>
+          <input type="checkbox" checked={tempo.on} onChange={(e) => setTempo({ ...tempo, on: e.target.checked })} className="h-5 w-5 accent-amber-600" />
+        </label>
+      )}
+      {tempo.on ? (
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
+          <label className="col-span-2 block">
+            <span className={labelCls}>Nama supplier</span>
+            <input value={tempo.party} onChange={(e) => setTempo({ ...tempo, party: e.target.value })} maxLength={60} placeholder="Mis. Toko Tepung Jaya" className={fieldCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Jatuh tempo (opsional)</span>
+            <input type="date" value={tempo.due} min={toLocalDateString()} onChange={(e) => setTempo({ ...tempo, due: e.target.value })} className={fieldCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Tanggal terima</span>
+            <input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={fieldCls} />
+          </label>
+        </div>
+      ) : locked ? (
         <p className="rounded-2xl bg-slate-50 px-4 py-3 fs-13 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Dibayar dari <b>{locked.accountName ?? '—'}</b> · hari ini
         </p>

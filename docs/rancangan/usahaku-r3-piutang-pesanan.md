@@ -1,13 +1,16 @@
 # Rancangan — Usahaku R3: bon pelanggan, pesanan & DP, utang supplier
 
 Status: **DI-ACC Bos 2026-11-16 ("gas aja" = semua saran bagian 8).** Bon pelanggan dikerjakan **3.30.0**
-(branch `claude/usahaku-bon-20261116`, migrasi `0047_shop_bon.sql`). Pesanan & DP dikerjakan **3.31.0** (branch `claude/usahaku-pesanan-20261116`, tanpa migrasi baru — pakai kolom 0047). Berikutnya: utang supplier (3.32).
+(branch `claude/usahaku-bon-20261116`, migrasi `0047_shop_bon.sql`). Pesanan & DP dikerjakan **3.31.0** (branch `claude/usahaku-pesanan-20261116`, tanpa migrasi baru — pakai kolom 0047). Utang supplier dikerjakan **3.32.0** (branch `claude/usahaku-utang-20261116`, tanpa migrasi baru). **R3 selesai.**
 Catatan 3.30: nama pelanggan juga disimpan di `buyer` (langsung tampil di laporan lama); bon dari **akun tim belum**
 (UI kasir tim belum punya pilihan cara bayar) — menyusul bersama toggle izin per akun tim.
 Catatan 3.31: entri `pesanan` (net 0, tanpa kas) + `dp` (ref_id → pesanan, kas +). Diambil = `jual` berbentuk bon
 (`pay_method 'bon'`, `ref_id` → pesanan) dan DP di-UPDATE jadi `bayar_piutang` (ref_id → penjualan) dalam satu batch,
 jadi sisa yang belum dibayar otomatis muncul sebagai bon. Batal tahan = DP jadi `jual` channel "DP hangus".
 Cek stok bahan cukup/tidak di kartu pesanan **belum** dibuat.
+Catatan 3.32: biaya tempo = `biaya` `pay_method 'tempo'` status `menunggu` tanpa kas (buyer/party = supplier,
+due_date); bayar lewat endpoint `pay` yang sama → entri `bayar_utang` (kas −, ≤ sisa, `cashEnough` di guard);
+cron `sendShopUtangReminders` (10:00 WIB, H-3 & H-1, klaim `$.dueRemindedFor`, toggle `$.prefs.notify.bills`).
 
 ## 1. Masalahnya
 

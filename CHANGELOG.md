@@ -113,6 +113,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.29.1 | 16 Nov 2026 | Perbaikan Olahragaku, kas tunai, halaman masuk |
 | 3.30.0 | 16 Nov 2026 | Usahaku: bon pelanggan |
 | 3.31.0 | 16 Nov 2026 | Usahaku: pesanan & DP |
+| 3.32.0 | 16 Nov 2026 | Usahaku: utang ke supplier |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -126,6 +127,16 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.32.0 — 2026-11-16 — Usahaku: utang ke supplier
+
+- **Utang ke supplier.** Tepung datang hari ini, bayarnya dua minggu lagi? Saat catat biaya, nyalakan **Belum dibayar
+  (utang ke supplier)**, isi nama supplier dan jatuh tempo. Biayanya langsung dihitung (laba & stok benar), tapi kas
+  belum berkurang. (PRO)
+- Beranda punya kartu **Utang ke supplier**: sisa per supplier, yang hampir jatuh tempo kuning, yang telat merah.
+  Tombol **Bayar** bisa dicicil — tidak bisa melebihi sisa, dan kas tunai tetap tidak bisa minus.
+- Pengingat otomatis **3 hari & 1 hari** sebelum jatuh tempo (ikut pengaturan notifikasi tagihan).
+- Laporan & Excel menampilkan utang yang belum lunas.
 
 ## 3.31.0 — 2026-11-16 — Usahaku: pesanan & DP
 

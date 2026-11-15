@@ -28,6 +28,7 @@ import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { UsahaSheet } from './UsahaSheet';
 import { reminderText } from '@/components/ladang/TagihView';
+import { usePlan } from '@/lib/usePlan';
 
 const money = (v: string) => Number(v.replace(/\D/g, '').slice(0, 11) || '0');
 const moneyText = (n: number) => (n ? n.toLocaleString('id-ID') : '');
@@ -149,7 +150,7 @@ type Form =
   | { k: 'ambil' }
   | { k: 'pindah' }
   | { k: 'cair'; entry: BookEntry }
-  | { k: 'bon'; entry: BookEntry; sisa: number }
+  | { k: 'bon' | 'utang'; entry: BookEntry; sisa: number }
   | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
@@ -179,7 +180,11 @@ export function BerandaUsaha({
   const kas = book.accounts.filter((a) => !a.archived);
   const totalKas = kas.reduce((a, k) => a + k.balance, 0);
   // Menunggu = marketplace belum cair + bon pelanggan belum lunas (dipisah tampilannya).
-  const marketPending = book.pending.filter((e) => e.payMethod !== 'bon' && e.type !== 'pesanan');
+  const marketPending = book.pending.filter((e) => e.payMethod !== 'bon' && e.payMethod !== 'tempo' && e.type !== 'pesanan');
+  const utangs = book.pending.filter((e) => e.type === 'biaya' && e.payMethod === 'tempo').sort((a, b) => (a.dueDate ?? '9').localeCompare(b.dueDate ?? '9'));
+  const sisaUtang = (e: BookEntry) => Math.max(0, e.amount - (book.paid[e.id] ?? 0));
+  const utangTotal = utangs.reduce((a, e) => a + sisaUtang(e), 0);
+  const isPro = usePlan();
   const orders = book.pending.filter((e) => e.type === 'pesanan').sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
   const dpOf = (e: BookEntry) => book.paid[e.id] ?? 0;
   const bons = book.pending.filter((e) => e.payMethod === 'bon');
@@ -201,7 +206,7 @@ export function BerandaUsaha({
 
   const remove = async (e: BookEntry) => {
     const what =
-      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : e.type === 'bayar_piutang' ? 'pembayaran bon' : e.type === 'pesanan' ? 'pesanan' : e.type === 'dp' ? 'DP' : 'catatan';
+      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : e.type === 'bayar_piutang' ? 'pembayaran bon' : e.type === 'bayar_utang' ? 'pembayaran utang' : e.type === 'pesanan' ? 'pesanan' : e.type === 'dp' ? 'DP' : 'catatan';
     if (!window.confirm(`Hapus ${what} ${formatIDR(e.amount)}? Saldo kas${e.type === 'setor' || e.type === 'ambil' ? ' & rekening pribadi' : ''} ikut kembali.`)) return;
     try {
       await shopBookService.removeEntry(shop.id, e.id);
@@ -288,6 +293,52 @@ export function BerandaUsaha({
           ))}
         </ul>
       </section>
+
+      {utangs.length > 0 && (
+        <section className="rounded-[26px] bg-rose-50 p-4 ring-1 ring-rose-100 dark:bg-rose-500/10 dark:ring-rose-500/20">
+          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-rose-900 dark:text-rose-200">
+            <span className="flex items-center gap-1.5">
+              <ReceiptText size={16} /> Utang ke supplier
+            </span>
+            <span className="tabular-nums">{formatIDR(utangTotal)}</span>
+          </p>
+          <ul className="mt-2 space-y-2">
+            {utangs.map((e) => {
+              const sisa = sisaUtang(e);
+              const d = e.dueDate ?? '';
+              const telat = Boolean(d && d < today);
+              const dekat = Boolean(d && !telat && d <= addDays(today, 3));
+              return (
+                <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                      {e.buyer || e.party || 'Supplier'} · {e.note || e.category || 'Pembelian'}
+                    </span>
+                    <span className="block fs-11 text-slate-500">
+                      {e.date} · {formatIDR(e.amount)}
+                      {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
+                      {d && (
+                        <span className={cn(telat ? 'font-bold text-rose-600' : dekat && 'font-bold text-amber-600')}>
+                          {' '}
+                          · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {d}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="fs-14 font-extrabold tabular-nums text-rose-700 dark:text-rose-300">{formatIDR(sisa)}</span>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ k: 'utang', entry: e, sisa })}
+                    className="rounded-full bg-slate-900 px-3 py-1.5 fs-12 font-bold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                  >
+                    Bayar
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {orders.length > 0 && (
         <section className="rounded-[26px] bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-500/10 dark:ring-violet-500/20">
@@ -458,6 +509,8 @@ export function BerandaUsaha({
                   ? 'Pindah antar kas'
                   : form?.k === 'bon'
                     ? 'Terima bayaran bon'
+                    : form?.k === 'utang'
+                      ? 'Bayar utang ke supplier'
                     : form?.k === 'o_dp'
                       ? 'Tambah DP pesanan'
                       : form?.k === 'o_ambil'
@@ -473,6 +526,7 @@ export function BerandaUsaha({
             materials={materials}
             kasList={kas.map((a) => ({ id: a.id, name: a.name }))}
             onSave={(input) => shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '', book: true })}
+            allowTempo={Boolean(isPro && book.bonReady)}
             onDone={(m) => {
               setForm(null);
               onToast(m);
@@ -508,8 +562,9 @@ export function BerandaUsaha({
             }}
           />
         )}
-        {form?.k === 'bon' && (
+        {(form?.k === 'bon' || form?.k === 'utang') && (
           <PayBonForm
+            mode={form.k}
             shop={shop}
             entry={form.entry}
             sisa={form.sisa}
@@ -544,6 +599,7 @@ const ENTRY_LABEL: Record<string, string> = {
   pindah: 'Pindah kas',
   saldo_awal: 'Saldo awal',
   bayar_piutang: 'Terima bon',
+  bayar_utang: 'Bayar utang',
   pesanan: 'Pesanan',
   dp: 'DP',
 };
@@ -606,7 +662,7 @@ function Riwayat({
                   </span>
                   {e.status === 'menunggu' && (
                     <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 fs-10 font-bold text-orange-700">
-                      {e.type === 'pesanan' ? 'belum diambil' : e.payMethod === 'bon' ? 'bon' : 'belum cair'}
+                      {e.type === 'pesanan' ? 'belum diambil' : e.payMethod === 'bon' ? 'bon' : e.payMethod === 'tempo' ? 'utang' : 'belum cair'}
                     </span>
                   )}
                   {e.status === 'batal' && (
@@ -1107,7 +1163,8 @@ function OrderForm({
 }
 
 // ── Bon pelanggan: terima bayaran (sebagian/lunas) ke kas usaha ──────────────
-function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: BookEntry; sisa: number; book: ShopBook; onDone: (m: string) => void }) {
+function PayBonForm({ mode = 'bon', shop, entry, sisa, book, onDone }: { mode?: 'bon' | 'utang'; shop: Shop; entry: BookEntry; sisa: number; book: ShopBook; onDone: (m: string) => void }) {
+  const utang = mode === 'utang';
   const kas = useMemo(() => book.accounts.filter((a) => !a.archived), [book.accounts]);
   const [kasId, setKasId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
   const [amount, setAmount] = useState(sisa);
@@ -1115,16 +1172,24 @@ function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: Bo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId] = useState(() => crypto.randomUUID());
-  const who = entry.buyer || entry.party || 'Pelanggan';
+  const who = entry.buyer || entry.party || (utang ? 'Supplier' : 'Pelanggan');
   const save = async () => {
     if (amount < 1) return setError('Isi nominal yang dibayar.');
-    if (amount > sisa) return setError(`Melebihi sisa bon (${formatIDR(sisa)}).`);
-    if (!kasId) return setError('Pilih kas yang menerima uangnya.');
+    if (amount > sisa) return setError(`Melebihi sisa ${utang ? 'utang' : 'bon'} (${formatIDR(sisa)}).`);
+    if (!kasId) return setError(utang ? 'Pilih kas yang dipakai bayar.' : 'Pilih kas yang menerima uangnya.');
     setBusy(true);
     setError('');
     try {
       const r = await shopBookService.payBon(shop.id, entry.id, { amount, accountId: kasId, date, requestId });
-      onDone(r.lunas ? `Bon ${who} lunas. ${formatIDR(amount)} masuk kas.` : `${formatIDR(amount)} diterima dari ${who}, sisa ${formatIDR(sisa - amount)}.`);
+      onDone(
+        utang
+          ? r.lunas
+            ? `Utang ke ${who} lunas.`
+            : `${formatIDR(amount)} dibayar ke ${who}, sisa ${formatIDR(sisa - amount)}.`
+          : r.lunas
+            ? `Bon ${who} lunas. ${formatIDR(amount)} masuk kas.`
+            : `${formatIDR(amount)} diterima dari ${who}, sisa ${formatIDR(sisa - amount)}.`,
+      );
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.');
       setBusy(false);
@@ -1133,9 +1198,9 @@ function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: Bo
   return (
     <div className="space-y-3">
       <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-13 text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
-        <b>{who}</b> · {entry.product || entry.note || 'Penjualan'}
+        <b>{who}</b> · {entry.product || entry.note || (utang ? 'Pembelian' : 'Penjualan')}
         <br />
-        Bon {formatIDR(entry.amount)} · sisa <b>{formatIDR(sisa)}</b>
+        {utang ? 'Utang' : 'Bon'} {formatIDR(entry.amount)} · sisa <b>{formatIDR(sisa)}</b>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
@@ -1153,11 +1218,12 @@ function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: Bo
         </label>
       </div>
       <label className="block">
-        <span className={labelCls}>Masuk ke kas</span>
+        <span className={labelCls}>{utang ? 'Bayar dari kas' : 'Masuk ke kas'}</span>
         <select value={kasId} onChange={(e) => setKasId(e.target.value)} className={fieldCls}>
           {kas.map((a) => (
             <option key={a.id} value={a.id}>
               {accountEmoji(a.kind)} {a.name}
+              {utang ? ` · ${formatIDR(a.balance)}` : ''}
             </option>
           ))}
         </select>
@@ -1173,7 +1239,8 @@ function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: Bo
         disabled={busy}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-14 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
       >
-        {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} {amount >= sisa ? 'Terima & lunas' : 'Terima sebagian'}
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{' '}
+        {utang ? (amount >= sisa ? 'Bayar & lunas' : 'Bayar sebagian') : amount >= sisa ? 'Terima & lunas' : 'Terima sebagian'}
       </button>
     </div>
   );

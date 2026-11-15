@@ -40,6 +40,12 @@ export type ReportExpense = {
   kind: string;
   item: string | null;
   note: string;
+  /** Utang supplier (biaya tempo): status, nama supplier, sudah dibayar, jatuh tempo. */
+  tempo?: boolean;
+  status?: string;
+  supplier?: string | null;
+  paid?: number;
+  due?: string | null;
 };
 export type ReportMaterial = { id: string; name: string; unit: string; stock: number; min_stock: number | null };
 export type ReportMove = {
@@ -234,6 +240,13 @@ export function summarize(r: ShopReport, opts: { estimate?: boolean } = {}) {
     overdue: openBon.filter((s) => s.due && s.due < today).length,
     people: [...new Set(openBon.map((s) => (s.buyer ?? '').trim().toLowerCase()).filter(Boolean))].length,
   };
+  // Utang ke supplier (biaya tempo) yang belum lunas di periode ini — biayanya sudah dihitung, kas belum keluar.
+  const openUtang = r.expenses.filter((e) => e.tempo && e.status === 'menunggu');
+  const utang = {
+    count: openUtang.length,
+    sisa: openUtang.reduce((a, e) => a + Math.max(0, e.amount - (e.paid ?? 0)), 0),
+    overdue: openUtang.filter((e) => e.due && e.due < today).length,
+  };
   const pending = {
     count: waiting.length,
     amount: waiting.reduce((a, s) => a + s.amount, 0),
@@ -363,6 +376,7 @@ export function summarize(r: ShopReport, opts: { estimate?: boolean } = {}) {
     channels: channels.map((x) => ({ ...x, cost: Math.round(chCost.get(x.name.toLowerCase()) ?? 0), costFull: !chPartial.has(x.name.toLowerCase()) })),
     pending,
     bon,
+    utang,
     hppInfo,
   };
 }

@@ -130,6 +130,14 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string, pr
     row.getCell(2).numFmt = RP;
     next += 1;
   }
+  if (s.utang.count) {
+    const row = ws.getRow(next);
+    row.getCell(1).value = `Utang ke supplier belum lunas (${s.utang.count})`;
+    row.getCell(1).font = { bold: true, color: { argb: 'FFE11D48' } };
+    row.getCell(2).value = s.utang.sisa;
+    row.getCell(2).numFmt = RP;
+    next += 1;
+  }
   if (s.bon.count) {
     const row = ws.getRow(next);
     row.getCell(1).value = `Bon pelanggan belum lunas (${s.bon.count})`;

@@ -394,6 +394,15 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
                 </p>
               </motion.section>
             )}
+            {sum.utang.count > 0 && (
+              <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-200">
+                <Hourglass size={18} className="mt-0.5 shrink-0 text-rose-600" />
+                <p className="fs-13 leading-relaxed text-rose-900">
+                  <b>{sum.utang.count} utang ke supplier belum lunas</b> — sisa {formatIDR(sum.utang.sisa)}
+                  {sum.utang.overdue ? `, ${sum.utang.overdue} lewat jatuh tempo` : ''}. Sudah dihitung sebagai biaya, uangnya belum keluar dari kas.
+                </p>
+              </motion.section>
+            )}
             {sum.bon.count > 0 && (
               <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
                 <Hourglass size={18} className="mt-0.5 shrink-0 text-amber-600" />
