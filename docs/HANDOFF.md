@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.30.0 bon pelanggan, run #217, commit df02f7f — SQL 0046 & 0047 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-16 (live: 3.31.0 pesanan & DP, run #218, commit 031c3f0 — tanpa SQL baru)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,11 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-16 — 3.31.0 LIVE (run #218, 031c3f0, tanpa SQL baru): Usahaku R3 pesanan & DP (PRO).** Kasir "Jadikan
+  pesanan", Beranda kartu Pesanan (+ DP, Diambil → jual bon + DP jadi bayar_piutang, Batal kembalikan/tahan), laporan.
+  Desain teknis di `docs/rancangan/usahaku-r3-piutang-pesanan.md` (catatan 3.31). Dites wrangler lokal + Playwright API
+  tiruan. **Belum**: data asli; cek stok bahan cukup di kartu pesanan. **Berikutnya (ACC)**: utang supplier (3.32).
 
 - **2026-11-16 — 3.30.0 LIVE (run #217, df02f7f): Usahaku R3 bon pelanggan.** SQL 0047 (`ref_id`, `due_date`, `party`)
   sudah dijalankan Bos. Rancangan R3 + ACC: `docs/rancangan/usahaku-r3-piutang-pesanan.md`. Kasir pemilik "Bon · bayar
