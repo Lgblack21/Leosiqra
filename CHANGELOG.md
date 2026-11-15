@@ -111,6 +111,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.6 | 15 Nov 2026 | Laporan Usahaku: perbandingan periode & per jalur jualan |
 | 3.29.0 | 16 Nov 2026 | Usahaku: laba dengan modal barang (HPP) |
 | 3.29.1 | 16 Nov 2026 | Perbaikan Olahragaku, kas tunai, halaman masuk |
+| 3.30.0 | 16 Nov 2026 | Usahaku: bon pelanggan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -124,6 +125,16 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.30.0 — 2026-11-16 — Usahaku: bon pelanggan
+
+- **Bon pelanggan.** Pelanggan ambil barang sekarang, bayar nanti? Di kasir pilih cara bayar **Bon · bayar nanti**, isi
+  nama (WA & jatuh tempo boleh dikosongkan). Penjualannya langsung masuk omzet, kas baru bertambah saat pelanggan bayar.
+- Beranda punya kartu **Bon pelanggan**: siapa saja yang belum bayar, sisanya berapa, dan yang lewat jatuh tempo ditandai
+  merah. Tombol **Terima bayaran** bisa dipakai untuk cicilan — tidak bisa melebihi sisa bon — dan bon otomatis lunas
+  saat pembayarannya cukup. Tombol **Ingatkan** membuka WhatsApp dengan pesan penagihan yang sopan.
+- Laporan menampilkan berapa bon yang belum lunas dan sisanya; Excel ikut.
+- Pesan pengingat (juga di Tagih) kini menyapa "Bu Rina", bukan cuma "Bu".
 
 ## 3.29.1 — 2026-11-16 — Perbaikan Olahragaku, kas tunai, halaman masuk
 

@@ -385,6 +385,19 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
               .
             </p>
 
+            {sum.bon.count > 0 && (
+              <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
+                <Hourglass size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                <p className="fs-13 leading-relaxed text-amber-900">
+                  <b>
+                    {sum.bon.count} bon pelanggan belum lunas
+                    {sum.bon.people > 1 ? ` (${sum.bon.people} orang)` : ''}
+                  </b>{' '}
+                  — sisa {formatIDR(sum.bon.sisa)}
+                  {sum.bon.overdue ? `, ${sum.bon.overdue} lewat jatuh tempo` : ''}. Sudah ikut dihitung di omzet, uangnya belum masuk kas.
+                </p>
+              </motion.section>
+            )}
             {sum.pending.count > 0 && (
               <motion.section
                 {...fade(1)}

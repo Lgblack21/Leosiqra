@@ -303,6 +303,7 @@ export const shopService = {
               reseller: b.reseller,
               settled: b.settled,
               shop_account_id: b.accountId,
+              ...(b.bon ? { bon: b.bon } : {}),
               ...(input.modal !== undefined && input.modal !== null ? { modal: input.modal } : {}),
             }
           : { account_id: input.accountId }),

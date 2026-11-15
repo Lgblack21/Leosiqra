@@ -27,6 +27,9 @@ export type ReportSale = {
   /** Total modal penjualan (lengkap). Tidak ada = sebagian/semua baris belum punya modal. */
   cogs?: number;
   cogsSrc?: 'transaksi' | 'produk';
+  /** Bon pelanggan (payMethod 'bon'): sudah dibayar & jatuh tempo. */
+  paid?: number;
+  due?: string | null;
 };
 export type ReportExpense = {
   id: string;
@@ -219,7 +222,16 @@ export function summarize(r: ShopReport, opts: { estimate?: boolean } = {}) {
   // (modal per jalur ditambahkan setelah HPP dihitung, di bawah)
 
   // Penjualan marketplace yang uangnya belum cair (status 'menunggu') di periode ini.
-  const waiting = r.sales.filter((s) => s.status === 'menunggu');
+  const waiting = r.sales.filter((s) => s.status === 'menunggu' && s.payMethod !== 'bon');
+  // Bon pelanggan yang belum lunas di periode ini (omzet sudah dihitung, uangnya belum masuk).
+  const openBon = r.sales.filter((s) => s.payMethod === 'bon' && s.status === 'menunggu');
+  const today = todayWIB();
+  const bon = {
+    count: openBon.length,
+    sisa: openBon.reduce((a, s) => a + Math.max(0, s.amount - (s.paid ?? 0)), 0),
+    overdue: openBon.filter((s) => s.due && s.due < today).length,
+    people: [...new Set(openBon.map((s) => (s.buyer ?? '').trim().toLowerCase()).filter(Boolean))].length,
+  };
   const pending = {
     count: waiting.length,
     amount: waiting.reduce((a, s) => a + s.amount, 0),
@@ -348,6 +360,7 @@ export function summarize(r: ShopReport, opts: { estimate?: boolean } = {}) {
     lowStock,
     channels: channels.map((x) => ({ ...x, cost: Math.round(chCost.get(x.name.toLowerCase()) ?? 0), costFull: !chPartial.has(x.name.toLowerCase()) })),
     pending,
+    bon,
     hppInfo,
   };
 }

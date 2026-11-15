@@ -23,7 +23,13 @@ const TONES = [
   { id: 'tegas', label: 'Tegas halus' },
 ] as const;
 type Tone = (typeof TONES)[number]['id'];
-const firstName = (s: string) => s.trim().split(/\s+/)[0] || s;
+// Nama panggilan: kata pertama, tapi sapaan (Bu/Pak/Mas/Mbak/Kak/…) ikut nama sesudahnya → "Bu Rina", bukan "Bu".
+const HONORIFIC = /^(bu|ibu|pak|bapak|mas|mbak|kak|bang|om|tante|cik|koh|ci|teh|aa|uda|uni|ning|cak)$/i;
+const firstName = (s: string) => {
+  const w = s.trim().split(/\s+/).filter(Boolean);
+  if (!w.length) return s;
+  return w.length > 1 && HONORIFIC.test(w[0].replace(/\.$/, '')) ? `${w[0]} ${w[1]}` : w[0];
+};
 const cleanNote = (s?: string) => (s ?? '').replace(/^\[Patungan\]\s*/, '').trim();
 
 export const reminderText = (tone: Tone, name: string, amount: number, note?: string) => {

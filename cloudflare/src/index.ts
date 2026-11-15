@@ -10192,24 +10192,45 @@ const shopBook = async (env: Env, ownerId: string, shopId: string) => {
     throw e;
   }
 };
-type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal";
+type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang";
 type BookEntry = {
   id: string; key: string; type: BookEntryType; date: string; amount: number; fee?: number; net: number;
   accountId: string | null; toAccountId?: string | null; personalAccountId?: string | null; personalTxId?: string | null;
   channel?: string | null; channelType?: "langsung" | "marketplace" | null; payMethod?: string | null; status?: "selesai" | "menunggu";
   category?: string | null; buyer?: string | null; reseller?: boolean; note?: string | null; payload?: Record<string, unknown> | null;
   by?: { id: string; name: string } | null;
+  // Kolom R3 (migrasi 0047) — hanya ikut INSERT kalau diisi, jadi entri lama tetap jalan tanpa migrasi.
+  refId?: string | null; dueDate?: string | null; party?: string | null;
 };
 // guard (opsional) = syarat SQL tambahan yang dicek DI DALAM batch, mis. saldo kas tunai cukup.
-const bookInsert = (env: Env, ownerId: string, shopId: string, e: BookEntry, guard?: { sql: string; binds: unknown[] }) =>
-  env.DB.prepare(
-    `INSERT OR IGNORE INTO shop_entries (id, owner_id, shop_id, entry_key, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, channel, channel_type, pay_method, status, category, buyer, reseller, note, payload_json, by_staff_id, by_name, created_at)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${guard ? ` WHERE ${guard.sql}` : ""}`
+const bookInsert = (env: Env, ownerId: string, shopId: string, e: BookEntry, guard?: { sql: string; binds: unknown[] }) => {
+  // Nama kolom dari daftar tetap (bukan input) — aman diinterpolasi.
+  const extra: [string, unknown][] = [];
+  if (e.refId !== undefined) extra.push(["ref_id", e.refId]);
+  if (e.dueDate !== undefined) extra.push(["due_date", e.dueDate]);
+  if (e.party !== undefined) extra.push(["party", e.party]);
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO shop_entries (id, owner_id, shop_id, entry_key, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, channel, channel_type, pay_method, status, category, buyer, reseller, note, payload_json, by_staff_id, by_name, created_at${extra.map(([c]) => `, ${c}`).join("")})
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${extra.map(() => ", ?").join("")}${guard ? ` WHERE ${guard.sql}` : ""}`
   ).bind(
     e.id, ownerId, shopId, e.key, e.type, e.date, e.amount, e.fee ?? 0, e.net, e.accountId, e.toAccountId ?? null, e.personalAccountId ?? null, e.personalTxId ?? null,
     e.channel ?? null, e.channelType ?? null, e.payMethod ?? null, e.status ?? "selesai", e.category ?? null, e.buyer ?? null, e.reseller ? 1 : 0, e.note ?? null,
-    e.payload ? JSON.stringify(e.payload) : null, e.by?.id ?? null, e.by?.name ?? null, nowIso(), ...(guard?.binds ?? [])
+    e.payload ? JSON.stringify(e.payload) : null, e.by?.id ?? null, e.by?.name ?? null, nowIso(), ...extra.map(([, v]) => v), ...(guard?.binds ?? [])
   );
+};
+// Kolom R3 sudah ada? (migrasi 0047) — dicek sekali per menit per isolate.
+let bonColsCache: { ok: boolean; at: number } | null = null;
+const bonReady = async (env: Env) => {
+  if (bonColsCache && Date.now() - bonColsCache.at < 60_000) return bonColsCache.ok;
+  let ok = true;
+  try { await env.DB.prepare("SELECT ref_id, due_date, party FROM shop_entries LIMIT 1").first(); }
+  catch (e) { if (e instanceof Error && /no such column|no such table/i.test(e.message)) ok = false; else throw e; }
+  bonColsCache = { ok, at: Date.now() };
+  return ok;
+};
+const BON_NOT_READY = "Bon pelanggan belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+// Jumlah yang sudah dibayar untuk sebuah bon (subquery, dipakai di dalam batch).
+const BON_PAID_SQL = "(SELECT COALESCE(SUM(p.amount), 0) FROM shop_entries p WHERE p.owner_id = ? AND p.ref_id = ? AND p.type = 'bayar_piutang')";
 // Kas tunai (kind 'kas') tidak boleh minus — uang di laci tidak bisa diambil melebihi isinya.
 // Bank/e-wallet/marketplace/deposit tetap boleh (sering ada pemasukan yang telat dicatat).
 const cashEnough = (ownerId: string, accountId: string, amount: number) => ({
@@ -10226,7 +10247,7 @@ const publishShopBook = async (env: Env, ownerId: string, shopId: string) => {
     await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "shop_book.changed", payload: { shopId, userId: ownerId } }) });
   } catch { /* realtime opsional */ }
 };
-type SaleBook = { accountId: string | null; channel: string; channelType: "langsung" | "marketplace"; payMethod: string | null; fees: { label: string; amount: number }[]; reseller: boolean };
+type SaleBook = { accountId: string | null; channel: string; channelType: "langsung" | "marketplace"; payMethod: string | null; fees: { label: string; amount: number }[]; reseller: boolean; bon?: { party: string; wa: string | null; due: string | null } };
 // Biaya marketplace diisi sendiri per baris (label + nominal), ditotal jadi satu.
 const parseSaleFees = (raw: unknown, channel: string) => {
   const rows = (Array.isArray(raw) ? raw : []).slice(0, 12).map((f) => (f && typeof f === "object" ? (f as Record<string, unknown>) : {}));
@@ -10245,6 +10266,15 @@ const parseSaleBook = (raw: Record<string, unknown>, book: { accounts: ShopAccou
   const fees = channelType === "marketplace" ? parseSaleFees(raw.fees, channel) : [];
   const fee = fees.reduce((a, f) => a + f.amount, 0);
   if (fee > amount) return "Total biaya lebih besar dari harga jual.";
+  // Bon / bayar nanti (jualan langsung): belum ada uang masuk → tanpa kas, status menunggu, nama pelanggan wajib.
+  if (channelType === "langsung" && raw.bon && typeof raw.bon === "object") {
+    const b = raw.bon as Record<string, unknown>;
+    const party = shopText(b.party, 60);
+    if (!party) return "Isi nama pelanggan untuk bon.";
+    const wa = typeof b.wa === "string" && /^\+?\d[\d\s-]{6,18}$/.test(b.wa.trim()) ? b.wa.replace(/[^\d+]/g, "") : null;
+    const due = isRealDateStr(b.due) && b.due >= "2000-01-01" && b.due <= "2100-12-31" ? b.due : null;
+    return { accountId: null, channel, channelType, payMethod: "bon", fees: [], reseller: raw.reseller === true, bon: { party, wa, due } };
+  }
   const settled = channelType === "langsung" || raw.settled === true;
   let accountId: string | null = null;
   if (settled) {
@@ -10262,12 +10292,14 @@ const recordBookSale = async (env: Env, ownerId: string, shop: { id: string; nam
   const net = input.amount - fee;
   const status = input.book.accountId ? "selesai" : "menunggu";
   const cost = await saleCost(env, ownerId, shop.id, input.items, input.modal);
-  const payload = { product: input.product || null, qty: input.qty, ...(cost.items?.length ? { items: cost.items } : {}), ...(cost.cogs !== null ? { cogs: cost.cogs, cogsSrc: cost.src } : {}), ...(input.book.fees.length ? { fees: input.book.fees } : {}), ...(input.source ? { source: input.source } : {}) };
+  const bon = input.book.bon;
+  const payload = { product: input.product || null, qty: input.qty, ...(cost.items?.length ? { items: cost.items } : {}), ...(cost.cogs !== null ? { cogs: cost.cogs, cogsSrc: cost.src } : {}), ...(input.book.fees.length ? { fees: input.book.fees } : {}), ...(input.source ? { source: input.source } : {}), ...(bon?.wa ? { wa: bon.wa } : {}) };
   const results = await env.DB.batch([
     bookInsert(env, ownerId, shop.id, {
       id, key: `sale:${input.saleKey}`, type: "jual", date: input.date, amount: input.amount, fee, net, accountId: input.book.accountId,
-      channel: input.book.channel, channelType: input.book.channelType, payMethod: input.book.payMethod, status, buyer: input.buyer || null,
+      channel: input.book.channel, channelType: input.book.channelType, payMethod: input.book.payMethod, status, buyer: bon ? bon.party : input.buyer || null,
       reseller: input.book.reseller, note: input.product || null, payload, by: input.by ?? null,
+      ...(bon ? { party: bon.party, dueDate: bon.due } : {}),
     }),
     ...(input.book.accountId ? [kasDelta(env, ownerId, input.book.accountId, net, id)] : []),
     ...(input.stock ?? []).flatMap((m) => stockMoveStatements(env, ownerId, shop.id, m, input.date, id, "shop_entries")),
@@ -10397,7 +10429,8 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       const minFrom = new Date(Date.parse(`${to}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10);
       if (from < minFrom) from = minFrom;
       const accounts = await listShopAccounts(env, ownerId, shop.id);
-      const cols = "id, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, channel, channel_type, pay_method, status, settled_at, category, buyer, reseller, note, payload_json, by_name, created_at";
+      const bonOn = await bonReady(env);
+      const cols = `id, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, channel, channel_type, pay_method, status, settled_at, category, buyer, reseller, note, payload_json, by_name, created_at${bonOn ? ", ref_id, due_date, party" : ""}`;
       const entries = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC, created_at DESC LIMIT 1000`).bind(ownerId, shop.id, from, to).all()).results ?? [];
       const pending = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND status = 'menunggu' ORDER BY date ASC, created_at ASC LIMIT 200`).bind(ownerId, shop.id).all()).results ?? [];
       // Ringkasan hari ini & bulan ini (omzet kotor, potongan marketplace, biaya).
@@ -10407,7 +10440,14 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
                   COALESCE(SUM(CASE WHEN type = 'biaya' THEN amount END), 0) AS biaya, COUNT(CASE WHEN type = 'jual' THEN 1 END) AS nota
              FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ?`
         ).bind(ownerId, shop.id, a, b).first<{ omzet: number; fee: number; biaya: number; nota: number }>()) ?? { omzet: 0, fee: 0, biaya: 0, nota: 0 };
-      return json({ ready: true, accounts, entries, pending, range: { from, to }, today: await sum(today, today), month: await sum(`${today.slice(0, 8)}01`, today), period: await sum(from, to), truncated: entries.length >= 1000 });
+      // Bon yang belum lunas: jumlah yang sudah dibayar per bon.
+      const bonIds = pending.filter((e) => (e as { pay_method?: string }).pay_method === "bon").map((e) => String((e as { id: string }).id));
+      const paid: Record<string, number> = {};
+      if (bonOn && bonIds.length) {
+        const rows = (await env.DB.prepare(`SELECT ref_id, SUM(amount) AS n FROM shop_entries WHERE owner_id = ? AND type = 'bayar_piutang' AND ref_id IN (${bonIds.map(() => "?").join(",")}) GROUP BY ref_id`).bind(ownerId, ...bonIds).all<{ ref_id: string; n: number }>()).results ?? [];
+        for (const r of rows) paid[r.ref_id] = Number(r.n) || 0;
+      }
+      return json({ ready: true, bonReady: bonOn, paid, accounts, entries, pending, range: { from, to }, today: await sum(today, today), month: await sum(`${today.slice(0, 8)}01`, today), period: await sum(from, to), truncated: entries.length >= 1000 });
     }
 
     if (action === "accounts") {
@@ -10571,10 +10611,47 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
     }
 
     if (action === "entries" && sub && /^[0-9a-f-]{36}$/i.test(sub)) {
-      const entry = await env.DB.prepare("SELECT id, type, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, status FROM shop_entries WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<{ id: string; type: BookEntryType; amount: number; fee: number; net: number; account_id: string | null; to_account_id: string | null; personal_account_id: string | null; personal_tx_id: string | null; status: string }>();
+      const entry = await env.DB.prepare("SELECT id, type, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, status, pay_method, buyer FROM shop_entries WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<{ id: string; type: BookEntryType; amount: number; fee: number; net: number; account_id: string | null; to_account_id: string | null; personal_account_id: string | null; personal_tx_id: string | null; status: string; pay_method: string | null; buyer: string | null }>();
       if (!entry) return json({ error: "Catatan tidak ditemukan." }, { status: 404 });
       // Penjualan marketplace cair: masuk ke kas pilihan, nominal cair boleh beda dari perkiraan.
+      // Bon pelanggan: terima bayaran (sebagian/lunas). Tidak boleh melebihi sisa — dicek DI DALAM batch.
+      if (op === "pay" && request.method === "POST") {
+        if (!(await bonReady(env))) return json({ error: BON_NOT_READY }, { status: 503 });
+        if (entry.type !== "jual" || entry.pay_method !== "bon" || entry.status !== "menunggu") return json({ error: "Bon ini sudah lunas." }, { status: 409 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const amount = shopMoney(raw.amount);
+        if (!amount || amount < 1) return json({ error: "Isi nominal yang dibayar." }, { status: 400 });
+        const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+        if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+        const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+        const book = await shopBook(env, ownerId, shop.id);
+        const kas = pickBookAccount(raw.shop_account_id, book);
+        if (!kas) return json({ error: "Pilih kas yang menerima uangnya." }, { status: 400 });
+        const id = generateId();
+        const key = `bon:${requestId}`;
+        const party = entry.buyer || "pelanggan";
+        const now = nowIso();
+        const r = await env.DB.batch([
+          bookInsert(env, ownerId, shop.id, { id, key, type: "bayar_piutang", date, amount, net: amount, accountId: kas.id, refId: entry.id, party, buyer: party, note: `Bayar bon · ${party}` }, {
+            sql: `EXISTS (SELECT 1 FROM shop_entries s WHERE s.id = ? AND s.owner_id = ? AND s.type = 'jual' AND s.pay_method = 'bon' AND s.status = 'menunggu' AND s.amount - ${BON_PAID_SQL} >= ?)`,
+            binds: [entry.id, ownerId, ownerId, entry.id, amount],
+          }),
+          kasDelta(env, ownerId, kas.id, amount, id),
+          // Lunas → bon jadi selesai (dihitung ulang dari semua pembayaran di batch yang sama).
+          env.DB.prepare(`UPDATE shop_entries SET status = 'selesai', settled_at = ? WHERE id = ? AND owner_id = ? AND status = 'menunggu' AND amount <= ${BON_PAID_SQL}`).bind(now, entry.id, ownerId, ownerId, entry.id),
+        ]);
+        if (!r[0]?.meta.changes) {
+          if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
+          const left = await env.DB.prepare(`SELECT amount - ${BON_PAID_SQL} AS sisa, status FROM shop_entries WHERE id = ? AND owner_id = ?`).bind(ownerId, entry.id, entry.id, ownerId).first<{ sisa: number; status: string }>();
+          if (left?.status !== "menunggu") return json({ error: "Bon ini sudah lunas." }, { status: 409 });
+          return json({ error: `Melebihi sisa bon. Sisanya Rp${Math.max(0, Math.round(Number(left?.sisa) || 0)).toLocaleString("id-ID")}.` }, { status: 409 });
+        }
+        await publishShopBook(env, ownerId, shop.id);
+        const done = (r[2]?.meta.changes ?? 0) > 0;
+        return json({ ok: true, id, lunas: done }, { status: 201 });
+      }
       if (op === "settle" && request.method === "POST") {
+        if (entry.pay_method === "bon") return json({ error: "Bon dilunasi lewat Terima bayaran." }, { status: 409 });
         if (entry.type !== "jual" || entry.status !== "menunggu") return json({ error: "Penjualan ini sudah cair." }, { status: 409 });
         const raw = await parseJson<Record<string, unknown>>(request);
         const book = await shopBook(env, ownerId, shop.id);
@@ -10600,7 +10677,18 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
           const archived = await env.DB.prepare(`SELECT name FROM shop_accounts WHERE owner_id = ? AND id IN (${kasIds.map(() => "?").join(",")}) AND archived_at IS NOT NULL LIMIT 1`).bind(ownerId, ...kasIds).first<{ name: string }>();
           if (archived) return json({ error: `Catatan ini memakai kas "${archived.name}" yang sudah dihapus, jadi tidak bisa dihapus. Catat koreksinya sebagai catatan baru.` }, { status: 409 });
         }
+        // Bon yang sudah ada pembayarannya: hapus pembayarannya dulu (kas pembayaran ada di entri itu).
+        const isBon = entry.type === "jual" && entry.pay_method === "bon";
+        if (isBon && (await bonReady(env)) && (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'bayar_piutang' LIMIT 1").bind(ownerId, entry.id).first())) {
+          return json({ error: "Bon ini sudah ada pembayarannya. Hapus pembayarannya dulu." }, { status: 409 });
+        }
         const stmts: D1PreparedStatement[] = [...(await stockRevertStatements(env, ownerId, [entry.id], "shop_entries"))];
+        // Pembayaran bon dihapus → kas kembali & bon terbuka lagi (status menunggu).
+        if (entry.type === "bayar_piutang" && entry.account_id) {
+          const ref = await env.DB.prepare("SELECT ref_id FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId).first<{ ref_id: string | null }>();
+          stmts.push(kasDelta(env, ownerId, entry.account_id, -entry.net, entry.id));
+          if (ref?.ref_id) stmts.push(env.DB.prepare("UPDATE shop_entries SET status = 'menunggu', settled_at = NULL WHERE id = ? AND owner_id = ? AND pay_method = 'bon' AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(ref.ref_id, ownerId, entry.id, ownerId));
+        }
         // Penjualan: status/kas/nominal dibaca saat batch jalan (bukan dari SELECT di atas) — kalau "cair"
         // terjadi bersamaan, saldo yang baru masuk tetap ikut dibalik, tidak tertinggal tanpa catatan.
         if (entry.type === "jual") {
@@ -10620,7 +10708,11 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
             );
           }
         }
-        stmts.push(env.DB.prepare("DELETE FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId));
+        stmts.push(
+          isBon && (await bonReady(env))
+            ? env.DB.prepare("DELETE FROM shop_entries WHERE id = ? AND owner_id = ? AND NOT EXISTS (SELECT 1 FROM shop_entries p WHERE p.owner_id = ? AND p.ref_id = ? AND p.type = 'bayar_piutang')").bind(entry.id, ownerId, ownerId, entry.id)
+            : env.DB.prepare("DELETE FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId)
+        );
         await env.DB.batch(stmts);
         await publishShopBook(env, ownerId, shop.id);
         return json({ ok: true });
@@ -11439,10 +11531,19 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
             ORDER BY e.date ASC, e.created_at ASC LIMIT ?`
         ).bind(userId, id, from, to, REPORT_MAX + 1).all<{ id: string; type: string; date: string; amount: number; fee: number; channel: string | null; channel_type: string | null; pay_method: string | null; status: string; category: string | null; buyer: string | null; reseller: number; note: string | null; payload_json: string | null; by_name: string | null; account_name: string | null }>()).results ?? [];
         bookCount = ent.length;
+        // Bon pelanggan (0047): sudah dibayar berapa & jatuh tempo, per penjualan bon di periode ini.
+        const bonInfo = new Map<string, { paid: number; due: string | null }>();
+        if (await bonReady(env)) {
+          const rowsBon = (await env.DB.prepare(
+            `SELECT s.id, s.due_date, COALESCE((SELECT SUM(q.amount) FROM shop_entries q WHERE q.owner_id = s.owner_id AND q.ref_id = s.id AND q.type = 'bayar_piutang'), 0) AS paid
+               FROM shop_entries s WHERE s.owner_id = ? AND s.shop_id = ? AND s.type = 'jual' AND s.pay_method = 'bon' AND s.date BETWEEN ? AND ?`
+          ).bind(userId, id, from, to).all<{ id: string; due_date: string | null; paid: number }>()).results ?? [];
+          for (const b of rowsBon) bonInfo.set(b.id, { paid: Number(b.paid) || 0, due: b.due_date });
+        }
         for (const r of ent.slice(0, REPORT_MAX)) {
           let p: Record<string, unknown> = {};
           try { const v = r.payload_json ? JSON.parse(r.payload_json) : null; if (v && typeof v === "object") p = v as Record<string, unknown>; } catch { /* abaikan */ }
-          const base = { id: r.id, date: r.date, amount: Math.round(num(r.amount)), account: r.account_name ?? (r.status === "menunggu" ? "Belum cair" : null), staff: txt(r.by_name, 60) || null };
+          const base = { id: r.id, date: r.date, amount: Math.round(num(r.amount)), account: r.account_name ?? (r.pay_method === "bon" ? (r.status === "menunggu" ? "Bon (belum lunas)" : "Bon (lunas)") : r.status === "menunggu" ? "Belum cair" : null), staff: txt(r.by_name, 60) || null };
           if (r.type === "jual") {
             const items = Array.isArray(p.items)
               ? (p.items as unknown[]).slice(0, 60).flatMap((it) => {
@@ -11454,7 +11555,8 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
                 })
               : [];
             const cogs = typeof p.cogs === "number" && Number.isFinite(p.cogs) && p.cogs >= 0 ? Math.round(p.cogs) : null;
-            sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(r.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "", ...(cogs !== null ? { cogs, cogsSrc: p.cogsSrc === "transaksi" ? "transaksi" : "produk" } : {}), channel: r.channel ?? null, channelType: r.channel_type ?? null, payMethod: r.pay_method ?? null, fee: Math.round(num(r.fee)), status: r.status, reseller: r.reseller === 1 });
+            const bi = r.pay_method === "bon" ? bonInfo.get(r.id) : undefined;
+            sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(r.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "", ...(cogs !== null ? { cogs, cogsSrc: p.cogsSrc === "transaksi" ? "transaksi" : "produk" } : {}), ...(r.pay_method === "bon" ? { paid: bi?.paid ?? 0, due: bi?.due ?? null } : {}), channel: r.channel ?? null, channelType: r.channel_type ?? null, payMethod: r.pay_method ?? null, fee: Math.round(num(r.fee)), status: r.status, reseller: r.reseller === 1 });
             if (num(r.fee) > 0) {
               const fees = Array.isArray(p.fees) ? (p.fees as Array<Record<string, unknown>>).map((f) => txt(f?.label, 60)).filter(Boolean).join(", ") : "";
               expenses.push({ ...base, id: `${r.id}:fee`, amount: Math.round(num(r.fee)), kind: "Potongan marketplace", item: `${r.channel ?? "Marketplace"}${fees ? ` · ${fees}` : ""}`.slice(0, 80), note: "" });
@@ -11540,6 +11642,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       let saleBook: SaleBook | undefined;
       let account: { id: string } | null = null;
       if (book.on) {
+        if (raw.bon && raw.channel_type !== "marketplace" && !(await bonReady(env))) return json({ error: BON_NOT_READY }, { status: 503 });
         const sb = parseSaleBook(raw, book, amount);
         if (typeof sb === "string") return json({ error: sb }, { status: 400 });
         saleBook = sb;

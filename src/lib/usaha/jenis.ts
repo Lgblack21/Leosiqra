@@ -141,7 +141,7 @@ export const PAY_METHODS = [
   { id: 'cod', label: 'COD' },
   { id: 'lainnya', label: 'Lainnya' },
 ] as const;
-export const payLabel = (id?: string | null) => PAY_METHODS.find((p) => p.id === id)?.label ?? '';
+export const payLabel = (id?: string | null) => (id === 'bon' ? 'Bon' : (PAY_METHODS.find((p) => p.id === id)?.label ?? ''));
 
 /** Tombol cepat biaya marketplace — hanya mengisi NAMA biaya; nominal diketik sendiri. */
 export const FEE_CHIPS = ['Biaya admin', 'Biaya layanan', 'Ongkir', 'Voucher toko', 'Komisi affiliate', 'Biaya lainnya'];

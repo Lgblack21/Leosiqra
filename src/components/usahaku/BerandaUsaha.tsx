@@ -8,6 +8,8 @@ import {
   Check,
   Clock,
   Loader2,
+  MessageCircle,
+  NotebookPen,
   Plus,
   ReceiptText,
   Store,
@@ -24,6 +26,7 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { UsahaSheet } from './UsahaSheet';
+import { reminderText } from '@/components/ladang/TagihView';
 
 const money = (v: string) => Number(v.replace(/\D/g, '').slice(0, 11) || '0');
 const moneyText = (n: number) => (n ? n.toLocaleString('id-ID') : '');
@@ -139,7 +142,12 @@ export function MulaiBukuUsaha({ shop, onDone }: { shop: Shop; onDone: (m: strin
 }
 
 // ── Beranda: ringkasan, kas, belum cair, riwayat ─────────────────────────────
-type Form = { k: 'biaya' } | { k: 'setor' } | { k: 'ambil' } | { k: 'pindah' } | { k: 'cair'; entry: BookEntry };
+type Form = { k: 'biaya' } | { k: 'setor' } | { k: 'ambil' } | { k: 'pindah' } | { k: 'cair'; entry: BookEntry } | { k: 'bon'; entry: BookEntry; sisa: number };
+// WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
+const waLink = (wa: string | null, text: string) => {
+  const n = (wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
+  return `https://wa.me/${n.length >= 9 ? n : ''}?text=${encodeURIComponent(text)}`;
+};
 
 export function BerandaUsaha({
   shop,
@@ -161,7 +169,13 @@ export function BerandaUsaha({
   const [materials, setMaterials] = useState<StockMaterial[]>([]);
   const kas = book.accounts.filter((a) => !a.archived);
   const totalKas = kas.reduce((a, k) => a + k.balance, 0);
-  const pendingTotal = book.pending.reduce((a, e) => a + e.net, 0);
+  // Menunggu = marketplace belum cair + bon pelanggan belum lunas (dipisah tampilannya).
+  const marketPending = book.pending.filter((e) => e.payMethod !== 'bon');
+  const bons = book.pending.filter((e) => e.payMethod === 'bon');
+  const sisaBon = (e: BookEntry) => Math.max(0, e.amount - (book.paid[e.id] ?? 0));
+  const bonTotal = bons.reduce((a, e) => a + sisaBon(e), 0);
+  const today = toLocalDateString();
+  const pendingTotal = marketPending.reduce((a, e) => a + e.net, 0);
   const label = periodLabel(book.range);
   const laba = book.period.omzet - book.period.fee - book.period.biaya;
   const kind = kindOf(shop.kind);
@@ -176,7 +190,7 @@ export function BerandaUsaha({
 
   const remove = async (e: BookEntry) => {
     const what =
-      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : 'catatan';
+      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : e.type === 'bayar_piutang' ? 'pembayaran bon' : 'catatan';
     if (!window.confirm(`Hapus ${what} ${formatIDR(e.amount)}? Saldo kas${e.type === 'setor' || e.type === 'ambil' ? ' & rekening pribadi' : ''} ikut kembali.`)) return;
     try {
       await shopBookService.removeEntry(shop.id, e.id);
@@ -234,7 +248,9 @@ export function BerandaUsaha({
           `potongan ${formatIDR(book.period.fee)} · biaya ${formatIDR(book.period.biaya)}`,
         )}
         {stat('Total kas usaha', formatIDR(totalKas))}
-        {stat('Belum cair', formatIDR(pendingTotal), pendingTotal ? 'text-orange-600' : undefined, `${book.pending.length} pesanan marketplace`)}
+        {bonTotal > 0 && !pendingTotal
+          ? stat('Bon belum dibayar', formatIDR(bonTotal), 'text-amber-600', `${bons.length} bon pelanggan`)
+          : stat('Belum cair', formatIDR(pendingTotal), pendingTotal ? 'text-orange-600' : undefined, `${marketPending.length} pesanan marketplace${bonTotal ? ` · bon ${formatIDR(bonTotal)}` : ''}`)}
       </div>
 
       <div className="grid grid-cols-4 gap-2">
@@ -262,13 +278,70 @@ export function BerandaUsaha({
         </ul>
       </section>
 
-      {book.pending.length > 0 && (
+      {bons.length > 0 && (
+        <section className="rounded-[26px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
+          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-amber-900 dark:text-amber-200">
+            <span className="flex items-center gap-1.5">
+              <NotebookPen size={16} /> Bon pelanggan
+            </span>
+            <span className="tabular-nums">{formatIDR(bonTotal)}</span>
+          </p>
+          <ul className="mt-2 space-y-2">
+            {bons.map((e) => {
+              const sisa = sisaBon(e);
+              const telat = Boolean(e.dueDate && e.dueDate < today);
+              const who = e.buyer || e.party || 'Pelanggan';
+              return (
+                <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
+                  <div className="flex items-start gap-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                        {who} · {e.product || e.note || 'Penjualan'}
+                      </span>
+                      <span className="block fs-11 text-slate-500">
+                        {e.date} · {formatIDR(e.amount)}
+                        {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
+                        {e.dueDate && (
+                          <span className={cn(telat && 'font-bold text-rose-600')}>
+                            {' '}
+                            · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {e.dueDate}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="fs-14 font-extrabold tabular-nums text-amber-700 dark:text-amber-300">{formatIDR(sisa)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <a
+                      href={waLink(e.wa, reminderText('sopan', who, sisa, e.product || undefined))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                      <MessageCircle size={13} /> Ingatkan
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ k: 'bon', entry: e, sisa })}
+                      className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-emerald-700"
+                    >
+                      Terima bayaran
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {marketPending.length > 0 && (
         <section className="rounded-[26px] bg-orange-50 p-4 ring-1 ring-orange-100 dark:bg-orange-500/10 dark:ring-orange-500/20">
           <p className="flex items-center gap-1.5 fs-15 font-extrabold text-orange-900 dark:text-orange-200">
             <Clock size={16} /> Menunggu cair
           </p>
           <ul className="mt-2 space-y-2">
-            {book.pending.map((e) => (
+            {marketPending.map((e) => (
               <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
@@ -313,7 +386,9 @@ export function BerandaUsaha({
                 ? 'Ambil uang usaha'
                 : form?.k === 'pindah'
                   ? 'Pindah antar kas'
-                  : 'Uang sudah cair'
+                  : form?.k === 'bon'
+                    ? 'Terima bayaran bon'
+                    : 'Uang sudah cair'
         }
       >
         {form?.k === 'biaya' && (
@@ -344,6 +419,18 @@ export function BerandaUsaha({
             }}
           />
         )}
+        {form?.k === 'bon' && (
+          <PayBonForm
+            shop={shop}
+            entry={form.entry}
+            sisa={form.sisa}
+            book={book}
+            onDone={(m) => {
+              setForm(null);
+              onToast(m);
+            }}
+          />
+        )}
         {form?.k === 'cair' && (
           <SettleForm
             shop={shop}
@@ -367,6 +454,7 @@ const ENTRY_LABEL: Record<string, string> = {
   ambil: 'Ambil uang',
   pindah: 'Pindah kas',
   saldo_awal: 'Saldo awal',
+  bayar_piutang: 'Terima bon',
 };
 function Riwayat({
   entries,
@@ -397,7 +485,7 @@ function Riwayat({
       </p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((e) => {
-          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal';
+          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal' || e.type === 'bayar_piutang';
           const neutral = e.type === 'pindah';
           const detail = [
             e.date,
@@ -426,7 +514,9 @@ function Riwayat({
                     {ENTRY_LABEL[e.type] ?? e.type}
                   </span>
                   {e.status === 'menunggu' && (
-                    <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 fs-10 font-bold text-orange-700">belum cair</span>
+                    <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 fs-10 font-bold text-orange-700">
+                      {e.payMethod === 'bon' ? 'bon' : 'belum cair'}
+                    </span>
                   )}
                   <span className="truncate fs-13 font-semibold text-slate-800 dark:text-slate-100">
                     {e.product || e.note || e.buyer || ENTRY_LABEL[e.type]}
@@ -778,6 +868,79 @@ function TransferForm({
         className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-14 font-extrabold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan
+      </button>
+    </div>
+  );
+}
+
+// ── Bon pelanggan: terima bayaran (sebagian/lunas) ke kas usaha ──────────────
+function PayBonForm({ shop, entry, sisa, book, onDone }: { shop: Shop; entry: BookEntry; sisa: number; book: ShopBook; onDone: (m: string) => void }) {
+  const kas = useMemo(() => book.accounts.filter((a) => !a.archived), [book.accounts]);
+  const [kasId, setKasId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
+  const [amount, setAmount] = useState(sisa);
+  const [date, setDate] = useState(toLocalDateString());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [requestId] = useState(() => crypto.randomUUID());
+  const who = entry.buyer || entry.party || 'Pelanggan';
+  const save = async () => {
+    if (amount < 1) return setError('Isi nominal yang dibayar.');
+    if (amount > sisa) return setError(`Melebihi sisa bon (${formatIDR(sisa)}).`);
+    if (!kasId) return setError('Pilih kas yang menerima uangnya.');
+    setBusy(true);
+    setError('');
+    try {
+      const r = await shopBookService.payBon(shop.id, entry.id, { amount, accountId: kasId, date, requestId });
+      onDone(r.lunas ? `Bon ${who} lunas. ${formatIDR(amount)} masuk kas.` : `${formatIDR(amount)} diterima dari ${who}, sisa ${formatIDR(sisa - amount)}.`);
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.');
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3">
+      <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-13 text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+        <b>{who}</b> · {entry.product || entry.note || 'Penjualan'}
+        <br />
+        Bon {formatIDR(entry.amount)} · sisa <b>{formatIDR(sisa)}</b>
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className={labelCls}>Dibayar</span>
+          <input
+            value={amount ? amount.toLocaleString('id-ID') : ''}
+            onChange={(e) => setAmount(Number(e.target.value.replace(/\D/g, '').slice(0, 12)) || 0)}
+            inputMode="numeric"
+            className={cn(fieldCls, 'tabular-nums')}
+          />
+        </label>
+        <label className="block">
+          <span className={labelCls}>Tanggal</span>
+          <input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={fieldCls} />
+        </label>
+      </div>
+      <label className="block">
+        <span className={labelCls}>Masuk ke kas</span>
+        <select value={kasId} onChange={(e) => setKasId(e.target.value)} className={fieldCls}>
+          {kas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {accountEmoji(a.kind)} {a.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error && (
+        <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-14 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} {amount >= sisa ? 'Terima & lunas' : 'Terima sebagian'}
       </button>
     </div>
   );

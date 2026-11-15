@@ -329,7 +329,7 @@ export function KasirView({
       onDone={say}
       inSheet={inSheet}
       onNew={() => setSheet(false)}
-      book={book ? { accounts: book.accounts.filter((a) => !a.archived) } : undefined}
+      book={book ? { accounts: book.accounts.filter((a) => !a.archived), bonReady: book.bonReady } : undefined}
       reseller={shop.products.some((p) => p.resellerPrice) ? { on: reseller, set: toggleReseller } : undefined}
     />
   );
@@ -1025,7 +1025,7 @@ export function Struk({
   onNew: () => void;
   staff?: { accountName: string | null; sell: StaffSell };
   /** Usaha dengan kas usaha: pilih jalur jualan (langsung / marketplace + biaya), cara bayar, kas tujuan. */
-  book?: { accounts: ShopAccount[] };
+  book?: { accounts: ShopAccount[]; bonReady?: boolean };
   /** Sakelar harga reseller (hanya kalau ada produk berharga reseller). */
   reseller?: { on: boolean; set: (on: boolean) => void };
 }) {
@@ -1040,6 +1040,9 @@ export function Struk({
   const isPro = usePlan();
   const [modalOpen, setModalOpen] = useState(false);
   const [modal, setModal] = useState('');
+  // Bon / bayar nanti (R3): nama pelanggan wajib, WA & jatuh tempo opsional.
+  const [bon, setBon] = useState({ party: '', wa: '', due: '' });
+  const isBon = Boolean(book) && chType === 'langsung' && payMethod === 'bon';
   const kasDefault = book?.accounts.find((a) => a.isDefault)?.id ?? book?.accounts[0]?.id ?? '';
   const kas = kasId && book?.accounts.some((a) => a.id === kasId) ? kasId : kasDefault;
   const feeTotal = fees.reduce((a, f) => a + (Number(f.amount) || 0), 0);
@@ -1107,7 +1110,11 @@ export function Struk({
       setError('Pilih rekening tujuan.');
       return;
     }
-    if (book && (chType === 'langsung' || settled) && !kas) {
+    if (isBon && !bon.party.trim()) {
+      setError('Isi nama pelanggan untuk bon.');
+      return;
+    }
+    if (book && !isBon && (chType === 'langsung' || settled) && !kas) {
       setError('Pilih kas usaha tujuan.');
       return;
     }
@@ -1151,8 +1158,11 @@ export function Struk({
                   .map((f) => ({ label: f.label.trim() || `Biaya admin ${channel}`, amount: Number(f.amount) }))
               : [],
             reseller: Boolean(reseller?.on),
-            settled: chType === 'langsung' || settled,
-            accountId: chType === 'langsung' || settled ? kas : null,
+            settled: !isBon && (chType === 'langsung' || settled),
+            accountId: !isBon && (chType === 'langsung' || settled) ? kas : null,
+            ...(isBon
+              ? { bon: { party: bon.party.trim(), ...(bon.wa.trim() ? { wa: bon.wa.trim() } : {}), ...(bon.due ? { due: bon.due } : {}) } }
+              : {}),
           },
           modal: isPro && modalOpen && modal !== '' ? Number(modal) : null,
         });
@@ -1181,7 +1191,9 @@ export function Struk({
       setDone({ text, amount: total, buyer: buyer.trim() });
       onDone(
         book
-          ? chType === 'marketplace' && !settled
+          ? isBon
+            ? `Bon ${bon.party.trim()} ${formatIDR(total)} tercatat · belum dibayar.`
+            : chType === 'marketplace' && !settled
             ? `Penjualan ${channel} ${formatIDR(total)} tercatat · menunggu cair.`
             : `Penjualan ${formatIDR(total)} tercatat di kas usaha.`
           : `Penjualan ${formatIDR(total)} tercatat & masuk rekening.`,
@@ -1201,6 +1213,8 @@ export function Struk({
     setSettled(false);
     setModal('');
     setModalOpen(false);
+    setBon({ party: '', wa: '', due: '' });
+    setPayMethod('tunai');
     setRequestId(crypto.randomUUID());
     if (inSheet) onNew();
   };
@@ -1418,6 +1432,9 @@ export function Struk({
           setSettled={setSettled}
           date={date}
           setDate={setDate}
+          bonReady={Boolean(book.bonReady)}
+          bon={bon}
+          setBon={setBon}
           extra={
             isPro ? (
               modalOpen ? (
@@ -1475,7 +1492,7 @@ export function Struk({
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
           <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">
-            {book && chType === 'marketplace' ? 'Harga jual' : 'Total diterima'}
+            {book && chType === 'marketplace' ? 'Harga jual' : isBon ? 'Total bon' : 'Total diterima'}
           </span>
           <span className="flex min-w-0 items-center gap-1 fsh-22 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
             <span className="fs-14">Rp</span>
@@ -1506,7 +1523,7 @@ export function Struk({
         disabled={busy || !allLines.length}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-40"
       >
-        {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Bayar & catat
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} {isBon ? 'Catat bon' : 'Bayar & catat'}
       </button>
       <p className="text-center fs-11 text-slate-400">
         {book
@@ -1540,6 +1557,9 @@ function BookSaleFields(p: {
   setDate: (v: string) => void;
   /** Isian tambahan di bawah (mis. modal pesanan, PRO). */
   extra?: React.ReactNode;
+  bonReady: boolean;
+  bon: { party: string; wa: string; due: string };
+  setBon: (b: { party: string; wa: string; due: string }) => void;
 }) {
   const list = p.chType === 'langsung' ? p.channels.langsung : p.channels.marketplace;
   const chip = (on: boolean) =>
@@ -1603,15 +1623,58 @@ function BookSaleFields(p: {
                   {m.label}
                 </button>
               ))}
+              {p.bonReady && (
+                <button type="button" onClick={() => p.setPayMethod('bon')} className={chip(p.payMethod === 'bon')}>
+                  Bon · bayar nanti
+                </button>
+              )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {kasSelect}
-            <label className="block">
-              <span className={labelCls}>Tanggal</span>
-              <input type="date" value={p.date} max={toLocalDateString()} onChange={(e) => p.setDate(e.target.value)} className={fieldCls} />
-            </label>
-          </div>
+          {p.payMethod === 'bon' ? (
+            <div className="space-y-2 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
+              <p className="fs-12 text-amber-900 dark:text-amber-200">
+                Barang keluar sekarang, uangnya nanti. Masuk omzet hari ini, kas bertambah saat pelanggan bayar (bisa dicicil).
+              </p>
+              <label className="block">
+                <span className={labelCls}>Nama pelanggan</span>
+                <input
+                  value={p.bon.party}
+                  onChange={(e) => p.setBon({ ...p.bon, party: e.target.value })}
+                  maxLength={60}
+                  placeholder="Mis. Bu Rina warung sebelah"
+                  className={fieldCls}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className={labelCls}>WA (opsional)</span>
+                  <input
+                    value={p.bon.wa}
+                    onChange={(e) => p.setBon({ ...p.bon, wa: e.target.value.replace(/[^\d+\s-]/g, '').slice(0, 20) })}
+                    inputMode="tel"
+                    placeholder="08…"
+                    className={fieldCls}
+                  />
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Jatuh tempo (opsional)</span>
+                  <input type="date" value={p.bon.due} min={toLocalDateString()} onChange={(e) => p.setBon({ ...p.bon, due: e.target.value })} className={fieldCls} />
+                </label>
+              </div>
+              <label className="block">
+                <span className={labelCls}>Tanggal</span>
+                <input type="date" value={p.date} max={toLocalDateString()} onChange={(e) => p.setDate(e.target.value)} className={fieldCls} />
+              </label>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {kasSelect}
+              <label className="block">
+                <span className={labelCls}>Tanggal</span>
+                <input type="date" value={p.date} max={toLocalDateString()} onChange={(e) => p.setDate(e.target.value)} className={fieldCls} />
+              </label>
+            </div>
+          )}
         </>
       ) : (
         <>

@@ -13,6 +13,8 @@ export type SaleBookInput = {
   reseller: boolean;
   /** Marketplace: false = belum cair (belum masuk kas). Jualan langsung selalu langsung masuk kas. */
   settled: boolean;
+  /** Bon / bayar nanti (jualan langsung): tanpa kas, nama pelanggan wajib. */
+  bon?: { party: string; wa?: string; due?: string };
   /** Kas usaha tujuan (wajib kalau sudah cair / jualan langsung). */
   accountId: string | null;
 };
@@ -25,7 +27,7 @@ export type ShopAccount = {
   isDefault: boolean;
   archived: boolean;
 };
-export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal';
+export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal' | 'bayar_piutang';
 export type BookEntry = {
   id: string;
   type: BookEntryType;
@@ -47,6 +49,11 @@ export type BookEntry = {
   product: string | null;
   byName: string | null;
   createdAt: string;
+  /** R3 (migrasi 0047): pembayaran bon → penjualan asal; jatuh tempo; nama pelanggan; WA pelanggan. */
+  refId: string | null;
+  dueDate: string | null;
+  party: string | null;
+  wa: string | null;
 };
 export type BookSum = { omzet: number; fee: number; biaya: number; nota: number };
 export type ShopBook = {
@@ -59,6 +66,10 @@ export type ShopBook = {
   period: BookSum;
   range: { from: string; to: string };
   truncated: boolean;
+  /** Bon pelanggan aktif (kolom 0047 sudah ada). */
+  bonReady: boolean;
+  /** Sudah dibayar per bon (id penjualan → rupiah), untuk bon yang belum lunas. */
+  paid: Record<string, number>;
 };
 
 type Row = Record<string, unknown>;
@@ -103,6 +114,10 @@ const entryFromRow = (r: Row): BookEntry => {
     product: txt(p.product),
     byName: txt(r.by_name),
     createdAt: String(r.created_at ?? ''),
+    refId: txt(r.ref_id),
+    dueDate: txt(r.due_date),
+    party: txt(r.party),
+    wa: txt(p.wa),
   };
 };
 const sumOf = (v: unknown): BookSum => {
@@ -115,6 +130,15 @@ const changed = () => {
 };
 
 export const shopBookService = {
+  /** Terima bayaran bon pelanggan (sebagian/lunas). Ditolak server kalau melebihi sisa. */
+  async payBon(shopId: string, entryId: string, input: { amount: number; accountId: string; date?: string; requestId: string }) {
+    const r = await cloudflareApi<{ ok: boolean; lunas: boolean }>(`/api/member/shops/${shopId}/entries/${entryId}/pay`, {
+      method: 'POST',
+      json: { amount: input.amount, shop_account_id: input.accountId, date: input.date, request_id: input.requestId },
+    });
+    changed();
+    return r;
+  },
   async get(shopId: string, range?: { from: string; to: string }): Promise<ShopBook> {
     const q = range ? `?from=${range.from}&to=${range.to}` : '';
     const r = await cloudflareApi<Row>(`/api/member/shops/${shopId}/book${q}`);
@@ -127,6 +151,8 @@ export const shopBookService = {
       period: sumOf(r.period ?? r.month),
       range: (r.range as { from: string; to: string }) ?? { from: '', to: '' },
       truncated: r.truncated === true,
+      bonReady: r.bonReady === true,
+      paid: Object.fromEntries(Object.entries((r.paid as Row) ?? {}).map(([k, v]) => [k, num(v)])),
     };
   },
   async createAccount(shopId: string, input: { name: string; kind: string; opening: number; requestId: string }) {

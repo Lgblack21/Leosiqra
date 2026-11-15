@@ -1,6 +1,9 @@
 # Rancangan — Usahaku R3: bon pelanggan, pesanan & DP, utang supplier
 
-Status: **DRAF, menunggu ACC Bos** (2026-11-16). Belum ada kode. Pertanyaan di bagian 8.
+Status: **DI-ACC Bos 2026-11-16 ("gas aja" = semua saran bagian 8).** Bon pelanggan dikerjakan **3.30.0**
+(branch `claude/usahaku-bon-20261116`, migrasi `0047_shop_bon.sql`). Berikutnya: pesanan & DP (3.31), utang supplier (3.32).
+Catatan 3.30: nama pelanggan juga disimpan di `buyer` (langsung tampil di laporan lama); bon dari **akun tim belum**
+(UI kasir tim belum punya pilihan cara bayar) — menyusul bersama toggle izin per akun tim.
 
 ## 1. Masalahnya
 
