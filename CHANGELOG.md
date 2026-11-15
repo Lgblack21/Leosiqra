@@ -110,6 +110,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.5 | 15 Nov 2026 | Kas tunai Usahaku tidak bisa minus |
 | 3.28.6 | 15 Nov 2026 | Laporan Usahaku: perbandingan periode & per jalur jualan |
 | 3.29.0 | 16 Nov 2026 | Usahaku: laba dengan modal barang (HPP) |
+| 3.29.1 | 16 Nov 2026 | Perbaikan Olahragaku, kas tunai, halaman masuk |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -123,6 +124,14 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.29.1 — 2026-11-16 — Perbaikan Olahragaku, kas tunai, halaman masuk
+
+- **Olahragaku:** kalau AI sempat gangguan dan koinmu sudah dikembalikan, evaluasi mingguan & tanya coach sekarang bisa
+  dicoba lagi saat itu juga — dulu terkunci "sedang disusun" sampai minggu berikutnya.
+- **Usahaku:** catat biaya dari kas tunai juga tidak bisa melebihi isi laci, sama seperti ambil uang & pindah kas.
+  Kas bank, e-wallet, dan marketplace tetap boleh minus.
+- Halaman masuk & daftar dirapikan untuk mesin pencari (satu judul utama per halaman).
 
 ## 3.29.0 — 2026-11-16 — Usahaku: laba dengan modal barang (HPP)
 

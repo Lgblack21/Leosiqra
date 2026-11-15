@@ -10279,11 +10279,17 @@ const recordBookSale = async (env: Env, ownerId: string, shop: { id: string; nam
 const recordBookExpense = async (env: Env, ownerId: string, shop: { id: string; name: string }, input: { expenseKey: string; amount: number; item: string; kind: string; accountId: string; date: string; by?: { id: string; name: string }; stock?: { materialId: string; qty: number } | null }) => {
   const id = generateId();
   const results = await env.DB.batch([
-    bookInsert(env, ownerId, shop.id, { id, key: `exp:${input.expenseKey}`, type: "biaya", date: input.date, amount: input.amount, net: input.amount, accountId: input.accountId, category: input.kind, note: input.item || null, payload: { item: input.item || null }, by: input.by ?? null }),
+    // Kas tunai tidak bisa minus (sama dengan ambil/pindah, 3.28.5) — dicek di dalam batch.
+    bookInsert(env, ownerId, shop.id, { id, key: `exp:${input.expenseKey}`, type: "biaya", date: input.date, amount: input.amount, net: input.amount, accountId: input.accountId, category: input.kind, note: input.item || null, payload: { item: input.item || null }, by: input.by ?? null }, cashEnough(ownerId, input.accountId, input.amount)),
     kasDelta(env, ownerId, input.accountId, -input.amount, id),
     ...(input.stock ? stockMoveStatements(env, ownerId, shop.id, { materialId: input.stock.materialId, qty: input.stock.qty, kind: "beli", key: `exp:${input.expenseKey}`, cost: input.amount, note: input.item, byName: input.by?.name ?? null }, input.date, id, "shop_entries") : []),
   ]);
-  if (!results[0]?.meta.changes) return { ok: false as const };
+  if (!results[0]?.meta.changes) {
+    const dup = await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, `exp:${input.expenseKey}`).first();
+    if (dup) return { ok: false as const };
+    const kas = await env.DB.prepare("SELECT name, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(input.accountId, ownerId).first<{ name: string; balance: number }>();
+    return { ok: false as const, error: `Saldo ${kas?.name ?? "kas"} cuma Rp${Math.max(0, Math.round(Number(kas?.balance) || 0)).toLocaleString("id-ID")}. Kas tunai tidak bisa minus — catat dari kas lain, atau catat dulu penjualan yang belum tercatat.` };
+  }
   await publishShopBook(env, ownerId, shop.id);
   return { ok: true as const, id };
 };
@@ -11139,7 +11145,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
         const st = await expenseStockInput(env, staff.owner_id, shop.id, raw.stock);
         if (typeof st === "string") return json({ error: st }, { status: 400 });
         const res = await recordShopExpense(env, staff.owner_id, shop, { expenseKey: e.requestId, amount: e.amount, item: e.item, kind: e.kind, accountId: account?.id ?? "", date: todayWIB(), by: { id: staff.id, name: staff.name }, stock: st, bookAccountId: kas?.id });
-        if (!res.ok) return json({ error: "Pengeluaran ini sudah tercatat." }, { status: 409 });
+        if (!res.ok) return json({ error: "error" in res && res.error ? res.error : "Pengeluaran ini sudah tercatat.", ...("error" in res && res.error ? { code: KAS_KURANG } : {}) }, { status: 409 });
         return json({ ok: true, id: res.id }, { status: 201 });
       }
       const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
@@ -11574,7 +11580,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       const st = await expenseStockInput(env, userId, shop.id, raw.stock);
       if (typeof st === "string") return json({ error: st }, { status: st === STOCK_NOT_READY ? 503 : 400 });
       const res = await recordShopExpense(env, userId, shop, { expenseKey: e.requestId, amount: e.amount, item: e.item, kind: e.kind, accountId: account?.id ?? "", date, stock: st, bookAccountId: kas?.id });
-      if (!res.ok) return json({ error: "Pengeluaran ini sudah tercatat." }, { status: 409 });
+      if (!res.ok) return json({ error: "error" in res && res.error ? res.error : "Pengeluaran ini sudah tercatat.", ...("error" in res && res.error ? { code: KAS_KURANG } : {}) }, { status: 409 });
       return json({ ok: true, id: res.id }, { status: 201 });
     }
     return json({ error: "Not found" }, { status: 404 });
