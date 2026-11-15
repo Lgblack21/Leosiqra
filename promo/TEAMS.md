@@ -71,6 +71,13 @@ Semua tim memakai model keputusan di `docs/otak/cara-berpikir.md` (ringkasnya di
 bisa ___, jadi tidak perlu lagi ___"), pintu satu/dua arah, inversi, daya ungkit, taruhan
 asimetris. Alat bantu menimbang — tidak pernah mengalahkan aturan keras atau urutan prioritas.
 
+## Gaya tulis (dari Bos, 2026-11-15)
+
+Semua teks tim (naskah, caption, artikel, laporan ke Bos) mengikuti `docs/otak/gaya-tulis.md`
+(ringkas di Tower `otak/bersama` → `gayaTulis`): tanpa ciri AI, ngobrol, spesifik ala praktisi,
+dipercaya bukan promosi, berkarakter, reflektif. Pagar tetap: klaim dari `content.mjs`, tidak
+mengarang pengalaman/angka, tidak menjanjikan hasil.
+
 ## Plugin tiap tim (`.claude/settings.json`, sejak 2026-10-23)
 
 Kalau plugin aktif di sesi routine, pakai sesuai peran:

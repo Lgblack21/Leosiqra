@@ -127,6 +127,14 @@ bets). Use them to weigh choices — they never override the priority order or t
 In short: two-way doors (UI, copy) move fast; one-way doors (D1 migrations, money data, removing
 features, pricing) go slow, verified, and ask first.
 
+## How to write (Bos's writing style)
+
+`docs/otak/gaya-tulis.md` is the house writing style for content, articles, in-app copy, routine
+reports and chat replies: no AI tells, conversational, specific & practitioner-like, trustworthy not
+promotional, confident with character, reflective. Guardrails win: claims only true (promo claims
+from `promo/content.mjs`), never invent experiences/testimonials/numbers, no guaranteed results, and
+legal/security/money-error text stays precise.
+
 ## Handoff between sessions (two Claude Code accounts)
 
 The user runs this repo from two Claude Code accounts that share nothing but
