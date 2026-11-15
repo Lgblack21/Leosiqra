@@ -64,6 +64,13 @@ Siklus SETIAP run — aturan lengkapnya di **`promo/BELAJAR.md`** (wajib dibaca)
 Pelajaran harus spesifik dan bisa ditindaklanjuti ("video POV + rekaman
 Input Cepat dapat views 2× rata-rata"), bukan klise ("buat konten menarik").
 
+## Cara berpikir (dari Bos, 2026-11-15)
+
+Semua tim memakai model keputusan di `docs/otak/cara-berpikir.md` (ringkasnya di Tower
+`otak/bersama` → `caraBerpikir`): bekerja mundur (tiap usul ide wajib bisa ditulis "Sekarang kamu
+bisa ___, jadi tidak perlu lagi ___"), pintu satu/dua arah, inversi, daya ungkit, taruhan
+asimetris. Alat bantu menimbang — tidak pernah mengalahkan aturan keras atau urutan prioritas.
+
 ## Plugin tiap tim (`.claude/settings.json`, sejak 2026-10-23)
 
 Kalau plugin aktif di sesi routine, pakai sesuai peran:

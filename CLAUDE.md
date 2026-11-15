@@ -119,6 +119,14 @@ Treat this as a live app with real users. Before a deploy:
   The release notes are also rendered in-app (`/membership/versi`, `/app/versi`, parsed
   from CHANGELOG.md at build time) — write them for users, keep the `## X.Y.Z — date — title` format.
 
+## How to think (Bos's mental models)
+
+`docs/otak/cara-berpikir.md` holds the decision & learning models Bos wants every session to use
+(first principles, working backwards, one-way vs two-way doors, inversion, leverage, asymmetric
+bets). Use them to weigh choices — they never override the priority order or the hard rules above.
+In short: two-way doors (UI, copy) move fast; one-way doors (D1 migrations, money data, removing
+features, pricing) go slow, verified, and ask first.
+
 ## Handoff between sessions (two Claude Code accounts)
 
 The user runs this repo from two Claude Code accounts that share nothing but
