@@ -338,6 +338,10 @@ export function BerandaUsaha({
               setForm(null);
               onToast(m);
             }}
+            onOpenKasir={() => {
+              setForm(null);
+              onOpenKasir();
+            }}
           />
         )}
         {form?.k === 'cair' && (
@@ -592,11 +596,13 @@ function TransferForm({
   direction,
   book,
   onDone,
+  onOpenKasir,
 }: {
   shop: Shop;
   direction: 'setor' | 'ambil' | 'pindah';
   book: ShopBook;
   onDone: (m: string) => void;
+  onOpenKasir: () => void;
 }) {
   const kas = book.accounts.filter((a) => !a.archived);
   const [amount, setAmount] = useState(0);
@@ -625,8 +631,11 @@ function TransferForm({
   }, [direction]);
 
   const fromKas = kas.find((a) => a.id === kasId);
+  // Kas tunai tidak bisa minus (server juga menolak). Bank/e-wallet/marketplace boleh, cukup diperingatkan.
+  const cashShort = direction !== 'setor' && fromKas?.kind === 'kas' && amount > fromKas.balance;
   const save = async () => {
     if (amount < 1) return setError('Isi nominalnya.');
+    if (cashShort) return;
     if (!kasId) return setError('Pilih kas usaha.');
     if (direction === 'pindah' && (!toId || toId === kasId)) return setError('Pilih kas tujuan yang berbeda.');
     if (direction !== 'pindah' && !personalId) return setError('Pilih rekening pribadi.');
@@ -739,8 +748,19 @@ function TransferForm({
           <input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={fieldCls} />
         </label>
       </div>
-      {direction !== 'setor' && fromKas && amount > fromKas.balance && (
-        <p className="fs-12 font-semibold text-amber-700">Saldo {fromKas.name} cuma {formatIDR(fromKas.balance)} — kas akan minus.</p>
+      {cashShort && fromKas ? (
+        <div className="space-y-2 rounded-xl bg-rose-50 px-3 py-2.5 dark:bg-rose-500/10">
+          <p className="fs-12 font-semibold text-rose-700 dark:text-rose-300">
+            Saldo {fromKas.name} cuma {formatIDR(fromKas.balance)}. Kas tunai tidak bisa minus — kalau ada penjualan yang belum dicatat, catat dulu.
+          </p>
+          <button type="button" onClick={onOpenKasir} className="rounded-full bg-rose-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-rose-700">
+            Catat penjualan yang lupa
+          </button>
+        </div>
+      ) : (
+        direction !== 'setor' &&
+        fromKas &&
+        amount > fromKas.balance && <p className="fs-12 font-semibold text-amber-700">Saldo {fromKas.name} cuma {formatIDR(fromKas.balance)} — kas akan minus.</p>
       )}
       <label className="block">
         <span className={labelCls}>Catatan (opsional)</span>
@@ -754,7 +774,7 @@ function TransferForm({
       <button
         type="button"
         onClick={save}
-        disabled={busy}
+        disabled={busy || cashShort}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-14 font-extrabold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan

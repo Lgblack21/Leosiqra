@@ -107,6 +107,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.2 | 11 Nov 2026 | Usahaku: daftar toko baru |
 | 3.28.3 | 11 Nov 2026 | Usahaku: ganti logo toko |
 | 3.28.4 | 15 Nov 2026 | Perbaikan saldo kas Usahaku |
+| 3.28.5 | 15 Nov 2026 | Kas tunai Usahaku tidak bisa minus |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -120,6 +121,14 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.5 — 2026-11-15 — Kas tunai Usahaku tidak bisa minus
+
+- **Kas tunai tidak bisa minus lagi.** Ambil uang ke rekening pribadi atau pindah ke kas lain dari kas
+  tunai kini ditolak kalau melebihi isinya — uang di laci memang tidak bisa diambil lebih dari yang ada.
+  Kalau ternyata ada penjualan yang lupa dicatat, tombol **Catat penjualan yang lupa** langsung membuka kasir.
+- Kas bank, e-wallet, saldo marketplace, dan deposit supplier tetap boleh minus (cukup diberi peringatan),
+  karena pemasukannya sering tercatat belakangan.
 
 ## 3.28.4 — 2026-11-15 — Perbaikan saldo kas Usahaku
 

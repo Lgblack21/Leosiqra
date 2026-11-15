@@ -10200,15 +10200,23 @@ type BookEntry = {
   category?: string | null; buyer?: string | null; reseller?: boolean; note?: string | null; payload?: Record<string, unknown> | null;
   by?: { id: string; name: string } | null;
 };
-const bookInsert = (env: Env, ownerId: string, shopId: string, e: BookEntry) =>
+// guard (opsional) = syarat SQL tambahan yang dicek DI DALAM batch, mis. saldo kas tunai cukup.
+const bookInsert = (env: Env, ownerId: string, shopId: string, e: BookEntry, guard?: { sql: string; binds: unknown[] }) =>
   env.DB.prepare(
     `INSERT OR IGNORE INTO shop_entries (id, owner_id, shop_id, entry_key, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, channel, channel_type, pay_method, status, category, buyer, reseller, note, payload_json, by_staff_id, by_name, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${guard ? ` WHERE ${guard.sql}` : ""}`
   ).bind(
     e.id, ownerId, shopId, e.key, e.type, e.date, e.amount, e.fee ?? 0, e.net, e.accountId, e.toAccountId ?? null, e.personalAccountId ?? null, e.personalTxId ?? null,
     e.channel ?? null, e.channelType ?? null, e.payMethod ?? null, e.status ?? "selesai", e.category ?? null, e.buyer ?? null, e.reseller ? 1 : 0, e.note ?? null,
-    e.payload ? JSON.stringify(e.payload) : null, e.by?.id ?? null, e.by?.name ?? null, nowIso()
+    e.payload ? JSON.stringify(e.payload) : null, e.by?.id ?? null, e.by?.name ?? null, nowIso(), ...(guard?.binds ?? [])
   );
+// Kas tunai (kind 'kas') tidak boleh minus — uang di laci tidak bisa diambil melebihi isinya.
+// Bank/e-wallet/marketplace/deposit tetap boleh (sering ada pemasukan yang telat dicatat).
+const cashEnough = (ownerId: string, accountId: string, amount: number) => ({
+  sql: "NOT EXISTS (SELECT 1 FROM shop_accounts WHERE id = ? AND owner_id = ? AND kind = 'kas' AND balance < ?)",
+  binds: [accountId, ownerId, amount],
+});
+const KAS_KURANG = "kas_kurang";
 // Ubah saldo kas usaha — hanya kalau baris buku pemicunya ada (dan, untuk pembalikan, MASIH ada).
 const kasDelta = (env: Env, ownerId: string, accountId: string, delta: number, entryId: string) =>
   env.DB.prepare("UPDATE shop_accounts SET balance = balance + ?, updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(delta, nowIso(), accountId, ownerId, entryId, ownerId);
@@ -10295,6 +10303,17 @@ const isShopBookPersonalTx = async (env: Env, userId: string, txId: string) => {
   try { return Boolean(await env.DB.prepare("SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entryId, userId).first()); } catch (e) { if (bookTableMissing(e)) return false; throw e; }
 };
 const SHOP_BOOK_TX_LOCKED = "Ini setor modal / ambil uang dari Usahaku. Ubah atau hapus dari Usahaku › Kas supaya saldo usaha ikut menyesuaikan.";
+
+// Baris buku tidak masuk: kirim ulang (entry_key sudah ada) atau saldo kas tunai tidak cukup.
+const transferRejected = async (env: Env, ownerId: string, key: string, kas: { id: string; name: string }) => {
+  const dup = await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first();
+  if (dup) return json({ error: "Sudah tercatat." }, { status: 409 });
+  const now = await env.DB.prepare("SELECT balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(kas.id, ownerId).first<{ balance: number }>();
+  return json(
+    { error: `Saldo ${kas.name} cuma Rp${Math.max(0, Math.round(Number(now?.balance) || 0)).toLocaleString("id-ID")}. Kas tunai tidak bisa minus — kalau ada penjualan yang belum dicatat, catat dulu.`, code: KAS_KURANG },
+    { status: 409 }
+  );
+};
 
 // /api/member/shops/:id/(book|accounts|transfer|entries)… — pemilik saja.
 async function handleShopBook(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
@@ -10411,11 +10430,11 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
         const dest = book.accounts.find((a) => a.id === raw.to_account_id);
         if (!dest || dest.id === kas.id) return json({ error: "Pilih kas tujuan yang berbeda." }, { status: 400 });
         const r = await env.DB.batch([
-          bookInsert(env, ownerId, shop.id, { id, key, type: "pindah", date, amount, net: amount, accountId: kas.id, toAccountId: dest.id, note: note ?? `${kas.name} → ${dest.name}` }),
+          bookInsert(env, ownerId, shop.id, { id, key, type: "pindah", date, amount, net: amount, accountId: kas.id, toAccountId: dest.id, note: note ?? `${kas.name} → ${dest.name}` }, cashEnough(ownerId, kas.id, amount)),
           kasDelta(env, ownerId, kas.id, -amount, id),
           kasDelta(env, ownerId, dest.id, amount, id),
         ]);
-        if (!r[0]?.meta.changes) return json({ error: "Sudah tercatat." }, { status: 409 });
+        if (!r[0]?.meta.changes) return await transferRejected(env, ownerId, key, kas);
         await publishShopBook(env, ownerId, shop.id);
         return json({ ok: true, id }, { status: 201 });
       }
@@ -10430,7 +10449,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       const label = setor ? "Setor modal" : "Ambil uang usaha";
       const txNote = `[${label}] ${setor ? `ke ${shop.name} · ${kas.name}` : `dari ${shop.name} · ${kas.name}`}${note ? ` · ${note}` : ""}`.slice(0, 200);
       const r = await env.DB.batch([
-        bookInsert(env, ownerId, shop.id, { id, key, type: setor ? "setor" : "ambil", date, amount, net: amount, accountId: kas.id, personalAccountId: personal.id, personalTxId: txId, note: note ?? `${label} · ${personal.name}` }),
+        bookInsert(env, ownerId, shop.id, { id, key, type: setor ? "setor" : "ambil", date, amount, net: amount, accountId: kas.id, personalAccountId: personal.id, personalTxId: txId, note: note ?? `${label} · ${personal.name}` }, setor ? undefined : cashEnough(ownerId, kas.id, amount)),
         env.DB.prepare(
           `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
            SELECT ?, ?, 'transfer', ?, ?, 'Transfer', ?, 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ? WHERE EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)`
@@ -10438,7 +10457,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
         env.DB.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)").bind(setor ? -amount : amount, personal.id, ownerId, txId, ownerId),
         kasDelta(env, ownerId, kas.id, setor ? amount : -amount, id),
       ]);
-      if (!r[0]?.meta.changes) return json({ error: "Sudah tercatat." }, { status: 409 });
+      if (!r[0]?.meta.changes) return await transferRejected(env, ownerId, key, kas);
       await publishShopBook(env, ownerId, shop.id);
       try {
         const durableId = env.REALTIME_ROOM.idFromName(`member:${ownerId}`);
