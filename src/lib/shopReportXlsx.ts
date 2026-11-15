@@ -1,5 +1,5 @@
 import type { Workbook, Worksheet } from 'exceljs';
-import { periodeLabel, saleLines, tglPanjang, todayWIB, type ShopReport, type Summary } from './shopReport';
+import { STOCK_PURCHASE_KIND, periodeLabel, saleLines, tglPanjang, todayWIB, type ShopReport, type Summary } from './shopReport';
 
 // Excel (.xlsx) laporan Usahaku. Dimuat lewat import() hanya saat tombol "Unduh Excel" diklik
 // (exceljs ±1 MB). Pakai build browser exceljs (tanpa polyfill Node).
@@ -30,7 +30,7 @@ function table(
       const cell = row.getCell(i + 1);
       cell.value = v as never;
       if (headers[i].num)
-        cell.numFmt = headers[i].h.toLowerCase().includes('qty') || headers[i].h === 'Jumlah' ? '#,##0' : RP;
+        cell.numFmt = /qty|peringkat/i.test(headers[i].h) || headers[i].h === 'Jumlah' ? '#,##0' : RP;
       if (ri % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6F7FB' } };
     });
   });
@@ -41,7 +41,7 @@ function table(
 
 const asDate = (d: string) => new Date(`${d}T00:00:00`);
 
-export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): Promise<Blob> {
+export async function buildShopXlsx(r: ShopReport, s: Summary, color: string, pro = false): Promise<Blob> {
   const mod = (await import('exceljs/dist/exceljs.min.js')) as unknown as {
     default?: { Workbook: new () => Workbook };
     Workbook?: new () => Workbook;
@@ -93,8 +93,37 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): P
     ws.getCell(`E${6 + i}`).numFmt = RP;
   });
 
+  // Laba dengan modal barang (HPP) — PRO, kalau ada modal tercatat.
+  const h = s.hppInfo;
+  let next = 5 + kpi.length + 1;
+  if (pro && h.hasAny) {
+    const rows: [string, number, string][] = [
+      ['Modal barang terjual (HPP)', h.hpp, RP],
+      ['Laba kotor', h.labaKotor, RP],
+      ['Potongan marketplace', h.feeExp, RP],
+      ['Biaya operasional', h.operasional, RP],
+      ['Laba bersih', h.labaBersih, RP],
+      ['Cakupan modal (omzet bermodal)', h.coverage, '0%'],
+    ];
+    const title = ws.getRow(next);
+    title.getCell(1).value = `Laba dengan modal barang${h.estimated ? ' (termasuk perkiraan)' : ''}`;
+    title.getCell(1).font = { bold: true, color: { argb: argb(color) } };
+    rows.forEach(([k, v, f], i) => {
+      const row = ws.getRow(next + 1 + i);
+      row.getCell(1).value = k;
+      row.getCell(2).value = v;
+      row.getCell(2).numFmt = f;
+      if (k.startsWith('Laba')) row.getCell(2).font = { bold: true, color: { argb: v < 0 ? 'FFE11D48' : 'FF059669' } };
+    });
+    next += rows.length + 2;
+    if (h.stockBuy > 0) {
+      ws.getRow(next - 1).getCell(1).value = `Belanja stok (${STOCK_PURCHASE_KIND}) ${h.stockBuy.toLocaleString('id-ID')} tidak dikurangkan — sudah lewat HPP.`;
+      ws.getRow(next - 1).getCell(1).font = { italic: true, color: { argb: 'FF64748B' } };
+      next += 1;
+    }
+  }
   if (s.pending.count) {
-    const row = ws.getRow(5 + kpi.length + 1);
+    const row = ws.getRow(next);
     row.getCell(1).value = `Belum cair (${s.pending.count} penjualan marketplace)`;
     row.getCell(1).font = { bold: true, color: { argb: 'FFB45309' } };
     row.getCell(2).value = s.pending.net;
@@ -163,14 +192,19 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): P
       { h: 'Qty terjual', w: 13, num: true },
       { h: 'Omzet', w: 16, num: true },
       { h: 'Porsi omzet', w: 13 },
+      ...(pro && h.hasAny ? [{ h: 'Modal', w: 16, num: true }, { h: 'Laba', w: 16, num: true }] : []),
     ],
-    s.products.map((p, i) => [
-      i + 1,
-      p.name,
-      p.qty,
-      p.omzet,
-      s.omzet ? `${((p.omzet / s.omzet) * 100).toFixed(1)}%` : '',
-    ]),
+    s.products.map((p, i) => {
+      const pp = h.productProfit.find((x) => x.name === p.name);
+      return [
+        i + 1,
+        p.name,
+        p.qty,
+        p.omzet,
+        s.omzet ? `${((p.omzet / s.omzet) * 100).toFixed(1)}%` : '',
+        ...(pro && h.hasAny ? [pp?.cost ?? null, pp?.laba ?? null] : []),
+      ];
+    }),
     color,
   );
 

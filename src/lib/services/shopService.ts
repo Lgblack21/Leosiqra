@@ -256,6 +256,16 @@ export const shopService = {
     notifyCollectionChanged('accounts');
     notifyCollectionChanged('shop_book');
   },
+  /** Harga modal per produk (key "kategori|nama"): manual (diisi pemilik) + perkiraan dari resep. */
+  async costs(id: string) {
+    return cloudflareApi<{ ready: boolean; manual: Record<string, number>; recipe: Record<string, number> }>(
+      `/api/member/shops/${id}/costs`,
+    );
+  },
+  /** Simpan harga modal manual (PRO). cost null = hapus (kembali ke resep/tanpa modal). */
+  async saveCosts(id: string, costs: { key: string; cost: number | null }[]) {
+    await cloudflareApi(`/api/member/shops/${id}/costs`, { method: 'PUT', json: { costs } });
+  },
   async sale(
     id: string,
     input: {
@@ -269,6 +279,8 @@ export const shopService = {
       date?: string;
       /** Buku usaha: jalur jualan, cara bayar, biaya marketplace, kas usaha tujuan. */
       book?: SaleBookInput;
+      /** Modal pesanan ini (PRO, buku usaha) — mis. harga beli top up/dropship ke supplier. */
+      modal?: number | null;
     },
   ) {
     const b = input.book;
@@ -291,6 +303,7 @@ export const shopService = {
               reseller: b.reseller,
               settled: b.settled,
               shop_account_id: b.accountId,
+              ...(input.modal !== undefined && input.modal !== null ? { modal: input.modal } : {}),
             }
           : { account_id: input.accountId }),
       },

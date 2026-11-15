@@ -9,7 +9,9 @@ import {
   Download,
   FileSpreadsheet,
   Hourglass,
+  Lock,
   Package,
+  Scale,
   Store,
   Receipt,
   ShoppingBag,
@@ -18,11 +20,13 @@ import {
   Wallet,
 } from 'lucide-react';
 import { KASIR_THEME } from './kasirTheme';
+import { usePlan } from '@/lib/usePlan';
 import { formatIDR, cn } from '@/lib/utils';
 import {
   fetchShopReport,
   growth,
   periodeLabel,
+  STOCK_PURCHASE_KIND,
   previousRange,
   rangeFor,
   saleLines,
@@ -96,7 +100,10 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
     };
   }, [id, range.from, range.to]);
 
-  const sum = useMemo(() => (data ? summarize(data) : null), [data]);
+  const isPro = usePlan();
+  // Perkirakan modal penjualan yang belum punya modal tercatat pakai harga modal SAAT INI (tampilan saja).
+  const [estimate, setEstimate] = useState(false);
+  const sum = useMemo(() => (data ? summarize(data, { estimate }) : null), [data, estimate]);
   const prevSum = useMemo(() => (prev ? summarize(prev) : null), [prev]);
   // Badge naik/turun vs periode sebelumnya. good = arah yang bagus (omzet naik, biaya turun).
   const delta = (now: number, before: number | undefined, upIsGood = true) => {
@@ -117,7 +124,7 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
     setXls('busy');
     try {
       const { buildShopXlsx } = await import('@/lib/shopReportXlsx');
-      const blob = await buildShopXlsx(data, sum, c);
+      const blob = await buildShopXlsx(data, sum, c, isPro === true);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `Laporan-${data.shop.name.replace(/[^\w-]+/g, '-')}-${data.range.from}_${data.range.to}.xlsx`;
@@ -393,6 +400,130 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
               </motion.section>
             )}
 
+
+            {/* Laba dengan modal barang (HPP) — PRO */}
+            {isPro === false && (
+              <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 print:hidden">
+                <Lock size={18} className="mt-0.5 shrink-0 text-slate-500" />
+                <p className="fs-13 leading-relaxed text-slate-600">
+                  <b className="text-slate-900">Laba kotor & bersih dengan modal barang (HPP)</b> dan laba per produk ada di paket PRO.
+                  Isi harga modal sekali, tiap penjualan langsung ketahuan untungnya.{' '}
+                  <Link href={variant === 'app' ? '/app/profile' : '/membership/profile'} className="font-bold underline" style={{ color: c }}>
+                    Lihat paket PRO
+                  </Link>
+                </p>
+              </motion.section>
+            )}
+            {isPro && !sum.hppInfo.hasAny && !sum.hppInfo.canEstimate && (
+              <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 print:hidden">
+                <Scale size={18} className="mt-0.5 shrink-0" style={{ color: c }} />
+                <p className="fs-13 leading-relaxed text-slate-600">
+                  <b className="text-slate-900">Mau tahu laba sebenarnya?</b> Isi harga modal tiap produk di ⚙️ Pengaturan › Produk, atau
+                  lengkapi resep & harga beli bahan di Stok. Penjualan berikutnya otomatis tercatat modalnya, dan laba kotor, laba
+                  bersih, serta laba per produk muncul di sini.
+                </p>
+              </motion.section>
+            )}
+            {isPro && (sum.hppInfo.hasAny || sum.hppInfo.canEstimate) && (
+              <motion.section {...fade(1)} className="lap-avoid">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <h2 className="flex items-center gap-2 fs-16 font-extrabold">
+                    <Scale size={17} style={{ color: c }} /> Laba dengan modal barang
+                  </h2>
+                  {sum.hppInfo.coverage < 1 && sum.omzet > 0 && (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 fs-11 font-bold text-amber-700 ring-1 ring-amber-200">
+                      Modal tercatat untuk {Math.floor(sum.hppInfo.coverage * 100)}% omzet
+                    </span>
+                  )}
+                  {sum.hppInfo.estimated && (
+                    <span className="rounded-full bg-sky-50 px-2.5 py-0.5 fs-11 font-bold text-sky-700 ring-1 ring-sky-200">
+                      termasuk perkiraan
+                    </span>
+                  )}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <dl className="divide-y divide-slate-100 rounded-2xl ring-1 ring-slate-200/80 fs-13 tabular-nums">
+                    {[
+                      { k: 'Omzet', v: sum.omzet },
+                      { k: '− Modal barang terjual (HPP)', v: -sum.hppInfo.hpp, muted: true },
+                      { k: 'Laba kotor', v: sum.hppInfo.labaKotor, bold: true, pct: sum.hppInfo.marginKotor },
+                      { k: '− Potongan marketplace', v: -sum.hppInfo.feeExp, muted: true },
+                      { k: '− Biaya operasional', v: -sum.hppInfo.operasional, muted: true },
+                      { k: 'Laba bersih', v: sum.hppInfo.labaBersih, bold: true, pct: sum.hppInfo.marginBersih, hi: true },
+                    ].map((row) => (
+                      <div
+                        key={row.k}
+                        className="flex items-center justify-between gap-3 px-3.5 py-2.5"
+                        style={row.hi ? { background: rgba(c, 0.06) } : undefined}
+                      >
+                        <dt className={cn(row.bold ? 'font-extrabold text-slate-900' : 'text-slate-600')}>{row.k}</dt>
+                        <dd className={cn(row.bold ? 'font-extrabold' : row.muted ? 'text-slate-500' : 'font-bold', row.bold && (row.v < 0 ? 'text-rose-600' : 'text-emerald-600'))}>
+                          {row.v < 0 && !row.bold ? `−${formatIDR(-row.v)}` : formatIDR(row.v)}
+                          {row.pct !== undefined && sum.omzet > 0 && <span className="ml-1.5 fs-11 font-semibold text-slate-400">{Math.round(row.pct * 100)}%</span>}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="space-y-3 fs-12.5 leading-relaxed text-slate-500">
+                    {sum.hppInfo.stockBuy > 0 && (
+                      <p>
+                        Belanja stok (<b>{STOCK_PURCHASE_KIND}</b>) {formatIDR(sum.hppInfo.stockBuy)} tidak dikurangkan di sini — sudah
+                        masuk lewat modal barang saat barangnya laku. Uangnya tetap tercatat keluar dari kas.
+                      </p>
+                    )}
+                    {sum.hppInfo.missing.length > 0 && (
+                      <div className="rounded-2xl bg-amber-50/70 p-3 ring-1 ring-amber-200/70">
+                        <p className="font-bold text-amber-900">Penjualan tanpa modal (labanya belum dihitung):</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {sum.hppInfo.missing.slice(0, 5).map((m) => (
+                            <li key={m.name} className="flex justify-between gap-2 tabular-nums">
+                              <span className="truncate">{m.name}</span>
+                              <span>{formatIDR(m.omzet)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-1.5">Isi harga modalnya di ⚙️ Pengaturan › Produk — berlaku untuk penjualan berikutnya.</p>
+                      </div>
+                    )}
+                    {sum.hppInfo.canEstimate && (sum.hppInfo.missing.length > 0 || estimate) && (
+                      <label className="flex cursor-pointer items-start gap-2 print:hidden">
+                        <input type="checkbox" checked={estimate} onChange={(e) => setEstimate(e.target.checked)} className="mt-0.5 h-4 w-4" style={{ accentColor: c }} />
+                        <span>
+                          <b className="text-slate-700">Perkirakan modal penjualan lama</b> pakai harga modal sekarang. Hanya tampilan, data
+                          penjualan tidak diubah.
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+                {sum.hppInfo.hasAny && (
+                  <div className="mt-4 overflow-hidden rounded-2xl ring-1 ring-slate-200/80">
+                    <p className="bg-slate-50 px-3.5 py-2 fs-11.5 font-bold uppercase tracking-wide text-slate-500">Laba per produk</p>
+                    <ul className="divide-y divide-slate-100 fs-13 tabular-nums">
+                      {sum.hppInfo.productProfit.slice(0, 10).map((p) => (
+                        <li key={p.name} className="flex items-center justify-between gap-3 px-3.5 py-2">
+                          <span className="min-w-0 truncate font-bold">
+                            {p.name} <span className="font-medium text-slate-400">· {p.qty.toLocaleString('id-ID')}×</span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="text-slate-500">{formatIDR(p.omzet)}</span>
+                            {p.laba !== null ? (
+                              <b className={cn('ml-2', p.laba < 0 ? 'text-rose-600' : 'text-emerald-600')}>
+                                {p.laba < 0 ? '−' : '+'}
+                                {formatIDR(Math.abs(p.laba))}
+                              </b>
+                            ) : (
+                              <span className="ml-2 text-slate-400">modal belum lengkap</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </motion.section>
+            )}
+
             {/* Grafik omzet & biaya */}
             <motion.section {...fade(1)} className="lap-avoid">
               <div className="mb-3 flex items-end justify-between gap-2">
@@ -410,7 +541,7 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
             </motion.section>
 
             {/* Per jalur jualan — hanya kalau ada lebih dari satu jalur atau ada potongan marketplace */}
-            {(sum.channels.length > 1 || sum.channels.some((x) => x.fee > 0)) && (
+            {(sum.channels.length > 1 || sum.channels.some((x) => x.fee > 0 || (isPro && x.cost > 0))) && (
               <motion.section {...fade(2)} className="lap-avoid">
                 <h2 className="mb-3 flex items-center gap-2 fs-16 font-extrabold">
                   <Store size={17} style={{ color: c }} /> Per jalur jualan
@@ -427,10 +558,27 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
                           {x.trx} trx · <b className="text-slate-900">{formatIDR(x.omzet)}</b>
                         </span>
                       </div>
-                      {x.fee > 0 && (
+                      {(x.fee > 0 || (isPro && x.cost > 0)) && (
                         <p className="mt-0.5 text-right fs-12 tabular-nums text-slate-500">
-                          potongan <span className="font-semibold text-rose-600">{formatIDR(x.fee)} ({Math.round((x.fee / x.omzet) * 100)}%)</span> ·
-                          diterima <b className="text-slate-900">{formatIDR(x.net)}</b>
+                          {x.fee > 0 && (
+                            <>
+                              potongan <span className="font-semibold text-rose-600">{formatIDR(x.fee)} ({Math.round((x.fee / x.omzet) * 100)}%)</span> ·
+                              diterima <b className="text-slate-900">{formatIDR(x.net)}</b>
+                            </>
+                          )}
+                          {isPro && x.cost > 0 && (
+                            <>
+                              {x.fee > 0 && ' · '}modal {formatIDR(x.cost)}
+                              {x.costFull ? (
+                                <>
+                                  {' '}· laba{' '}
+                                  <b className={x.net - x.cost < 0 ? 'text-rose-600' : 'text-emerald-600'}>{formatIDR(x.net - x.cost)}</b>
+                                </>
+                              ) : (
+                                ' (sebagian)'
+                              )}
+                            </>
+                          )}
                         </p>
                       )}
                     </li>

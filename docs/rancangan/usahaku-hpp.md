@@ -1,6 +1,15 @@
 # Rancangan — Usahaku R2: HPP & laba yang benar
 
-Status: **DRAF, menunggu ACC Bos** (2026-11-15). Belum ada kode. Pertanyaan untuk Bos di bagian 9.
+Status: **DI-ACC Bos 2026-11-15 ("gas aja" = 4 saran: 1 setuju, 2 masuk R2, 3 tombol perkiraan, 4 PRO).
+Dikerjakan 3.29.0** — branch `claude/usahaku-hpp-20261115`, migrasi `0046_shop_costs.sql`.
+
+**Beda dari draf (hasil cek kode saat implementasi):**
+- Modal manual TIDAK di `shops.products_json` — katalog itu dikirim utuh ke akun tim (`ownShops`) dan bisa ditimpa
+  sinkron website/MCP. Disimpan di tabel baru `shop_costs` (pemilik saja).
+- Modal terkunci disimpan di `shop_entries.payload_json` (`items[].cost`, `costSrc`, `cogs`, `cogsSrc`), bukan kolom
+  `cogs` baru — tidak perlu ALTER, laporan dihitung di perangkat dari payload.
+- Urutan sumber modal: per pesanan > **manual > resep** (manual = keputusan sadar pemilik, jadi menang).
+- "Perkiraan penjualan lama" = tampilan saja di laporan (harga modal SAAT INI dikirim di `costs`), tidak menulis DB.
 
 ## 1. Masalahnya
 

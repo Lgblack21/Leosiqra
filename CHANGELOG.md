@@ -109,6 +109,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.4 | 15 Nov 2026 | Perbaikan saldo kas Usahaku |
 | 3.28.5 | 15 Nov 2026 | Kas tunai Usahaku tidak bisa minus |
 | 3.28.6 | 15 Nov 2026 | Laporan Usahaku: perbandingan periode & per jalur jualan |
+| 3.29.0 | 16 Nov 2026 | Usahaku: laba dengan modal barang (HPP) |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -122,6 +123,21 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.29.0 — 2026-11-16 — Usahaku: laba dengan modal barang (HPP)
+
+- **Laba yang sebenarnya, bukan cuma omzet dikurangi belanja.** Isi harga modal tiap produk (⚙️ Pengaturan › Produk),
+  atau biarkan dihitung dari resep × harga beli bahan di Stok. Mulai sekarang tiap penjualan mencatat modalnya sendiri,
+  jadi laporan menampilkan **laba kotor**, **laba bersih**, dan **laba per produk** — kelihatan produk mana yang
+  sebenarnya untung tipis. (PRO)
+- **Modal per pesanan** untuk top up, pulsa, dan dropship: di struk kasir ketuk "Isi modal pesanan ini", masukkan harga
+  beli ke supplier. Tidak terlihat oleh akun tim. (PRO)
+- Belanja stok (Bahan & Stok) tidak lagi dihitung dua kali: di laporan laba, belanja itu dianggap persediaan dan baru
+  mengurangi laba saat barangnya laku.
+- Penjualan lama yang belum punya modal bisa **diperkirakan** pakai harga modal sekarang — hanya tampilan, datanya tidak
+  diubah. Laporan juga menunjukkan berapa persen omzet yang sudah punya modal.
+- Per jalur jualan kini menampilkan modal dan laba (kalau semua penjualannya sudah punya modal).
+- Excel: blok laba dengan modal barang di Ringkasan, kolom Modal & Laba di lembar Produk.
 
 ## 3.28.6 — 2026-11-15 — Laporan Usahaku: perbandingan periode & per jalur jualan
 

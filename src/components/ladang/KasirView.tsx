@@ -40,6 +40,7 @@ import { PriceEditor } from './PriceEditor';
 import { ExpenseForm } from './ExpenseForm';
 import { StockView } from './StockView';
 import { isLow, stockService, type StockData } from '@/lib/services/stockService';
+import { usePlan } from '@/lib/usePlan';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -1035,6 +1036,10 @@ export function Struk({
   const [kasId, setKasId] = useState('');
   const [fees, setFees] = useState<{ label: string; amount: string }[]>([]);
   const [settled, setSettled] = useState(false);
+  // Modal pesanan ini (PRO, buku usaha, pemilik): harga beli ke supplier untuk top up/dropship dsb.
+  const isPro = usePlan();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modal, setModal] = useState('');
   const kasDefault = book?.accounts.find((a) => a.isDefault)?.id ?? book?.accounts[0]?.id ?? '';
   const kas = kasId && book?.accounts.some((a) => a.id === kasId) ? kasId : kasDefault;
   const feeTotal = fees.reduce((a, f) => a + (Number(f.amount) || 0), 0);
@@ -1149,6 +1154,7 @@ export function Struk({
             settled: chType === 'langsung' || settled,
             accountId: chType === 'langsung' || settled ? kas : null,
           },
+          modal: isPro && modalOpen && modal !== '' ? Number(modal) : null,
         });
       } else {
         await shopService.sale(shop.id, { ...base, accountId, date });
@@ -1193,6 +1199,8 @@ export function Struk({
     setError('');
     setFees([]);
     setSettled(false);
+    setModal('');
+    setModalOpen(false);
     setRequestId(crypto.randomUUID());
     if (inSheet) onNew();
   };
@@ -1410,6 +1418,30 @@ export function Struk({
           setSettled={setSettled}
           date={date}
           setDate={setDate}
+          extra={
+            isPro ? (
+              modalOpen ? (
+                <label className="block">
+                  <span className={labelCls}>Modal pesanan ini (harga beli ke supplier)</span>
+                  <input
+                    value={modal ? Number(modal).toLocaleString('id-ID') : ''}
+                    onChange={(e) => setModal(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    inputMode="numeric"
+                    placeholder="Rp"
+                    autoFocus
+                    className={cn(fieldCls, 'tabular-nums')}
+                  />
+                  <span className="mt-1 block fs-11 text-slate-500 dark:text-slate-400">
+                    Dipakai untuk laba pesanan ini, menggantikan harga modal produk. Tidak dilihat akun tim.
+                  </span>
+                </label>
+              ) : (
+                <button type="button" onClick={() => setModalOpen(true)} className="fs-12 font-bold text-violet-600 dark:text-violet-300">
+                  + Isi modal pesanan ini (top up, dropship)
+                </button>
+              )
+            ) : null
+          }
         />
       ) : (
         <div className="grid grid-cols-2 gap-2">
@@ -1506,6 +1538,8 @@ function BookSaleFields(p: {
   setSettled: (v: boolean) => void;
   date: string;
   setDate: (v: string) => void;
+  /** Isian tambahan di bawah (mis. modal pesanan, PRO). */
+  extra?: React.ReactNode;
 }) {
   const list = p.chType === 'langsung' ? p.channels.langsung : p.channels.marketplace;
   const chip = (on: boolean) =>
@@ -1659,6 +1693,7 @@ function BookSaleFields(p: {
           </div>
         </>
       )}
+      {p.extra}
     </div>
   );
 }

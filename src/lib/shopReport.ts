@@ -3,7 +3,8 @@ import { cloudflareApi } from './cloudflare-api';
 // Laporan Usahaku — data dari GET /api/member/shops/:id/report (Worker, baca saja) lalu
 // diringkas di perangkat untuk halaman Laporan, PDF (cetak), dan Excel.
 
-export type ReportItem = { name: string; price: number; qty: number };
+// cost = modal per satuan yang DIKUNCI saat penjualan dicatat (R2 HPP); tidak ada = belum punya modal.
+export type ReportItem = { name: string; price: number; qty: number; key?: string; cost?: number; costSrc?: 'manual' | 'resep' };
 export type ReportSale = {
   id: string;
   date: string;
@@ -23,6 +24,9 @@ export type ReportSale = {
   fee?: number;
   status?: 'selesai' | 'menunggu';
   reseller?: boolean;
+  /** Total modal penjualan (lengkap). Tidak ada = sebagian/semua baris belum punya modal. */
+  cogs?: number;
+  cogsSrc?: 'transaksi' | 'produk';
 };
 export type ReportExpense = {
   id: string;
@@ -63,7 +67,13 @@ export type ShopReport = {
   materials: ReportMaterial[];
   moves: ReportMove[];
   truncated: boolean;
+  /** Modal per satuan SAAT INI — hanya untuk "perkirakan modal" penjualan tanpa modal tercatat. */
+  costs?: { byKey: Record<string, number>; byName: Record<string, number> };
 };
+
+/** Kategori biaya yang dianggap pembelian persediaan (sudah dihitung lewat HPP saat barangnya laku). */
+export const STOCK_PURCHASE_KIND = 'Bahan & Stok';
+export const MARKETPLACE_FEE_KIND = 'Potongan marketplace';
 
 export const fetchShopReport = (id: string, from: string, to: string) =>
   cloudflareApi<ShopReport>(
@@ -131,7 +141,7 @@ export const saleLines = (s: ReportSale): ReportItem[] => {
 };
 
 export type Summary = ReturnType<typeof summarize>;
-export function summarize(r: ShopReport) {
+export function summarize(r: ShopReport, opts: { estimate?: boolean } = {}) {
   const omzet = r.sales.reduce((s, x) => s + x.amount, 0);
   const biaya = r.expenses.reduce((s, x) => s + x.amount, 0);
   const laba = omzet - biaya;
@@ -206,6 +216,7 @@ export function summarize(r: ShopReport) {
     chMap.set(name.toLowerCase(), cur);
   }
   const channels = [...chMap.values()].map((x) => ({ ...x, net: x.omzet - x.fee })).sort((a, b) => b.omzet - a.omzet);
+  // (modal per jalur ditambahkan setelah HPP dihitung, di bawah)
 
   // Penjualan marketplace yang uangnya belum cair (status 'menunggu') di periode ini.
   const waiting = r.sales.filter((s) => s.status === 'menunggu');
@@ -215,6 +226,106 @@ export function summarize(r: ShopReport) {
     net: waiting.reduce((a, s) => a + s.amount - (s.fee ?? 0), 0),
     oldest: waiting.reduce<string | null>((a, s) => (a === null || s.date < a ? s.date : a), null),
   };
+
+  // ── HPP (modal barang terjual) ─────────────────────────────────────────────
+  // Modal tercatat dipakai apa adanya. Baris tanpa modal: kalau estimate, pakai modal produk SAAT INI
+  // (ditandai perkiraan); kalau tidak, baris itu tidak punya modal dan masuk "cakupan" yang kurang.
+  const now = r.costs ?? { byKey: {}, byName: {} };
+  const guess = (key: string | undefined, name: string) =>
+    opts.estimate ? ((key ? now.byKey[key] : undefined) ?? now.byName[name.trim().toLowerCase()]) : undefined;
+  let hpp = 0;
+  let coveredOmzet = 0;
+  let estimated = false;
+  const prodCost = new Map<string, { cost: number; revenue: number }>();
+  const missing = new Map<string, { name: string; omzet: number }>();
+  const saleCostOf = new Map<string, number>();
+  const salePartial = new Set<string>(); // penjualan yang sebagian/seluruh barisnya tanpa modal
+  for (const s of r.sales) {
+    if (typeof s.cogs === 'number') {
+      hpp += s.cogs;
+      coveredOmzet += s.amount;
+      saleCostOf.set(s.id, s.cogs);
+      // Modal per transaksi (tanpa rincian) / modal lengkap: bagi ke produk sesuai porsi omzet baris.
+      const ls = saleLines(s);
+      const tot = ls.reduce((a, l) => a + (s.items.length ? l.price * l.qty : s.amount), 0) || 1;
+      for (const l of ls) {
+        const rev = s.items.length ? l.price * l.qty : s.amount;
+        const share = l.cost !== undefined && s.cogsSrc !== 'transaksi' ? l.cost * l.qty : (s.cogs * rev) / tot;
+        const k = l.name.toLowerCase();
+        const cur = prodCost.get(k) ?? { cost: 0, revenue: 0 };
+        cur.cost += share;
+        cur.revenue += rev;
+        prodCost.set(k, cur);
+      }
+      continue;
+    }
+    let sc = 0;
+    for (const l of saleLines(s)) {
+      const rev = s.items.length ? l.price * l.qty : s.amount;
+      let unit = l.cost;
+      if (unit === undefined) {
+        unit = guess(l.key, l.name);
+        if (unit !== undefined) estimated = true;
+      }
+      const k = l.name.toLowerCase();
+      if (unit === undefined) {
+        salePartial.add(s.id);
+        const m = missing.get(k) ?? { name: l.name, omzet: 0 };
+        m.omzet += rev;
+        missing.set(k, m);
+        continue;
+      }
+      const c = unit * l.qty;
+      sc += c;
+      coveredOmzet += rev;
+      const cur = prodCost.get(k) ?? { cost: 0, revenue: 0 };
+      cur.cost += c;
+      cur.revenue += rev;
+      prodCost.set(k, cur);
+    }
+    hpp += sc;
+    saleCostOf.set(s.id, sc);
+  }
+  hpp = Math.round(hpp);
+  const feeExp = r.expenses.filter((e) => e.kind === MARKETPLACE_FEE_KIND).reduce((a, e) => a + e.amount, 0);
+  const stockBuy = r.expenses.filter((e) => e.kind === STOCK_PURCHASE_KIND).reduce((a, e) => a + e.amount, 0);
+  const operasional = biaya - feeExp - stockBuy;
+  const labaKotor = omzet - hpp;
+  const labaBersih = labaKotor - feeExp - operasional;
+  const coverage = omzet > 0 ? Math.min(1, coveredOmzet / omzet) : 0;
+  const productProfit = products
+    .map((p) => {
+      const pc = prodCost.get(p.name.toLowerCase());
+      // Laba produk hanya kalau seluruh omzet produk itu punya modal.
+      const full = pc && Math.abs(pc.revenue - p.omzet) < 1;
+      return { ...p, cost: pc ? Math.round(pc.cost) : null, laba: full ? Math.round(p.omzet - pc.cost) : null };
+    })
+    .sort((a, b) => (b.laba ?? -Infinity) - (a.laba ?? -Infinity) || b.omzet - a.omzet);
+  const hppInfo = {
+    hpp,
+    coveredOmzet,
+    coverage,
+    estimated,
+    hasAny: hpp > 0 || coveredOmzet > 0,
+    canEstimate: Object.keys(now.byKey).length > 0 || Object.keys(now.byName).length > 0,
+    labaKotor,
+    feeExp,
+    stockBuy,
+    operasional,
+    labaBersih,
+    marginKotor: omzet > 0 ? labaKotor / omzet : 0,
+    marginBersih: omzet > 0 ? labaBersih / omzet : 0,
+    missing: [...missing.values()].sort((a, b) => b.omzet - a.omzet),
+    productProfit,
+  };
+  // Modal per jalur (dari modal tiap penjualan).
+  const chCost = new Map<string, number>();
+  const chPartial = new Set<string>();
+  for (const s of r.sales) {
+    const name = (s.channel || (s.source === 'website' ? 'Website' : 'Kasir')).toLowerCase();
+    chCost.set(name, (chCost.get(name) ?? 0) + (saleCostOf.get(s.id) ?? 0));
+    if (salePartial.has(s.id)) chPartial.add(name);
+  }
 
   const lowStock = r.materials.filter((m) => m.stock <= 0 || (m.min_stock !== null && m.stock <= m.min_stock));
 
@@ -235,7 +346,8 @@ export function summarize(r: ShopReport) {
     monthly,
     best,
     lowStock,
-    channels,
+    channels: channels.map((x) => ({ ...x, cost: Math.round(chCost.get(x.name.toLowerCase()) ?? 0), costFull: !chPartial.has(x.name.toLowerCase()) })),
     pending,
+    hppInfo,
   };
 }

@@ -44,6 +44,7 @@ import { HookSection } from './HookSection';
 import { CatalogImage } from './CatalogImage';
 import { kindOf } from '@/lib/usaha/jenis';
 import { TeamManager } from './TeamManager';
+import { usePlan } from '@/lib/usePlan';
 
 // Leosiqra tidak meng-host halaman publik; website dibuat user sendiri, lalu AI bisa membaca daftar harganya.
 
@@ -1215,14 +1216,36 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
       price: String(p.price),
       group: p.group ?? '',
       resellerPrice: p.resellerPrice ? String(p.resellerPrice) : '',
+      cost: '', // harga modal manual (PRO) — dimuat dari /costs, disimpan terpisah dari katalog
+      costKey: `${p.group ?? ''}|${p.name}`,
     })),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const set = (i: number, k: 'name' | 'price' | 'unit' | 'group' | 'resellerPrice', v: string) =>
+  const isPro = usePlan();
+  // Harga modal: manual (bisa diubah) + perkiraan dari resep (placeholder). null = belum dimuat/tidak aktif.
+  const [costs, setCosts] = useState<{ ready: boolean; recipe: Record<string, number> } | null>(null);
+  useEffect(() => {
+    if (!isPro) return;
+    let alive = true;
+    shopService
+      .costs(shop.id)
+      .then((c) => {
+        if (!alive) return;
+        setCosts({ ready: c.ready, recipe: c.recipe });
+        setList((l) => l.map((p) => (c.manual[p.costKey] !== undefined ? { ...p, cost: String(Math.round(c.manual[p.costKey])) } : p)));
+      })
+      .catch(() => alive && setCosts(null));
+    return () => {
+      alive = false;
+    };
+  }, [isPro, shop.id]);
+  const set = (i: number, k: 'name' | 'price' | 'unit' | 'group' | 'resellerPrice' | 'cost', v: string) =>
     setList((l) =>
       l.map((p, j) =>
-        j === i ? { ...p, [k]: k === 'price' || k === 'resellerPrice' ? v.replace(/\D/g, '').slice(0, 10) : v } : p,
+        j === i
+          ? { ...p, [k]: k === 'price' || k === 'resellerPrice' || k === 'cost' ? v.replace(/\D/g, '').slice(0, 10) : v }
+          : p,
       ),
     );
   const groups = [...new Set(list.map((p) => p.group.trim()).filter(Boolean))];
@@ -1239,6 +1262,18 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
     setBusy(true);
     try {
       await shopService.update(shop.id, { products });
+      // Harga modal (PRO) disimpan terpisah — tidak ikut katalog yang dilihat tim. Kosong = hapus.
+      if (isPro && costs?.ready) {
+        const entries = list
+          .filter((p) => p.name.trim())
+          .map((p) => ({ key: `${p.group.trim()}|${p.name.trim()}`, cost: p.cost === '' ? null : Number(p.cost) }));
+        try {
+          if (entries.length) await shopService.saveCosts(shop.id, entries);
+        } catch (e) {
+          onDone(`Produk disimpan, tapi harga modal gagal: ${e instanceof Error ? e.message : 'coba lagi'}.`);
+          return;
+        }
+      }
       onDone('Produk disimpan.');
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.');
@@ -1286,7 +1321,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 <X size={16} />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-1.5 pr-[34px]">
+            <div className="grid grid-cols-2 gap-1.5 pr-[34px] sm:grid-cols-4">
               <input
                 value={p.group}
                 onChange={(e) => set(i, 'group', e.target.value)}
@@ -1312,6 +1347,28 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
                 aria-label="Harga reseller (opsional)"
                 className={cn(fieldCls, 'px-3 py-1.5 fs-12 tabular-nums')}
               />
+              {isPro && costs?.ready ? (
+                <input
+                  value={p.cost ? Number(p.cost).toLocaleString('id-ID') : ''}
+                  onChange={(e) => set(i, 'cost', e.target.value)}
+                  inputMode="numeric"
+                  placeholder={
+                    costs.recipe[`${p.group.trim()}|${p.name.trim()}`] !== undefined
+                      ? `Modal ≈ ${formatIDR(Math.round(costs.recipe[`${p.group.trim()}|${p.name.trim()}`]))} (resep)`
+                      : 'Harga modal'
+                  }
+                  aria-label="Harga modal per satuan (opsional)"
+                  title="Modal per satuan. Kosongkan untuk pakai hitungan resep (kalau ada)."
+                  className={cn(fieldCls, 'px-3 py-1.5 fs-12 tabular-nums')}
+                />
+              ) : (
+                <input
+                  disabled
+                  placeholder={isPro === false ? 'Harga modal · PRO' : isPro && costs && !costs.ready ? 'Modal · segera' : 'Harga modal'}
+                  aria-label="Harga modal (PRO)"
+                  className={cn(fieldCls, 'px-3 py-1.5 fs-12 opacity-60')}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -1320,7 +1377,10 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
         <button
           type="button"
           onClick={() =>
-            setList((l) => [...l, { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '', resellerPrice: '' }])
+            setList((l) => [
+              ...l,
+              { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '', resellerPrice: '', cost: '', costKey: '' },
+            ])
           }
           className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
         >

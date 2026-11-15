@@ -10110,7 +10110,7 @@ const sanitizeShopFields = (raw: Record<string, unknown>, creating: boolean): { 
 // Catat satu penjualan usaha: pemasukan Usaha & Freelance › Penjualan + saldo rekening
 // dalam SATU batch; saleKey (payload_json.saleId) mencegah dobel. Dipakai kasir
 // (request_id UUID) & webhook website (saleKey "web:<order_id>").
-const recordShopSale = async (env: Env, userId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date: string; source?: "website"; by?: { id: string; name: string }; stock?: StockMoveInput[]; book?: SaleBook }) => {
+const recordShopSale = async (env: Env, userId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: SaleLine[]; accountId: string; date: string; source?: "website"; by?: { id: string; name: string }; stock?: StockMoveInput[]; book?: SaleBook; modal?: number | null }) => {
   // Toko dengan kas usaha → buku usaha (tidak menyentuh rekening/statistik pribadi).
   if (input.book) return recordBookSale(env, userId, shop, { ...input, book: input.book });
   const txId = generateId();
@@ -10256,12 +10256,13 @@ const parseSaleBook = (raw: Record<string, unknown>, book: { accounts: ShopAccou
   const payMethod = channelType === "langsung" ? ((SHOP_PAY_METHODS as readonly string[]).includes(raw.pay_method as string) ? (raw.pay_method as string) : "tunai") : null;
   return { accountId, channel, channelType, payMethod, fees, reseller: raw.reseller === true };
 };
-const recordBookSale = async (env: Env, ownerId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: { name: string; price: number; qty: number }[]; date: string; source?: "website"; by?: { id: string; name: string }; stock?: StockMoveInput[]; book: SaleBook }) => {
+const recordBookSale = async (env: Env, ownerId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: SaleLine[]; date: string; source?: "website"; by?: { id: string; name: string }; stock?: StockMoveInput[]; book: SaleBook; modal?: number | null }) => {
   const id = generateId();
   const fee = input.book.fees.reduce((a, f) => a + f.amount, 0);
   const net = input.amount - fee;
   const status = input.book.accountId ? "selesai" : "menunggu";
-  const payload = { product: input.product || null, qty: input.qty, ...(input.items?.length ? { items: input.items } : {}), ...(input.book.fees.length ? { fees: input.book.fees } : {}), ...(input.source ? { source: input.source } : {}) };
+  const cost = await saleCost(env, ownerId, shop.id, input.items, input.modal);
+  const payload = { product: input.product || null, qty: input.qty, ...(cost.items?.length ? { items: cost.items } : {}), ...(cost.cogs !== null ? { cogs: cost.cogs, cogsSrc: cost.src } : {}), ...(input.book.fees.length ? { fees: input.book.fees } : {}), ...(input.source ? { source: input.source } : {}) };
   const results = await env.DB.batch([
     bookInsert(env, ownerId, shop.id, {
       id, key: `sale:${input.saleKey}`, type: "jual", date: input.date, amount: input.amount, fee, net, accountId: input.book.accountId,
@@ -10301,6 +10302,67 @@ const isShopBookPersonalTx = async (env: Env, userId: string, txId: string) => {
   if (!entryId) return false;
   // Usahanya sudah dihapus → buku hilang, transaksi pribadi boleh diurus seperti biasa.
   try { return Boolean(await env.DB.prepare("SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entryId, userId).first()); } catch (e) { if (bookTableMissing(e)) return false; throw e; }
+};
+// ── Usahaku R2: HPP (modal barang) ──────────────────────────────────────────
+// Modal per satuan produk SAAT INI: manual (shop_costs, migrasi 0046) > resep × harga rata-rata bahan.
+// Dikunci ke penjualan saat dicatat (payload_json.items[].cost + payload_json.cogs) supaya harga bahan
+// naik bulan depan tidak mengubah laba bulan lalu. Modal tidak pernah dikirim ke akun tim.
+type SaleLine = { name: string; price: number; qty: number; key?: string };
+const costTableMissing = (e: unknown) => e instanceof Error && /no such table: shop_costs/i.test(e.message);
+const COST_NOT_READY = "Harga modal belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const costSources = async (env: Env, ownerId: string, shopId: string, keys?: string[]) => {
+  const recipe = new Map<string, number>();
+  const manual = new Map<string, number>();
+  if (keys && !keys.length) return { recipe, manual };
+  const inKeys = keys ? ` AND product_key IN (${keys.map(() => "?").join(",")})` : "";
+  try {
+    const recipes = (await env.DB.prepare(`SELECT product_key, items_json FROM shop_recipes WHERE shop_id = ? AND owner_id = ?${inKeys}`).bind(shopId, ownerId, ...(keys ?? [])).all<{ product_key: string; items_json: string }>()).results ?? [];
+    if (recipes.length) {
+      const avg = new Map(
+        ((await env.DB.prepare(
+          "SELECT material_id, SUM(cost) AS c, SUM(qty) AS q FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ? AND kind = 'beli' AND reverted_at IS NULL AND cost IS NOT NULL AND qty > 0 GROUP BY material_id"
+        ).bind(ownerId, shopId).all<{ material_id: string; c: number; q: number }>()).results ?? []).filter((x) => x.q > 0).map((x) => [x.material_id, x.c / x.q])
+      );
+      for (const r of recipes) {
+        const items = parseRecipe(r.items_json);
+        // Semua bahan di resep harus punya harga beli; kalau ada yang belum, modal resep tidak dipakai.
+        if (items.length && items.every((i) => avg.has(i.m))) recipe.set(r.product_key, r2(items.reduce((a, i) => a + i.q * (avg.get(i.m) ?? 0), 0)));
+      }
+    }
+  } catch (e) { if (!stockTableMissing(e)) throw e; }
+  try {
+    const rows = (await env.DB.prepare(`SELECT product_key, cost FROM shop_costs WHERE owner_id = ? AND shop_id = ?${inKeys}`).bind(ownerId, shopId, ...(keys ?? [])).all<{ product_key: string; cost: number }>()).results ?? [];
+    for (const m of rows) manual.set(m.product_key, r2(Number(m.cost) || 0));
+  } catch (e) { if (!costTableMissing(e)) throw e; }
+  return { recipe, manual };
+};
+const productUnitCosts = async (env: Env, ownerId: string, shopId: string, keys?: string[]) => {
+  const { recipe, manual } = await costSources(env, ownerId, shopId, keys);
+  const out = new Map<string, { cost: number; src: "manual" | "resep" }>();
+  for (const [k, c] of recipe) out.set(k, { cost: c, src: "resep" });
+  for (const [k, c] of manual) out.set(k, { cost: c, src: "manual" });
+  return out;
+};
+// Modal satu penjualan. modal (diisi pemilik per pesanan, mis. top up/dropship) menang; selain itu dari
+// produk. cogs = null kalau ada baris tanpa modal (laporan menghitung cakupan per baris). Gagal hitung
+// TIDAK boleh menggagalkan penjualan — catat tanpa modal.
+const saleCost = async (env: Env, ownerId: string, shopId: string, items: SaleLine[] | undefined, modal?: number | null) => {
+  const lines = items ?? [];
+  if (modal !== undefined && modal !== null) return { items: lines, cogs: Math.round(modal), src: "transaksi" as const };
+  try {
+    const keys = [...new Set(lines.map((l) => l.key ?? "").filter(Boolean))].slice(0, 30);
+    const unit = await productUnitCosts(env, ownerId, shopId, keys);
+    const costed = lines.map((l) => {
+      const c = l.key ? unit.get(l.key) : undefined;
+      return c ? { ...l, cost: c.cost, costSrc: c.src } : l;
+    });
+    const all = costed.length > 0 && costed.every((l) => "cost" in l);
+    return { items: costed, cogs: all ? Math.round(costed.reduce((a, l) => a + ("cost" in l ? (l.cost as number) * l.qty : 0), 0)) : null, src: "produk" as const };
+  } catch (e) {
+    console.error("Hitung modal penjualan gagal:", e instanceof Error ? e.message : e);
+    return { items: lines, cogs: null, src: "produk" as const };
+  }
 };
 const SHOP_BOOK_TX_LOCKED = "Ini setor modal / ambil uang dari Usahaku. Ubah atau hapus dari Usahaku › Kas supaya saldo usaha ikut menyesuaikan.";
 
@@ -10466,6 +10528,42 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       return json({ ok: true, id }, { status: 201 });
     }
 
+    // Harga modal per produk (HPP). GET = manual + perkiraan dari resep; PUT (PRO) = simpan manual.
+    if (action === "costs" && !sub) {
+      if (request.method === "GET") {
+        // Modal resep tetap dikirim walau ada manual (pemilik bisa membandingkan); manual yang dipakai.
+        const src = await costSources(env, ownerId, shop.id);
+        const manual = Object.fromEntries(src.manual);
+        const recipe = Object.fromEntries(src.recipe);
+        let ready = true;
+        try { await env.DB.prepare("SELECT 1 FROM shop_costs LIMIT 1").first(); } catch (e) { if (costTableMissing(e)) ready = false; else throw e; }
+        return json({ ready, manual, recipe });
+      }
+      if (request.method === "PUT") {
+        if (!(await isProUser(env, ownerId))) return json({ error: "Harga modal & laba per produk khusus PRO." }, { status: 403 });
+        const raw = await parseJson<{ costs?: unknown }>(request);
+        const list = (Array.isArray(raw.costs) ? raw.costs : []).slice(0, 300).map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>) : {}));
+        const stmts: D1PreparedStatement[] = [];
+        const now = nowIso();
+        for (const x of list) {
+          const key = typeof x.key === "string" ? x.key.slice(0, 170) : "";
+          if (!key || !key.includes("|")) continue;
+          if (x.cost === null || x.cost === undefined || x.cost === "") {
+            stmts.push(env.DB.prepare("DELETE FROM shop_costs WHERE shop_id = ? AND owner_id = ? AND product_key = ?").bind(shop.id, ownerId, key));
+            continue;
+          }
+          const n = typeof x.cost === "number" ? x.cost : Number(x.cost);
+          if (!Number.isFinite(n) || n < 0 || n > 1e10) return json({ error: "Harga modal tidak valid." }, { status: 400 });
+          stmts.push(env.DB.prepare(
+            `INSERT INTO shop_costs (shop_id, product_key, owner_id, cost, updated_at) VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(shop_id, product_key) DO UPDATE SET cost = excluded.cost, updated_at = excluded.updated_at WHERE shop_costs.owner_id = excluded.owner_id`
+          ).bind(shop.id, key, ownerId, r2(n), now));
+        }
+        if (stmts.length) await env.DB.batch(stmts);
+        return json({ ok: true, saved: stmts.length });
+      }
+    }
+
     if (action === "entries" && sub && /^[0-9a-f-]{36}$/i.test(sub)) {
       const entry = await env.DB.prepare("SELECT id, type, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, status FROM shop_entries WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<{ id: string; type: BookEntryType; amount: number; fee: number; net: number; account_id: string | null; to_account_id: string | null; personal_account_id: string | null; personal_tx_id: string | null; status: string }>();
       if (!entry) return json({ error: "Catatan tidak ditemukan." }, { status: 404 });
@@ -10525,6 +10623,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
     return json({ error: "Not found" }, { status: 404 });
   } catch (e) {
     if (bookTableMissing(e)) return json({ error: BOOK_NOT_READY }, { status: 503 });
+    if (costTableMissing(e)) return json({ error: COST_NOT_READY }, { status: 503 });
     if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     throw e;
   }
@@ -11230,7 +11329,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
     }
     const rest = pathname.slice("/api/member/shops/".length);
     const [id, action, extra, ...more] = rest.split("/");
-    if ((action === "book" || action === "accounts" || action === "transfer" || action === "entries") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
+    if ((action === "book" || action === "accounts" || action === "transfer" || action === "entries" || action === "costs") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
       const bookShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();
       if (!bookShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
       return await handleShopBook(request, env, userId, bookShop, [action, extra, ...more].filter((x): x is string => Boolean(x)));
@@ -11315,7 +11414,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
             ? (p.items as unknown[]).slice(0, 60).flatMap((it) => {
                 const o = it as Record<string, unknown>;
                 const name = txt(o?.name, 80);
-                return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)) }] : [];
+                return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)), ...(txt(o.key, 170) ? { key: txt(o.key, 170) } : {}) }] : [];
               })
             : [];
           sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(p.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "" });
@@ -11343,10 +11442,13 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
               ? (p.items as unknown[]).slice(0, 60).flatMap((it) => {
                   const o = it as Record<string, unknown>;
                   const name = txt(o?.name, 80);
-                  return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)) }] : [];
+                  const key = txt(o.key, 170);
+                  const cost = typeof o.cost === "number" && Number.isFinite(o.cost) && o.cost >= 0 ? o.cost : null;
+                  return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)), ...(key ? { key } : {}), ...(cost !== null ? { cost, costSrc: o.costSrc === "resep" ? "resep" : "manual" } : {}) }] : [];
                 })
               : [];
-            sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(r.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "", channel: r.channel ?? null, channelType: r.channel_type ?? null, payMethod: r.pay_method ?? null, fee: Math.round(num(r.fee)), status: r.status, reseller: r.reseller === 1 });
+            const cogs = typeof p.cogs === "number" && Number.isFinite(p.cogs) && p.cogs >= 0 ? Math.round(p.cogs) : null;
+            sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(r.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "", ...(cogs !== null ? { cogs, cogsSrc: p.cogsSrc === "transaksi" ? "transaksi" : "produk" } : {}), channel: r.channel ?? null, channelType: r.channel_type ?? null, payMethod: r.pay_method ?? null, fee: Math.round(num(r.fee)), status: r.status, reseller: r.reseller === 1 });
             if (num(r.fee) > 0) {
               const fees = Array.isArray(p.fees) ? (p.fees as Array<Record<string, unknown>>).map((f) => txt(f?.label, 60)).filter(Boolean).join(", ") : "";
               expenses.push({ ...base, id: `${r.id}:fee`, amount: Math.round(num(r.fee)), kind: "Potongan marketplace", item: `${r.channel ?? "Marketplace"}${fees ? ` · ${fees}` : ""}`.slice(0, 80), note: "" });
@@ -11378,6 +11480,20 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
         materials,
         moves,
         truncated: rows.length > REPORT_MAX || bookCount > REPORT_MAX,
+        // Modal per satuan SAAT INI (manual > resep) — hanya untuk tombol "perkirakan modal" penjualan
+        // yang tidak punya modal tercatat; tidak pernah mengubah data. byName = cocokkan nama produk.
+        costs: await (async () => {
+          try {
+            const unit = await productUnitCosts(env, userId, id);
+            const byKey = Object.fromEntries([...unit].map(([k, v]) => [k, v.cost]));
+            const byName: Record<string, number> = {};
+            for (const [k, v] of unit) { const n = k.split("|").slice(1).join("|").trim().toLowerCase(); if (n && !(n in byName)) byName[n] = v.cost; }
+            return { byKey, byName };
+          } catch (e) {
+            console.error("Modal produk untuk laporan gagal:", e instanceof Error ? e.message : e);
+            return { byKey: {}, byName: {} };
+          }
+        })(),
       });
     }
     // Sambungan website: buat/ganti kunci (ditampilkan SEKALI) atau putuskan.
@@ -11427,8 +11543,17 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
           : null;
         if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
       }
+      // Modal pesanan ini (top up/dropship: harga beli ke supplier beda tiap pesanan) — PRO, buku usaha.
+      let modal: number | null = null;
+      if (saleBook && raw.modal !== undefined && raw.modal !== null && raw.modal !== "") {
+        if (!(await isProUser(env, userId))) return json({ error: "Modal per pesanan khusus PRO." }, { status: 403 });
+        // shopMoney membuang non-angka ("abc" → 0) — teks harus benar-benar angka.
+        const okText = typeof raw.modal === "number" || (typeof raw.modal === "string" && /^\s*\d[\d.,\s]*$/.test(raw.modal));
+        modal = okText ? shopMoney(raw.modal) : null;
+        if (modal === null) return json({ error: "Modal pesanan tidak valid." }, { status: 400 });
+      }
       const stock = await saleStockMoves(env, userId, shop.id, items, requestId);
-      const res = await recordShopSale(env, userId, shop, { saleKey: requestId, amount, qty, product, buyer, items, accountId: account?.id ?? "", date, stock, book: saleBook });
+      const res = await recordShopSale(env, userId, shop, { saleKey: requestId, amount, qty, product, buyer, items, accountId: account?.id ?? "", date, stock, book: saleBook, modal });
       if (!res.ok) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
       return json({ ok: true, id: res.id }, { status: 201 });
     }
@@ -11476,9 +11601,10 @@ const deleteShopExtrasForUser = async (env: Env, userId: string) => {
     "DELETE FROM shop_materials WHERE owner_id = ?",
     "DELETE FROM shop_entries WHERE owner_id = ?",
     "DELETE FROM shop_accounts WHERE owner_id = ?",
+    "DELETE FROM shop_costs WHERE owner_id = ?",
   ]) {
     try { await env.DB.prepare(sql).bind(userId).run(); } catch (e) {
-      if (!staffTableMissing(e) && !stockTableMissing(e) && !bookTableMissing(e)) console.error("Hapus data tim/stok gagal:", e instanceof Error ? e.message : e);
+      if (!staffTableMissing(e) && !stockTableMissing(e) && !bookTableMissing(e) && !costTableMissing(e)) console.error("Hapus data tim/stok gagal:", e instanceof Error ? e.message : e);
     }
   }
 };
@@ -11488,6 +11614,7 @@ const deleteShopExtras = async (env: Env, userId: string, shopId: string) => {
   const stmts: [string, unknown[]][] = [
     ["DELETE FROM shop_entries WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
     ["DELETE FROM shop_accounts WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
+    ["DELETE FROM shop_costs WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
     ["DELETE FROM shop_recipes WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
     ["DELETE FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
     ["DELETE FROM shop_materials WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
@@ -11499,7 +11626,7 @@ const deleteShopExtras = async (env: Env, userId: string, shopId: string) => {
   ];
   for (const [sql, args] of stmts) {
     try { await env.DB.prepare(sql).bind(...args).run(); } catch (e) {
-      if (!staffTableMissing(e) && !stockTableMissing(e) && !bookTableMissing(e)) console.error("Hapus data usaha gagal:", e instanceof Error ? e.message : e);
+      if (!staffTableMissing(e) && !stockTableMissing(e) && !bookTableMissing(e) && !costTableMissing(e)) console.error("Hapus data usaha gagal:", e instanceof Error ? e.message : e);
     }
   }
 };
