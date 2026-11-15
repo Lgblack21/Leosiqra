@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (live: 3.27.3 animasi gerakan, run #206, commit 35155ec — tanpa SQL. Sesi Olahragaku — lihat ringkasan di bawah)
+Terakhir diperbarui: 2026-11-15 (live: 3.28.4 fix saldo kas Usahaku, run #212, commit db8d406 — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,13 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-15 — 3.28.4 LIVE (run #212, db8d406, tanpa SQL): fix saldo kas Usahaku** (temuan routine Dev 15-11).
+  Hapus catatan buku yang memakai kas terarsip → 409 (dulu membalik saldo kas tersembunyi → total kas salah & usaha
+  tak bisa dihapus); hapus penjualan membaca status/kas/net di dalam batch (race dengan "cair"). Dites wrangler dev
+  --local (D1 schema-production + 0027–0045). Masih 🟡: ambil/pindah tidak cek saldo kas cukup (kas bisa minus).
+  Akses GitHub akun routine sempat 403 → Bos menyambungkan Claude GitHub App (Only select repositories) → push jalan.
+  Routine 11–14 Nov gagal usage limit (Bos: dibiarkan).
 
 - **2026-11-10 — USAHAKU R1 PEMBUKUAN — 3.28.0 LIVE (run #208), 3.28.1 LIVE (filter tanggal). SQL 0045: Bos diminta jalankan (belum dikonfirmasi dengan query). Butuh SQL `cloudflare/migrations/0045_usaha_buku.sql`
   (Bos jalankan di D1 Console; tanpa SQL kode tetap jalan cara lama: book_ready=false).** Rancangan & keputusan Bos:
