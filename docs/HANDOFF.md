@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-15 (live: 3.28.5 kas tunai Usahaku tidak bisa minus, run #213, commit 3b82e2d — tanpa SQL)
+Terakhir diperbarui: 2026-11-15 (live: 3.28.6 laporan Usahaku per jalur & perbandingan, run #214, commit ae413be — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,13 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-15 — 3.28.6 LIVE (run #214, ae413be, tanpa SQL/Worker): laporan Usahaku** — badge naik/turun vs periode
+  pembanding (`previousRange` di `src/lib/shopReport.ts`), per jalur jualan (+ lembar Excel "Per jalur"), banner belum
+  cair, label "Laba kotor" → "Laba (dasar kas)". Dites Playwright dengan API tiruan (/app 1280 & 390) + unduhan Excel.
+  **Belum**: dilihat dengan data asli; render /membership dengan API tiruan gagal (redirect onboarding — butuh mock
+  lebih lengkap). **Berikutnya**: rancangan detail HPP (R2) untuk ACC Bos sebelum dikerjakan. Juga sesi ini:
+  `docs/otak/gaya-tulis.md` (gaya tulis Bos) + Tower `otak/bersama.gayaTulis`.
 
 - **2026-11-15 — 3.28.5 LIVE (run #213, 3b82e2d, tanpa SQL): kas tunai Usahaku tidak bisa minus** (keputusan Bos
   opsi 2). Ambil/pindah dari kas `kind='kas'` ditolak 409 `{code:'kas_kurang'}` kalau saldo kurang — syarat di INSERT
