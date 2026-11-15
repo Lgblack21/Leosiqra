@@ -47,7 +47,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { isCreditAccountType } from '@/lib/creditCard';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { shopBookService, type ShopAccount, type ShopBook } from '@/lib/services/shopBookService';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, History, MoreHorizontal } from 'lucide-react';
 import { FEE_CHIPS, PAY_METHODS, accountEmoji, channelsOf } from '@/lib/usaha/jenis';
 import { ShopDetail, amt, fieldCls, initials, labelCls, monthKey, productLabel, short, toneOf } from './UsahaView';
 
@@ -69,7 +69,7 @@ export function KasirView({
   onToast?: (m: string) => void;
   /** Di dalam layar Usahaku (tab Kasir): tanpa tombol kembali sendiri. */
   embedded?: boolean;
-  /** Mode kasir penuh di Usahaku: tombol keluar ke menu toko, tanpa menu bawah, tanpa Biaya/Stok. */
+  /** Kasir penuh di Usahaku (layar POS): hanya jualan; tombol keluar kembali ke menu toko. */
   onExit?: () => void;
 }) {
   const app = variant === 'app';
@@ -88,6 +88,8 @@ export function KasirView({
   const [stock, setStock] = useState<StockData | null>(null);
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
+  const [more, setMore] = useState(false); // kasir penuh: menu ⋯
+  const [recentOpen, setRecentOpen] = useState(false);
   const say = (m: string) => {
     if (onToast) onToast(m);
     else {
@@ -247,7 +249,7 @@ export function KasirView({
   // Desain bebas menekan "Bayar": layar lebar → panel struk di samping; selain itu → sheet struk.
   const openStruk = () => {
     const aside =
-      !app && window.matchMedia('(min-width: 1024px)').matches
+      (onExit || !app) && window.matchMedia(onExit ? '(min-width: 768px)' : '(min-width: 1024px)').matches
         ? document.querySelector('aside[aria-label="Struk"]')
         : null;
     if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -272,37 +274,32 @@ export function KasirView({
   // HP: ikon di atas label (5 tombol muat satu baris); layar lebar: pil sebaris.
   const actBtn =
     'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 fs-11 font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:fs-12';
-  // Mode kasir penuh (Usahaku): Biaya & Stok ada di menu samping toko, kasir hanya untuk jualan.
   const actions = (
     <>
-      {!onExit && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              setBuyMat(undefined);
-              setSpending(true);
-            }}
-            aria-label="Catat pengeluaran usaha"
-            className={actBtn}
-          >
-            <Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setStocking(true)}
-            aria-label={lowCount ? `Stok, ${lowCount} hampir habis` : 'Stok'}
-            className={actBtn}
-          >
-            <Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>
-            {lowCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900 sm:static">
-                {lowCount}
-              </span>
-            )}
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          setBuyMat(undefined);
+          setSpending(true);
+        }}
+        aria-label="Catat pengeluaran usaha"
+        className={actBtn}
+      >
+        <Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setStocking(true)}
+        aria-label={lowCount ? `Stok, ${lowCount} hampir habis` : 'Stok'}
+        className={actBtn}
+      >
+        <Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>
+        {lowCount > 0 && (
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900 sm:static">
+            {lowCount}
+          </span>
+        )}
+      </button>
       {shop.products.length > 0 && (
         <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}>
           <BadgeDollarSign size={15} className="shrink-0" /> <span className="truncate">Harga</span>
@@ -326,7 +323,7 @@ export function KasirView({
     shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '', book: Boolean(book) });
   const kasList = book ? book.accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name })) : undefined;
   const strukLeft = shop.style.strukSide === 'kiri';
-  const strukFor = (inSheet: boolean) => (
+  const strukFor = (inSheet: boolean, panel = false) => (
     <Struk
       key={`${shop.id}-${inSheet}`}
       shop={shop}
@@ -337,14 +334,347 @@ export function KasirView({
       clear={() => setLines([])}
       onDone={say}
       inSheet={inSheet}
+      panel={panel}
       onNew={() => setSheet(false)}
       book={book ? { accounts: book.accounts.filter((a) => !a.archived), bonReady: book.bonReady } : undefined}
       reseller={shop.products.some((p) => p.resellerPrice) ? { on: reseller, set: toggleReseller } : undefined}
     />
   );
 
+  const overlays = (
+    <>
+    {app ? (
+      <>
+        <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div>
+        </BottomSheet>
+        <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <PriceEditor
+              key={shop.updatedAt}
+              shop={shop}
+              onDone={(m) => {
+                setPricing(false);
+                say(m);
+              }}
+              onToast={say}
+              onLeave={() => setPricing(false)}
+            />
+          </div>
+        </BottomSheet>
+        <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <ExpenseForm
+              key={`exp-${buyMat ?? ''}-${spending}`}
+              shop={shop}
+              materials={activeMaterials}
+              initialMaterialId={buyMat}
+              kasList={kasList}
+              onSave={saveExpense}
+              onDone={(m) => {
+                setSpending(false);
+                say(m);
+                void loadStock();
+              }}
+              onCancel={() => setSpending(false)}
+            />
+          </div>
+        </BottomSheet>
+        <BottomSheet isOpen={stocking} onClose={() => setStocking(false)} title="Stok">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} />
+          </div>
+        </BottomSheet>
+        <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <KasirStyleEditor
+              shop={shop}
+              onDone={(m) => {
+                setStyling(false);
+                say(m);
+              }}
+              onToast={say}
+              onLeave={() => setStyling(false)}
+            />
+          </div>
+        </BottomSheet>
+        <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}>
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <ShopDetail
+              shop={shop}
+              sales={sales}
+              onToast={say}
+              onLeave={() => setManage(false)}
+              onDeleted={() => router.replace(back)}
+            />
+          </div>
+        </BottomSheet>
+      </>
+    ) : (
+      <>
+        <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">
+          {strukFor(true)}
+        </Modal>
+        <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg">
+          <PriceEditor
+            key={shop.updatedAt}
+            shop={shop}
+            onDone={(m) => {
+              setPricing(false);
+              say(m);
+            }}
+            onToast={say}
+            onLeave={() => setPricing(false)}
+          />
+        </Modal>
+        <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md">
+          <ExpenseForm
+            key={`exp-${buyMat ?? ''}-${spending}`}
+            shop={shop}
+            materials={activeMaterials}
+            initialMaterialId={buyMat}
+            kasList={kasList}
+            onSave={saveExpense}
+            onDone={(m) => {
+              setSpending(false);
+              say(m);
+              void loadStock();
+            }}
+            onCancel={() => setSpending(false)}
+          />
+        </Modal>
+        <Modal isOpen={stocking} onClose={() => setStocking(false)} title="Stok" maxWidth="max-w-xl">
+          <StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} />
+        </Modal>
+        <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg">
+          <KasirStyleEditor
+            shop={shop}
+            onDone={(m) => {
+              setStyling(false);
+              say(m);
+            }}
+            onToast={say}
+            onLeave={() => setStyling(false)}
+          />
+        </Modal>
+        <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl">
+          <ShopDetail
+            shop={shop}
+            sales={sales}
+            onToast={say}
+            onLeave={() => setManage(false)}
+            onDeleted={() => router.replace(back)}
+          />
+        </Modal>
+      </>
+    )}
+    </>
+  );
+  const recentRows = [
+    ...todayBook,
+    ...[...todaySales, ...todayCosts].map((t) => ({
+      id: t.id ?? '',
+      type: t.type,
+      amount: amt(t),
+      note: t.note,
+      createdAt: String(new Date(t.createdAt ?? t.date).getTime() || 0),
+    })),
+  ];
+  const cartBar = (
+    <button
+      type="button"
+      onClick={() => setSheet(true)}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-xl transition-transform active:scale-[0.99]',
+        count ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-800',
+      )}
+    >
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+        <ReceiptText size={18} />
+        {count > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 fs-11 font-extrabold text-emerald-700">
+            {count}
+          </span>
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block fs-11 font-semibold text-white/70">
+          {count ? `${count} item di struk` : 'Struk kosong'}
+        </span>
+        <span className="block fs-16 font-extrabold tabular-nums">
+          {count ? formatIDR(sum) : 'Ketuk produk untuk mulai'}
+        </span>
+      </span>
+      {count > 0 && (
+        <span className="shrink-0 rounded-full bg-white px-3.5 py-2 fs-13 font-extrabold text-emerald-700">
+          Bayar
+        </span>
+      )}
+    </button>
+  );
+  const emptyCatalog = (
+    <section className="rounded-[26px] bg-white p-8 text-center ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
+        <ShoppingBag size={26} />
+      </span>
+      <p className="mt-3 fs-16 font-extrabold text-slate-900 dark:text-white">Katalog masih kosong</p>
+      <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
+        Tambahkan produk & harga, atau ambil otomatis dari website tokomu — kategorinya langsung jadi kategori
+        kasir.
+      </p>
+      <button
+        type="button"
+        onClick={() => setManage(true)}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 fs-13 font-bold text-white hover:bg-violet-700"
+      >
+        <Settings2 size={15} /> Isi katalog
+      </button>
+    </section>
+  );
+  const customFrame = (
+    <div className="min-w-0 space-y-1.5">
+      <CustomKasirFrame
+        shop={shop}
+        products={shop.products}
+        cart={cartByIndex}
+        onAdd={(i) => add(shop.products[i])}
+        onRemove={(i) => {
+          const k = lineKey(shop.products[i]);
+          const q = lines.find((l) => l.key === k)?.qty ?? 0;
+          if (q) setQty(k, q - 1);
+        }}
+        onCheckout={openStruk}
+      />
+      <p className="px-2 fs-11 text-slate-400">
+        Desain buatanmu (mode bebas) · data uang & pembeli tetap diisi di struk Leosiqra — jangan ketik
+        PIN/password di dalam desain.
+      </p>
+    </div>
+  );
+
+  // ── Kasir penuh (Usahaku): layar POS — bar atas tipis, katalog, panel struk tetap di kanan (tablet/desktop) ──
+  if (onExit) {
+    const nota = book ? book.today.nota : todaySales.length;
+    const dateLabel = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+    const has = shop.products.length > 0;
+    const menuBtn = (Icon: typeof Plus, label: string, onClick: () => void) => (
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          setMore(false);
+          onClick();
+        }}
+        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left fs-13 font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <Icon size={16} className="shrink-0 text-slate-400" /> {label}
+      </button>
+    );
+    return (
+      <div className="fixed inset-0 flex flex-col bg-slate-100 dark:bg-slate-950">
+        {flash && (
+          <div
+            role="status"
+            className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center fs-13 font-semibold text-white shadow-lg"
+          >
+            {flash}
+          </div>
+        )}
+        <header
+          className={cn(
+            'flex shrink-0 items-center gap-2.5 border-b border-slate-200 bg-white px-3 pb-2.5 md:gap-3 md:px-5 dark:border-slate-800 dark:bg-slate-900',
+            app ? 'pt-[calc(env(safe-area-inset-top)+10px)]' : 'pt-2.5',
+          )}
+        >
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Keluar dari kasir"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 fs-13 font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800"
+          >
+            <ArrowLeft size={16} /> <span className="hidden sm:inline">Keluar</span>
+          </button>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 fsh-20 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
+            <CatalogImage src={shop.style.logoUrl} alt="" fallback={shop.emoji || '🏪'} className="h-full w-full bg-white p-0.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate fs-15 font-extrabold leading-tight text-slate-900 dark:text-white">{shop.name}</p>
+            <p className="truncate fs-12 text-slate-500 dark:text-slate-400">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">Kasir</span> · {dateLabel}
+            </p>
+          </div>
+          {shop.style.showStats && (
+            <button
+              type="button"
+              onClick={() => setRecentOpen(true)}
+              className="hidden shrink-0 flex-col items-end rounded-xl px-3 py-1 text-right hover:bg-slate-50 md:flex dark:hover:bg-slate-800"
+            >
+              <span className="fs-11 font-semibold text-slate-500 dark:text-slate-400">Hari ini · {nota} transaksi</span>
+              <span className="fs-16 font-extrabold tabular-nums text-slate-900 dark:text-white">{formatIDR(todayTotal)}</span>
+            </button>
+          )}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMore((v) => !v)}
+              aria-label="Menu kasir"
+              aria-expanded={more}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {more && (
+              <>
+                <button type="button" aria-label="Tutup menu" tabIndex={-1} onClick={() => setMore(false)} className="fixed inset-0 z-40 cursor-default" />
+                <div role="menu" className="absolute right-0 top-12 z-50 w-60 rounded-2xl bg-white p-1.5 shadow-xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+                  {menuBtn(History, `Transaksi hari ini (${nota})`, () => setRecentOpen(true))}
+                  {has && menuBtn(BadgeDollarSign, 'Perbarui harga', () => setPricing(true))}
+                  {menuBtn(Palette, 'Tampilan kasir', () => setStyling(true))}
+                  {menuBtn(Settings2, 'Katalog & produk', () => setManage(true))}
+                </div>
+              </>
+            )}
+          </div>
+        </header>
+
+        <div className="flex min-h-0 flex-1">
+          <main className={cn('min-w-0 flex-1 overflow-y-auto p-3 md:p-5', has ? 'pb-28 md:pb-5' : '')}>
+            {!has ? emptyCatalog : custom ? customFrame : <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />}
+          </main>
+          {has && (
+            <aside
+              aria-label="Struk"
+              className={cn(
+                'hidden w-[360px] shrink-0 overflow-y-auto border-slate-200 bg-white p-4 md:block lg:w-[400px] dark:border-slate-800 dark:bg-slate-900',
+                strukLeft ? 'order-first border-r' : 'border-l',
+              )}
+            >
+              {strukFor(false, true)}
+            </aside>
+          )}
+        </div>
+
+        {has && (
+          <div className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] z-40 mx-auto max-w-md md:hidden">{cartBar}</div>
+        )}
+        {overlays}
+        {app ? (
+          <BottomSheet isOpen={recentOpen} onClose={() => setRecentOpen(false)} title="Transaksi hari ini">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+              {recentRows.length ? <RecentSales sales={recentRows} /> : <p className="py-6 text-center fs-13 text-slate-400">Belum ada transaksi hari ini.</p>}
+            </div>
+          </BottomSheet>
+        ) : (
+          <Modal isOpen={recentOpen} onClose={() => setRecentOpen(false)} title="Transaksi hari ini" maxWidth="max-w-md">
+            {recentRows.length ? <RecentSales sales={recentRows} /> : <p className="py-6 text-center fs-13 text-slate-400">Belum ada transaksi hari ini.</p>}
+          </Modal>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('space-y-4', onExit ? 'pb-28 lg:pb-4' : app || embedded ? 'pb-44' : 'pb-28 lg:pb-0')}>
+    <div className={cn('space-y-4', app || embedded ? 'pb-44' : 'pb-28 lg:pb-0')}>
       {flash && (
         <div
           role="status"
@@ -362,7 +692,7 @@ export function KasirView({
         )}
       >
         <div className="flex items-center gap-3">
-          {!embedded ? (
+          {!embedded && (
             <Link
               href={back}
               aria-label="Kembali ke Usahaku"
@@ -370,17 +700,6 @@ export function KasirView({
             >
               <ArrowLeft size={17} />
             </Link>
-          ) : (
-            onExit && (
-              <button
-                type="button"
-                onClick={onExit}
-                aria-label="Keluar dari kasir"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-              >
-                <ArrowLeft size={17} />
-              </button>
-            )
           )}
           {!compactHead && (
             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
@@ -414,7 +733,7 @@ export function KasirView({
           <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{actions}</div>
         </div>
         {/* HP: tombol aksi di baris sendiri supaya nama toko tidak terpotong */}
-        <div className={cn('mt-3 grid gap-1.5 sm:hidden', onExit ? (shop.products.length > 0 ? 'grid-cols-3' : 'grid-cols-2') : shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>
+        <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>
           {actions}
         </div>
         {!compactHead && shop.style.showStats && (
@@ -439,46 +758,13 @@ export function KasirView({
       </section>
 
       {shop.products.length === 0 ? (
-        <section className="rounded-[26px] bg-white p-8 text-center ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
-            <ShoppingBag size={26} />
-          </span>
-          <p className="mt-3 fs-16 font-extrabold text-slate-900 dark:text-white">Katalog masih kosong</p>
-          <p className="mx-auto mt-1 max-w-sm fs-13 text-slate-500 dark:text-slate-400">
-            Tambahkan produk & harga, atau ambil otomatis dari website tokomu — kategorinya langsung jadi kategori
-            kasir.
-          </p>
-          <button
-            type="button"
-            onClick={() => setManage(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 fs-13 font-bold text-white hover:bg-violet-700"
-          >
-            <Settings2 size={15} /> Isi katalog
-          </button>
-        </section>
+        emptyCatalog
       ) : (
         <div
           className={cn('grid items-start gap-4', strukLeft ? 'lg:grid-cols-[360px_1fr]' : 'lg:grid-cols-[1fr_360px]')}
         >
           {custom ? (
-            <div className="min-w-0 space-y-1.5">
-              <CustomKasirFrame
-                shop={shop}
-                products={shop.products}
-                cart={cartByIndex}
-                onAdd={(i) => add(shop.products[i])}
-                onRemove={(i) => {
-                  const k = lineKey(shop.products[i]);
-                  const q = lines.find((l) => l.key === k)?.qty ?? 0;
-                  if (q) setQty(k, q - 1);
-                }}
-                onCheckout={openStruk}
-              />
-              <p className="px-2 fs-11 text-slate-400">
-                Desain buatanmu (mode bebas) · data uang & pembeli tetap diisi di struk Leosiqra — jangan ketik
-                PIN/password di dalam desain.
-              </p>
-            </div>
+            customFrame
           ) : (
             <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />
           )}
@@ -497,188 +783,16 @@ export function KasirView({
         <div
           className={cn(
             'fixed inset-x-3 z-40 mx-auto max-w-md',
-            onExit
-              ? cn('bottom-[calc(env(safe-area-inset-bottom)+16px)]', !app && 'lg:hidden')
-              : app
-                ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]'
-                : embedded
-                  ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:hidden'
-                  : 'bottom-4 lg:hidden',
+            app ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]' : embedded ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:hidden' : 'bottom-4 lg:hidden',
           )}
         >
-          <button
-            type="button"
-            onClick={() => setSheet(true)}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-xl transition-transform active:scale-[0.99]',
-              count ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-800',
-            )}
-          >
-            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
-              <ReceiptText size={18} />
-              {count > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 fs-11 font-extrabold text-emerald-700">
-                  {count}
-                </span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block fs-11 font-semibold text-white/70">
-                {count ? `${count} item di struk` : 'Struk kosong'}
-              </span>
-              <span className="block fs-16 font-extrabold tabular-nums">
-                {count ? formatIDR(sum) : 'Ketuk produk untuk mulai'}
-              </span>
-            </span>
-            {count > 0 && (
-              <span className="shrink-0 rounded-full bg-white px-3.5 py-2 fs-13 font-extrabold text-emerald-700">
-                Bayar
-              </span>
-            )}
-          </button>
+          {cartBar}
         </div>
       )}
 
-      {app ? (
-        <>
-          <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div>
-          </BottomSheet>
-          <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
-              <PriceEditor
-                key={shop.updatedAt}
-                shop={shop}
-                onDone={(m) => {
-                  setPricing(false);
-                  say(m);
-                }}
-                onToast={say}
-                onLeave={() => setPricing(false)}
-              />
-            </div>
-          </BottomSheet>
-          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
-              <ExpenseForm
-                key={`exp-${buyMat ?? ''}-${spending}`}
-                shop={shop}
-                materials={activeMaterials}
-                initialMaterialId={buyMat}
-                kasList={kasList}
-                onSave={saveExpense}
-                onDone={(m) => {
-                  setSpending(false);
-                  say(m);
-                  void loadStock();
-                }}
-                onCancel={() => setSpending(false)}
-              />
-            </div>
-          </BottomSheet>
-          <BottomSheet isOpen={stocking} onClose={() => setStocking(false)} title="Stok">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
-              <StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} />
-            </div>
-          </BottomSheet>
-          <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
-              <KasirStyleEditor
-                shop={shop}
-                onDone={(m) => {
-                  setStyling(false);
-                  say(m);
-                }}
-                onToast={say}
-                onLeave={() => setStyling(false)}
-              />
-            </div>
-          </BottomSheet>
-          <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
-              <ShopDetail
-                shop={shop}
-                sales={sales}
-                onToast={say}
-                onLeave={() => setManage(false)}
-                onDeleted={() => router.replace(back)}
-              />
-            </div>
-          </BottomSheet>
-        </>
-      ) : (
-        <>
-          <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">
-            {strukFor(true)}
-          </Modal>
-          <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg">
-            <PriceEditor
-              key={shop.updatedAt}
-              shop={shop}
-              onDone={(m) => {
-                setPricing(false);
-                say(m);
-              }}
-              onToast={say}
-              onLeave={() => setPricing(false)}
-            />
-          </Modal>
-          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md">
-            <ExpenseForm
-              key={`exp-${buyMat ?? ''}-${spending}`}
-              shop={shop}
-              materials={activeMaterials}
-              initialMaterialId={buyMat}
-              kasList={kasList}
-              onSave={saveExpense}
-              onDone={(m) => {
-                setSpending(false);
-                say(m);
-                void loadStock();
-              }}
-              onCancel={() => setSpending(false)}
-            />
-          </Modal>
-          <Modal isOpen={stocking} onClose={() => setStocking(false)} title="Stok" maxWidth="max-w-xl">
-            <StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} />
-          </Modal>
-          <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg">
-            <KasirStyleEditor
-              shop={shop}
-              onDone={(m) => {
-                setStyling(false);
-                say(m);
-              }}
-              onToast={say}
-              onLeave={() => setStyling(false)}
-            />
-          </Modal>
-          <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl">
-            <ShopDetail
-              shop={shop}
-              sales={sales}
-              onToast={say}
-              onLeave={() => setManage(false)}
-              onDeleted={() => router.replace(back)}
-            />
-          </Modal>
-        </>
-      )}
+      {overlays}
 
-      {shop.style.showRecent && (
-        <RecentSales
-          sales={[
-            ...todayBook,
-            ...[...todaySales, ...todayCosts].map((t) => ({
-              id: t.id ?? '',
-              type: t.type,
-              amount: amt(t),
-              note: t.note,
-              createdAt: String(new Date(t.createdAt ?? t.date).getTime() || 0),
-            })),
-          ]}
-        />
-      )}
+      {shop.style.showRecent && <RecentSales sales={recentRows} />}
     </div>
   );
 }
@@ -1035,6 +1149,7 @@ export function Struk({
   clear,
   onDone,
   inSheet,
+  panel = false,
   onNew,
   staff,
   book,
@@ -1048,6 +1163,8 @@ export function Struk({
   clear: () => void;
   onDone: (m: string) => void;
   inSheet: boolean;
+  /** Panel struk di kasir penuh: tanpa kartu (panelnya sudah jadi wadah). */
+  panel?: boolean;
   onNew: () => void;
   staff?: { accountName: string | null; sell: StaffSell };
   /** Usaha dengan kas usaha: pilih jalur jualan (langsung / marketplace + biaya), cara bayar, kas tujuan. */
@@ -1268,7 +1385,7 @@ export function Struk({
     setRequestId(crypto.randomUUID());
     if (inSheet) onNew();
   };
-  const card = inSheet ? '' : 'rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800';
+  const card = inSheet || panel ? '' : 'rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800';
 
   if (done) {
     return (
@@ -1311,7 +1428,7 @@ export function Struk({
   }
 
   return (
-    <div className={cn(card, 'space-y-3')}>
+    <div className={cn(card, 'space-y-3', panel && 'flex min-h-full flex-col')}>
       <div className={cn('flex items-center', inSheet ? 'justify-end' : 'justify-between')}>
         {!inSheet && (
           <p className="flex items-center gap-1.5 fs-15 font-extrabold text-slate-900 dark:text-white">
@@ -1608,6 +1725,14 @@ export function Struk({
           </label>
         </div>
       )}
+      {/* Panel kasir penuh: total + tombol bayar menempel di bawah panel (tidak perlu gulir). */}
+      <div
+        className={cn(
+          'space-y-3',
+          panel &&
+            'sticky bottom-0 -mx-4 -mb-4 !mt-auto border-t border-slate-200 bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95',
+        )}
+      >
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
           <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">
@@ -1644,6 +1769,7 @@ export function Struk({
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} {isOrder ? 'Simpan pesanan' : isBon ? 'Catat bon' : 'Bayar & catat'}
       </button>
+      </div>
       <p className="text-center fs-11 text-slate-400">
         {book
           ? 'Masuk ke buku usaha — terpisah dari keuangan pribadimu.'

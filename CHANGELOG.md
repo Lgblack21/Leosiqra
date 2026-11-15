@@ -137,7 +137,10 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   tempat sendiri. Di HP, menunya dibuka lewat tombol ☰ di kiri atas. Angka kecil di menu menandakan berapa yang
   masih menunggu, misalnya pesanan yang belum diambil atau utang ke supplier.
 - **Ringkasan** menampilkan daftar **Perlu ditindaklanjuti** yang bisa langsung diketuk ke bagiannya.
-- **Kasir layar penuh.** Begitu masuk kasir, yang tampil cuma kasir. Tombol ← membawamu kembali ke menu toko.
+- **Kasir baru, khusus jualan.** Tampilannya sekarang seperti mesin kasir: bar atas tipis (nama toko, tanggal, total
+  hari ini), katalog di kiri, struk menempel di kanan di tablet dan laptop. Total dan tombol **Bayar & catat** selalu
+  kelihatan di bawah panel, gak perlu gulir. Di HP, keranjang ada di bawah dan tinggal ketuk **Bayar**. Biaya dan stok
+  gak ada lagi di kasir (sudah di menu toko). Harga, tampilan, katalog, dan transaksi hari ini ada di tombol ⋯.
 - **Pengaturan** tampil sebagai halaman biasa, bukan jendela kecil lagi.
 
 ## 3.32.0 — 2026-11-16 — Usahaku: utang ke supplier
