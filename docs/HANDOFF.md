@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.29.0 Usahaku R2 HPP, run #215, commit 0e30624 — SQL 0046 diberikan ke Bos, belum dikonfirmasi)
+Terakhir diperbarui: 2026-11-16 (live: 3.29.1, run #216, commit bd9de15 — tanpa SQL baru; SQL 0046 masih menunggu konfirmasi Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,11 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-16 — 3.29.1 LIVE (run #216, bd9de15, tanpa SQL):** catat biaya dari kas tunai tidak bisa minus (atomik,
+  `cashEnough` di `recordBookExpense`, kasir pemilik & tim) + 2 patch routine yang menunggu sejak 10 Nov ikut masuk:
+  Olahragaku coba lagi setelah refund (`fitCharge` idem `#n`) & SEO satu `<h1>` di /auth. Antrean merge kini kosong
+  dari dua item itu. Olahragaku belum dites ulang end-to-end (butuh AI gagal) — verifikasi = tes SQLite 10 Nov + review.
 
 - **2026-11-16 — 3.29.0 LIVE (run #215, 0e30624): Usahaku R2 HPP.** Rancangan + keputusan Bos:
   `docs/rancangan/usahaku-hpp.md`. **SQL `cloudflare/migrations/0046_shop_costs.sql` diberikan ke Bos — belum dikonfirmasi
