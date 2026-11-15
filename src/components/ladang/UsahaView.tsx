@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
   Download,
   ExternalLink,
   Globe,
+  ImagePlus,
   Link2,
   Loader2,
   MessageCircle,
@@ -44,6 +45,7 @@ import { CatalogImage } from './CatalogImage';
 import { kindOf } from '@/lib/usaha/jenis';
 import { TeamManager } from './TeamManager';
 import { usePlan } from '@/lib/usePlan';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 // Leosiqra tidak meng-host halaman publik; website dibuat user sendiri, lalu AI bisa membaca daftar harganya.
 
@@ -1197,6 +1199,28 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
       ),
     );
   const groups = [...new Set(list.map((p) => p.group.trim()).filter(Boolean))];
+  // Foto produk: diunggah ke Cloudinary (sama seperti logo toko), yang disimpan cuma tautannya.
+  const [photoAt, setPhotoAt] = useState<number | null>(null);
+  const [uploading, setUploading] = useState<number | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const pickPhoto = (i: number) => {
+    setPhotoAt(i);
+    photoInput.current?.click();
+  };
+  const uploadPhoto = async (file: File) => {
+    const i = photoAt;
+    if (i === null) return;
+    setUploading(i);
+    setError('');
+    try {
+      const url = await uploadToCloudinary(file);
+      setList((l) => l.map((p, j) => (j === i ? { ...p, image: url } : p)));
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Foto gagal diunggah.');
+    } finally {
+      setUploading(null);
+    }
+  };
   const save = async () => {
     const products = list
       .map((p) => ({
@@ -1205,6 +1229,7 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
         unit: p.unit.trim(),
         ...(p.group.trim() ? { group: p.group.trim() } : {}),
         ...(Number(p.resellerPrice) > 0 ? { resellerPrice: Number(p.resellerPrice) } : {}),
+        ...(p.image ? { image: p.image } : {}),
       }))
       .filter((p) => p.name);
     setBusy(true);
@@ -1235,6 +1260,18 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
           {error}
         </p>
       )}
+      <input
+        ref={photoInput}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void uploadPhoto(f);
+        }}
+      />
+      <p className="fs-11 text-slate-500 dark:text-slate-400">Ketuk kotak foto untuk menambah gambar produk — tampil di kartu kasir.</p>
       <datalist id={`grp-${shop.id}`}>
         {groups.map((g) => (
           <option key={g} value={g} />
@@ -1243,7 +1280,34 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
       <div className="max-h-[60vh] space-y-2 overflow-y-auto">
         {list.map((p, i) => (
           <div key={i} className="space-y-1.5 rounded-2xl bg-slate-50 p-2 dark:bg-slate-800/50">
-            <div className="grid grid-cols-[1fr_96px_28px] gap-1.5 sm:grid-cols-[1fr_110px_28px]">
+            <div className="grid grid-cols-[40px_1fr_96px_28px] gap-1.5 sm:grid-cols-[40px_1fr_110px_28px]">
+              <span className="relative">
+                <button
+                  type="button"
+                  onClick={() => pickPhoto(i)}
+                  disabled={uploading !== null}
+                  aria-label={p.image ? `Ganti foto ${p.name || 'produk'}` : `Tambah foto ${p.name || 'produk'}`}
+                  className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white text-slate-400 border border-dashed border-slate-300 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:bg-slate-900"
+                >
+                  {uploading === i ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : p.image ? (
+                    <CatalogImage src={p.image} alt="" fallback={<ImagePlus size={16} />} className="h-full w-full object-cover" />
+                  ) : (
+                    <ImagePlus size={16} />
+                  )}
+                </button>
+                {p.image && uploading !== i && (
+                  <button
+                    type="button"
+                    onClick={() => setList((l) => l.map((x, j) => (j === i ? { ...x, image: undefined } : x)))}
+                    aria-label="Hapus foto"
+                    className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-white"
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </span>
               <input
                 value={p.name}
                 onChange={(e) => set(i, 'name', e.target.value)}

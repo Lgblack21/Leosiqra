@@ -18,12 +18,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.33.0 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, tanpa SQL, Worker tidak berubah):
+- **2026-11-16 — 3.33.0 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, tanpa SQL, Worker berubah: foto produk):
   tampilan Usahaku baru.** Daftar toko tanpa angka uang (Tim + Buat toko tetap). Di dalam toko ada menu samping
   (`UsahakuApp` TABS: beranda/kasir/tagihan/biaya/kas/stok/laporan/pengaturan, di hash; HP = laci ☰). `BerandaUsaha`
   dapat prop `view` (ringkasan/kas/biaya/tagihan). Kasir = layar POS (`KasirView` prop `onExit` → return awal: bar atas,
   katalog + panel struk `md:` kanan dengan total/tombol bayar menempel (`Struk` prop `panel`), menu ⋯; HP = bar keranjang
-  + sheet). Mode kasir lama (non-Usahaku) tidak berubah. Dites tsc + build + Playwright API tiruan 1366 & 390 px. **Belum**: data asli,
+  + sheet). Mode kasir lama (non-Usahaku) tidak berubah.
+  Foto produk: `ShopProduct.image` (https saja, `productImage` → `safeImageUrl`; data:image ditolak) di products_json,
+  unggah via Cloudinary di ProductsForm; `keepProductImages` menjaga foto saat sinkron hook/MCP. **Worker ikut berubah**
+  (tanpa SQL). Dites Playwright (unggah tiruan → payload products berisi image). Dites tsc + build + Playwright API tiruan 1366 & 390 px. **Belum**: data asli,
   Capacitor (safe-area) di HP sungguhan. Menunggu "gas".
 
 - **2026-11-16 — 3.32.0 LIVE (run #219, 0758ebf, tanpa SQL baru): Usahaku R3 utang ke supplier (PRO). R3 SELESAI**

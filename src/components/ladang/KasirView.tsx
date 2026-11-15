@@ -852,6 +852,18 @@ export function Catalog({
     window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
   const big = style.size === 'besar';
+  // Foto produk: kalau ada minimal satu produk berfoto, semua kartu dapat kotak gambar (yang belum = inisial) supaya rata.
+  const withPics = products.some((p) => p.image);
+  const pic = (p: ShopProduct, cls: string, text: string) => (
+    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden font-extrabold', cls, !p.image && toneOf(p.group || p.name))}>
+      <CatalogImage
+        src={p.image}
+        alt={p.name}
+        fallback={<span className={text}>{initials(p.name)}</span>}
+        className="h-full w-full bg-white object-cover"
+      />
+    </span>
+  );
   const avatar = (g: string, cls: string, text: string) => (
     <span
       className={cn(
@@ -1037,6 +1049,7 @@ export function Catalog({
                             n ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
                           )}
                         >
+                          {withPics && pic(p, 'h-11 w-11 rounded-xl', 'fs-12')}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">
                               {p.name}
@@ -1086,10 +1099,16 @@ export function Catalog({
                               : (CARD[style.card] ?? CARD.soft),
                           )}
                         >
+                          {withPics &&
+                            pic(
+                              p,
+                              cn('rounded-xl', compact ? 'mb-1.5 h-10 w-10' : big ? 'mb-2.5 h-20 w-20' : 'mb-2 h-16 w-16'),
+                              compact ? 'fs-11' : 'fs-15',
+                            )}
                           {n > 0 && (
                             <span
                               className={cn(
-                                'absolute flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 font-extrabold text-white',
+                                'absolute z-10 flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 font-extrabold text-white shadow',
                                 compact ? 'right-1 top-1 h-5 fs-10' : 'right-2 top-2 h-6 fs-11',
                               )}
                             >

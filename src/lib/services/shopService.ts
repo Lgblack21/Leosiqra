@@ -6,7 +6,8 @@ import type { SaleBookInput } from './shopBookService';
 // Penjualan = transaksi pemasukan (related_type 'shop', related_id = id usaha).
 
 // group = kategori, mis. "Free Fire"; resellerPrice = harga khusus reseller (opsional).
-export type ShopProduct = { name: string; price: number; unit: string; group?: string; resellerPrice?: number };
+// image = foto produk (https, mis. hasil unggah Cloudinary) untuk kartu kasir — opsional.
+export type ShopProduct = { name: string; price: number; unit: string; group?: string; resellerPrice?: number; image?: string };
 export type ShopPlan = {
   modal: number | null;
   waktu: string;

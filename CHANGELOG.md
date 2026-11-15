@@ -142,6 +142,9 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   kelihatan di bawah panel, gak perlu gulir. Di HP, keranjang ada di bawah dan tinggal ketuk **Bayar**. Biaya dan stok
   gak ada lagi di kasir (sudah di menu toko). Harga, tampilan, katalog, dan transaksi hari ini ada di tombol ⋯.
 - **Pengaturan** tampil sebagai halaman biasa, bukan jendela kecil lagi.
+- **Foto produk di kasir.** Di Kelola → Produk & harga, ketuk kotak foto di sebelah nama produk untuk mengunggah
+  gambar. Fotonya tampil kecil di kartu kasir, jadi produk lebih cepat dikenali. Produk yang belum punya foto tetap
+  tampil rapi dengan inisial namanya. Sinkron harga dari website atau AI tidak menghapus foto yang sudah ada.
 
 ## 3.32.0 — 2026-11-16 — Usahaku: utang ke supplier
 

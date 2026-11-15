@@ -10018,14 +10018,22 @@ const shopMoney = (v: unknown) => {
   return Number.isFinite(n) && n >= 0 && n <= 1e10 ? n : null;
 };
 // resellerPrice (opsional) = harga khusus reseller, dipakai kasir saat "Pembeli reseller" dinyalakan.
-type ShopProduct = { name: string; price: number; unit: string; group?: string; resellerPrice?: number };
+// image (opsional) = foto produk untuk kartu kasir — tautan https saja (data:image tidak, supaya katalog tetap kecil).
+type ShopProduct = { name: string; price: number; unit: string; group?: string; resellerPrice?: number; image?: string };
+const productImage = (v: unknown) => { const u = typeof v === "string" && /^https:\/\//i.test(v.trim()) ? safeImageUrl(v) : ""; return u.startsWith("https://") ? u : ""; };
+// Sinkron dari website/AI biasanya tanpa foto → foto lama (produk group+nama sama) tetap dipakai.
+const keepProductImages = (next: ShopProduct[], old: ShopProduct[]) => {
+  const img = new Map(old.filter((p) => p.image).map((p) => [`${p.group ?? ""}|${p.name}`.toLowerCase(), p.image as string]));
+  return next.map((p) => (p.image || !img.has(`${p.group ?? ""}|${p.name}`.toLowerCase()) ? p : { ...p, image: img.get(`${p.group ?? ""}|${p.name}`.toLowerCase()) }));
+};
 const sanitizeShopProducts = (raw: unknown): ShopProduct[] =>
   (Array.isArray(raw) ? raw : [])
     .map((p) => (p && typeof p === "object" ? (p as Record<string, unknown>) : {}))
     .map((p) => {
       const group = shopText(p.group, 40); // kategori, mis. "Free Fire" — opsional
       const reseller = p.resellerPrice === undefined || p.resellerPrice === null || p.resellerPrice === "" ? null : shopMoney(p.resellerPrice);
-      return { name: shopText(p.name, 80), price: shopMoney(p.price) ?? 0, unit: shopText(p.unit, 24), ...(group ? { group } : {}), ...(reseller !== null && reseller > 0 ? { resellerPrice: reseller } : {}) };
+      const image = productImage(p.image);
+      return { name: shopText(p.name, 80), price: shopMoney(p.price) ?? 0, unit: shopText(p.unit, 24), ...(group ? { group } : {}), ...(reseller !== null && reseller > 0 ? { resellerPrice: reseller } : {}), ...(image ? { image } : {}) };
     })
     .filter((p) => p.name)
     .slice(0, SHOP_PRODUCTS_MAX);
@@ -11290,10 +11298,10 @@ async function handleShopHookProducts(request: Request, env: Env, shopId: string
     if (!n) return p;
     if (n.price === p.price && (n.unit || "") === (p.unit || "")) { unchanged++; return p; }
     updated++;
-    return { ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}) };
+    return { ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}), ...(n.image ? { image: n.image } : {}) };
   });
   const added = incoming.filter((p) => !old.some((o) => key(o) === key(p)));
-  const products = (mode === "replace" ? incoming : [...kept, ...added]).slice(0, SHOP_PRODUCTS_MAX);
+  const products = keepProductImages((mode === "replace" ? incoming : [...kept, ...added]).slice(0, SHOP_PRODUCTS_MAX), old);
   const now = nowIso();
   try {
     await env.DB.prepare("UPDATE shops SET products_json = ?, catalog_synced_at = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(products), now, now, row.id).run();
@@ -21699,7 +21707,7 @@ const mcpSyncShopCatalog: McpToolDef["run"] = async (env, auth, args) => {
     const n = inMap.get(key(p));
     if (!n) { removed.push(label(p)); continue; }
     if (n.price !== p.price) changes.push({ produk: label(p), dari: p.price, jadi: n.price });
-    next.push({ ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}) });
+    next.push({ ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}), ...(n.image ? { image: n.image } : {}) });
   }
   const added = incoming.filter((p) => !oldKeys.has(key(p)));
   for (const a of added) {
@@ -21892,9 +21900,9 @@ const mcpSetShopProducts: McpToolDef["run"] = async (env, auth, args) => {
   if (!incoming.length) throw new McpToolError("Tidak ada produk valid (nama & harga Rupiah > 0).");
   const key = (p: ShopProduct) => `${p.group ?? ""}|${p.name}`.toLowerCase();
   const old = mcpShopProducts(r);
-  const products = args.mode === "append"
+  const products = keepProductImages(args.mode === "append"
     ? [...old.map((p) => incoming.find((x) => key(x) === key(p)) ?? p), ...incoming.filter((x) => !old.some((p) => key(p) === key(x)))].slice(0, SHOP_PRODUCTS_MAX)
-    : incoming;
+    : incoming, old);
   await env.DB.prepare("UPDATE shops SET products_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(products), nowIso(), r.id, auth.userId).run();
   return { data: { ok: true, shop_id: r.id, products: products.length }, summary: `katalog ${String(r.name).slice(0, 30)}: ${products.length} produk` };
 };
