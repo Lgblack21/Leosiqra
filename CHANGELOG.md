@@ -114,6 +114,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.30.0 | 16 Nov 2026 | Usahaku: bon pelanggan |
 | 3.31.0 | 16 Nov 2026 | Usahaku: pesanan & DP |
 | 3.32.0 | 16 Nov 2026 | Usahaku: utang ke supplier |
+| 3.33.0 | 16 Nov 2026 | Usahaku tampilan baru: menu samping, kasir layar penuh |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -127,6 +128,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.33.0 — 2026-11-16 — Usahaku tampilan baru: menu samping, kasir layar penuh
+
+- **Daftar toko lebih bersih.** Halaman Usahaku sekarang cuma menampilkan toko-tokomu (logo, nama, jenis usaha,
+  status buku usaha). Angka uang pindah ke dalam masing-masing toko. Tombol **Tim** dan **Buat toko** tetap di atas.
+- **Menu samping di dalam toko.** Ringkasan, Kasir, Pesanan & Bon, Biaya, Kas, Stok, Laporan, dan Pengaturan punya
+  tempat sendiri. Di HP, menunya dibuka lewat tombol ☰ di kiri atas. Angka kecil di menu menandakan berapa yang
+  masih menunggu, misalnya pesanan yang belum diambil atau utang ke supplier.
+- **Ringkasan** menampilkan daftar **Perlu ditindaklanjuti** yang bisa langsung diketuk ke bagiannya.
+- **Kasir layar penuh.** Begitu masuk kasir, yang tampil cuma kasir. Tombol ← membawamu kembali ke menu toko.
+- **Pengaturan** tampil sebagai halaman biasa, bukan jendela kecil lagi.
 
 ## 3.32.0 — 2026-11-16 — Usahaku: utang ke supplier
 

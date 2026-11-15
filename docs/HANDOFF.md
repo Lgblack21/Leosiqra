@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.33.0 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, tanpa SQL, Worker tidak berubah):
+  tampilan Usahaku baru.** Daftar toko tanpa angka uang (Tim + Buat toko tetap). Di dalam toko ada menu samping
+  (`UsahakuApp` TABS: beranda/kasir/tagihan/biaya/kas/stok/laporan/pengaturan, di hash; HP = laci ☰). `BerandaUsaha`
+  dapat prop `view` (ringkasan/kas/biaya/tagihan). Kasir = layar penuh (`KasirView` prop `onExit`, tombol Biaya/Stok
+  disembunyikan di mode ini). Dites tsc + build + Playwright API tiruan 1366 & 390 px. **Belum**: data asli,
+  Capacitor (safe-area) di HP sungguhan. Menunggu "gas".
+
 - **2026-11-16 — 3.32.0 LIVE (run #219, 0758ebf, tanpa SQL baru): Usahaku R3 utang ke supplier (PRO). R3 SELESAI**
   (bon 3.30, pesanan & DP 3.31, utang 3.32). Catat biaya "Belum dibayar" → biaya tempo tanpa kas; Beranda kartu Utang
   ke supplier + Bayar (≤ sisa, kas tunai cukup); cron `sendShopUtangReminders` 10:00 WIB H-3/H-1. Dites wrangler lokal

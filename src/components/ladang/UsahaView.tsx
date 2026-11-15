@@ -38,7 +38,6 @@ import {
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
-import { KASIR_THEME } from './kasirTheme';
 import { AiMcpCard } from './AiMcpCard';
 import { HookSection } from './HookSection';
 import { CatalogImage } from './CatalogImage';
@@ -111,17 +110,14 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     };
   }, []);
 
-  const now = toLocalDateString().slice(0, 7);
-  // Penjualan (pemasukan) & biaya usaha (pengeluaran "Biaya Usaha") per usaha — omzet hanya dari penjualan.
-  const [salesBy, costBy] = useMemo(() => {
+  // Penjualan per usaha (pemasukan) — dipakai untuk tahap toko & rincian, bukan untuk angka di daftar.
+  const salesBy = useMemo(() => {
     const m = new Map<string, Transaction[]>();
-    const c = new Map<string, Transaction[]>();
     for (const t of tx) {
-      if (t.relatedType !== 'shop' || !t.relatedId) continue;
-      const into = t.type === 'pemasukan' ? m : t.type === 'pengeluaran' ? c : null;
-      if (into) into.set(t.relatedId, [...(into.get(t.relatedId) ?? []), t]);
+      if (t.relatedType !== 'shop' || !t.relatedId || t.type !== 'pemasukan') continue;
+      m.set(t.relatedId, [...(m.get(t.relatedId) ?? []), t]);
     }
-    return [m, c];
+    return m;
   }, [tx]);
 
   const app = variant === 'app';
@@ -189,166 +185,118 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </section>
       ) : (
         <>
-          {(() => {
-            // Angka per toko = catatan lama (transaksi pribadi) + buku usaha (kas usaha terpisah).
-            const today = toLocalDateString();
-            const statOf = (x: Shop) => {
-              const sales = salesBy.get(x.id) ?? [];
-              const costs = (costBy.get(x.id) ?? []).filter((t) => monthKey(t.date) === now);
-              const sum = (l: Transaction[]) => Math.round(l.reduce((a, t) => a + amt(t), 0));
-              const day = sum(sales.filter((t) => toLocalDateString(new Date(t.date)) === today)) + x.book.day;
-              const month = sum(sales.filter((t) => monthKey(t.date) === now)) + x.book.month;
-              const cost = sum(costs) + x.book.cost;
-              return { day, month, cost, laba: month - cost, sales: sales.length };
-            };
-            const stats = new Map(shops.map((x) => [x.id, statOf(x)]));
-            const tot = [...stats.values()].reduce(
-              (a, v) => ({ day: a.day + v.day, month: a.month + v.month, laba: a.laba + v.laba }),
-              { day: 0, month: 0, laba: 0 },
-            );
-            const kas = shops.reduce((a, x) => a + (x.bookOn ? x.book.kas : 0), 0);
-            const anyBook = shops.some((x) => x.bookOn);
-            return (
-              <>
-                <section className="web-keep relative overflow-hidden rounded-[30px] bg-slate-950 p-5 text-white md:p-7">
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-500/25 blur-3xl"
-                  />
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-teal-400/15 blur-3xl"
-                  />
-                  <div className="relative flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="fs-12 font-bold uppercase tracking-[0.14em] text-emerald-300/80">Semua usaha · bulan ini</p>
-                      <p className="mt-1 fsh-32 font-black leading-none tabular-nums md:fsh-40">{formatIDR(tot.month)}</p>
-                      <p className="mt-1.5 fs-13 text-white/60">Omzet dari {shops.length} toko</p>
+          {/* Daftar toko: sengaja tanpa angka uang — angka ada di dalam tiap toko (Ringkasan & Laporan). */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="fs-12 font-bold uppercase tracking-[0.14em] text-slate-400">Toko kamu</p>
+              <p className="fs-13 text-slate-500 dark:text-slate-400">
+                {shops.length} dari 5 toko · pilih toko untuk membuka kasir, biaya, stok, dan laporannya
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => setSheet({ k: 'tim' })}
+                className="flex h-10 items-center gap-1.5 rounded-xl bg-white px-4 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
+              >
+                <Users size={15} /> Tim
+              </button>
+              {shops.length < 5 && (
+                <button
+                  type="button"
+                  onClick={() => setSheet({ k: 'ideas' })}
+                  className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-900 px-4 fs-13 font-bold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                >
+                  <Plus size={15} /> Buat toko
+                </button>
+              )}
+            </div>
+          </div>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {shops.map((s) => {
+              const st = stageOf(s, (salesBy.get(s.id)?.length ?? 0) + (s.book.month ? 1 : 0));
+              const kind = kindOf(s.kind);
+              const nextStep = !s.contactWa
+                ? 'Isi nomor WhatsApp'
+                : !s.products.length
+                  ? 'Isi katalog produk'
+                  : st < 2
+                    ? 'Tempel website atau sebar katalog'
+                    : 'Catat penjualan pertama';
+              return (
+                <li
+                  key={s.id}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/80 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 dark:bg-slate-900 dark:ring-slate-800 dark:hover:shadow-none dark:hover:ring-slate-700"
+                >
+                  <Link href={usahakuHref(variant, s.id)} className="flex flex-1 flex-col p-4 md:p-5">
+                    <div className="flex items-center gap-3.5">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 fsh-26 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+                        <CatalogImage
+                          src={s.style.logoUrl}
+                          alt={`Logo ${s.name}`}
+                          fallback={s.emoji || kind?.emoji || '🏪'}
+                          className="h-full w-full bg-white p-1"
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate fs-17 font-extrabold tracking-tight text-slate-900 dark:text-white">{s.name}</span>
+                        <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
+                          {[kind?.label, s.tagline].filter(Boolean).join(' · ') || 'Usaha'}
+                        </span>
+                      </span>
+                      <ArrowRight
+                        size={18}
+                        className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-600 dark:group-hover:text-slate-200"
+                      />
                     </div>
-                    <div className="flex shrink-0 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSheet({ k: 'tim' })}
-                        className="flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-4 fs-13 font-bold ring-1 ring-white/15 hover:bg-white/15"
-                      >
-                        <Users size={15} /> Tim
-                      </button>
-                      {shops.length < 5 && (
-                        <button
-                          type="button"
-                          onClick={() => setSheet({ k: 'ideas' })}
-                          className="flex h-10 items-center gap-1.5 rounded-full bg-emerald-400 px-4 fs-13 font-extrabold text-slate-950 hover:bg-emerald-300"
-                        >
-                          <Plus size={15} /> Toko baru
-                        </button>
+                    <span className="mt-4 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 fs-11 font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {s.products.length} produk
+                      </span>
+                      {s.bookOn ? (
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 fs-11 font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                          Buku usaha aktif
+                        </span>
+                      ) : (
+                        <span className="rounded-md bg-amber-50 px-2 py-0.5 fs-11 font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          Buku usaha belum aktif
+                        </span>
                       )}
-                    </div>
-                  </div>
-                  <div className="relative mt-5 grid grid-cols-3 gap-2">
-                    {[
-                      ['Hari ini', short(tot.day), ''],
-                      ['Laba bulan ini', short(tot.laba), tot.laba < 0 ? 'text-rose-300' : 'text-emerald-300'],
-                      [anyBook ? 'Kas usaha' : 'Toko aktif', anyBook ? short(kas) : String(shops.length), ''],
-                    ].map(([k, v, c]) => (
-                      <div key={k} className="min-w-0 rounded-2xl bg-white/[0.06] px-3 py-3 ring-1 ring-white/10">
-                        <p className="truncate fs-11 text-white/50">{k}</p>
-                        <p className={cn('truncate fs-16 font-extrabold tabular-nums md:fs-18', c)}>{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <div className="flex items-center justify-between px-1">
-                  <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Toko kamu</p>
-                  <p className="fs-12 text-slate-400">{shops.length}/5</p>
-                </div>
-                <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {shops.map((s) => {
-                    const v = stats.get(s.id)!;
-                    const st = stageOf(s, v.sales + (s.book.month ? 1 : 0));
-                    const kind = kindOf(s.kind);
-                    const theme = KASIR_THEME[s.style.theme] ?? KASIR_THEME.ungu;
-                    const nextStep = !s.contactWa
-                      ? 'Isi nomor WhatsApp'
-                      : !s.products.length
-                        ? 'Isi katalog produk'
-                        : st < 2
-                          ? 'Tempel website atau sebar katalog'
-                          : 'Catat penjualan pertama';
-                    return (
-                      <li
-                        key={s.id}
-                        className="group relative flex flex-col overflow-hidden rounded-[26px] bg-white ring-1 ring-slate-200/70 transition-shadow hover:shadow-lg hover:shadow-slate-200/60 dark:bg-slate-900 dark:ring-slate-800 dark:hover:shadow-none"
-                      >
-                        <div className={cn('web-keep h-1.5 w-full', theme.header)} aria-hidden />
-                        <Link href={usahakuHref(variant, s.id)} className="flex flex-1 flex-col p-4 md:p-5">
-                          <div className="flex items-start gap-3">
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 fsh-26 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
-                              <CatalogImage
-                                src={s.style.logoUrl}
-                                alt={`Logo ${s.name}`}
-                                fallback={s.emoji || kind?.emoji || '🏪'}
-                                className="h-full w-full bg-white p-1"
-                              />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate fs-17 font-extrabold text-slate-900 dark:text-white">{s.name}</span>
-                              <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
-                                {[kind?.label, s.tagline].filter(Boolean).join(' · ') || `${s.products.length} produk`}
-                              </span>
-                              <span className="mt-1.5 flex flex-wrap gap-1">
-                                {s.bookOn ? (
-                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 fs-10 font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                    ✓ Kas usaha terpisah
-                                  </span>
-                                ) : (
-                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 fs-10 font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                                    Uang masih campur pribadi
-                                  </span>
-                                )}
-                                {s.lowStock > 0 && (
-                                  <span className="rounded-full bg-rose-50 px-2 py-0.5 fs-10 font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                                    {s.lowStock} stok menipis
-                                  </span>
-                                )}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="mt-4 grid grid-cols-3 gap-2">
-                            {[
-                              ['Hari ini', short(v.day), ''],
-                              ['Bulan ini', short(v.month), ''],
-                              ['Laba', short(v.laba), v.laba < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300'],
-                            ].map(([k, val, c]) => (
-                              <span key={k} className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
-                                <span className="block truncate fs-11 text-slate-400">{k}</span>
-                                <span className={cn('block truncate fs-15 font-extrabold tabular-nums text-slate-900 dark:text-white', c)}>
-                                  {val}
-                                </span>
-                              </span>
-                            ))}
-                          </div>
-                          <span className="mt-4 flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 fs-14 font-extrabold text-white transition-colors group-hover:bg-emerald-600 dark:bg-white dark:text-slate-900">
-                            <Store size={16} /> Buka toko <ArrowRight size={15} />
-                          </span>
-                        </Link>
-                        {st < 3 && (
-                          <button
-                            type="button"
-                            onClick={() => setSheet({ k: 'shop', id: s.id })}
-                            className="flex w-full flex-col gap-2 border-t border-slate-100 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:gap-3 dark:border-slate-800 dark:hover:bg-slate-800/50"
-                          >
-                            <StageBar stage={st} className="w-full sm:flex-1" />
-                            <span className="shrink-0 fs-11 font-bold text-violet-600 dark:text-violet-300">{nextStep} →</span>
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            );
-          })()}
+                      {s.lowStock > 0 && (
+                        <span className="rounded-md bg-rose-50 px-2 py-0.5 fs-11 font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                          {s.lowStock} stok menipis
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                  {st < 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setSheet({ k: 'shop', id: s.id })}
+                      className="flex w-full flex-col gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:gap-3 dark:border-slate-800 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
+                    >
+                      <StageBar stage={st} className="w-full sm:flex-1" />
+                      <span className="shrink-0 fs-11 font-bold text-violet-600 dark:text-violet-300">{nextStep} →</span>
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+            {shops.length < 5 && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setSheet({ k: 'ideas' })}
+                  className="flex h-full min-h-[132px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 p-4 fs-13 font-bold text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800">
+                    <Plus size={20} />
+                  </span>
+                  Buat toko baru
+                </button>
+              </li>
+            )}
+          </ul>
         </>
       )}
       {app ? (

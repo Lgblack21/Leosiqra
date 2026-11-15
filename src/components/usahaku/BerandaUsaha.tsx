@@ -9,11 +9,11 @@ import {
   Clock,
   Loader2,
   CalendarClock,
+  ChevronRight,
   MessageCircle,
   NotebookPen,
   Plus,
   ReceiptText,
-  Store,
   Trash2,
   Wallet,
 } from 'lucide-react';
@@ -152,6 +152,8 @@ type Form =
   | { k: 'cair'; entry: BookEntry }
   | { k: 'bon' | 'utang'; entry: BookEntry; sisa: number }
   | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
+export type BerandaView = 'ringkasan' | 'kas' | 'biaya' | 'tagihan';
+const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal']);
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
 const waLink = (wa: string | null, text: string) => {
@@ -166,6 +168,8 @@ export function BerandaUsaha({
   onToast,
   onOpenKasir,
   onRange,
+  view = 'ringkasan',
+  onNav,
 }: {
   shop: Shop;
   book: ShopBook;
@@ -174,6 +178,9 @@ export function BerandaUsaha({
   onOpenKasir: () => void;
   /** Tarik data per tanggal/bulan (null = bulan ini). */
   onRange: (r: { from: string; to: string } | null) => void;
+  /** Bagian yang ditampilkan (menu samping Usahaku). */
+  view?: BerandaView;
+  onNav?: (v: Exclude<BerandaView, 'ringkasan'>) => void;
 }) {
   const [form, setForm] = useState<Form | null>(null);
   const [materials, setMaterials] = useState<StockMaterial[]>([]);
@@ -238,260 +245,320 @@ export function BerandaUsaha({
 
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={onOpenKasir}
-        className="flex w-full items-center gap-3 rounded-[26px] bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-left text-white shadow-lg shadow-emerald-600/20"
-      >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-          <Store size={24} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block fs-16 font-extrabold">Buka kasir</span>
-          <span className="block truncate fs-12 text-white/75">Catat penjualan langsung atau marketplace</span>
-        </span>
-        <ArrowUpRight size={20} />
-      </button>
+      {view === 'ringkasan' && (
+        <>
+          <PeriodPicker range={book.range} onRange={onRange} />
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            {stat(`Omzet ${label}`, formatIDR(book.period.omzet), undefined, `${book.period.nota} nota`)}
+            {stat(
+              `Laba ${label}`,
+              formatIDR(laba),
+              laba < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300',
+              `potongan ${formatIDR(book.period.fee)} · biaya ${formatIDR(book.period.biaya)}`,
+            )}
+            {stat('Total kas usaha', formatIDR(totalKas))}
+            {bonTotal > 0 && !pendingTotal
+              ? stat('Bon belum dibayar', formatIDR(bonTotal), 'text-amber-600', `${bons.length} bon pelanggan`)
+              : stat('Belum cair', formatIDR(pendingTotal), pendingTotal ? 'text-orange-600' : undefined, `${marketPending.length} pesanan marketplace${bonTotal ? ` · bon ${formatIDR(bonTotal)}` : ''}`)}
+          </div>
 
-      <PeriodPicker range={book.range} onRange={onRange} />
+          <div className="grid grid-cols-4 gap-2">
+            {action('biaya', 'Catat biaya', ReceiptText, 'bg-rose-50 text-rose-600 dark:bg-rose-500/10')}
+            {action('setor', 'Setor modal', ArrowDownLeft, 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10')}
+            {action('ambil', 'Ambil uang', ArrowUpRight, 'bg-amber-50 text-amber-600 dark:bg-amber-500/10')}
+            {action('pindah', 'Pindah kas', ArrowLeftRight, 'bg-sky-50 text-sky-600 dark:bg-sky-500/10')}
+          </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {stat(`Omzet ${label}`, formatIDR(book.period.omzet), undefined, `${book.period.nota} nota`)}
-        {stat(
-          `Laba ${label}`,
-          formatIDR(laba),
-          laba < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300',
-          `potongan ${formatIDR(book.period.fee)} · biaya ${formatIDR(book.period.biaya)}`,
-        )}
-        {stat('Total kas usaha', formatIDR(totalKas))}
-        {bonTotal > 0 && !pendingTotal
-          ? stat('Bon belum dibayar', formatIDR(bonTotal), 'text-amber-600', `${bons.length} bon pelanggan`)
-          : stat('Belum cair', formatIDR(pendingTotal), pendingTotal ? 'text-orange-600' : undefined, `${marketPending.length} pesanan marketplace${bonTotal ? ` · bon ${formatIDR(bonTotal)}` : ''}`)}
-      </div>
-
-      <div className="grid grid-cols-4 gap-2">
-        {action('biaya', 'Catat biaya', ReceiptText, 'bg-rose-50 text-rose-600 dark:bg-rose-500/10')}
-        {action('setor', 'Setor modal', ArrowDownLeft, 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10')}
-        {action('ambil', 'Ambil uang', ArrowUpRight, 'bg-amber-50 text-amber-600 dark:bg-amber-500/10')}
-        {action('pindah', 'Pindah kas', ArrowLeftRight, 'bg-sky-50 text-sky-600 dark:bg-sky-500/10')}
-      </div>
-
-      <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-        <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Kas usaha</p>
-        <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
-          {kas.map((a) => (
-            <li key={a.id} className="flex items-center gap-3 py-2.5">
-              <span className="fsh-20">{accountEmoji(a.kind)}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate fs-14 font-bold text-slate-800 dark:text-slate-100">{a.name}</span>
-                {a.isDefault && <span className="block fs-11 text-slate-400">Kas utama (kasir tim & website)</span>}
-              </span>
-              <span className={cn('fs-15 font-extrabold tabular-nums', a.balance < 0 ? 'text-rose-600' : 'text-slate-900 dark:text-white')}>
-                {formatIDR(a.balance)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {utangs.length > 0 && (
-        <section className="rounded-[26px] bg-rose-50 p-4 ring-1 ring-rose-100 dark:bg-rose-500/10 dark:ring-rose-500/20">
-          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-rose-900 dark:text-rose-200">
-            <span className="flex items-center gap-1.5">
-              <ReceiptText size={16} /> Utang ke supplier
-            </span>
-            <span className="tabular-nums">{formatIDR(utangTotal)}</span>
-          </p>
-          <ul className="mt-2 space-y-2">
-            {utangs.map((e) => {
-              const sisa = sisaUtang(e);
-              const d = e.dueDate ?? '';
-              const telat = Boolean(d && d < today);
-              const dekat = Boolean(d && !telat && d <= addDays(today, 3));
-              return (
-                <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
-                      {e.buyer || e.party || 'Supplier'} · {e.note || e.category || 'Pembelian'}
-                    </span>
-                    <span className="block fs-11 text-slate-500">
-                      {e.date} · {formatIDR(e.amount)}
-                      {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
-                      {d && (
-                        <span className={cn(telat ? 'font-bold text-rose-600' : dekat && 'font-bold text-amber-600')}>
-                          {' '}
-                          · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {d}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                  <span className="fs-14 font-extrabold tabular-nums text-rose-700 dark:text-rose-300">{formatIDR(sisa)}</span>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ k: 'utang', entry: e, sisa })}
-                    className="rounded-full bg-slate-900 px-3 py-1.5 fs-12 font-bold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-                  >
-                    Bayar
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {orders.length > 0 && (
-        <section className="rounded-[26px] bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-500/10 dark:ring-violet-500/20">
-          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-violet-900 dark:text-violet-200">
-            <span className="flex items-center gap-1.5">
-              <CalendarClock size={16} /> Pesanan
-            </span>
-            <span className="fs-12 font-bold">{orders.length} belum diambil</span>
-          </p>
-          <ul className="mt-2 space-y-2">
-            {orders.map((e) => {
-              const dp = dpOf(e);
-              const d = e.dueDate ?? '';
-              const when = !d ? '' : d < today ? `telat (${d})` : d === today ? 'hari ini' : d === addDays(today, 1) ? 'besok' : d;
-              return (
-                <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
-                  <div className="flex items-start gap-3">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
-                        {e.buyer || e.party || 'Pemesan'} · {e.product || e.note || 'Pesanan'}
-                      </span>
-                      <span className="block fs-11 text-slate-500">
-                        Ambil <b className={cn(d && d <= today ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200')}>{when || '—'}</b> · DP{' '}
-                        {formatIDR(dp)} · sisa {formatIDR(Math.max(0, e.amount - dp))}
-                      </span>
-                    </span>
-                    <span className="fs-14 font-extrabold tabular-nums text-violet-700 dark:text-violet-300">{formatIDR(e.amount)}</span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap justify-end gap-2">
+          {(orders.length > 0 || bons.length > 0 || utangs.length > 0 || marketPending.length > 0) && onNav && (
+            <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+              <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Perlu ditindaklanjuti</p>
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    orders.length > 0 && ['tagihan', CalendarClock, 'Pesanan belum diambil', `${orders.length} pesanan`, 'text-violet-600'],
+                    bons.length > 0 && ['tagihan', NotebookPen, 'Bon pelanggan', formatIDR(bonTotal), 'text-amber-600'],
+                    marketPending.length > 0 && ['tagihan', Clock, 'Menunggu cair', formatIDR(pendingTotal), 'text-orange-600'],
+                    utangs.length > 0 && ['biaya', ReceiptText, 'Utang ke supplier', formatIDR(utangTotal), 'text-rose-600'],
+                  ].filter(Boolean) as [Exclude<BerandaView, 'ringkasan'>, typeof Wallet, string, string, string][]
+                ).map(([to, Icon, t, v, tone]) => (
+                  <li key={t}>
                     <button
                       type="button"
-                      onClick={() => setForm({ k: 'o_batal', entry: e, dp })}
-                      className="rounded-full px-3 py-1.5 fs-12 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => onNav(to)}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5 text-left hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800"
                     >
-                      Batal
+                      <Icon size={18} className={tone} />
+                      <span className="min-w-0 flex-1 truncate fs-13 font-semibold text-slate-700 dark:text-slate-200">{t}</span>
+                      <span className="fs-13 font-extrabold tabular-nums text-slate-900 dark:text-white">{v}</span>
+                      <ChevronRight size={16} className="text-slate-400" />
                     </button>
-                    {dp < e.amount && (
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <Riwayat entries={book.entries} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
+          {kind && (
+            <p className="rounded-2xl bg-slate-50 px-4 py-3 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+              {kind.emoji} <b>Tips {kind.label}:</b> {kind.tip}
+            </p>
+          )}
+        </>
+      )}
+
+      {view === 'kas' && (
+        <>
+          <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+            <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Kas usaha</p>
+            <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
+              {kas.map((a) => (
+                <li key={a.id} className="flex items-center gap-3 py-2.5">
+                  <span className="fsh-20">{accountEmoji(a.kind)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate fs-14 font-bold text-slate-800 dark:text-slate-100">{a.name}</span>
+                    {a.isDefault && <span className="block fs-11 text-slate-400">Kas utama (kasir tim & website)</span>}
+                  </span>
+                  <span className={cn('fs-15 font-extrabold tabular-nums', a.balance < 0 ? 'text-rose-600' : 'text-slate-900 dark:text-white')}>
+                    {formatIDR(a.balance)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <div className="grid grid-cols-3 gap-2">
+            {action('setor', 'Setor modal', ArrowDownLeft, 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10')}
+            {action('ambil', 'Ambil uang', ArrowUpRight, 'bg-amber-50 text-amber-600 dark:bg-amber-500/10')}
+            {action('pindah', 'Pindah kas', ArrowLeftRight, 'bg-sky-50 text-sky-600 dark:bg-sky-500/10')}
+          </div>
+          <PeriodPicker range={book.range} onRange={onRange} />
+          <Riwayat entries={book.entries.filter((e) => KAS_TYPES.has(e.type))} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
+        </>
+      )}
+
+      {view === 'biaya' && (
+        <>
+          <button
+            type="button"
+            onClick={() => setForm({ k: 'biaya' })}
+            className="flex w-full items-center gap-3 rounded-[26px] bg-white p-4 text-left ring-1 ring-slate-100 hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-800"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-500/10">
+              <ReceiptText size={22} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block fs-16 font-extrabold text-slate-900 dark:text-white">Catat biaya</span>
+              <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">
+                Belanja bahan, ongkir, sewa, gaji{isPro && book.bonReady ? ' · bisa tempo (bayar nanti)' : ''}
+              </span>
+            </span>
+            <Plus size={20} className="text-slate-400" />
+          </button>
+          {utangs.length > 0 && (
+            <section className="rounded-[26px] bg-rose-50 p-4 ring-1 ring-rose-100 dark:bg-rose-500/10 dark:ring-rose-500/20">
+              <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-rose-900 dark:text-rose-200">
+                <span className="flex items-center gap-1.5">
+                  <ReceiptText size={16} /> Utang ke supplier
+                </span>
+                <span className="tabular-nums">{formatIDR(utangTotal)}</span>
+              </p>
+              <ul className="mt-2 space-y-2">
+                {utangs.map((e) => {
+                  const sisa = sisaUtang(e);
+                  const d = e.dueDate ?? '';
+                  const telat = Boolean(d && d < today);
+                  const dekat = Boolean(d && !telat && d <= addDays(today, 3));
+                  return (
+                    <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                          {e.buyer || e.party || 'Supplier'} · {e.note || e.category || 'Pembelian'}
+                        </span>
+                        <span className="block fs-11 text-slate-500">
+                          {e.date} · {formatIDR(e.amount)}
+                          {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
+                          {d && (
+                            <span className={cn(telat ? 'font-bold text-rose-600' : dekat && 'font-bold text-amber-600')}>
+                              {' '}
+                              · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {d}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="fs-14 font-extrabold tabular-nums text-rose-700 dark:text-rose-300">{formatIDR(sisa)}</span>
                       <button
                         type="button"
-                        onClick={() => setForm({ k: 'o_dp', entry: e, dp })}
-                        className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                        onClick={() => setForm({ k: 'utang', entry: e, sisa })}
+                        className="rounded-full bg-slate-900 px-3 py-1.5 fs-12 font-bold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
                       >
-                        + DP
+                        Bayar
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setForm({ k: 'o_ambil', entry: e, dp })}
-                      className="rounded-full bg-violet-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-violet-700"
-                    >
-                      Diambil
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          <PeriodPicker range={book.range} onRange={onRange} />
+          <Riwayat entries={book.entries.filter((e) => e.type === 'biaya' || e.type === 'bayar_utang')} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
+        </>
       )}
 
-      {bons.length > 0 && (
-        <section className="rounded-[26px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
-          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-amber-900 dark:text-amber-200">
-            <span className="flex items-center gap-1.5">
-              <NotebookPen size={16} /> Bon pelanggan
-            </span>
-            <span className="tabular-nums">{formatIDR(bonTotal)}</span>
-          </p>
-          <ul className="mt-2 space-y-2">
-            {bons.map((e) => {
-              const sisa = sisaBon(e);
-              const telat = Boolean(e.dueDate && e.dueDate < today);
-              const who = e.buyer || e.party || 'Pelanggan';
-              return (
-                <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
-                  <div className="flex items-start gap-3">
+      {view === 'tagihan' && (
+        <>
+          {orders.length > 0 && (
+            <section className="rounded-[26px] bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-500/10 dark:ring-violet-500/20">
+              <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-violet-900 dark:text-violet-200">
+                <span className="flex items-center gap-1.5">
+                  <CalendarClock size={16} /> Pesanan
+                </span>
+                <span className="fs-12 font-bold">{orders.length} belum diambil</span>
+              </p>
+              <ul className="mt-2 space-y-2">
+                {orders.map((e) => {
+                  const dp = dpOf(e);
+                  const d = e.dueDate ?? '';
+                  const when = !d ? '' : d < today ? `telat (${d})` : d === today ? 'hari ini' : d === addDays(today, 1) ? 'besok' : d;
+                  return (
+                    <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
+                      <div className="flex items-start gap-3">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                            {e.buyer || e.party || 'Pemesan'} · {e.product || e.note || 'Pesanan'}
+                          </span>
+                          <span className="block fs-11 text-slate-500">
+                            Ambil <b className={cn(d && d <= today ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200')}>{when || '—'}</b> · DP{' '}
+                            {formatIDR(dp)} · sisa {formatIDR(Math.max(0, e.amount - dp))}
+                          </span>
+                        </span>
+                        <span className="fs-14 font-extrabold tabular-nums text-violet-700 dark:text-violet-300">{formatIDR(e.amount)}</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setForm({ k: 'o_batal', entry: e, dp })}
+                          className="rounded-full px-3 py-1.5 fs-12 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                          Batal
+                        </button>
+                        {dp < e.amount && (
+                          <button
+                            type="button"
+                            onClick={() => setForm({ k: 'o_dp', entry: e, dp })}
+                            className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                          >
+                            + DP
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setForm({ k: 'o_ambil', entry: e, dp })}
+                          className="rounded-full bg-violet-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-violet-700"
+                        >
+                          Diambil
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {bons.length > 0 && (
+            <section className="rounded-[26px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
+              <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-amber-900 dark:text-amber-200">
+                <span className="flex items-center gap-1.5">
+                  <NotebookPen size={16} /> Bon pelanggan
+                </span>
+                <span className="tabular-nums">{formatIDR(bonTotal)}</span>
+              </p>
+              <ul className="mt-2 space-y-2">
+                {bons.map((e) => {
+                  const sisa = sisaBon(e);
+                  const telat = Boolean(e.dueDate && e.dueDate < today);
+                  const who = e.buyer || e.party || 'Pelanggan';
+                  return (
+                    <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
+                      <div className="flex items-start gap-3">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                            {who} · {e.product || e.note || 'Penjualan'}
+                          </span>
+                          <span className="block fs-11 text-slate-500">
+                            {e.date} · {formatIDR(e.amount)}
+                            {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
+                            {e.dueDate && (
+                              <span className={cn(telat && 'font-bold text-rose-600')}>
+                                {' '}
+                                · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {e.dueDate}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <span className="fs-14 font-extrabold tabular-nums text-amber-700 dark:text-amber-300">{formatIDR(sisa)}</span>
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <a
+                          href={waLink(e.wa, reminderText('sopan', who, sisa, e.product || undefined))}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                          <MessageCircle size={13} /> Ingatkan
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ k: 'bon', entry: e, sisa })}
+                          className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-emerald-700"
+                        >
+                          Terima bayaran
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {marketPending.length > 0 && (
+            <section className="rounded-[26px] bg-orange-50 p-4 ring-1 ring-orange-100 dark:bg-orange-500/10 dark:ring-orange-500/20">
+              <p className="flex items-center gap-1.5 fs-15 font-extrabold text-orange-900 dark:text-orange-200">
+                <Clock size={16} /> Menunggu cair
+              </p>
+              <ul className="mt-2 space-y-2">
+                {marketPending.map((e) => (
+                  <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
                     <span className="min-w-0 flex-1">
                       <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
-                        {who} · {e.product || e.note || 'Penjualan'}
+                        {e.channel} · {e.product || e.note || 'Penjualan'}
                       </span>
                       <span className="block fs-11 text-slate-500">
-                        {e.date} · {formatIDR(e.amount)}
-                        {book.paid[e.id] ? ` · sudah dibayar ${formatIDR(book.paid[e.id])}` : ''}
-                        {e.dueDate && (
-                          <span className={cn(telat && 'font-bold text-rose-600')}>
-                            {' '}
-                            · {telat ? 'lewat jatuh tempo' : 'jatuh tempo'} {e.dueDate}
-                          </span>
-                        )}
+                        {e.date} · jual {formatIDR(e.amount)} · potongan {formatIDR(e.fee)}
                       </span>
                     </span>
-                    <span className="fs-14 font-extrabold tabular-nums text-amber-700 dark:text-amber-300">{formatIDR(sisa)}</span>
-                  </div>
-                  <div className="mt-2 flex justify-end gap-2">
-                    <a
-                      href={waLink(e.wa, reminderText('sopan', who, sisa, e.product || undefined))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
-                    >
-                      <MessageCircle size={13} /> Ingatkan
-                    </a>
+                    <span className="fs-14 font-extrabold tabular-nums text-orange-700 dark:text-orange-300">{formatIDR(e.net)}</span>
                     <button
                       type="button"
-                      onClick={() => setForm({ k: 'bon', entry: e, sisa })}
+                      onClick={() => setForm({ k: 'cair', entry: e })}
                       className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-emerald-700"
                     >
-                      Terima bayaran
+                      Cair
                     </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-      {marketPending.length > 0 && (
-        <section className="rounded-[26px] bg-orange-50 p-4 ring-1 ring-orange-100 dark:bg-orange-500/10 dark:ring-orange-500/20">
-          <p className="flex items-center gap-1.5 fs-15 font-extrabold text-orange-900 dark:text-orange-200">
-            <Clock size={16} /> Menunggu cair
-          </p>
-          <ul className="mt-2 space-y-2">
-            {marketPending.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 dark:bg-slate-900">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
-                    {e.channel} · {e.product || e.note || 'Penjualan'}
-                  </span>
-                  <span className="block fs-11 text-slate-500">
-                    {e.date} · jual {formatIDR(e.amount)} · potongan {formatIDR(e.fee)}
-                  </span>
-                </span>
-                <span className="fs-14 font-extrabold tabular-nums text-orange-700 dark:text-orange-300">{formatIDR(e.net)}</span>
-                <button
-                  type="button"
-                  onClick={() => setForm({ k: 'cair', entry: e })}
-                  className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-emerald-700"
-                >
-                  Cair
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <Riwayat entries={book.entries} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
-
-      {kind && (
-        <p className="rounded-2xl bg-slate-50 px-4 py-3 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
-          {kind.emoji} <b>Tips {kind.label}:</b> {kind.tip}
-        </p>
+          {!orders.length && !bons.length && !marketPending.length && (
+            <p className="rounded-[26px] border-2 border-dashed border-slate-200 p-8 text-center fs-13 text-slate-400 dark:border-slate-800">
+              Tidak ada pesanan, bon, atau uang marketplace yang menunggu. Catat dari kasir: pilih <b>Bon</b> atau <b>Jadikan pesanan</b>.
+            </p>
+          )}
+        </>
       )}
 
       <UsahaSheet

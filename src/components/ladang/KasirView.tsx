@@ -63,11 +63,14 @@ export function KasirView({
   variant,
   onToast,
   embedded = false,
+  onExit,
 }: {
   variant: 'web' | 'app';
   onToast?: (m: string) => void;
   /** Di dalam layar Usahaku (tab Kasir): tanpa tombol kembali sendiri. */
   embedded?: boolean;
+  /** Mode kasir penuh di Usahaku: tombol keluar ke menu toko, tanpa menu bawah, tanpa Biaya/Stok. */
+  onExit?: () => void;
 }) {
   const app = variant === 'app';
   const router = useRouter();
@@ -269,32 +272,37 @@ export function KasirView({
   // HP: ikon di atas label (5 tombol muat satu baris); layar lebar: pil sebaris.
   const actBtn =
     'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 fs-11 font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:fs-12';
+  // Mode kasir penuh (Usahaku): Biaya & Stok ada di menu samping toko, kasir hanya untuk jualan.
   const actions = (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          setBuyMat(undefined);
-          setSpending(true);
-        }}
-        aria-label="Catat pengeluaran usaha"
-        className={actBtn}
-      >
-        <Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => setStocking(true)}
-        aria-label={lowCount ? `Stok, ${lowCount} hampir habis` : 'Stok'}
-        className={actBtn}
-      >
-        <Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>
-        {lowCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900 sm:static">
-            {lowCount}
-          </span>
-        )}
-      </button>
+      {!onExit && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setBuyMat(undefined);
+              setSpending(true);
+            }}
+            aria-label="Catat pengeluaran usaha"
+            className={actBtn}
+          >
+            <Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStocking(true)}
+            aria-label={lowCount ? `Stok, ${lowCount} hampir habis` : 'Stok'}
+            className={actBtn}
+          >
+            <Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>
+            {lowCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 fs-10 font-extrabold text-slate-900 sm:static">
+                {lowCount}
+              </span>
+            )}
+          </button>
+        </>
+      )}
       {shop.products.length > 0 && (
         <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}>
           <BadgeDollarSign size={15} className="shrink-0" /> <span className="truncate">Harga</span>
@@ -336,7 +344,7 @@ export function KasirView({
   );
 
   return (
-    <div className={cn('space-y-4', app || embedded ? 'pb-44' : 'pb-28 lg:pb-0')}>
+    <div className={cn('space-y-4', onExit ? 'pb-28 lg:pb-4' : app || embedded ? 'pb-44' : 'pb-28 lg:pb-0')}>
       {flash && (
         <div
           role="status"
@@ -354,7 +362,7 @@ export function KasirView({
         )}
       >
         <div className="flex items-center gap-3">
-          {!embedded && (
+          {!embedded ? (
             <Link
               href={back}
               aria-label="Kembali ke Usahaku"
@@ -362,6 +370,17 @@ export function KasirView({
             >
               <ArrowLeft size={17} />
             </Link>
+          ) : (
+            onExit && (
+              <button
+                type="button"
+                onClick={onExit}
+                aria-label="Keluar dari kasir"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+              >
+                <ArrowLeft size={17} />
+              </button>
+            )
           )}
           {!compactHead && (
             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
@@ -395,7 +414,7 @@ export function KasirView({
           <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{actions}</div>
         </div>
         {/* HP: tombol aksi di baris sendiri supaya nama toko tidak terpotong */}
-        <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>
+        <div className={cn('mt-3 grid gap-1.5 sm:hidden', onExit ? (shop.products.length > 0 ? 'grid-cols-3' : 'grid-cols-2') : shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>
           {actions}
         </div>
         {!compactHead && shop.style.showStats && (
@@ -478,7 +497,13 @@ export function KasirView({
         <div
           className={cn(
             'fixed inset-x-3 z-40 mx-auto max-w-md',
-            app ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]' : embedded ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:hidden' : 'bottom-4 lg:hidden',
+            onExit
+              ? cn('bottom-[calc(env(safe-area-inset-bottom)+16px)]', !app && 'lg:hidden')
+              : app
+                ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]'
+                : embedded
+                  ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)] lg:hidden'
+                  : 'bottom-4 lg:hidden',
           )}
         >
           <button
