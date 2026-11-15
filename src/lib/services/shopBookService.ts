@@ -27,7 +27,7 @@ export type ShopAccount = {
   isDefault: boolean;
   archived: boolean;
 };
-export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal' | 'bayar_piutang';
+export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal' | 'bayar_piutang' | 'pesanan' | 'dp';
 export type BookEntry = {
   id: string;
   type: BookEntryType;
@@ -40,7 +40,7 @@ export type BookEntry = {
   channel: string | null;
   channelType: 'langsung' | 'marketplace' | null;
   payMethod: string | null;
-  status: 'selesai' | 'menunggu';
+  status: 'selesai' | 'menunggu' | 'batal';
   category: string | null;
   buyer: string | null;
   reseller: boolean;
@@ -103,7 +103,7 @@ const entryFromRow = (r: Row): BookEntry => {
     channel: txt(r.channel),
     channelType: r.channel_type === 'marketplace' ? 'marketplace' : r.channel_type === 'langsung' ? 'langsung' : null,
     payMethod: txt(r.pay_method),
-    status: r.status === 'menunggu' ? 'menunggu' : 'selesai',
+    status: r.status === 'menunggu' ? 'menunggu' : r.status === 'batal' ? 'batal' : 'selesai',
     category: txt(r.category),
     buyer: txt(r.buyer),
     reseller: num(r.reseller) === 1,
@@ -130,6 +130,62 @@ const changed = () => {
 };
 
 export const shopBookService = {
+  /** Pesanan & DP (PRO): belum omzet; DP (opsional) masuk kas. */
+  async createOrder(
+    shopId: string,
+    input: {
+      requestId: string;
+      amount: number;
+      party: string;
+      wa?: string;
+      pickup: string;
+      product?: string;
+      items?: { name: string; price: number; qty: number; key?: string }[];
+      dp?: number;
+      accountId?: string | null;
+    },
+  ) {
+    const r = await cloudflareApi<{ ok: boolean; id: string }>(`/api/member/shops/${shopId}/orders`, {
+      method: 'POST',
+      json: {
+        request_id: input.requestId,
+        amount: input.amount,
+        party: input.party,
+        wa: input.wa,
+        pickup: input.pickup,
+        product: input.product,
+        items: input.items,
+        dp: input.dp,
+        shop_account_id: input.accountId,
+      },
+    });
+    changed();
+    return r;
+  },
+  async orderDp(shopId: string, orderId: string, input: { amount: number; accountId: string; requestId: string }) {
+    await cloudflareApi(`/api/member/shops/${shopId}/entries/${orderId}/dp`, {
+      method: 'POST',
+      json: { amount: input.amount, shop_account_id: input.accountId, request_id: input.requestId },
+    });
+    changed();
+  },
+  /** Pesanan diambil → penjualan (DP jadi pembayaran). Sisa yang tidak dibayar sekarang jadi bon. */
+  async orderAmbil(shopId: string, orderId: string, input: { payNow: number; accountId: string | null; due?: string; requestId: string }) {
+    const r = await cloudflareApi<{ ok: boolean; id: string; sisa: number }>(`/api/member/shops/${shopId}/entries/${orderId}/ambil`, {
+      method: 'POST',
+      json: { pay_now: input.payNow, shop_account_id: input.accountId, due: input.due, request_id: input.requestId },
+    });
+    changed();
+    return r;
+  },
+  async orderBatal(shopId: string, orderId: string, input: { dpAction: 'kembalikan' | 'tahan'; requestId: string }) {
+    const r = await cloudflareApi<{ ok: boolean; dp: number; tahan: boolean }>(`/api/member/shops/${shopId}/entries/${orderId}/batal`, {
+      method: 'POST',
+      json: { dp_action: input.dpAction, request_id: input.requestId },
+    });
+    changed();
+    return r;
+  },
   /** Terima bayaran bon pelanggan (sebagian/lunas). Ditolak server kalau melebihi sisa. */
   async payBon(shopId: string, entryId: string, input: { amount: number; accountId: string; date?: string; requestId: string }) {
     const r = await cloudflareApi<{ ok: boolean; lunas: boolean }>(`/api/member/shops/${shopId}/entries/${entryId}/pay`, {

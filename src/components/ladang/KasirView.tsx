@@ -47,6 +47,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { isCreditAccountType } from '@/lib/creditCard';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { shopBookService, type ShopAccount, type ShopBook } from '@/lib/services/shopBookService';
+import { CalendarClock } from 'lucide-react';
 import { FEE_CHIPS, PAY_METHODS, accountEmoji, channelsOf } from '@/lib/usaha/jenis';
 import { ShopDetail, amt, fieldCls, initials, labelCls, monthKey, productLabel, short, toneOf } from './UsahaView';
 
@@ -1043,6 +1044,9 @@ export function Struk({
   // Bon / bayar nanti (R3): nama pelanggan wajib, WA & jatuh tempo opsional.
   const [bon, setBon] = useState({ party: '', wa: '', due: '' });
   const isBon = Boolean(book) && chType === 'langsung' && payMethod === 'bon';
+  // Pesanan (R3, PRO): diambil nanti, DP opsional. Belum omzet sampai diambil.
+  const [order, setOrder] = useState({ on: false, party: '', wa: '', pickup: '', dp: '' });
+  const isOrder = Boolean(book) && order.on;
   const kasDefault = book?.accounts.find((a) => a.isDefault)?.id ?? book?.accounts[0]?.id ?? '';
   const kas = kasId && book?.accounts.some((a) => a.id === kasId) ? kasId : kasDefault;
   const feeTotal = fees.reduce((a, f) => a + (Number(f.amount) || 0), 0);
@@ -1110,11 +1114,17 @@ export function Struk({
       setError('Pilih rekening tujuan.');
       return;
     }
+    if (isOrder) {
+      if (!order.party.trim()) return setError('Isi nama pemesan.');
+      if (!order.pickup) return setError('Isi tanggal ambil.');
+      if (Number(order.dp || 0) > total) return setError('DP lebih besar dari total pesanan.');
+      if (Number(order.dp || 0) > 0 && !kas) return setError('Pilih kas yang menerima DP.');
+    }
     if (isBon && !bon.party.trim()) {
       setError('Isi nama pelanggan untuk bon.');
       return;
     }
-    if (book && !isBon && (chType === 'langsung' || settled) && !kas) {
+    if (book && !isBon && !isOrder && (chType === 'langsung' || settled) && !kas) {
       setError('Pilih kas usaha tujuan.');
       return;
     }
@@ -1143,7 +1153,19 @@ export function Struk({
         })),
       };
       if (staff) await staff.sell(base);
-      else if (book) {
+      else if (book && isOrder) {
+        await shopBookService.createOrder(shop.id, {
+          requestId,
+          amount: total,
+          party: order.party.trim(),
+          ...(order.wa.trim() ? { wa: order.wa.trim() } : {}),
+          pickup: order.pickup,
+          product: base.product,
+          items: base.items,
+          dp: Number(order.dp || 0),
+          accountId: Number(order.dp || 0) > 0 ? kas : null,
+        });
+      } else if (book) {
         await shopService.sale(shop.id, {
           ...base,
           accountId: '',
@@ -1191,7 +1213,9 @@ export function Struk({
       setDone({ text, amount: total, buyer: buyer.trim() });
       onDone(
         book
-          ? isBon
+          ? isOrder
+            ? `Pesanan ${order.party.trim()} ${formatIDR(total)} tersimpan · ambil ${order.pickup}${Number(order.dp || 0) ? ` · DP ${formatIDR(Number(order.dp))}` : ''}.`
+            : isBon
             ? `Bon ${bon.party.trim()} ${formatIDR(total)} tercatat · belum dibayar.`
             : chType === 'marketplace' && !settled
             ? `Penjualan ${channel} ${formatIDR(total)} tercatat · menunggu cair.`
@@ -1214,6 +1238,7 @@ export function Struk({
     setModal('');
     setModalOpen(false);
     setBon({ party: '', wa: '', due: '' });
+    setOrder({ on: false, party: '', wa: '', pickup: '', dp: '' });
     setPayMethod('tunai');
     setRequestId(crypto.randomUUID());
     if (inSheet) onNew();
@@ -1412,6 +1437,64 @@ export function Struk({
         <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
           Masuk ke <b>{staff.accountName ?? '— belum ditentukan pemilik'}</b> · hari ini
         </p>
+      ) : book && isOrder ? (
+        <div className="space-y-2 rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:ring-violet-500/30">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 fs-13 font-extrabold text-violet-900 dark:text-violet-200">
+              <CalendarClock size={15} /> Pesanan · diambil nanti
+            </p>
+            <button type="button" onClick={() => setOrder({ ...order, on: false })} className="fs-12 font-bold text-violet-700 dark:text-violet-300">
+              Jual sekarang saja
+            </button>
+          </div>
+          <p className="fs-11 text-violet-900/80 dark:text-violet-200/80">
+            Belum masuk omzet sampai diambil. DP (kalau ada) langsung masuk kas.
+          </p>
+          <label className="block">
+            <span className={labelCls}>Nama pemesan</span>
+            <input value={order.party} onChange={(e) => setOrder({ ...order, party: e.target.value })} maxLength={60} placeholder="Mis. Bu Ani" className={fieldCls} />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className={labelCls}>Tanggal ambil</span>
+              <input type="date" value={order.pickup} min={toLocalDateString()} onChange={(e) => setOrder({ ...order, pickup: e.target.value })} className={fieldCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>WA (opsional)</span>
+              <input
+                value={order.wa}
+                onChange={(e) => setOrder({ ...order, wa: e.target.value.replace(/[^\d+\s-]/g, '').slice(0, 20) })}
+                inputMode="tel"
+                placeholder="08…"
+                className={fieldCls}
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className={labelCls}>DP (opsional)</span>
+              <input
+                value={order.dp ? Number(order.dp).toLocaleString('id-ID') : ''}
+                onChange={(e) => setOrder({ ...order, dp: e.target.value.replace(/\D/g, '').slice(0, 12) })}
+                inputMode="numeric"
+                placeholder="Rp"
+                className={cn(fieldCls, 'tabular-nums')}
+              />
+            </label>
+            {Number(order.dp || 0) > 0 && (
+              <label className="block">
+                <span className={labelCls}>DP masuk ke</span>
+                <select value={kas} onChange={(e) => setKasId(e.target.value)} className={fieldCls}>
+                  {book.accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {accountEmoji(a.kind)} {a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        </div>
       ) : book ? (
         <BookSaleFields
           channels={channels}
@@ -1436,7 +1519,17 @@ export function Struk({
           bon={bon}
           setBon={setBon}
           extra={
-            isPro ? (
+            <>
+            {isPro && book.bonReady && (
+              <button
+                type="button"
+                onClick={() => setOrder({ ...order, on: true, party: order.party || bon.party })}
+                className="flex items-center gap-1 fs-12 font-bold text-violet-600 dark:text-violet-300"
+              >
+                <CalendarClock size={13} /> Jadikan pesanan (diambil nanti, bisa DP)
+              </button>
+            )}
+            {isPro ? (
               modalOpen ? (
                 <label className="block">
                   <span className={labelCls}>Modal pesanan ini (harga beli ke supplier)</span>
@@ -1457,7 +1550,8 @@ export function Struk({
                   + Isi modal pesanan ini (top up, dropship)
                 </button>
               )
-            ) : null
+            ) : null}
+            </>
           }
         />
       ) : (
@@ -1492,7 +1586,7 @@ export function Struk({
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
           <span className="fs-13 font-bold text-emerald-900 dark:text-emerald-200">
-            {book && chType === 'marketplace' ? 'Harga jual' : isBon ? 'Total bon' : 'Total diterima'}
+            {isOrder ? 'Total pesanan' : book && chType === 'marketplace' ? 'Harga jual' : isBon ? 'Total bon' : 'Total diterima'}
           </span>
           <span className="flex min-w-0 items-center gap-1 fsh-22 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">
             <span className="fs-14">Rp</span>
@@ -1523,7 +1617,7 @@ export function Struk({
         disabled={busy || !allLines.length}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-40"
       >
-        {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} {isBon ? 'Catat bon' : 'Bayar & catat'}
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} {isOrder ? 'Simpan pesanan' : isBon ? 'Catat bon' : 'Bayar & catat'}
       </button>
       <p className="text-center fs-11 text-slate-400">
         {book

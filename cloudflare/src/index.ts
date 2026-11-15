@@ -10192,7 +10192,7 @@ const shopBook = async (env: Env, ownerId: string, shopId: string) => {
     throw e;
   }
 };
-type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang";
+type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang" | "pesanan" | "dp";
 type BookEntry = {
   id: string; key: string; type: BookEntryType; date: string; amount: number; fee?: number; net: number;
   accountId: string | null; toAccountId?: string | null; personalAccountId?: string | null; personalTxId?: string | null;
@@ -10231,6 +10231,10 @@ const bonReady = async (env: Env) => {
 const BON_NOT_READY = "Bon pelanggan belum aktif (menunggu pembaruan database). Coba lagi nanti.";
 // Jumlah yang sudah dibayar untuk sebuah bon (subquery, dipakai di dalam batch).
 const BON_PAID_SQL = "(SELECT COALESCE(SUM(p.amount), 0) FROM shop_entries p WHERE p.owner_id = ? AND p.ref_id = ? AND p.type = 'bayar_piutang')";
+// DP yang sudah masuk untuk sebuah pesanan (subquery, dipakai di dalam batch).
+const ORDER_DP_SQL = "(SELECT COALESCE(SUM(d.amount), 0) FROM shop_entries d WHERE d.owner_id = ? AND d.ref_id = ? AND d.type = 'dp')";
+const ORDER_NOT_READY = "Pesanan belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+const waNumber = (v: unknown) => (typeof v === "string" && /^\+?\d[\d\s-]{6,18}$/.test(v.trim()) ? v.replace(/[^\d+]/g, "") : null);
 // Kas tunai (kind 'kas') tidak boleh minus — uang di laci tidak bisa diambil melebihi isinya.
 // Bank/e-wallet/marketplace/deposit tetap boleh (sering ada pemasukan yang telat dicatat).
 const cashEnough = (ownerId: string, accountId: string, amount: number) => ({
@@ -10432,7 +10436,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       const bonOn = await bonReady(env);
       const cols = `id, type, date, amount, fee, net, account_id, to_account_id, personal_account_id, channel, channel_type, pay_method, status, settled_at, category, buyer, reseller, note, payload_json, by_name, created_at${bonOn ? ", ref_id, due_date, party" : ""}`;
       const entries = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC, created_at DESC LIMIT 1000`).bind(ownerId, shop.id, from, to).all()).results ?? [];
-      const pending = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND status = 'menunggu' ORDER BY date ASC, created_at ASC LIMIT 200`).bind(ownerId, shop.id).all()).results ?? [];
+      const pending = (await env.DB.prepare(`SELECT ${cols} FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND status = 'menunggu' ORDER BY ${bonOn ? "COALESCE(due_date, date)" : "date"} ASC, created_at ASC LIMIT 300`).bind(ownerId, shop.id).all()).results ?? [];
       // Ringkasan hari ini & bulan ini (omzet kotor, potongan marketplace, biaya).
       const sum = async (a: string, b: string) =>
         (await env.DB.prepare(
@@ -10441,10 +10445,11 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
              FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND date BETWEEN ? AND ?`
         ).bind(ownerId, shop.id, a, b).first<{ omzet: number; fee: number; biaya: number; nota: number }>()) ?? { omzet: 0, fee: 0, biaya: 0, nota: 0 };
       // Bon yang belum lunas: jumlah yang sudah dibayar per bon.
-      const bonIds = pending.filter((e) => (e as { pay_method?: string }).pay_method === "bon").map((e) => String((e as { id: string }).id));
+      // + pesanan terbuka: DP yang sudah masuk per pesanan (map yang sama).
+      const bonIds = pending.filter((e) => (e as { pay_method?: string }).pay_method === "bon" || (e as { type?: string }).type === "pesanan").map((e) => String((e as { id: string }).id));
       const paid: Record<string, number> = {};
       if (bonOn && bonIds.length) {
-        const rows = (await env.DB.prepare(`SELECT ref_id, SUM(amount) AS n FROM shop_entries WHERE owner_id = ? AND type = 'bayar_piutang' AND ref_id IN (${bonIds.map(() => "?").join(",")}) GROUP BY ref_id`).bind(ownerId, ...bonIds).all<{ ref_id: string; n: number }>()).results ?? [];
+        const rows = (await env.DB.prepare(`SELECT ref_id, SUM(amount) AS n FROM shop_entries WHERE owner_id = ? AND type IN ('bayar_piutang', 'dp') AND ref_id IN (${bonIds.map(() => "?").join(",")}) GROUP BY ref_id`).bind(ownerId, ...bonIds).all<{ ref_id: string; n: number }>()).results ?? [];
         for (const r of rows) paid[r.ref_id] = Number(r.n) || 0;
       }
       return json({ ready: true, bonReady: bonOn, paid, accounts, entries, pending, range: { from, to }, today: await sum(today, today), month: await sum(`${today.slice(0, 8)}01`, today), period: await sum(from, to), truncated: entries.length >= 1000 });
@@ -10574,6 +10579,47 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       return json({ ok: true, id }, { status: 201 });
     }
 
+    // ── Pesanan & DP (R3, 3.31): pesanan belum omzet & belum menyentuh kas; DP = uang masuk kas terikat pesanan.
+    if (action === "orders" && !sub && request.method === "POST") {
+      if (!(await bonReady(env))) return json({ error: ORDER_NOT_READY }, { status: 503 });
+      if (!(await isProUser(env, ownerId))) return json({ error: "Pesanan & DP khusus PRO." }, { status: 403 });
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
+      if (amount < 1 || amount > 1e11) return json({ error: "Isi total pesanan." }, { status: 400 });
+      const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      const party = shopText(raw.party, 60);
+      if (!party) return json({ error: "Isi nama pemesan." }, { status: 400 });
+      const pickup = isRealDateStr(raw.pickup) && raw.pickup >= "2000-01-01" && raw.pickup <= "2100-12-31" ? raw.pickup : null;
+      if (!pickup) return json({ error: "Isi tanggal ambil." }, { status: 400 });
+      const items = saleItems(raw.items);
+      const qty = items.reduce((a, i) => a + i.qty, 0) || 1;
+      const product = shopText(raw.product, 80) || items.map((i) => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(", ").slice(0, 80) || "Pesanan";
+      const dp = raw.dp === undefined || raw.dp === null || raw.dp === "" ? 0 : shopMoney(raw.dp);
+      if (dp === null) return json({ error: "DP tidak valid." }, { status: 400 });
+      if (dp > amount) return json({ error: "DP lebih besar dari total pesanan." }, { status: 400 });
+      const book = await shopBook(env, ownerId, shop.id);
+      const kas = dp > 0 ? pickBookAccount(raw.shop_account_id, book) : null;
+      if (dp > 0 && !kas) return json({ error: "Pilih kas yang menerima DP." }, { status: 400 });
+      const id = generateId();
+      const dpId = generateId();
+      const r = await env.DB.batch([
+        bookInsert(env, ownerId, shop.id, {
+          id, key: `order:${requestId}`, type: "pesanan", date: todayWIB(), amount, net: 0, accountId: null, status: "menunggu", buyer: party, party, dueDate: pickup,
+          note: product, payload: { product, qty, items, ...(waNumber(raw.wa) ? { wa: waNumber(raw.wa) } : {}), ...(shopText(raw.note, 120) ? { note: shopText(raw.note, 120) } : {}) },
+        }),
+        ...(dp > 0 && kas
+          ? [
+              bookInsert(env, ownerId, shop.id, { id: dpId, key: `dp:${requestId}`, type: "dp", date: todayWIB(), amount: dp, net: dp, accountId: kas.id, refId: id, party, buyer: party, note: `DP pesanan · ${party}` }, { sql: "EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)", binds: [id, ownerId] }),
+              kasDelta(env, ownerId, kas.id, dp, dpId),
+            ]
+          : []),
+      ]);
+      if (!r[0]?.meta.changes) return json({ error: "Sudah tercatat." }, { status: 409 });
+      await publishShopBook(env, ownerId, shop.id);
+      return json({ ok: true, id }, { status: 201 });
+    }
+
     // Harga modal per produk (HPP). GET = manual + perkiraan dari resep; PUT (PRO) = simpan manual.
     if (action === "costs" && !sub) {
       if (request.method === "GET") {
@@ -10614,6 +10660,118 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       const entry = await env.DB.prepare("SELECT id, type, amount, fee, net, account_id, to_account_id, personal_account_id, personal_tx_id, status, pay_method, buyer FROM shop_entries WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<{ id: string; type: BookEntryType; amount: number; fee: number; net: number; account_id: string | null; to_account_id: string | null; personal_account_id: string | null; personal_tx_id: string | null; status: string; pay_method: string | null; buyer: string | null }>();
       if (!entry) return json({ error: "Catatan tidak ditemukan." }, { status: 404 });
       // Penjualan marketplace cair: masuk ke kas pilihan, nominal cair boleh beda dari perkiraan.
+      // Pesanan: tambah DP, diambil (jadi penjualan; DP → pembayaran; sisa dibayar sekarang atau jadi bon), batal.
+      if ((op === "dp" || op === "ambil" || op === "batal") && request.method === "POST") {
+        if (!(await bonReady(env))) return json({ error: ORDER_NOT_READY }, { status: 503 });
+        if (entry.type !== "pesanan") return json({ error: "Ini bukan pesanan." }, { status: 409 });
+        if (entry.status !== "menunggu") return json({ error: "Pesanan ini sudah diambil atau dibatalkan." }, { status: 409 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+        if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+        const o = await env.DB.prepare("SELECT party, payload_json FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId).first<{ party: string | null; payload_json: string | null }>();
+        let op_: Record<string, unknown> = {};
+        try { const v = o?.payload_json ? JSON.parse(o.payload_json) : null; if (v && typeof v === "object") op_ = v as Record<string, unknown>; } catch { /* abaikan */ }
+        const party = o?.party || entry.buyer || "Pemesan";
+        const book = await shopBook(env, ownerId, shop.id);
+        const now = nowIso();
+        const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+        const dpSum = Number((await env.DB.prepare(`SELECT ${ORDER_DP_SQL} AS n`).bind(ownerId, entry.id).first<{ n: number }>())?.n) || 0;
+
+        if (op === "dp") {
+          const amount = shopMoney(raw.amount);
+          if (!amount || amount < 1) return json({ error: "Isi nominal DP." }, { status: 400 });
+          const kas = pickBookAccount(raw.shop_account_id, book);
+          if (!kas) return json({ error: "Pilih kas yang menerima DP." }, { status: 400 });
+          const id = generateId();
+          const key = `dp:${requestId}`;
+          const r = await env.DB.batch([
+            bookInsert(env, ownerId, shop.id, { id, key, type: "dp", date, amount, net: amount, accountId: kas.id, refId: entry.id, party, buyer: party, note: `DP pesanan · ${party}` }, {
+              sql: `EXISTS (SELECT 1 FROM shop_entries o WHERE o.id = ? AND o.owner_id = ? AND o.type = 'pesanan' AND o.status = 'menunggu' AND o.amount - ${ORDER_DP_SQL} >= ?)`,
+              binds: [entry.id, ownerId, ownerId, entry.id, amount],
+            }),
+            kasDelta(env, ownerId, kas.id, amount, id),
+          ]);
+          if (!r[0]?.meta.changes) {
+            if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
+            return json({ error: `DP melebihi total pesanan. Sisa yang bisa dibayar Rp${Math.max(0, entry.amount - dpSum).toLocaleString("id-ID")}.` }, { status: 409 });
+          }
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true, id }, { status: 201 });
+        }
+
+        if (op === "ambil") {
+          const payNow = raw.pay_now === undefined || raw.pay_now === null || raw.pay_now === "" ? 0 : shopMoney(raw.pay_now);
+          if (payNow === null) return json({ error: "Nominal pembayaran tidak valid." }, { status: 400 });
+          if (payNow > entry.amount - dpSum) return json({ error: `Melebihi sisa pesanan. Sisanya Rp${Math.max(0, entry.amount - dpSum).toLocaleString("id-ID")}.` }, { status: 400 });
+          const kas = payNow > 0 ? pickBookAccount(raw.shop_account_id, book) : null;
+          if (payNow > 0 && !kas) return json({ error: "Pilih kas yang menerima uangnya." }, { status: 400 });
+          const due = isRealDateStr(raw.due) && raw.due >= "2000-01-01" && raw.due <= "2100-12-31" ? raw.due : null;
+          const items = saleItems(op_.items);
+          const product = typeof op_.product === "string" ? op_.product.slice(0, 80) : entry.buyer || "Pesanan";
+          const saleId = generateId();
+          const payId = generateId();
+          const cost = await saleCost(env, ownerId, shop.id, items);
+          const stock = await saleStockMoves(env, ownerId, shop.id, items, `order:${entry.id}`);
+          const orderOpen = { sql: "EXISTS (SELECT 1 FROM shop_entries o WHERE o.id = ? AND o.owner_id = ? AND o.type = 'pesanan' AND o.status = 'menunggu')", binds: [entry.id, ownerId] };
+          const r = await env.DB.batch([
+            // 1) Penjualan di tanggal ambil (omzet diakui di sini). Bentuknya bon: lunas lewat pembayaran (DP + sisa).
+            bookInsert(env, ownerId, shop.id, {
+              id: saleId, key: `ambil:${entry.id}`, type: "jual", date, amount: entry.amount, net: entry.amount, accountId: null, channel: "Pesanan", channelType: "langsung",
+              payMethod: "bon", status: "menunggu", buyer: party, party, dueDate: due, refId: entry.id, note: product,
+              payload: { product, qty: Number(op_.qty) || 1, ...(cost.items.length ? { items: cost.items } : {}), ...(cost.cogs !== null ? { cogs: cost.cogs, cogsSrc: cost.src } : {}), ...(typeof op_.wa === "string" ? { wa: op_.wa } : {}), fromOrder: entry.id },
+            }, orderOpen),
+            // 2) DP yang sudah masuk kas jadi pembayaran penjualan itu (kas tidak berubah).
+            env.DB.prepare("UPDATE shop_entries SET type = 'bayar_piutang', ref_id = ? WHERE owner_id = ? AND ref_id = ? AND type = 'dp' AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(saleId, ownerId, entry.id, saleId, ownerId),
+            // 3) Bayar sisa sekarang (opsional) — tidak boleh melebihi sisa.
+            ...(payNow > 0 && kas
+              ? [
+                  bookInsert(env, ownerId, shop.id, { id: payId, key: `ambilbayar:${entry.id}`, type: "bayar_piutang", date, amount: payNow, net: payNow, accountId: kas.id, refId: saleId, party, buyer: party, note: `Pelunasan pesanan · ${party}` }, {
+                    sql: `EXISTS (SELECT 1 FROM shop_entries s WHERE s.id = ? AND s.owner_id = ? AND s.amount - ${BON_PAID_SQL} >= ?)`,
+                    binds: [saleId, ownerId, ownerId, saleId, payNow],
+                  }),
+                  kasDelta(env, ownerId, kas.id, payNow, payId),
+                ]
+              : []),
+            // 4) Lunas? (DP + bayar sekarang ≥ total)
+            env.DB.prepare(`UPDATE shop_entries SET status = 'selesai', settled_at = ? WHERE id = ? AND owner_id = ? AND status = 'menunggu' AND amount <= ${BON_PAID_SQL}`).bind(now, saleId, ownerId, ownerId, saleId),
+            // 5) Pesanan selesai, menunjuk penjualannya.
+            env.DB.prepare("UPDATE shop_entries SET status = 'selesai', settled_at = ?, ref_id = ? WHERE id = ? AND owner_id = ? AND status = 'menunggu' AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(now, saleId, entry.id, ownerId, saleId, ownerId),
+            // 6) Stok bahan berkurang saat diambil (resep).
+            ...stock.flatMap((m) => stockMoveStatements(env, ownerId, shop.id, m, date, saleId, "shop_entries")),
+          ]);
+          if (!r[0]?.meta.changes) return json({ error: "Pesanan ini sudah diambil atau dibatalkan." }, { status: 409 });
+          await publishShopBook(env, ownerId, shop.id);
+          const sisa = Math.max(0, entry.amount - dpSum - payNow);
+          return json({ ok: true, id: saleId, sisa }, { status: 201 });
+        }
+
+        // Batal: DP dikembalikan (kas berkurang, catatan DP dihapus) atau ditahan (jadi pendapatan "DP hangus").
+        const tahan = raw.dp_action === "tahan";
+        const dps = (await env.DB.prepare("SELECT id, amount, account_id FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'dp'").bind(ownerId, entry.id).all<{ id: string; amount: number; account_id: string | null }>()).results ?? [];
+        if (!tahan) {
+          const need = new Map<string, number>();
+          for (const d of dps) if (d.account_id) need.set(d.account_id, (need.get(d.account_id) ?? 0) + Number(d.amount));
+          for (const [accId, n] of need) {
+            const a = book.accounts.find((x) => x.id === accId) ?? (await env.DB.prepare("SELECT id, name, kind, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(accId, ownerId).first<ShopAccountRow>());
+            if (a && a.kind === "kas" && Number(a.balance) < n) return json({ error: `Saldo ${a.name} kurang untuk mengembalikan DP (${n.toLocaleString("id-ID")}). Pilih tahan DP, atau tambah kas dulu.`, code: KAS_KURANG }, { status: 409 });
+          }
+        }
+        const batal = "EXISTS (SELECT 1 FROM shop_entries o WHERE o.id = ? AND o.owner_id = ? AND o.status = 'batal')";
+        const stmts: D1PreparedStatement[] = [env.DB.prepare("UPDATE shop_entries SET status = 'batal', settled_at = ? WHERE id = ? AND owner_id = ? AND status = 'menunggu'").bind(now, entry.id, ownerId)];
+        if (tahan) {
+          stmts.push(env.DB.prepare(`UPDATE shop_entries SET type = 'jual', pay_method = 'dp', channel = 'DP hangus', channel_type = 'langsung', status = 'selesai', note = ? WHERE owner_id = ? AND ref_id = ? AND type = 'dp' AND ${batal}`).bind(`DP hangus · pesanan ${party}`.slice(0, 200), ownerId, entry.id, entry.id, ownerId));
+        } else {
+          for (const d of dps) {
+            if (d.account_id) stmts.push(env.DB.prepare(`UPDATE shop_accounts SET balance = balance - ?, updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ? AND type = 'dp') AND ${batal}`).bind(Number(d.amount), now, d.account_id, ownerId, d.id, ownerId, entry.id, ownerId));
+          }
+          stmts.push(env.DB.prepare(`DELETE FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'dp' AND ${batal}`).bind(ownerId, entry.id, entry.id, ownerId));
+        }
+        const r = await env.DB.batch(stmts);
+        if (!r[0]?.meta.changes) return json({ error: "Pesanan ini sudah diambil atau dibatalkan." }, { status: 409 });
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true, dp: dps.reduce((a, d) => a + Number(d.amount), 0), tahan });
+      }
+
       // Bon pelanggan: terima bayaran (sebagian/lunas). Tidak boleh melebihi sisa — dicek DI DALAM batch.
       if (op === "pay" && request.method === "POST") {
         if (!(await bonReady(env))) return json({ error: BON_NOT_READY }, { status: 503 });
@@ -10677,12 +10835,26 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
           const archived = await env.DB.prepare(`SELECT name FROM shop_accounts WHERE owner_id = ? AND id IN (${kasIds.map(() => "?").join(",")}) AND archived_at IS NOT NULL LIMIT 1`).bind(ownerId, ...kasIds).first<{ name: string }>();
           if (archived) return json({ error: `Catatan ini memakai kas "${archived.name}" yang sudah dihapus, jadi tidak bisa dihapus. Catat koreksinya sebagai catatan baru.` }, { status: 409 });
         }
+        // Pesanan: yang sudah ada DP → batalkan dulu; yang sudah diambil → hapus penjualannya.
+        if (entry.type === "pesanan") {
+          if (entry.status === "selesai") return json({ error: "Pesanan ini sudah diambil. Hapus penjualannya dulu kalau mau membatalkan." }, { status: 409 });
+          if (entry.status === "menunggu" && (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'dp' LIMIT 1").bind(ownerId, entry.id).first())) {
+            return json({ error: "Pesanan ini sudah ada DP-nya. Batalkan pesanan dulu (DP dikembalikan atau ditahan)." }, { status: 409 });
+          }
+        }
         // Bon yang sudah ada pembayarannya: hapus pembayarannya dulu (kas pembayaran ada di entri itu).
         const isBon = entry.type === "jual" && entry.pay_method === "bon";
         if (isBon && (await bonReady(env)) && (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'bayar_piutang' LIMIT 1").bind(ownerId, entry.id).first())) {
           return json({ error: "Bon ini sudah ada pembayarannya. Hapus pembayarannya dulu." }, { status: 409 });
         }
         const stmts: D1PreparedStatement[] = [...(await stockRevertStatements(env, ownerId, [entry.id], "shop_entries"))];
+        // DP dihapus (pesanan masih terbuka) → kas kembali.
+        if (entry.type === "dp" && entry.account_id) stmts.push(kasDelta(env, ownerId, entry.account_id, -entry.net, entry.id));
+        // Penjualan dari pesanan dihapus (tanpa pembayaran) → pesanan terbuka lagi.
+        if (isBon && (await bonReady(env))) {
+          const ref = await env.DB.prepare("SELECT ref_id FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId).first<{ ref_id: string | null }>();
+          if (ref?.ref_id) stmts.push(env.DB.prepare("UPDATE shop_entries SET status = 'menunggu', settled_at = NULL, ref_id = NULL WHERE id = ? AND owner_id = ? AND type = 'pesanan' AND status = 'selesai' AND NOT EXISTS (SELECT 1 FROM shop_entries p WHERE p.owner_id = ? AND p.ref_id = ? AND p.type = 'bayar_piutang')").bind(ref.ref_id, ownerId, ownerId, entry.id));
+        }
         // Pembayaran bon dihapus → kas kembali & bon terbuka lagi (status menunggu).
         if (entry.type === "bayar_piutang" && entry.account_id) {
           const ref = await env.DB.prepare("SELECT ref_id FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId).first<{ ref_id: string | null }>();
@@ -11427,7 +11599,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
     }
     const rest = pathname.slice("/api/member/shops/".length);
     const [id, action, extra, ...more] = rest.split("/");
-    if ((action === "book" || action === "accounts" || action === "transfer" || action === "entries" || action === "costs") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
+    if ((action === "book" || action === "accounts" || action === "transfer" || action === "entries" || action === "costs" || action === "orders") && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
       const bookShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();
       if (!bookShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
       return await handleShopBook(request, env, userId, bookShop, [action, extra, ...more].filter((x): x is string => Boolean(x)));
@@ -11588,6 +11760,17 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
         materials,
         moves,
         truncated: rows.length > REPORT_MAX || bookCount > REPORT_MAX,
+        // Pesanan terbuka (semua, bukan per periode): total & DP yang sudah dipegang (uang pelanggan, belum omzet).
+        orders: await (async () => {
+          try {
+            if (!(await bonReady(env))) return { count: 0, total: 0, dp: 0 };
+            const o = await env.DB.prepare(
+              `SELECT COUNT(*) AS n, COALESCE(SUM(o.amount), 0) AS total, COALESCE(SUM((SELECT COALESCE(SUM(d.amount), 0) FROM shop_entries d WHERE d.owner_id = o.owner_id AND d.ref_id = o.id AND d.type = 'dp')), 0) AS dp
+                 FROM shop_entries o WHERE o.owner_id = ? AND o.shop_id = ? AND o.type = 'pesanan' AND o.status = 'menunggu'`
+            ).bind(userId, id).first<{ n: number; total: number; dp: number }>();
+            return { count: Number(o?.n) || 0, total: Number(o?.total) || 0, dp: Number(o?.dp) || 0 };
+          } catch { return { count: 0, total: 0, dp: 0 }; }
+        })(),
         // Modal per satuan SAAT INI (manual > resep) — hanya untuk tombol "perkirakan modal" penjualan
         // yang tidak punya modal tercatat; tidak pernah mengubah data. byName = cocokkan nama produk.
         costs: await (async () => {

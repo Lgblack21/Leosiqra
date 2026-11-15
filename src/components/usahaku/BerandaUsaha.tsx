@@ -8,6 +8,7 @@ import {
   Check,
   Clock,
   Loader2,
+  CalendarClock,
   MessageCircle,
   NotebookPen,
   Plus,
@@ -142,7 +143,15 @@ export function MulaiBukuUsaha({ shop, onDone }: { shop: Shop; onDone: (m: strin
 }
 
 // ── Beranda: ringkasan, kas, belum cair, riwayat ─────────────────────────────
-type Form = { k: 'biaya' } | { k: 'setor' } | { k: 'ambil' } | { k: 'pindah' } | { k: 'cair'; entry: BookEntry } | { k: 'bon'; entry: BookEntry; sisa: number };
+type Form =
+  | { k: 'biaya' }
+  | { k: 'setor' }
+  | { k: 'ambil' }
+  | { k: 'pindah' }
+  | { k: 'cair'; entry: BookEntry }
+  | { k: 'bon'; entry: BookEntry; sisa: number }
+  | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
+const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
 const waLink = (wa: string | null, text: string) => {
   const n = (wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
@@ -170,7 +179,9 @@ export function BerandaUsaha({
   const kas = book.accounts.filter((a) => !a.archived);
   const totalKas = kas.reduce((a, k) => a + k.balance, 0);
   // Menunggu = marketplace belum cair + bon pelanggan belum lunas (dipisah tampilannya).
-  const marketPending = book.pending.filter((e) => e.payMethod !== 'bon');
+  const marketPending = book.pending.filter((e) => e.payMethod !== 'bon' && e.type !== 'pesanan');
+  const orders = book.pending.filter((e) => e.type === 'pesanan').sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
+  const dpOf = (e: BookEntry) => book.paid[e.id] ?? 0;
   const bons = book.pending.filter((e) => e.payMethod === 'bon');
   const sisaBon = (e: BookEntry) => Math.max(0, e.amount - (book.paid[e.id] ?? 0));
   const bonTotal = bons.reduce((a, e) => a + sisaBon(e), 0);
@@ -190,7 +201,7 @@ export function BerandaUsaha({
 
   const remove = async (e: BookEntry) => {
     const what =
-      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : e.type === 'bayar_piutang' ? 'pembayaran bon' : 'catatan';
+      e.type === 'jual' ? 'penjualan' : e.type === 'biaya' ? 'biaya' : e.type === 'setor' ? 'setoran' : e.type === 'ambil' ? 'pengambilan' : e.type === 'bayar_piutang' ? 'pembayaran bon' : e.type === 'pesanan' ? 'pesanan' : e.type === 'dp' ? 'DP' : 'catatan';
     if (!window.confirm(`Hapus ${what} ${formatIDR(e.amount)}? Saldo kas${e.type === 'setor' || e.type === 'ambil' ? ' & rekening pribadi' : ''} ikut kembali.`)) return;
     try {
       await shopBookService.removeEntry(shop.id, e.id);
@@ -277,6 +288,65 @@ export function BerandaUsaha({
           ))}
         </ul>
       </section>
+
+      {orders.length > 0 && (
+        <section className="rounded-[26px] bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-500/10 dark:ring-violet-500/20">
+          <p className="flex items-center justify-between gap-2 fs-15 font-extrabold text-violet-900 dark:text-violet-200">
+            <span className="flex items-center gap-1.5">
+              <CalendarClock size={16} /> Pesanan
+            </span>
+            <span className="fs-12 font-bold">{orders.length} belum diambil</span>
+          </p>
+          <ul className="mt-2 space-y-2">
+            {orders.map((e) => {
+              const dp = dpOf(e);
+              const d = e.dueDate ?? '';
+              const when = !d ? '' : d < today ? `telat (${d})` : d === today ? 'hari ini' : d === addDays(today, 1) ? 'besok' : d;
+              return (
+                <li key={e.id} className="rounded-2xl bg-white p-3 dark:bg-slate-900">
+                  <div className="flex items-start gap-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate fs-13 font-bold text-slate-800 dark:text-slate-100">
+                        {e.buyer || e.party || 'Pemesan'} · {e.product || e.note || 'Pesanan'}
+                      </span>
+                      <span className="block fs-11 text-slate-500">
+                        Ambil <b className={cn(d && d <= today ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200')}>{when || '—'}</b> · DP{' '}
+                        {formatIDR(dp)} · sisa {formatIDR(Math.max(0, e.amount - dp))}
+                      </span>
+                    </span>
+                    <span className="fs-14 font-extrabold tabular-nums text-violet-700 dark:text-violet-300">{formatIDR(e.amount)}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ k: 'o_batal', entry: e, dp })}
+                      className="rounded-full px-3 py-1.5 fs-12 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Batal
+                    </button>
+                    {dp < e.amount && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ k: 'o_dp', entry: e, dp })}
+                        className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                      >
+                        + DP
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ k: 'o_ambil', entry: e, dp })}
+                      className="rounded-full bg-violet-600 px-3 py-1.5 fs-12 font-bold text-white hover:bg-violet-700"
+                    >
+                      Diambil
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {bons.length > 0 && (
         <section className="rounded-[26px] bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:ring-amber-500/20">
@@ -388,7 +458,13 @@ export function BerandaUsaha({
                   ? 'Pindah antar kas'
                   : form?.k === 'bon'
                     ? 'Terima bayaran bon'
-                    : 'Uang sudah cair'
+                    : form?.k === 'o_dp'
+                      ? 'Tambah DP pesanan'
+                      : form?.k === 'o_ambil'
+                        ? 'Pesanan diambil'
+                        : form?.k === 'o_batal'
+                          ? 'Batalkan pesanan'
+                          : 'Uang sudah cair'
         }
       >
         {form?.k === 'biaya' && (
@@ -416,6 +492,19 @@ export function BerandaUsaha({
             onOpenKasir={() => {
               setForm(null);
               onOpenKasir();
+            }}
+          />
+        )}
+        {(form?.k === 'o_dp' || form?.k === 'o_ambil' || form?.k === 'o_batal') && (
+          <OrderForm
+            shop={shop}
+            mode={form.k}
+            entry={form.entry}
+            dp={form.dp}
+            book={book}
+            onDone={(m) => {
+              setForm(null);
+              onToast(m);
             }}
           />
         )}
@@ -455,6 +544,8 @@ const ENTRY_LABEL: Record<string, string> = {
   pindah: 'Pindah kas',
   saldo_awal: 'Saldo awal',
   bayar_piutang: 'Terima bon',
+  pesanan: 'Pesanan',
+  dp: 'DP',
 };
 function Riwayat({
   entries,
@@ -485,8 +576,8 @@ function Riwayat({
       </p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((e) => {
-          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal' || e.type === 'bayar_piutang';
-          const neutral = e.type === 'pindah';
+          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal' || e.type === 'bayar_piutang' || e.type === 'dp';
+          const neutral = e.type === 'pindah' || e.type === 'pesanan'; // pesanan belum menyentuh kas
           const detail = [
             e.date,
             e.type === 'jual' ? [e.channel, e.channelType === 'langsung' ? payLabel(e.payMethod) : '', e.reseller ? 'reseller' : ''] : [],
@@ -515,8 +606,11 @@ function Riwayat({
                   </span>
                   {e.status === 'menunggu' && (
                     <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 fs-10 font-bold text-orange-700">
-                      {e.payMethod === 'bon' ? 'bon' : 'belum cair'}
+                      {e.type === 'pesanan' ? 'belum diambil' : e.payMethod === 'bon' ? 'bon' : 'belum cair'}
                     </span>
+                  )}
+                  {e.status === 'batal' && (
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 fs-10 font-bold text-slate-500">batal</span>
                   )}
                   <span className="truncate fs-13 font-semibold text-slate-800 dark:text-slate-100">
                     {e.product || e.note || e.buyer || ENTRY_LABEL[e.type]}
@@ -868,6 +962,145 @@ function TransferForm({
         className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 fs-14 font-extrabold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan
+      </button>
+    </div>
+  );
+}
+
+// ── Pesanan: tambah DP · diambil (bayar sisa sekarang / jadi bon) · batal (DP kembali/ditahan) ──
+function OrderForm({
+  shop,
+  mode,
+  entry,
+  dp,
+  book,
+  onDone,
+}: {
+  shop: Shop;
+  mode: 'o_dp' | 'o_ambil' | 'o_batal';
+  entry: BookEntry;
+  dp: number;
+  book: ShopBook;
+  onDone: (m: string) => void;
+}) {
+  const kas = useMemo(() => book.accounts.filter((a) => !a.archived), [book.accounts]);
+  const sisa = Math.max(0, entry.amount - dp);
+  const [kasId, setKasId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
+  const [amount, setAmount] = useState(mode === 'o_dp' ? 0 : sisa);
+  const [due, setDue] = useState('');
+  const [dpAction, setDpAction] = useState<'kembalikan' | 'tahan'>('kembalikan');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [requestId] = useState(() => crypto.randomUUID());
+  const who = entry.buyer || entry.party || 'Pemesan';
+  const save = async () => {
+    setError('');
+    if (mode === 'o_dp' && (amount < 1 || amount > sisa)) return setError(amount < 1 ? 'Isi nominal DP.' : `Melebihi sisa (${formatIDR(sisa)}).`);
+    if (mode === 'o_ambil' && amount > sisa) return setError(`Melebihi sisa (${formatIDR(sisa)}).`);
+    if ((mode === 'o_dp' || (mode === 'o_ambil' && amount > 0)) && !kasId) return setError('Pilih kas.');
+    setBusy(true);
+    try {
+      if (mode === 'o_dp') {
+        await shopBookService.orderDp(shop.id, entry.id, { amount, accountId: kasId, requestId });
+        onDone(`DP ${formatIDR(amount)} dari ${who} masuk kas.`);
+      } else if (mode === 'o_ambil') {
+        const r = await shopBookService.orderAmbil(shop.id, entry.id, { payNow: amount, accountId: amount > 0 ? kasId : null, ...(due ? { due } : {}), requestId });
+        onDone(r.sisa > 0 ? `Pesanan ${who} diambil · sisa ${formatIDR(r.sisa)} jadi bon.` : `Pesanan ${who} diambil & lunas.`);
+      } else {
+        const r = await shopBookService.orderBatal(shop.id, entry.id, { dpAction, requestId });
+        onDone(r.dp ? (r.tahan ? `Pesanan dibatalkan · DP ${formatIDR(r.dp)} ditahan jadi pendapatan.` : `Pesanan dibatalkan · DP ${formatIDR(r.dp)} dikembalikan.`) : 'Pesanan dibatalkan.');
+      }
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.');
+      setBusy(false);
+    }
+  };
+  const kasSelect = (label: string) => (
+    <label className="block">
+      <span className={labelCls}>{label}</span>
+      <select value={kasId} onChange={(e) => setKasId(e.target.value)} className={fieldCls}>
+        {kas.map((a) => (
+          <option key={a.id} value={a.id}>
+            {accountEmoji(a.kind)} {a.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <div className="space-y-3">
+      <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-13 text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+        <b>{who}</b> · {entry.product || entry.note || 'Pesanan'}
+        <br />
+        Total {formatIDR(entry.amount)} · DP {formatIDR(dp)} · sisa <b>{formatIDR(sisa)}</b>
+        {entry.dueDate ? ` · ambil ${entry.dueDate}` : ''}
+      </p>
+      {mode === 'o_batal' ? (
+        dp > 0 ? (
+          <div className="space-y-2">
+            <span className={labelCls}>DP {formatIDR(dp)}</span>
+            {(
+              [
+                ['kembalikan', 'Kembalikan ke pemesan', 'Uangnya keluar dari kas.'],
+                ['tahan', 'Tahan (tidak dikembalikan)', 'Dicatat sebagai pendapatan "DP hangus".'],
+              ] as const
+            ).map(([id, t, d]) => (
+              <label key={id} className={cn('flex cursor-pointer items-start gap-2 rounded-2xl p-3 ring-1', dpAction === id ? 'ring-violet-400 bg-violet-50 dark:bg-violet-500/10' : 'ring-slate-200 dark:ring-slate-700')}>
+                <input type="radio" name="dp" checked={dpAction === id} onChange={() => setDpAction(id)} className="mt-1" />
+                <span>
+                  <span className="block fs-13 font-bold text-slate-800 dark:text-slate-100">{t}</span>
+                  <span className="block fs-11 text-slate-500">{d}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="fs-13 text-slate-600 dark:text-slate-300">Belum ada DP. Pesanan dibatalkan tanpa mengubah kas.</p>
+        )
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className={labelCls}>{mode === 'o_dp' ? 'DP tambahan' : 'Dibayar sekarang'}</span>
+              <input
+                value={amount ? amount.toLocaleString('id-ID') : ''}
+                onChange={(e) => setAmount(Number(e.target.value.replace(/\D/g, '').slice(0, 12)) || 0)}
+                inputMode="numeric"
+                placeholder="Rp 0"
+                className={cn(fieldCls, 'tabular-nums')}
+              />
+            </label>
+            {(mode === 'o_dp' || amount > 0) && kasSelect('Masuk ke kas')}
+          </div>
+          {mode === 'o_ambil' && amount < sisa && (
+            <div className="space-y-2 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
+              <p className="fs-12 text-amber-900 dark:text-amber-200">
+                Sisa {formatIDR(sisa - amount)} jadi <b>bon {who}</b> — muncul di kartu Bon pelanggan.
+              </p>
+              <label className="block">
+                <span className={labelCls}>Jatuh tempo bon (opsional)</span>
+                <input type="date" value={due} min={toLocalDateString()} onChange={(e) => setDue(e.target.value)} className={fieldCls} />
+              </label>
+            </div>
+          )}
+        </>
+      )}
+      {error && (
+        <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className={cn(
+          'flex w-full items-center justify-center gap-2 rounded-full py-3.5 fs-14 font-extrabold text-white disabled:opacity-50',
+          mode === 'o_batal' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-violet-600 hover:bg-violet-700',
+        )}
+      >
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{' '}
+        {mode === 'o_dp' ? 'Simpan DP' : mode === 'o_ambil' ? (amount >= sisa ? 'Diambil & lunas' : 'Diambil') : 'Batalkan pesanan'}
       </button>
     </div>
   );

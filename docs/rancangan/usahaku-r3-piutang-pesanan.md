@@ -1,9 +1,13 @@
 # Rancangan — Usahaku R3: bon pelanggan, pesanan & DP, utang supplier
 
 Status: **DI-ACC Bos 2026-11-16 ("gas aja" = semua saran bagian 8).** Bon pelanggan dikerjakan **3.30.0**
-(branch `claude/usahaku-bon-20261116`, migrasi `0047_shop_bon.sql`). Berikutnya: pesanan & DP (3.31), utang supplier (3.32).
+(branch `claude/usahaku-bon-20261116`, migrasi `0047_shop_bon.sql`). Pesanan & DP dikerjakan **3.31.0** (branch `claude/usahaku-pesanan-20261116`, tanpa migrasi baru — pakai kolom 0047). Berikutnya: utang supplier (3.32).
 Catatan 3.30: nama pelanggan juga disimpan di `buyer` (langsung tampil di laporan lama); bon dari **akun tim belum**
 (UI kasir tim belum punya pilihan cara bayar) — menyusul bersama toggle izin per akun tim.
+Catatan 3.31: entri `pesanan` (net 0, tanpa kas) + `dp` (ref_id → pesanan, kas +). Diambil = `jual` berbentuk bon
+(`pay_method 'bon'`, `ref_id` → pesanan) dan DP di-UPDATE jadi `bayar_piutang` (ref_id → penjualan) dalam satu batch,
+jadi sisa yang belum dibayar otomatis muncul sebagai bon. Batal tahan = DP jadi `jual` channel "DP hangus".
+Cek stok bahan cukup/tidak di kartu pesanan **belum** dibuat.
 
 ## 1. Masalahnya
 

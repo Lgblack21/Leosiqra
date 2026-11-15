@@ -112,6 +112,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.29.0 | 16 Nov 2026 | Usahaku: laba dengan modal barang (HPP) |
 | 3.29.1 | 16 Nov 2026 | Perbaikan Olahragaku, kas tunai, halaman masuk |
 | 3.30.0 | 16 Nov 2026 | Usahaku: bon pelanggan |
+| 3.31.0 | 16 Nov 2026 | Usahaku: pesanan & DP |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -125,6 +126,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.31.0 — 2026-11-16 — Usahaku: pesanan & DP
+
+- **Pesanan & DP.** Kue dipesan Senin, diambil Sabtu? Di struk kasir ketuk **Jadikan pesanan**, isi nama pemesan, tanggal
+  ambil, dan DP kalau ada. DP langsung masuk kas, tapi pesanannya **belum dihitung omzet** sampai diambil. (PRO)
+- Beranda punya kartu **Pesanan**, diurutkan dari yang paling dekat diambil ("hari ini", "besok", yang telat merah).
+  Tombolnya: **+ DP**, **Diambil**, **Batal**.
+- **Diambil**: pesanan jadi penjualan di hari itu, DP otomatis dihitung sebagai pembayaran. Sisanya bisa dibayar
+  sekarang, atau langsung jadi bon pelanggan. Stok bahan (resep) berkurang saat diambil, bukan saat dipesan.
+- **Batal**: pilih DP dikembalikan ke pemesan (kas berkurang) atau ditahan (dicatat sebagai pendapatan "DP hangus").
+- Laporan & Excel menampilkan pesanan yang belum diambil dan DP yang sedang kamu pegang.
 
 ## 3.30.0 — 2026-11-16 — Usahaku: bon pelanggan
 

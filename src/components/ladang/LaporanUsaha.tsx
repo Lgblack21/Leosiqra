@@ -385,6 +385,15 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
               .
             </p>
 
+            {(data.orders?.count ?? 0) > 0 && (
+              <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-200">
+                <Hourglass size={18} className="mt-0.5 shrink-0 text-violet-600" />
+                <p className="fs-13 leading-relaxed text-violet-900">
+                  <b>{data.orders!.count} pesanan belum diambil</b> — total {formatIDR(data.orders!.total)}, DP dipegang{' '}
+                  {formatIDR(data.orders!.dp)}. DP itu uang pemesan: sudah di kas, tapi baru jadi omzet saat pesanan diambil.
+                </p>
+              </motion.section>
+            )}
             {sum.bon.count > 0 && (
               <motion.section {...fade(1)} className="lap-avoid flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
                 <Hourglass size={18} className="mt-0.5 shrink-0 text-amber-600" />

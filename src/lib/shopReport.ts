@@ -70,6 +70,8 @@ export type ShopReport = {
   materials: ReportMaterial[];
   moves: ReportMove[];
   truncated: boolean;
+  /** Pesanan yang belum diambil (semua periode): jumlah, total, DP yang dipegang. */
+  orders?: { count: number; total: number; dp: number };
   /** Modal per satuan SAAT INI — hanya untuk "perkirakan modal" penjualan tanpa modal tercatat. */
   costs?: { byKey: Record<string, number>; byName: Record<string, number> };
 };

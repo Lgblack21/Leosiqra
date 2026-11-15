@@ -122,6 +122,14 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string, pr
       next += 1;
     }
   }
+  if (r.orders?.count) {
+    const row = ws.getRow(next);
+    row.getCell(1).value = `Pesanan belum diambil (${r.orders.count}) · DP dipegang`;
+    row.getCell(1).font = { bold: true, color: { argb: 'FF6D28D9' } };
+    row.getCell(2).value = r.orders.dp;
+    row.getCell(2).numFmt = RP;
+    next += 1;
+  }
   if (s.bon.count) {
     const row = ws.getRow(next);
     row.getCell(1).value = `Bon pelanggan belum lunas (${s.bon.count})`;
