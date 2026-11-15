@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-15 (live: 3.28.4 fix saldo kas Usahaku, run #212, commit db8d406 — tanpa SQL)
+Terakhir diperbarui: 2026-11-15 (live: 3.28.5 kas tunai Usahaku tidak bisa minus, run #213, commit 3b82e2d — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,13 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-15 — 3.28.5 LIVE (run #213, 3b82e2d, tanpa SQL): kas tunai Usahaku tidak bisa minus** (keputusan Bos
+  opsi 2). Ambil/pindah dari kas `kind='kas'` ditolak 409 `{code:'kas_kurang'}` kalau saldo kurang — syarat di INSERT
+  baris buku (`cashEnough`), atomik. Bank/e-wallet/marketplace/deposit tetap boleh minus. UI TransferForm: Simpan
+  dikunci + tombol "Catat penjualan yang lupa" (buka kasir). Dites wrangler dev --local (termasuk 2 klik bersamaan).
+  **Belum**: tampilan kotak merah belum dilihat di browser; catat BIAYA dari kas tunai masih bisa bikin minus (di luar
+  permintaan Bos). Juga sesi ini: `docs/otak/cara-berpikir.md` (model berpikir Bos) + Tower `otak/bersama.caraBerpikir`.
 
 - **2026-11-15 — 3.28.4 LIVE (run #212, db8d406, tanpa SQL): fix saldo kas Usahaku** (temuan routine Dev 15-11).
   Hapus catatan buku yang memakai kas terarsip → 409 (dulu membalik saldo kas tersembunyi → total kas salah & usaha
