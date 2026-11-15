@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.29.1, run #216, commit bd9de15 — tanpa SQL baru; SQL 0046 masih menunggu konfirmasi Bos)
+Terakhir diperbarui: 2026-11-16 (live: 3.30.0 bon pelanggan, run #217, commit df02f7f — SQL 0046 & 0047 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -18,14 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.30.0 LIVE (run #217, df02f7f): Usahaku R3 bon pelanggan.** SQL 0047 (`ref_id`, `due_date`, `party`)
+  sudah dijalankan Bos. Rancangan R3 + ACC: `docs/rancangan/usahaku-r3-piutang-pesanan.md`. Kasir pemilik "Bon · bayar
+  nanti", POST `…/entries/:id/pay` (sisa dicek di batch), Beranda kartu bon + WA, laporan/Excel. Dites wrangler lokal
+  (lengkap) + Playwright API tiruan. **Belum**: data asli; bon dari akun tim (UI kasir tim belum ada cara bayar).
+  **Berikutnya (sudah ACC)**: pesanan & DP (3.31), lalu utang supplier (3.32).
+
 - **2026-11-16 — 3.29.1 LIVE (run #216, bd9de15, tanpa SQL):** catat biaya dari kas tunai tidak bisa minus (atomik,
   `cashEnough` di `recordBookExpense`, kasir pemilik & tim) + 2 patch routine yang menunggu sejak 10 Nov ikut masuk:
   Olahragaku coba lagi setelah refund (`fitCharge` idem `#n`) & SEO satu `<h1>` di /auth. Antrean merge kini kosong
   dari dua item itu. Olahragaku belum dites ulang end-to-end (butuh AI gagal) — verifikasi = tes SQLite 10 Nov + review.
 
 - **2026-11-16 — 3.29.0 LIVE (run #215, 0e30624): Usahaku R2 HPP.** Rancangan + keputusan Bos:
-  `docs/rancangan/usahaku-hpp.md`. **SQL `cloudflare/migrations/0046_shop_costs.sql` diberikan ke Bos — belum dikonfirmasi
-  dengan query** (`SELECT name FROM sqlite_master WHERE name='shop_costs'`). Tanpa tabel: modal resep & modal per pesanan
+  `docs/rancangan/usahaku-hpp.md`. **SQL `cloudflare/migrations/0046_shop_costs.sql` — Bos bilang sudah dijalankan (2026-11-16)** (`SELECT name FROM sqlite_master WHERE name='shop_costs'`). Tanpa tabel: modal resep & modal per pesanan
   tetap jalan, kolom harga modal manual tampil "Modal · segera" (GET costs ready=false), PUT → 503.
   - Worker: `shop_costs` (pemilik saja — sengaja bukan `products_json` karena dikirim ke akun tim), `GET/PUT …/costs`
     (PUT PRO), `costSources/productUnitCosts/saleCost`, modal dikunci di `shop_entries.payload_json` (items[].cost,
