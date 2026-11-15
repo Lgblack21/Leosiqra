@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-15 (live: 3.28.6 laporan Usahaku per jalur & perbandingan, run #214, commit ae413be — tanpa SQL)
+Terakhir diperbarui: 2026-11-16 (live: 3.29.0 Usahaku R2 HPP, run #215, commit 0e30624 — SQL 0046 diberikan ke Bos, belum dikonfirmasi)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,19 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-16 — 3.29.0 LIVE (run #215, 0e30624): Usahaku R2 HPP.** Rancangan + keputusan Bos:
+  `docs/rancangan/usahaku-hpp.md`. **SQL `cloudflare/migrations/0046_shop_costs.sql` diberikan ke Bos — belum dikonfirmasi
+  dengan query** (`SELECT name FROM sqlite_master WHERE name='shop_costs'`). Tanpa tabel: modal resep & modal per pesanan
+  tetap jalan, kolom harga modal manual tampil "Modal · segera" (GET costs ready=false), PUT → 503.
+  - Worker: `shop_costs` (pemilik saja — sengaja bukan `products_json` karena dikirim ke akun tim), `GET/PUT …/costs`
+    (PUT PRO), `costSources/productUnitCosts/saleCost`, modal dikunci di `shop_entries.payload_json` (items[].cost,
+    cogs, cogsSrc), `modal` per pesanan di POST …/sale (PRO, teks wajib angka), report kirim `costs` (harga modal saat
+    ini, untuk toggle perkiraan — tidak menulis DB).
+  - UI: laporan (laba kotor/bersih, cakupan, laba per produk & jalur, "Bahan & Stok" = persediaan), Pengaturan ›
+    Produk kolom Harga modal, kasir "+ Isi modal pesanan ini", Excel.
+  - Dites wrangler dev lokal + Playwright API tiruan. **Belum**: dengan data/akun asli; penjualan kasir TIM & webhook
+    hanya dapat modal dari produk (tidak ada modal per pesanan); MCP tools belum tahu harga modal.
 
 - **2026-11-15 — 3.28.6 LIVE (run #214, ae413be, tanpa SQL/Worker): laporan Usahaku** — badge naik/turun vs periode
   pembanding (`previousRange` di `src/lib/shopReport.ts`), per jalur jualan (+ lembar Excel "Per jalur"), banner belum
