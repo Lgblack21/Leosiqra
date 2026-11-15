@@ -10470,9 +10470,20 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
       }
       // Hapus catatan: saldo kas (dan rekening pribadi untuk setor/ambil) + stok dikembalikan, satu batch.
       if (!op && request.method === "DELETE") {
+        // Kas yang sudah dihapus (diarsipkan) tersembunyi dari UI & tidak bisa dipindah/diambil: membalik
+        // saldonya membuat uang "hilang" ke kas tak terlihat dan usaha tidak bisa dihapus lagi (saldo ≠ 0).
+        const kasIds = [entry.account_id, entry.to_account_id].filter((x): x is string => Boolean(x));
+        if (kasIds.length) {
+          const archived = await env.DB.prepare(`SELECT name FROM shop_accounts WHERE owner_id = ? AND id IN (${kasIds.map(() => "?").join(",")}) AND archived_at IS NOT NULL LIMIT 1`).bind(ownerId, ...kasIds).first<{ name: string }>();
+          if (archived) return json({ error: `Catatan ini memakai kas "${archived.name}" yang sudah dihapus, jadi tidak bisa dihapus. Catat koreksinya sebagai catatan baru.` }, { status: 409 });
+        }
         const stmts: D1PreparedStatement[] = [...(await stockRevertStatements(env, ownerId, [entry.id], "shop_entries"))];
-        const settled = entry.status === "selesai";
-        if (entry.type === "jual" && settled && entry.account_id) stmts.push(kasDelta(env, ownerId, entry.account_id, -entry.net, entry.id));
+        // Penjualan: status/kas/nominal dibaca saat batch jalan (bukan dari SELECT di atas) — kalau "cair"
+        // terjadi bersamaan, saldo yang baru masuk tetap ikut dibalik, tidak tertinggal tanpa catatan.
+        if (entry.type === "jual") {
+          const live = "FROM shop_entries WHERE id = ? AND owner_id = ? AND status = 'selesai'";
+          stmts.push(env.DB.prepare(`UPDATE shop_accounts SET balance = balance - (SELECT net ${live}), updated_at = ? WHERE owner_id = ? AND id = (SELECT account_id ${live})`).bind(entry.id, ownerId, nowIso(), ownerId, entry.id, ownerId));
+        }
         if ((entry.type === "biaya") && entry.account_id) stmts.push(kasDelta(env, ownerId, entry.account_id, entry.net, entry.id));
         if (entry.type === "saldo_awal" && entry.account_id) stmts.push(kasDelta(env, ownerId, entry.account_id, -entry.net, entry.id));
         if (entry.type === "pindah" && entry.account_id && entry.to_account_id) stmts.push(kasDelta(env, ownerId, entry.account_id, entry.net, entry.id), kasDelta(env, ownerId, entry.to_account_id, -entry.net, entry.id));
