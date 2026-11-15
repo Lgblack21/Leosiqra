@@ -8,7 +8,9 @@ import {
   CalendarDays,
   Download,
   FileSpreadsheet,
+  Hourglass,
   Package,
+  Store,
   Receipt,
   ShoppingBag,
   TrendingUp,
@@ -19,7 +21,9 @@ import { KASIR_THEME } from './kasirTheme';
 import { formatIDR, cn } from '@/lib/utils';
 import {
   fetchShopReport,
+  growth,
   periodeLabel,
+  previousRange,
   rangeFor,
   saleLines,
   summarize,
@@ -62,6 +66,7 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
   const [rangeId, setRangeId] = useState<RangeId>('bulan');
   const [custom, setCustom] = useState(() => rangeFor('bulan'));
   const [data, setData] = useState<ShopReport | null>(null);
+  const [prev, setPrev] = useState<ShopReport | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [xls, setXls] = useState<'idle' | 'busy' | 'err'>('idle');
@@ -80,12 +85,29 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
       .then((r) => alive && setData(r))
       .catch((e) => alive && setErr(e instanceof Error ? e.message : 'Laporan gagal dimuat.'))
       .finally(() => alive && setLoading(false));
+    // Periode pembanding (naik/turun). Gagal dimuat → laporan tetap tampil tanpa perbandingan.
+    const p = previousRange(range.from, range.to);
+    setPrev(null);
+    fetchShopReport(id, p.from, p.to)
+      .then((r) => alive && setPrev(r))
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, [id, range.from, range.to]);
 
   const sum = useMemo(() => (data ? summarize(data) : null), [data]);
+  const prevSum = useMemo(() => (prev ? summarize(prev) : null), [prev]);
+  // Badge naik/turun vs periode sebelumnya. good = arah yang bagus (omzet naik, biaya turun).
+  const delta = (now: number, before: number | undefined, upIsGood = true) => {
+    if (before === undefined) return null;
+    const g = growth(now, before);
+    if (g === null) return null;
+    const pct = Math.round(g * 100);
+    if (pct === 0) return { text: '= 0%', good: null };
+    const up = pct > 0;
+    return { text: `${up ? '▲' : '▼'} ${Math.abs(pct)}%`, good: up === upIsGood };
+  };
   const theme = KASIR_THEME[data?.shop.theme ?? 'ungu'] ?? KASIR_THEME.ungu;
   const c = theme.swatch;
   const back = `${variant === 'app' ? '/app' : '/membership'}/usahaku${id ? `?id=${encodeURIComponent(id)}` : ''}`;
@@ -294,25 +316,30 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
                   value: formatIDR(sum.omzet),
                   sub: `${formatIDR(sum.perHari)} / hari`,
                   hi: true,
+                  d: delta(sum.omzet, prevSum?.omzet),
                 },
                 {
                   icon: Wallet,
                   label: 'Biaya usaha',
                   value: formatIDR(sum.biaya),
                   sub: `${data.expenses.length} catatan`,
+                  d: delta(sum.biaya, prevSum?.biaya, false),
                 },
                 {
                   icon: Receipt,
-                  label: 'Laba kotor',
+                  label: 'Laba (dasar kas)',
                   value: formatIDR(sum.laba),
                   sub: sum.omzet ? `Margin ${Math.round(sum.margin * 100)}%` : '—',
                   tone: sum.laba < 0 ? 'text-rose-600' : 'text-emerald-600',
+                  // Laba bisa minus → persen dari nilai minus menyesatkan; bandingkan hanya kalau dua-duanya positif.
+                  d: prevSum && prevSum.laba > 0 && sum.laba > 0 ? delta(sum.laba, prevSum.laba) : null,
                 },
                 {
                   icon: ShoppingBag,
                   label: 'Transaksi',
                   value: sum.trx.toLocaleString('id-ID'),
                   sub: `${sum.unit.toLocaleString('id-ID')} item terjual`,
+                  d: delta(sum.trx, prevSum?.trx),
                 },
                 { icon: Receipt, label: 'Rata-rata / transaksi', value: formatIDR(sum.avg), sub: 'nilai keranjang' },
                 {
@@ -334,9 +361,37 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
                   </p>
                   <p className={cn('mt-1.5 fsh-20 font-extrabold tracking-tight tabular-nums', k.tone)}>{k.value}</p>
                   <p className="fs-11.5 text-slate-400">{k.sub}</p>
+                  {'d' in k && k.d && (
+                    <p className={cn('mt-1 fs-11 font-bold tabular-nums', k.d.good === null ? 'text-slate-500' : k.d.good ? 'text-emerald-600' : 'text-rose-600')}>
+                      {k.d.text} <span className="font-medium text-slate-400">vs periode lalu</span>
+                    </p>
+                  )}
                 </div>
               ))}
             </motion.section>
+            <p className="-mt-4 fs-11.5 leading-relaxed text-slate-400">
+              Laba di sini = omzet − biaya yang tercatat (dasar kas), belum dikurangi modal barang (HPP). Pembanding:{' '}
+              {(() => {
+                const p = previousRange(data.range.from, data.range.to);
+                return periodeLabel(p.from, p.to);
+              })()}
+              .
+            </p>
+
+            {sum.pending.count > 0 && (
+              <motion.section
+                {...fade(1)}
+                className="lap-avoid flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200"
+              >
+                <Hourglass size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                <p className="fs-13 leading-relaxed text-amber-900">
+                  <b>{sum.pending.count} penjualan marketplace belum cair</b> — {formatIDR(sum.pending.amount)} harga jual,
+                  perkiraan masuk {formatIDR(sum.pending.net)}
+                  {sum.pending.oldest ? `, paling lama sejak ${tglPanjang(sum.pending.oldest)}` : ''}. Sudah ikut dihitung
+                  di omzet, tapi uangnya belum ada di kas.
+                </p>
+              </motion.section>
+            )}
 
             {/* Grafik omzet & biaya */}
             <motion.section {...fade(1)} className="lap-avoid">
@@ -353,6 +408,36 @@ export function LaporanUsaha({ variant, embedded = false }: { variant: 'web' | '
               </div>
               <Chart buckets={sum.buckets} color={c} reduce={Boolean(reduce)} />
             </motion.section>
+
+            {/* Per jalur jualan — hanya kalau ada lebih dari satu jalur atau ada potongan marketplace */}
+            {(sum.channels.length > 1 || sum.channels.some((x) => x.fee > 0)) && (
+              <motion.section {...fade(2)} className="lap-avoid">
+                <h2 className="mb-3 flex items-center gap-2 fs-16 font-extrabold">
+                  <Store size={17} style={{ color: c }} /> Per jalur jualan
+                </h2>
+                <ul className="divide-y divide-slate-100 rounded-2xl ring-1 ring-slate-200/80">
+                  {sum.channels.map((x) => (
+                    <li key={x.name} className="px-3.5 py-2.5 fs-13">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate font-bold">
+                          {x.name}
+                          {x.type === 'marketplace' && <span className="ml-1.5 fs-11 font-semibold text-slate-400">marketplace</span>}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-slate-600">
+                          {x.trx} trx · <b className="text-slate-900">{formatIDR(x.omzet)}</b>
+                        </span>
+                      </div>
+                      {x.fee > 0 && (
+                        <p className="mt-0.5 text-right fs-12 tabular-nums text-slate-500">
+                          potongan <span className="font-semibold text-rose-600">{formatIDR(x.fee)} ({Math.round((x.fee / x.omzet) * 100)}%)</span> ·
+                          diterima <b className="text-slate-900">{formatIDR(x.net)}</b>
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </motion.section>
+            )}
 
             <div className="grid gap-7 md:grid-cols-2">
               {/* Produk terlaris */}

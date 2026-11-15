@@ -108,6 +108,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.3 | 11 Nov 2026 | Usahaku: ganti logo toko |
 | 3.28.4 | 15 Nov 2026 | Perbaikan saldo kas Usahaku |
 | 3.28.5 | 15 Nov 2026 | Kas tunai Usahaku tidak bisa minus |
+| 3.28.6 | 15 Nov 2026 | Laporan Usahaku: perbandingan periode & per jalur jualan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -121,6 +122,16 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.6 — 2026-11-15 — Laporan Usahaku: perbandingan periode & per jalur jualan
+
+- **Laporan Usahaku kini membandingkan dengan periode sebelumnya.** Omzet, biaya, laba, dan jumlah transaksi
+  diberi tanda naik/turun (mis. 1–15 Nov dibanding 1–15 Okt).
+- **Per jalur jualan:** omzet tiap jalur (Offline, WA, Shopee, …), plus potongan marketplace dan uang yang benar-benar
+  diterima — jadi kelihatan jalur mana yang untungnya paling tipis. Ikut masuk ke Excel (lembar "Per jalur").
+- **Penjualan marketplace yang belum cair** ditandai jelas: berapa, perkiraan uang masuk, dan sejak kapan.
+- Label "Laba kotor" diganti **"Laba (dasar kas)"** — angkanya omzet − biaya yang tercatat, belum dikurangi modal
+  barang. Laba kotor yang sebenarnya (dengan HPP) menyusul.
 
 ## 3.28.5 — 2026-11-15 — Kas tunai Usahaku tidak bisa minus
 

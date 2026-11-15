@@ -70,7 +70,7 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): P
   const kpi: [string, number, string][] = [
     ['Omzet', s.omzet, RP],
     ['Biaya usaha', s.biaya, RP],
-    ['Laba kotor', s.laba, RP],
+    ['Laba (dasar kas, belum HPP)', s.laba, RP],
     ['Margin', s.margin, '0.0%'],
     ['Jumlah transaksi', s.trx, '#,##0'],
     ['Item terjual', s.unit, '#,##0'],
@@ -83,7 +83,7 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): P
     row.getCell(1).font = { bold: true };
     row.getCell(2).value = v;
     row.getCell(2).numFmt = f;
-    if (k === 'Laba kotor') row.getCell(2).font = { bold: true, color: { argb: v < 0 ? 'FFE11D48' : 'FF059669' } };
+    if (k.startsWith('Laba')) row.getCell(2).font = { bold: true, color: { argb: v < 0 ? 'FFE11D48' : 'FF059669' } };
   });
   ws.getCell('D5').value = 'Biaya per jenis';
   ws.getCell('D5').font = { bold: true };
@@ -92,6 +92,31 @@ export async function buildShopXlsx(r: ShopReport, s: Summary, color: string): P
     ws.getCell(`E${6 + i}`).value = c.amount;
     ws.getCell(`E${6 + i}`).numFmt = RP;
   });
+
+  if (s.pending.count) {
+    const row = ws.getRow(5 + kpi.length + 1);
+    row.getCell(1).value = `Belum cair (${s.pending.count} penjualan marketplace)`;
+    row.getCell(1).font = { bold: true, color: { argb: 'FFB45309' } };
+    row.getCell(2).value = s.pending.net;
+    row.getCell(2).numFmt = RP;
+  }
+
+  // ── Per jalur jualan
+  if (s.channels.length > 1 || s.channels.some((x) => x.fee > 0)) {
+    table(
+      wb.addWorksheet('Per jalur'),
+      [
+        { h: 'Jalur', w: 24 },
+        { h: 'Jenis', w: 14 },
+        { h: 'Jumlah', w: 12, num: true },
+        { h: 'Omzet', w: 18, num: true },
+        { h: 'Potongan', w: 18, num: true },
+        { h: 'Diterima', w: 18, num: true },
+      ],
+      s.channels.map((x) => [x.name, x.type === 'marketplace' ? 'Marketplace' : 'Langsung', x.trx, x.omzet, x.fee, x.net]),
+      color,
+    );
+  }
 
   // ── Penjualan (satu baris per item)
   const sales = wb.addWorksheet('Penjualan');

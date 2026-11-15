@@ -16,6 +16,13 @@ export type ReportSale = {
   source: 'kasir' | 'website';
   items: ReportItem[];
   note: string;
+  // Buku usaha (migrasi 0045) — tidak ada di penjualan lama (transaksi pribadi).
+  channel?: string | null;
+  channelType?: 'langsung' | 'marketplace' | null;
+  payMethod?: string | null;
+  fee?: number;
+  status?: 'selesai' | 'menunggu';
+  reseller?: boolean;
 };
 export type ReportExpense = {
   id: string;
@@ -82,6 +89,31 @@ export const rangeFor = (id: Exclude<RangeId, 'bebas'>, today = todayWIB()) => {
   if (id === '3-bulan') return { from: new Date(Date.UTC(y, m - 3, 1)).toISOString().slice(0, 10), to: today };
   return { from: `${y}-01-01`, to: today };
 };
+
+/**
+ * Periode pembanding dengan panjang setara tepat sebelumnya. Rentang yang mulai tanggal 1 dibandingkan
+ * dengan bulan sebelumnya pada tanggal yang sama (1–15 Nov ↔ 1–15 Okt; Okt penuh ↔ Sep penuh), rentang
+ * 1 Jan–hari ini dengan tahun lalu; selain itu digeser mundur sepanjang jumlah harinya.
+ */
+export const previousRange = (from: string, to: string) => {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const ymd = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, Math.min(d, lastDay(y, m)))).toISOString().slice(0, 10);
+  if (fd === 1 && fm === 1 && fy === ty) return { from: `${fy - 1}-01-01`, to: ymd(ty - 1, tm, td) };
+  if (fd === 1) {
+    const months = (ty - fy) * 12 + (tm - fm) + 1;
+    const fullEnd = td === lastDay(ty, tm);
+    const pf = new Date(Date.UTC(fy, fm - 1 - months, 1));
+    const pt = new Date(Date.UTC(ty, tm - 1 - months, 1));
+    const [py, pm] = [pt.getUTCFullYear(), pt.getUTCMonth() + 1];
+    return { from: pf.toISOString().slice(0, 10), to: ymd(py, pm, fullEnd ? lastDay(py, pm) : td) };
+  }
+  const n = daysBetween(from, to);
+  return { from: addDays(from, -n), to: addDays(from, -1) };
+};
+/** Perubahan relatif (0.12 = naik 12%). null kalau pembanding nol. */
+export const growth = (now: number, before: number) => (before > 0 ? (now - before) / before : null);
 
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 export const tglPendek = (d: string) => `${Number(d.slice(8, 10))} ${BULAN[Number(d.slice(5, 7)) - 1]}`;
@@ -163,6 +195,27 @@ export function summarize(r: ShopReport) {
     buckets[0] ?? { key: '', label: '', omzet: 0, biaya: 0 },
   );
 
+  // Per jalur jualan (buku usaha). Penjualan lama tanpa jalur → "Kasir" / "Website".
+  const chMap = new Map<string, { name: string; type: 'langsung' | 'marketplace' | null; trx: number; omzet: number; fee: number }>();
+  for (const s of r.sales) {
+    const name = s.channel || (s.source === 'website' ? 'Website' : 'Kasir');
+    const cur = chMap.get(name.toLowerCase()) ?? { name, type: s.channelType ?? null, trx: 0, omzet: 0, fee: 0 };
+    cur.trx++;
+    cur.omzet += s.amount;
+    cur.fee += s.fee ?? 0;
+    chMap.set(name.toLowerCase(), cur);
+  }
+  const channels = [...chMap.values()].map((x) => ({ ...x, net: x.omzet - x.fee })).sort((a, b) => b.omzet - a.omzet);
+
+  // Penjualan marketplace yang uangnya belum cair (status 'menunggu') di periode ini.
+  const waiting = r.sales.filter((s) => s.status === 'menunggu');
+  const pending = {
+    count: waiting.length,
+    amount: waiting.reduce((a, s) => a + s.amount, 0),
+    net: waiting.reduce((a, s) => a + s.amount - (s.fee ?? 0), 0),
+    oldest: waiting.reduce<string | null>((a, s) => (a === null || s.date < a ? s.date : a), null),
+  };
+
   const lowStock = r.materials.filter((m) => m.stock <= 0 || (m.min_stock !== null && m.stock <= m.min_stock));
 
   return {
@@ -182,5 +235,7 @@ export function summarize(r: ShopReport) {
     monthly,
     best,
     lowStock,
+    channels,
+    pending,
   };
 }
