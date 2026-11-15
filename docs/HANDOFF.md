@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.31.0 pesanan & DP, run #218, commit 031c3f0 — tanpa SQL baru)
+Terakhir diperbarui: 2026-11-16 (live: 3.32.0 utang supplier — R3 Usahaku selesai, run #219, commit 0758ebf — tanpa SQL baru)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,13 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-16 — 3.32.0 LIVE (run #219, 0758ebf, tanpa SQL baru): Usahaku R3 utang ke supplier (PRO). R3 SELESAI**
+  (bon 3.30, pesanan & DP 3.31, utang 3.32). Catat biaya "Belum dibayar" → biaya tempo tanpa kas; Beranda kartu Utang
+  ke supplier + Bayar (≤ sisa, kas tunai cukup); cron `sendShopUtangReminders` 10:00 WIB H-3/H-1. Dites wrangler lokal
+  (--test-scheduled) + Playwright API tiruan. **Belum**: data asli; push pengingat sampai di HP.
+  **Sisa Usahaku**: bon/pesanan dari akun tim + izin per akun tim; cek stok bahan di kartu pesanan; R4 (arus kas,
+  neraca, impor marketplace, ekspor KUR/pajak).
 
 - **2026-11-16 — 3.31.0 LIVE (run #218, 031c3f0, tanpa SQL baru): Usahaku R3 pesanan & DP (PRO).** Kasir "Jadikan
   pesanan", Beranda kartu Pesanan (+ DP, Diambil → jual bon + DP jadi bayar_piutang, Batal kembalikan/tahan), laporan.
