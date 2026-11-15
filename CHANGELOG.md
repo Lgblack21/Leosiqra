@@ -106,6 +106,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.28.1 | 11 Nov 2026 | Usahaku: tarik data per tanggal & bulan |
 | 3.28.2 | 11 Nov 2026 | Usahaku: daftar toko baru |
 | 3.28.3 | 11 Nov 2026 | Usahaku: ganti logo toko |
+| 3.28.4 | 15 Nov 2026 | Perbaikan saldo kas Usahaku |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -119,6 +120,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.28.4 — 2026-11-15 — Perbaikan saldo kas Usahaku
+
+- **Saldo kas usaha tetap benar** saat menghapus catatan lama. Catatan yang memakai kas yang sudah dihapus kini
+  tidak bisa dihapus (dulu saldonya pindah ke kas yang tersembunyi, dan toko jadi tidak bisa dihapus) — catat
+  koreksinya sebagai catatan baru.
+- Menghapus penjualan marketplace yang baru saja **cair** kini ikut mengembalikan uang cairnya dari kas.
 
 ## 3.28.3 — 2026-11-11 — Usahaku: ganti logo toko
 
