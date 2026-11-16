@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.34.0 SIAP (branch `claude/usahaku-pinjaman-20261116`, belum deploy): Usahaku jenis Pinjaman
+  (tahap 1, PRO).** **SQL baru `0048_shop_pinjaman.sql` — Bos jalankan di D1 Console** (kode aman sebelum migrasi:
+  halaman tampil "sedang disiapkan", endpoint 503). Worker: `handleShopLoans` (`/api/member/shops/:id/pinjaman`
+  GET, `peminjam` POST/PUT/DELETE=arsip, `loans` POST, `loans/:id/pay`, DELETE loan tanpa angsuran); entri
+  `pinjam_cair`/`pinjam_admin`/`angsuran` di `shop_entries`; hapus entri: cair/admin ditolak, angsuran → kas balik +
+  pinjaman aktif lagi (ditolak kalau peminjam sudah punya pinjaman aktif baru). Unique index parsial = 1 pinjaman
+  aktif per peminjam. UI: `PinjamanView.tsx`, hitungan `src/lib/usaha/pinjaman.ts` (jadwal pakai `hariLibur`).
+  Dites wrangler lokal (kas kurang, dobel, >sisa, lunas, hapus, admin terpisah, FREE, akun lain 404) + Playwright
+  terhadap Worker lokal. **Belum**: data asli; Laporan/Excel & notifikasi pagi (tahap 2). Menunggu SQL + "gas".
+
 - **2026-11-16 — 3.33.1 LIVE (run #221, 5935689, frontend saja):** kasir POS — panel
   kanan jadi keranjang (item, total, Bayar); detail bayar + struk di modal/sheet "Pembayaran". `Struk` dapat
   `onSaved` → keranjang dikosongkan begitu tercatat (cegah catat dobel kalau modal ditutup ×). Dites Playwright API

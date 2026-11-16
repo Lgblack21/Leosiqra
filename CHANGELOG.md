@@ -116,6 +116,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.32.0 | 16 Nov 2026 | Usahaku: utang ke supplier |
 | 3.33.0 | 16 Nov 2026 | Usahaku tampilan baru: menu samping, kasir layar penuh |
 | 3.33.1 | 16 Nov 2026 | Kasir: struk muncul saat bayar |
+| 3.34.0 | 16 Nov 2026 | Usahaku: jenis usaha Pinjaman |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -129,6 +130,22 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.34.0 — 2026-11-16 — Usahaku: jenis usaha Pinjaman
+
+- **Jenis usaha baru: Pinjaman harian/mingguan.** Pilih jenisnya di Pengaturan toko, dan menu tokonya berubah
+  sendiri: Ringkasan, Tagihan hari ini, Pinjaman, Peminjam, Kas. Kasir dan stok tidak muncul. (PRO)
+- **Pinjaman baru:** isi jumlah pinjaman, admin (dipotong di depan atau dibayar terpisah), harian/mingguan, angsuran
+  per kali, dan berapa kali. Sebelum disimpan kelihatan langsung: uang yang diserahkan, total yang kembali, untung,
+  dan tanggal selesai. **Tanggal merah, Minggu, dan cuti bersama otomatis tidak ditagih** (Minggu & cuti bisa
+  dimatikan).
+- **Tagihan hari ini:** siapa yang harus bayar dan berapa, sudah termasuk tunggakan ("hari ini 40rb + nunggak 2×").
+  Tanpa denda. Tombol **Terima** (bisa sebagian, lebihnya jadi bayar di muka) dan **Ingatkan** lewat WhatsApp.
+- **Untungnya dihitung benar:** uang yang diserahkan bukan biaya, angsuran bukan omzet. Pendapatan = admin + jasa,
+  dan jasanya masuk sedikit-sedikit tiap angsuran, pas sampai rupiah terakhir waktu lunas. Ringkasan menampilkan uang
+  beredar, modal yang masih di luar, dan siapa yang telat (1–7, 8–30, lebih dari 30 hari).
+- Satu peminjam cuma boleh punya satu pinjaman aktif, kas tunai tidak bisa minus, dan angsuran tidak bisa tercatat
+  dua kali atau melebihi sisa.
 
 ## 3.33.1 — 2026-11-16 — Kasir: struk muncul saat bayar
 

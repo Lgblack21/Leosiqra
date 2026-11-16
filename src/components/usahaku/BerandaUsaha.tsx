@@ -153,7 +153,7 @@ type Form =
   | { k: 'bon' | 'utang'; entry: BookEntry; sisa: number }
   | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
 export type BerandaView = 'ringkasan' | 'kas' | 'biaya' | 'tagihan';
-const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal']);
+const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal', 'pinjam_cair', 'pinjam_admin', 'angsuran']);
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
 const waLink = (wa: string | null, text: string) => {
@@ -669,6 +669,9 @@ const ENTRY_LABEL: Record<string, string> = {
   bayar_utang: 'Bayar utang',
   pesanan: 'Pesanan',
   dp: 'DP',
+  pinjam_cair: 'Pinjaman keluar',
+  pinjam_admin: 'Admin pinjaman',
+  angsuran: 'Angsuran',
 };
 function Riwayat({
   entries,
@@ -699,7 +702,8 @@ function Riwayat({
       </p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((e) => {
-          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal' || e.type === 'bayar_piutang' || e.type === 'dp';
+          const plus = e.type === 'jual' || e.type === 'setor' || e.type === 'saldo_awal' || e.type === 'bayar_piutang' || e.type === 'dp' || e.type === 'angsuran' || e.type === 'pinjam_admin';
+          const cair = e.type === 'pinjam_cair'; // kas keluar = uang diserahkan (net), admin dipotong ada di fee
           const neutral = e.type === 'pindah' || e.type === 'pesanan'; // pesanan belum menyentuh kas
           const detail = [
             e.date,
@@ -740,7 +744,11 @@ function Riwayat({
                   </span>
                 </span>
                 <span className="block truncate fs-11 text-slate-400">{detail}</span>
-                {e.fee > 0 && (
+                {cair && e.fee > 0 ? (
+                  <span className="block truncate fs-11 text-slate-500">
+                    Pinjaman {formatIDR(e.amount)} · admin dipotong {formatIDR(e.fee)}
+                  </span>
+                ) : e.fee > 0 && (
                   <span className="block truncate fs-11 text-orange-600">
                     Potongan {formatIDR(e.fee)}
                     {e.fees.length ? ` (${e.fees.map((f) => f.label).join(', ')})` : ''} · diterima {formatIDR(e.net)}
@@ -754,9 +762,9 @@ function Riwayat({
                 )}
               >
                 {neutral ? '' : plus ? '+' : '−'}
-                {formatIDR(e.amount)}
+                {formatIDR(cair ? e.net : e.amount)}
               </span>
-              {e.type !== 'saldo_awal' && (
+              {e.type !== 'saldo_awal' && !cair && e.type !== 'pinjam_admin' && (
                 <button
                   type="button"
                   onClick={() => onRemove(e)}

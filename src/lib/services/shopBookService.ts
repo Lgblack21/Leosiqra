@@ -27,7 +27,7 @@ export type ShopAccount = {
   isDefault: boolean;
   archived: boolean;
 };
-export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal' | 'bayar_piutang' | 'pesanan' | 'dp' | 'bayar_utang';
+export type BookEntryType = 'jual' | 'biaya' | 'setor' | 'ambil' | 'pindah' | 'saldo_awal' | 'bayar_piutang' | 'pesanan' | 'dp' | 'bayar_utang' | 'pinjam_cair' | 'pinjam_admin' | 'angsuran';
 export type BookEntry = {
   id: string;
   type: BookEntryType;

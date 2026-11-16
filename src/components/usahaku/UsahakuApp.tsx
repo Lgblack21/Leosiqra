@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   BarChart3,
+  HandCoins,
   LayoutDashboard,
   Menu,
   NotebookPen,
@@ -13,6 +14,7 @@ import {
   ReceiptText,
   Settings,
   Store,
+  Users,
   Wallet,
   X,
 } from 'lucide-react';
@@ -29,6 +31,7 @@ import { stockService, type StockData } from '@/lib/services/stockService';
 import { kindOf } from '@/lib/usaha/jenis';
 import { cn } from '@/lib/utils';
 import { BerandaUsaha, MulaiBukuUsaha, type BerandaView } from './BerandaUsaha';
+import { PinjamanView, type PinjamanTab } from './PinjamanView';
 import { PengaturanUsaha } from './PengaturanUsaha';
 import { UsahaSheet } from './UsahaSheet';
 
@@ -45,8 +48,19 @@ const TABS = [
   { id: 'laporan', label: 'Laporan', icon: BarChart3, group: 'Analisis', desc: 'Laporan usaha per periode, bisa diunduh Excel' },
   { id: 'pengaturan', label: 'Pengaturan', icon: Settings, group: 'Analisis', desc: 'Profil toko, kas, katalog, dan tim' },
 ] as const;
-type TabId = (typeof TABS)[number]['id'];
+// Jenis usaha Pinjaman: menu sendiri (tanpa kasir/stok) — docs/rancangan/usahaku-pinjaman.md.
+const LOAN_TABS = [
+  { id: 'beranda', label: 'Ringkasan', icon: LayoutDashboard, group: 'Toko', desc: 'Uang beredar, pendapatan, dan kelancaran pembayaran', book: true },
+  { id: 'tagihan', label: 'Tagihan hari ini', icon: HandCoins, group: 'Toko', desc: 'Siapa yang harus bayar hari ini, sudah termasuk tunggakan', book: true },
+  { id: 'pinjaman', label: 'Pinjaman', icon: NotebookPen, group: 'Toko', desc: 'Semua pinjaman aktif dan yang sudah lunas', book: true },
+  { id: 'peminjam', label: 'Peminjam', icon: Users, group: 'Toko', desc: 'Daftar peminjam dan nomor WA-nya', book: true },
+  { id: 'kas', label: 'Kas', icon: Wallet, group: 'Keuangan', desc: 'Saldo kas, setor modal, ambil uang, pindah kas', book: true },
+  { id: 'pengaturan', label: 'Pengaturan', icon: Settings, group: 'Analisis', desc: 'Profil usaha dan kas' },
+] as const;
+type TabId = (typeof TABS)[number]['id'] | (typeof LOAN_TABS)[number]['id'];
+const ALL_TAB_IDS = new Set<string>([...TABS, ...LOAN_TABS].map((t) => t.id));
 const VIEW_OF: Partial<Record<TabId, BerandaView>> = { beranda: 'ringkasan', tagihan: 'tagihan', biaya: 'biaya', kas: 'kas' };
+const LOAN_VIEW_OF: Partial<Record<TabId, PinjamanTab>> = { beranda: 'ringkasan', tagihan: 'tagihan', pinjaman: 'pinjaman', peminjam: 'peminjam' };
 
 export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
   const app = variant === 'app';
@@ -71,7 +85,7 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
   useEffect(() => {
     const read = () => {
       const h = window.location.hash.slice(1);
-      setTab(TABS.some((t) => t.id === h) ? (h as TabId) : 'beranda');
+      setTab(ALL_TAB_IDS.has(h) ? (h as TabId) : 'beranda');
     };
     read();
     window.addEventListener('hashchange', read);
@@ -199,12 +213,16 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
     );
 
   const kind = kindOf(shop.kind);
-  const tabs = TABS.filter((t) => (t.id !== 'stok' || !kind || kind.stok) && (!('book' in t) || bookOn));
+  const loanShop = kind?.id === 'pinjaman';
+  const tabs = (loanShop ? LOAN_TABS : TABS).filter(
+    (t) => (t.id !== 'stok' || !kind || kind.stok) && (!('book' in t) || bookOn || (loanShop && t.id === 'beranda')),
+  );
   const kasList = book?.accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const current = tabs.find((t) => t.id === tab) ?? tabs[0];
-  const view = VIEW_OF[current.id];
+  const loanView = loanShop ? LOAN_VIEW_OF[current.id] : undefined;
+  const view = loanShop ? (current.id === 'kas' ? 'kas' : undefined) : VIEW_OF[current.id];
   // Lencana angka di menu: yang menunggu tindakan (bukan nominal uang).
-  const badge: Partial<Record<TabId, number>> = book
+  const badge: Partial<Record<TabId, number>> = book && !loanShop
     ? {
         tagihan: book.pending.filter((e) => !(e.type === 'biaya' && e.payMethod === 'tempo')).length,
         biaya: book.pending.filter((e) => e.type === 'biaya' && e.payMethod === 'tempo').length,
@@ -374,18 +392,44 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
               <h1 className="truncate fsh-20 font-extrabold tracking-tight text-slate-900 md:fsh-22 dark:text-white">{current.label}</h1>
               <p className="hidden truncate fs-12 text-slate-500 md:block dark:text-slate-400">{current.desc}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => go('kasir')}
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 fs-13 font-bold text-white hover:bg-emerald-700 sm:px-4"
-            >
-              <Store size={16} /> <span className="hidden sm:inline">Buka kasir</span>
-              <span className="sm:hidden">Kasir</span>
-            </button>
+            {loanShop ? (
+              bookOn &&
+              current.id !== 'tagihan' && (
+                <button
+                  type="button"
+                  onClick={() => go('tagihan')}
+                  className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 fs-13 font-bold text-white hover:bg-emerald-700 sm:px-4"
+                >
+                  <HandCoins size={16} /> <span className="hidden sm:inline">Tagihan hari ini</span>
+                  <span className="sm:hidden">Tagihan</span>
+                </button>
+              )
+            ) : (
+              <button
+                type="button"
+                onClick={() => go('kasir')}
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 fs-13 font-bold text-white hover:bg-emerald-700 sm:px-4"
+              >
+                <Store size={16} /> <span className="hidden sm:inline">Buka kasir</span>
+                <span className="sm:hidden">Kasir</span>
+              </button>
+            )}
           </div>
         </header>
 
         <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 md:px-8 md:pt-6">
+          {loanView &&
+            (bookOn && book ? (
+              <PinjamanView shop={shop} book={book} variant={variant} view={loanView} onNav={(v) => go(v === 'ringkasan' ? 'beranda' : v)} onToast={say} />
+            ) : bookOn ? (
+              <div className="h-72 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" />
+            ) : shop.bookReady ? (
+              <MulaiBukuUsaha shop={shop} onDone={say} />
+            ) : (
+              <p className="rounded-[26px] bg-amber-50 p-5 fs-14 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                Buku usaha sedang disiapkan di server. Coba lagi sebentar lagi.
+              </p>
+            ))}
           {view &&
             (bookOn && book ? (
               <BerandaUsaha

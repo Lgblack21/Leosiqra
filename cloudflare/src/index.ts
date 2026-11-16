@@ -10177,7 +10177,7 @@ const recordShopExpense = async (env: Env, userId: string, shop: { id: string; n
 // (entry_key unik per pemilik → kirim dua kali = no-op).
 const bookTableMissing = (e: unknown) => e instanceof Error && /no such table: shop_(accounts|entries)/i.test(e.message);
 const BOOK_NOT_READY = "Buku usaha belum aktif (menunggu pembaruan database). Coba lagi nanti.";
-const SHOP_KINDS = ["kuliner", "online", "kelontong", "jasa", "kue", "topup", "dropship", "fotokopi", "sewa", "tani", "freelance", "lainnya"] as const;
+const SHOP_KINDS = ["kuliner", "online", "kelontong", "jasa", "kue", "topup", "dropship", "fotokopi", "sewa", "tani", "freelance", "pinjaman", "lainnya"] as const;
 const SHOP_ACCOUNT_KINDS = ["kas", "bank", "ewallet", "marketplace", "deposit"] as const;
 const SHOP_PAY_METHODS = ["tunai", "transfer", "qris", "cod", "lainnya"] as const;
 const SHOP_ACCOUNTS_MAX = 10;
@@ -10200,7 +10200,7 @@ const shopBook = async (env: Env, ownerId: string, shopId: string) => {
     throw e;
   }
 };
-type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang" | "pesanan" | "dp" | "bayar_utang";
+type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang" | "pesanan" | "dp" | "bayar_utang" | "pinjam_cair" | "pinjam_admin" | "angsuran";
 type BookEntry = {
   id: string; key: string; type: BookEntryType; date: string; amount: number; fee?: number; net: number;
   accountId: string | null; toAccountId?: string | null; personalAccountId?: string | null; personalTxId?: string | null;
@@ -10891,6 +10891,27 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
           const archived = await env.DB.prepare(`SELECT name FROM shop_accounts WHERE owner_id = ? AND id IN (${kasIds.map(() => "?").join(",")}) AND archived_at IS NOT NULL LIMIT 1`).bind(ownerId, ...kasIds).first<{ name: string }>();
           if (archived) return json({ error: `Catatan ini memakai kas "${archived.name}" yang sudah dihapus, jadi tidak bisa dihapus. Catat koreksinya sebagai catatan baru.` }, { status: 409 });
         }
+        // Pinjaman: uang diserahkan/admin dihapus lewat "Hapus pinjaman" (cek angsuran + kas di sana).
+        if (entry.type === "pinjam_cair" || entry.type === "pinjam_admin") return json({ error: "Catatan ini bagian dari pinjaman. Hapus lewat menu Pinjaman." }, { status: 409 });
+        // Angsuran dihapus → kas berkurang lagi & pinjaman aktif lagi. Peminjam sudah punya pinjaman aktif lain → tolak
+        // (1 peminjam = 1 pinjaman aktif).
+        if (entry.type === "angsuran") {
+          const lr = await env.DB.prepare("SELECT l.id, l.status, l.borrower_id FROM shop_entries e JOIN shop_loans l ON l.id = e.ref_id WHERE e.id = ? AND e.owner_id = ?").bind(entry.id, ownerId).first<{ id: string; status: string; borrower_id: string }>();
+          if (lr?.status === "lunas" && (await env.DB.prepare("SELECT 1 FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND borrower_id = ? AND status = 'aktif'").bind(ownerId, shop.id, lr.borrower_id).first())) {
+            return json({ error: "Peminjam ini sudah punya pinjaman baru yang aktif, jadi angsuran pinjaman lamanya tidak bisa dihapus." }, { status: 409 });
+          }
+          if (entry.account_id) {
+            const a = await env.DB.prepare("SELECT name, kind, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(entry.account_id, ownerId).first<{ name: string; kind: string; balance: number }>();
+            if (a?.kind === "kas" && Number(a.balance) < entry.net) return json({ error: `Saldo ${a.name} kurang untuk membatalkan angsuran ini.`, code: KAS_KURANG }, { status: 409 });
+          }
+          const stmts2: D1PreparedStatement[] = [];
+          if (entry.account_id) stmts2.push(kasDelta(env, ownerId, entry.account_id, -entry.net, entry.id));
+          if (lr) stmts2.push(env.DB.prepare("UPDATE shop_loans SET status = 'aktif', closed_at = NULL WHERE id = ? AND owner_id = ? AND status = 'lunas' AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(lr.id, ownerId, entry.id, ownerId));
+          stmts2.push(env.DB.prepare("DELETE FROM shop_entries WHERE id = ? AND owner_id = ?").bind(entry.id, ownerId));
+          await env.DB.batch(stmts2);
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
         // Pesanan: yang sudah ada DP → batalkan dulu; yang sudah diambil → hapus penjualannya.
         if (entry.type === "pesanan") {
           if (entry.status === "selesai") return json({ error: "Pesanan ini sudah diambil. Hapus penjualannya dulu kalau mau membatalkan." }, { status: 409 });
@@ -10963,6 +10984,211 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
   } catch (e) {
     if (bookTableMissing(e)) return json({ error: BOOK_NOT_READY }, { status: 503 });
     if (costTableMissing(e)) return json({ error: COST_NOT_READY }, { status: 503 });
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
+// ── Usahaku jenis Pinjaman (harian/mingguan) — docs/rancangan/usahaku-pinjaman.md ─────────────────
+// Uang lewat shop_entries: pinjam_cair (kas −, amount = pokok, fee = admin dipotong, net = uang diserahkan),
+// pinjam_admin (kas +, admin dibayar terpisah), angsuran (kas +, ref_id → pinjaman). Laba = admin + jasa,
+// jasa diakui bertahap di perangkat (proporsional), jadi tidak perlu disimpan per angsuran.
+const LOAN_NOT_READY = "Fitur pinjaman belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+const LOAN_DATES_MAX = 400;
+const BORROWERS_MAX = 500;
+const loanTableMissing = (e: unknown) => e instanceof Error && /no such table: shop_(loans|borrowers)/i.test(e.message);
+const LOAN_PAID_SQL = "(SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = ? AND a.ref_id = ? AND a.type = 'angsuran')";
+const reqId = (v: unknown) => (typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
+const rp = (n: number) => `Rp${Math.max(0, Math.round(n)).toLocaleString("id-ID")}`;
+type LoanRow = { id: string; borrower_id: string; principal: number; admin_fee: number; admin_mode: string; installment: number; count: number; total: number; frequency: string; disbursed_on: string; due_dates_json: string; account_id: string | null; status: string; note: string | null; created_at: string; closed_at: string | null };
+
+async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
+  const [res, sub, op] = parts;
+  try {
+    if (!res && request.method === "GET") {
+      const borrowers = (await env.DB.prepare("SELECT id, name, wa, note, created_at, archived_at FROM shop_borrowers WHERE owner_id = ? AND shop_id = ? ORDER BY name COLLATE NOCASE ASC LIMIT ?").bind(ownerId, shop.id, BORROWERS_MAX).all()).results ?? [];
+      // Semua pinjaman aktif + 200 lunas terakhir, plus total & tanggal angsuran terakhir per pinjaman.
+      const loans = (await env.DB.prepare(
+        `SELECT l.*, (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid,
+                (SELECT MAX(a.date) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS last_paid
+           FROM shop_loans l WHERE l.owner_id = ? AND l.shop_id = ? AND (l.status = 'aktif' OR l.id IN (SELECT id FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND status != 'aktif' ORDER BY closed_at DESC LIMIT 200))
+          ORDER BY l.created_at DESC`
+      ).bind(ownerId, shop.id, ownerId, shop.id).all()).results ?? [];
+      const payments = (await env.DB.prepare(
+        "SELECT id, ref_id, date, amount, account_id, created_at FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 1000"
+      ).bind(ownerId, shop.id, new Date(Date.parse(`${todayWIB()}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10)).all()).results ?? [];
+      return json({ ready: true, today: todayWIB(), borrowers, loans, payments });
+    }
+
+    if (res === "peminjam") {
+      if (!sub && request.method === "POST") {
+        if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const name = shopText(raw.name, 60);
+        if (!name) return json({ error: "Isi nama peminjam." }, { status: 400 });
+        const id = generateId();
+        const now = nowIso();
+        const r = await env.DB.prepare(
+          "INSERT INTO shop_borrowers (id, owner_id, shop_id, name, wa, note, created_at, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_borrowers WHERE owner_id = ? AND shop_id = ?) < ?"
+        ).bind(id, ownerId, shop.id, name, waNumber(raw.wa), shopText(raw.note, 120) || null, now, now, ownerId, shop.id, BORROWERS_MAX).run();
+        if (!r.meta.changes) return json({ error: `Maksimal ${BORROWERS_MAX} peminjam per usaha.` }, { status: 409 });
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true, id }, { status: 201 });
+      }
+      if (sub && /^[0-9a-f-]{36}$/i.test(sub) && !op && (request.method === "PUT" || request.method === "DELETE")) {
+        const b = await env.DB.prepare("SELECT id FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first();
+        if (!b) return json({ error: "Peminjam tidak ditemukan." }, { status: 404 });
+        if (request.method === "PUT") {
+          const raw = await parseJson<Record<string, unknown>>(request);
+          const name = shopText(raw.name, 60);
+          if (!name) return json({ error: "Isi nama peminjam." }, { status: 400 });
+          await env.DB.prepare("UPDATE shop_borrowers SET name = ?, wa = ?, note = ?, archived_at = NULL, updated_at = ? WHERE id = ? AND owner_id = ?").bind(name, waNumber(raw.wa), shopText(raw.note, 120) || null, nowIso(), sub, ownerId).run();
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
+        // Hapus = arsip (riwayat pinjaman tetap utuh). Masih punya pinjaman aktif → tidak bisa.
+        const r = await env.DB.prepare("UPDATE shop_borrowers SET archived_at = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND NOT EXISTS (SELECT 1 FROM shop_loans WHERE owner_id = ? AND borrower_id = ? AND status = 'aktif')").bind(nowIso(), nowIso(), sub, ownerId, ownerId, sub).run();
+        if (!r.meta.changes) return json({ error: "Peminjam ini masih punya pinjaman aktif." }, { status: 409 });
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true });
+      }
+    }
+
+    if (res === "loans" && !sub && request.method === "POST") {
+      if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const requestId = reqId(raw.request_id);
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      const borrower = typeof raw.borrower_id === "string" ? await env.DB.prepare("SELECT id, name FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ? AND archived_at IS NULL").bind(raw.borrower_id, ownerId, shop.id).first<{ id: string; name: string }>() : null;
+      if (!borrower) return json({ error: "Pilih peminjam." }, { status: 400 });
+      const principal = shopMoney(raw.principal);
+      if (!principal || principal < 1 || principal > 1e10) return json({ error: "Isi jumlah pinjaman." }, { status: 400 });
+      const adminFee = raw.admin_fee === undefined || raw.admin_fee === null || raw.admin_fee === "" ? 0 : shopMoney(raw.admin_fee);
+      if (adminFee === null || adminFee >= principal) return json({ error: "Admin harus lebih kecil dari jumlah pinjaman." }, { status: 400 });
+      const adminMode = raw.admin_mode === "terpisah" ? "terpisah" : "potong";
+      const installment = shopMoney(raw.installment);
+      if (!installment || installment < 1) return json({ error: "Isi angsuran per kali." }, { status: 400 });
+      const count = Number(raw.count);
+      if (!Number.isInteger(count) || count < 1 || count > LOAN_DATES_MAX) return json({ error: `Jumlah angsuran 1–${LOAN_DATES_MAX} kali.` }, { status: 400 });
+      const total = installment * count;
+      if (total < principal) return json({ error: `Total angsuran (${rp(total)}) lebih kecil dari pinjaman (${rp(principal)}).` }, { status: 400 });
+      if (total > 1e11) return json({ error: "Total angsuran terlalu besar." }, { status: 400 });
+      const frequency = raw.frequency === "mingguan" ? "mingguan" : raw.frequency === "harian" ? "harian" : null;
+      if (!frequency) return json({ error: "Pilih harian atau mingguan." }, { status: 400 });
+      const today = todayWIB();
+      const disbursedOn = isRealDateStr(raw.date) && raw.date <= today && raw.date >= "2000-01-01" ? raw.date : today;
+      // Jadwal dibuat di perangkat (melompati tanggal merah/Minggu) lalu DIKUNCI di sini: dicek bentuknya.
+      const dates = Array.isArray(raw.due_dates) ? raw.due_dates : [];
+      const maxDate = new Date(Date.parse(`${disbursedOn}T00:00:00Z`) + 3 * 366 * 86400e3).toISOString().slice(0, 10);
+      if (dates.length !== count || !dates.every((d, i) => isRealDateStr(d) && d > disbursedOn && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)))) {
+        return json({ error: "Jadwal angsuran tidak valid. Muat ulang lalu coba lagi." }, { status: 400 });
+      }
+      const book = await shopBook(env, ownerId, shop.id);
+      const kas = pickBookAccount(raw.shop_account_id, book);
+      if (!kas) return json({ error: "Pilih kas yang dipakai menyerahkan uang." }, { status: 400 });
+      const handed = adminMode === "potong" ? principal - adminFee : principal;
+      const id = generateId();
+      const cairId = generateId();
+      const adminId = generateId();
+      const key = `loan:${requestId}`;
+      const now = nowIso();
+      const note = shopText(raw.note, 120) || null;
+      const cash = cashEnough(ownerId, kas.id, handed);
+      const loanExists = { sql: "EXISTS (SELECT 1 FROM shop_loans WHERE id = ? AND owner_id = ?)", binds: [id, ownerId] };
+      const r = await env.DB.batch([
+        // Pinjaman baru hanya kalau: peminjam belum punya yang aktif, belum pernah tercatat (anti dobel), kas tunai cukup.
+        env.DB.prepare(
+          `INSERT INTO shop_loans (id, owner_id, shop_id, borrower_id, principal, admin_fee, admin_mode, installment, count, total, frequency, disbursed_on, due_dates_json, account_id, status, note, created_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?, ?
+            WHERE NOT EXISTS (SELECT 1 FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND borrower_id = ? AND status = 'aktif')
+              AND NOT EXISTS (SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?)
+              AND ${cash.sql}`
+        ).bind(id, ownerId, shop.id, borrower.id, principal, adminFee, adminMode, installment, count, total, frequency, disbursedOn, JSON.stringify(dates), kas.id, note, now, ownerId, shop.id, borrower.id, ownerId, key, ...cash.binds),
+        bookInsert(env, ownerId, shop.id, {
+          id: cairId, key, type: "pinjam_cair", date: disbursedOn, amount: principal, fee: adminMode === "potong" ? adminFee : 0, net: handed, accountId: kas.id,
+          refId: id, party: borrower.name, buyer: borrower.name, note: `Pinjaman · ${borrower.name}`,
+          payload: { loanId: id, adminMode, adminFee, installment, count, frequency },
+        }, loanExists),
+        kasDelta(env, ownerId, kas.id, -handed, cairId),
+        ...(adminMode === "terpisah" && adminFee > 0
+          ? [
+              bookInsert(env, ownerId, shop.id, { id: adminId, key: `loanadm:${requestId}`, type: "pinjam_admin", date: disbursedOn, amount: adminFee, net: adminFee, accountId: kas.id, refId: id, party: borrower.name, buyer: borrower.name, note: `Admin pinjaman · ${borrower.name}` }, loanExists),
+              kasDelta(env, ownerId, kas.id, adminFee, adminId),
+            ]
+          : []),
+      ]);
+      if (!r[0]?.meta.changes) {
+        if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
+        if (await env.DB.prepare("SELECT 1 FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND borrower_id = ? AND status = 'aktif'").bind(ownerId, shop.id, borrower.id).first()) return json({ error: `${borrower.name} masih punya pinjaman aktif. Lunasi dulu sebelum pinjam lagi.` }, { status: 409 });
+        const k = await env.DB.prepare("SELECT name, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(kas.id, ownerId).first<{ name: string; balance: number }>();
+        return json({ error: `Saldo ${k?.name ?? "kas"} cuma ${rp(Number(k?.balance) || 0)}. Kas tunai tidak bisa minus — pakai kas lain atau setor modal dulu.`, code: KAS_KURANG }, { status: 409 });
+      }
+      await publishShopBook(env, ownerId, shop.id);
+      return json({ ok: true, id, handed }, { status: 201 });
+    }
+
+    if (res === "loans" && sub && /^[0-9a-f-]{36}$/i.test(sub)) {
+      const loan = await env.DB.prepare("SELECT * FROM shop_loans WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<LoanRow>();
+      if (!loan) return json({ error: "Pinjaman tidak ditemukan." }, { status: 404 });
+      const borrower = await env.DB.prepare("SELECT name FROM shop_borrowers WHERE id = ? AND owner_id = ?").bind(loan.borrower_id, ownerId).first<{ name: string }>();
+      const who = borrower?.name ?? "Peminjam";
+
+      // Terima angsuran: ≤ sisa (dicek di dalam batch). Lunas → status lunas di batch yang sama.
+      if (op === "pay" && request.method === "POST") {
+        if (loan.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const requestId = reqId(raw.request_id);
+        if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+        const amount = shopMoney(raw.amount);
+        if (!amount || amount < 1) return json({ error: "Isi nominal yang dibayar." }, { status: 400 });
+        const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= loan.disbursed_on ? raw.date : todayWIB();
+        const book = await shopBook(env, ownerId, shop.id);
+        const kas = pickBookAccount(raw.shop_account_id, book);
+        if (!kas) return json({ error: "Pilih kas yang menerima uangnya." }, { status: 400 });
+        const id = generateId();
+        const key = `angs:${requestId}`;
+        const r = await env.DB.batch([
+          bookInsert(env, ownerId, shop.id, { id, key, type: "angsuran", date, amount, net: amount, accountId: kas.id, refId: loan.id, party: who, buyer: who, note: `Angsuran · ${who}` }, {
+            sql: `EXISTS (SELECT 1 FROM shop_loans l WHERE l.id = ? AND l.owner_id = ? AND l.status = 'aktif' AND l.total - ${LOAN_PAID_SQL} >= ?)`,
+            binds: [loan.id, ownerId, ownerId, loan.id, amount],
+          }),
+          kasDelta(env, ownerId, kas.id, amount, id),
+          env.DB.prepare(`UPDATE shop_loans SET status = 'lunas', closed_at = ? WHERE id = ? AND owner_id = ? AND status = 'aktif' AND total <= ${LOAN_PAID_SQL}`).bind(nowIso(), loan.id, ownerId, ownerId, loan.id),
+        ]);
+        if (!r[0]?.meta.changes) {
+          if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
+          const left = await env.DB.prepare(`SELECT status, total - ${LOAN_PAID_SQL} AS sisa FROM shop_loans WHERE id = ? AND owner_id = ?`).bind(ownerId, loan.id, loan.id, ownerId).first<{ status: string; sisa: number }>();
+          if (left?.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
+          return json({ error: `Melebihi sisa pinjaman. Sisanya ${rp(Number(left?.sisa) || 0)}.` }, { status: 409 });
+        }
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true, id, lunas: (r[2]?.meta.changes ?? 0) > 0 }, { status: 201 });
+      }
+
+      // Hapus pinjaman: hanya kalau belum ada angsuran. Kas dikembalikan (uang diserahkan +, admin terpisah −).
+      if (!op && request.method === "DELETE") {
+        if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'angsuran' LIMIT 1").bind(ownerId, loan.id).first()) {
+          return json({ error: "Pinjaman ini sudah ada angsurannya. Hapus angsurannya dulu." }, { status: 409 });
+        }
+        const ents = (await env.DB.prepare("SELECT id, type, net, account_id FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type IN ('pinjam_cair', 'pinjam_admin')").bind(ownerId, loan.id).all<{ id: string; type: string; net: number; account_id: string | null }>()).results ?? [];
+        // Total perubahan kas = +uang diserahkan − admin terpisah ≥ 0 (pokok > admin), jadi kas tidak bisa minus.
+        const noPay = "NOT EXISTS (SELECT 1 FROM shop_entries p WHERE p.owner_id = ? AND p.ref_id = ? AND p.type = 'angsuran')";
+        const stmts: D1PreparedStatement[] = [];
+        for (const e of ents) {
+          if (e.account_id) stmts.push(env.DB.prepare(`UPDATE shop_accounts SET balance = balance + ?, updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?) AND ${noPay}`).bind(e.type === "pinjam_cair" ? Number(e.net) : -Number(e.net), nowIso(), e.account_id, ownerId, e.id, ownerId, ownerId, loan.id));
+        }
+        stmts.push(env.DB.prepare(`DELETE FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type IN ('pinjam_cair', 'pinjam_admin') AND ${noPay}`).bind(ownerId, loan.id, ownerId, loan.id));
+        stmts.push(env.DB.prepare(`DELETE FROM shop_loans WHERE id = ? AND owner_id = ? AND ${noPay}`).bind(loan.id, ownerId, ownerId, loan.id));
+        const r = await env.DB.batch(stmts);
+        if (!r[r.length - 1]?.meta.changes) return json({ error: "Pinjaman ini sudah ada angsurannya. Hapus angsurannya dulu." }, { status: 409 });
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true });
+      }
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (loanTableMissing(e)) return json({ error: LOAN_NOT_READY, code: "loan_not_ready" }, { status: 503 });
+    if (bookTableMissing(e)) return json({ error: BOOK_NOT_READY }, { status: 503 });
     if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     throw e;
   }
@@ -11672,6 +11898,11 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       const bookShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();
       if (!bookShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
       return await handleShopBook(request, env, userId, bookShop, [action, extra, ...more].filter((x): x is string => Boolean(x)));
+    }
+    if (action === "pinjaman" && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
+      const loanShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();
+      if (!loanShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
+      return await handleShopLoans(request, env, userId, loanShop, [extra, ...more].filter((x): x is string => Boolean(x)));
     }
     if (action === "stock" && /^[0-9a-f-]{36}$/i.test(id ?? "")) {
       const stockShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();

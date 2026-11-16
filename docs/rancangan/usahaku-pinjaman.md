@@ -1,6 +1,14 @@
 # Rancangan — Usahaku: jenis usaha Pinjaman (harian / mingguan)
 
-Status: **DRAF, menunggu ACC Bos.** Belum ada kode. Butuh migrasi D1 baru (Bos jalankan di D1 Console).
+Status: **DI-ACC Bos 2026-11-16 ("gas" = semua saran bagian 8: admin default dipotong, Minggu & cuti bersama libur
+(bisa dimatikan per pinjaman), bayar lebih = bayar di muka, PRO).** Tahap 1 dikerjakan **3.34.0** (branch
+`claude/usahaku-pinjaman-20261116`, migrasi `0048_shop_pinjaman.sql`).
+
+Contoh Bos: pinjam Rp1.000.000, admin Rp50.000 dipotong → diterima Rp950.000; harian 12× Rp100.000 = Rp1.200.000.
+Untung Rp250.000 = admin Rp50.000 + jasa Rp200.000 (per angsuran ≈ Rp83.333 pokok + Rp16.667 jasa).
+
+Catatan 3.34: PRO hanya untuk membuat peminjam/pinjaman baru; menerima angsuran tetap bisa walau PRO habis.
+Pilihan Minggu/cuti libur ada di form pinjaman (bukan pengaturan toko). Laporan/Excel & notifikasi pagi = tahap 2.
 
 Catatan: ini pinjaman dari modal pribadi pemilik, **bukan koperasi** (tidak ada anggota/simpanan/SHU).
 Nama usaha sebaiknya tidak memakai kata "Koperasi" sebelum berbadan hukum. Leosiqra hanya alat catat

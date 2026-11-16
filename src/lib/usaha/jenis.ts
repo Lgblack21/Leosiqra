@@ -117,6 +117,15 @@ export const SHOP_KINDS: ShopKind[] = [
     tip: 'Nama klien di kolom pembeli; potongan platform di biaya marketplace.',
   },
   {
+    id: 'pinjaman',
+    label: 'Pinjaman harian/mingguan',
+    emoji: '🤝',
+    contoh: 'Pinjam uang dicicil harian atau mingguan',
+    channels: { langsung: ['Offline'], marketplace: [] },
+    stok: false,
+    tip: 'Buka Tagihan hari ini tiap pagi: angka yang tampil sudah termasuk tunggakan, tanggal merah tidak ditagih.',
+  },
+  {
     id: 'lainnya',
     label: 'Lainnya / umum',
     emoji: '📦',
