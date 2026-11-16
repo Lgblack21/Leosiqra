@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.35.0 laporan & Excel pinjaman — run #223, commit 4741fcf — tanpa SQL baru)
+Terakhir diperbarui: 2026-11-16 (live: 3.36.0 ringkasan tagihan pinjaman 07:00 WIB — run #224, commit cd700f5 — tanpa SQL baru)
 
 ## Siapa sedang kerja
 
@@ -18,13 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.36.0 SIAP (branch `claude/pinjaman-notif-20261116`, belum deploy, tanpa SQL): Pinjaman tahap 2b —
+- **2026-11-16 — 3.36.0 LIVE (run #224, cd700f5, tanpa SQL): Pinjaman tahap 2b —
   notifikasi pagi.** `sendShopLoanDigest` dipanggil dari cron per-menit di 00:00–00:09 UTC (07:00 WIB; trigger cron
   sudah penuh). Hitungan dari `due_dates_json` (json_each) − angsuran, satu push per pemilik, klaim
   `users.metadata_json $.loanDigestSent = tanggal`, toggle baru `prefs.notify.loans` (NOTIFY_KEYS + baris di
   Pengaturan › Notifikasi). Dites wrangler lokal dengan syarat jam dilepas sementara (dikembalikan): isi pesan,
-  3× jalan = 1 notifikasi, opt-out, jalur tanpa jadwal hari ini. **Belum**: push sungguhan sampai di HP besok pagi.
-  Menunggu "gas". Berikutnya: geser jadwal (3.37).
+  3× jalan = 1 notifikasi, opt-out, jalur tanpa jadwal hari ini. **Belum**: push sungguhan sampai di HP besok pagi
+  (cek 17 Nov 07:00 WIB). Berikutnya: geser jadwal (3.37).
 
 - **2026-11-16 — 3.35.0 LIVE (run #223, 4741fcf, tanpa SQL): Pinjaman tahap 2a
   — Laporan & Excel.** Worker `GET …/pinjaman/laporan?from&to` (pinjaman relevan + paid_before/paid_to + angsuran di
