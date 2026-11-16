@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.32.0 utang supplier — R3 Usahaku selesai, run #219, commit 0758ebf — tanpa SQL baru)
+Terakhir diperbarui: 2026-11-16 (live: 3.33.0 tampilan Usahaku baru — sidebar, kasir POS, foto produk — run #220, commit ab391de — tanpa SQL baru)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.33.0 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, tanpa SQL, Worker berubah: foto produk):
+- **2026-11-16 — 3.33.0 LIVE (run #220, ab391de, tanpa SQL, Worker berubah: foto produk):
   tampilan Usahaku baru.** Daftar toko tanpa angka uang (Tim + Buat toko tetap). Di dalam toko ada menu samping
   (`UsahakuApp` TABS: beranda/kasir/tagihan/biaya/kas/stok/laporan/pengaturan, di hash; HP = laci ☰). `BerandaUsaha`
   dapat prop `view` (ringkasan/kas/biaya/tagihan). Kasir = layar POS (`KasirView` prop `onExit` → return awal: bar atas,
@@ -27,7 +27,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Foto produk: `ShopProduct.image` (https saja, `productImage` → `safeImageUrl`; data:image ditolak) di products_json,
   unggah via Cloudinary di ProductsForm; `keepProductImages` menjaga foto saat sinkron hook/MCP. **Worker ikut berubah**
   (tanpa SQL). Dites Playwright (unggah tiruan → payload products berisi image). Dites tsc + build + Playwright API tiruan 1366 & 390 px. **Belum**: data asli,
-  Capacitor (safe-area) di HP sungguhan. Menunggu "gas".
+  Capacitor (safe-area) di HP sungguhan, unggah foto ke Cloudinary produksi.
 
 - **2026-11-16 — 3.32.0 LIVE (run #219, 0758ebf, tanpa SQL baru): Usahaku R3 utang ke supplier (PRO). R3 SELESAI**
   (bon 3.30, pesanan & DP 3.31, utang 3.32). Catat biaya "Belum dibayar" → biaya tempo tanpa kas; Beranda kartu Utang
