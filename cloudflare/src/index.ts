@@ -19183,7 +19183,7 @@ const sanitizeAiMemory = (raw: unknown): AiMemory => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(AI_MEMORY_KEYS.map((k) => [k, cleanAiMemoryText(r[k])])) as AiMemory;
 };
-const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty", "subscriptions", "collectibles"] as const;
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty", "subscriptions", "collectibles", "loans"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
 const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -20125,6 +20125,75 @@ const sendDebtDueReminders = async (env: Env) => {
 // Usahaku: utang ke supplier (biaya tempo) jatuh tempo H-3 & H-1 (harian 10:00 WIB). Klaim
 // payload_json.dueRemindedFor = "<tanggal>|<tahap>" sebelum kirim → cron dobel aman. Ikut toggle
 // $.prefs.notify.bills. Kolom 0047 belum ada → dilewati.
+// Ringkasan tagihan pinjaman (Usahaku jenis Pinjaman) tiap pagi 07:00 WIB (00:00–00:09 UTC lewat cron per-menit —
+// batas jumlah trigger cron sudah penuh). Dihitung dari jadwal yang dikunci (due_dates_json) − angsuran masuk,
+// sama dengan halaman Tagihan hari ini. Satu push per pemilik (gabungan semua toko pinjamannya). Klaim
+// $.loanDigestSent = tanggal → sekali sehari walau cron jalan beberapa kali. Toggle $.prefs.notify.loans.
+const sendShopLoanDigest = async (env: Env) => {
+  const today = todayWIB();
+  type Row = { owner_id: string; shop_id: string; shop_name: string; installment: number; total: number; jatuh: number; hari_ini: number; paid: number };
+  let rows: Row[];
+  try {
+    rows = (await env.DB.prepare(
+      `SELECT l.owner_id, l.shop_id, s.name AS shop_name, l.installment, l.total,
+              (SELECT COUNT(*) FROM json_each(l.due_dates_json) WHERE value <= ?) AS jatuh,
+              (SELECT COUNT(*) FROM json_each(l.due_dates_json) WHERE value = ?) AS hari_ini,
+              (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid
+         FROM shop_loans l JOIN shops s ON s.id = l.shop_id AND s.user_id = l.owner_id JOIN users u ON u.id = l.owner_id
+        WHERE l.status = 'aktif' AND json_valid(l.due_dates_json)
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.loans') END, 1) <> 0
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.loanDigestSent') END, '') <> ?
+        LIMIT 20000`
+    ).bind(today, today, today).all<Row>()).results ?? [];
+  } catch (e) {
+    if (e instanceof Error && /no such column|no such table/i.test(e.message)) return;
+    throw e;
+  }
+  type Agg = { orang: number; total: number; nunggak: number; nunggakRp: number; jadwal: boolean; shops: Map<string, { name: string; total: number }> };
+  const byOwner = new Map<string, Agg>();
+  for (const r of rows) {
+    const inst = Number(r.installment) || 0;
+    const tagihan = Math.max(0, Math.min(Number(r.total) || 0, inst * (Number(r.jatuh) || 0)) - (Number(r.paid) || 0));
+    if (tagihan <= 0) continue;
+    const a = byOwner.get(r.owner_id) ?? { orang: 0, total: 0, nunggak: 0, nunggakRp: 0, jadwal: false, shops: new Map() };
+    const hariIni = Number(r.hari_ini) > 0;
+    // Nunggak = masih ada yang belum dibayar dari jadwal SEBELUM hari ini.
+    const lama = Math.max(0, tagihan - (hariIni ? inst : 0));
+    a.orang += 1;
+    a.total += tagihan;
+    if (lama > 0) {
+      a.nunggak += 1;
+      a.nunggakRp += lama;
+    }
+    if (hariIni) a.jadwal = true;
+    const sh = a.shops.get(r.shop_id) ?? { name: r.shop_name, total: 0 };
+    sh.total += tagihan;
+    a.shops.set(r.shop_id, sh);
+    byOwner.set(r.owner_id, a);
+  }
+  for (const [ownerId, a] of byOwner) {
+    try {
+      const claim = await env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.loanDigestSent', ?)
+          WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.loanDigestSent') END, '') <> ?`
+      ).bind(today, ownerId, today).run();
+      if (!claim.meta.changes) continue;
+      const top = [...a.shops.entries()].sort((x, y) => y[1].total - x[1].total)[0];
+      const where = a.shops.size > 1 ? `${a.shops.size} usaha` : top[1].name;
+      const title = a.jadwal
+        ? `🤝 Tagihan hari ini: ${a.orang} peminjam · ${formatRupiahForPush(a.total)}`
+        : `🤝 Tidak ada jadwal tagih hari ini · ${a.nunggak} tunggakan`;
+      const body = a.jadwal
+        ? `${a.nunggak ? `${a.nunggak} orang nunggak (${formatRupiahForPush(a.nunggakRp)}). ` : "Semua lancar. "}Buka Tagihan hari ini di ${where}.`
+        : `Hari ini libur atau memang tidak ada jadwal. Tunggakan ${formatRupiahForPush(a.total)} masih bisa ditagih di ${where}.`;
+      await sendWebPushToUser(env, ownerId, title, body, `/membership/usahaku?id=${encodeURIComponent(top[0])}#tagihan`);
+    } catch (error) {
+      console.error(`Ringkasan tagihan pinjaman ${ownerId} gagal:`, error);
+    }
+  }
+};
+
 const sendShopUtangReminders = async (env: Env) => {
   const today = todayWIB();
   const t3 = shiftDateStr(today, 3);
@@ -24173,6 +24242,8 @@ const worker = {
       // :25 perbarui harga paling basi, :45 push kalau harga melonjak/anjlok.
       if (minute === 25) ctx.waitUntil(refreshStaleCollectiblePrices(env).catch((error) => console.error("Harga koleksi:", error)));
       if (minute === 45) ctx.waitUntil(sendCollectiblePriceAlerts(env).catch((error) => console.error("Peringatan harga koleksi:", error)));
+      // 07:00–07:09 WIB: ringkasan tagihan pinjaman (klaim per hari → tetap sekali walau jalan 10×).
+      if (new Date(event.scheduledTime).getUTCHours() === 0 && minute < 10) ctx.waitUntil(sendShopLoanDigest(env).catch((error) => console.error("Ringkasan tagihan pinjaman:", error)));
       if (event.cron === PROMO_QUEUE_CRON || minute % 10 === 0) {
         // Posting video promo yang sudah waktunya + metrik harian.
         ctx.waitUntil(processPromoQueue(env));

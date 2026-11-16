@@ -118,6 +118,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.33.1 | 16 Nov 2026 | Kasir: struk muncul saat bayar |
 | 3.34.0 | 16 Nov 2026 | Usahaku: jenis usaha Pinjaman |
 | 3.35.0 | 16 Nov 2026 | Pinjaman: laporan & Excel |
+| 3.36.0 | 16 Nov 2026 | Pinjaman: ringkasan tagihan tiap pagi |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -131,6 +132,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.36.0 — 2026-11-16 — Pinjaman: ringkasan tagihan tiap pagi
+
+- **Ringkasan tagihan pinjaman tiap pagi.** Jam 07:00 WIB masuk notifikasi, misalnya *"Tagihan hari ini:
+  12 peminjam · Rp1.240.000"* plus berapa orang yang nunggak. Diketuk, langsung terbuka halaman Tagihan hari ini.
+- Di tanggal merah atau hari tanpa jadwal, notifikasinya cuma mengingatkan tunggakan, dan gak dikirim sama sekali
+  kalau semua sudah beres.
+- Dikirim sekali sehari, gabungan semua toko pinjamanmu. Bisa dimatikan di Pengaturan › Notifikasi ›
+  **Tagihan pinjaman (Usahaku)**.
 
 ## 3.35.0 — 2026-11-16 — Pinjaman: laporan & Excel
 

@@ -18,6 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.36.0 SIAP (branch `claude/pinjaman-notif-20261116`, belum deploy, tanpa SQL): Pinjaman tahap 2b —
+  notifikasi pagi.** `sendShopLoanDigest` dipanggil dari cron per-menit di 00:00–00:09 UTC (07:00 WIB; trigger cron
+  sudah penuh). Hitungan dari `due_dates_json` (json_each) − angsuran, satu push per pemilik, klaim
+  `users.metadata_json $.loanDigestSent = tanggal`, toggle baru `prefs.notify.loans` (NOTIFY_KEYS + baris di
+  Pengaturan › Notifikasi). Dites wrangler lokal dengan syarat jam dilepas sementara (dikembalikan): isi pesan,
+  3× jalan = 1 notifikasi, opt-out, jalur tanpa jadwal hari ini. **Belum**: push sungguhan sampai di HP besok pagi.
+  Menunggu "gas". Berikutnya: geser jadwal (3.37).
+
 - **2026-11-16 — 3.35.0 LIVE (run #223, 4741fcf, tanpa SQL): Pinjaman tahap 2a
   — Laporan & Excel.** Worker `GET …/pinjaman/laporan?from&to` (pinjaman relevan + paid_before/paid_to + angsuran di
   rentang, maks ±800 hari). Hitungan `rekapLaporan` di `src/lib/usaha/pinjaman.ts` (jasa periode = jasaDiakui(paid_to)

@@ -31,6 +31,7 @@ import {
   Target,
   Repeat,
   Layers,
+  HandCoins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -501,6 +502,7 @@ function NotifikasiView() {
           warranty: true,
           subscriptions: true,
           collectibles: true,
+          loans: true,
           ...(res.item.notify ?? {}),
         });
       })
@@ -694,7 +696,8 @@ type NotifyKey =
   | 'bills'
   | 'warranty'
   | 'subscriptions'
-  | 'collectibles';
+  | 'collectibles'
+  | 'loans';
 const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
   {
     key: 'reminders',
@@ -749,6 +752,12 @@ const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; des
     icon: Layers,
     title: 'Harga koleksi',
     desc: 'Saat harga kartu Pokémon / item Steam di Koleksiku naik atau turun ≥ 20%.',
+  },
+  {
+    key: 'loans',
+    icon: HandCoins,
+    title: 'Tagihan pinjaman (Usahaku)',
+    desc: 'Jam 07:00 WIB: berapa peminjam yang harus ditagih hari ini dan siapa yang nunggak.',
   },
 ];
 
