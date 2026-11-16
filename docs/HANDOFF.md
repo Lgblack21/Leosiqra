@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.40.0 tim — run #228; siap: 3.41.0 petugas)
+Terakhir diperbarui: 2026-11-16 (live: 3.41.0 petugas + PWA Tim — run #229)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.41.0 SIAP (branch `claude/pinjaman-petugas-20261116`, tanpa SQL): Tim di usaha pinjaman —
+- **2026-11-16 — 3.41.0 LIVE (run #229, 16d3c97, tanpa SQL): Tim di usaha pinjaman —
   jabatan Petugas.** Keluhan Bos: akun tim di usaha pinjaman malah dapat Kasir + Stok. Sekarang role `petugas`
   (STAFF_ROLES), rute `/api/staff/shops/:id/pinjaman/*` → `handleShopLoans(..., actor)` dengan allowlist
   `staffLoanAllowed()` (GET utama, peminjam POST/PUT, foto/KTP GET/PUT, daftar, loans/:id/pay, GET foto jaminan).
@@ -31,7 +31,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   + PWA Tim: `public/tim-manifest.json` (id/scope `/tim`), `src/app/tim/layout.tsx` (manifest, apple-touch-icon,
   appleWebApp), ikon `public/images/tim-{180,192,512,maskable-*}.png` (dibuat dari SVG via Playwright), tombol
   `src/components/install/TimInstall.tsx` (login & dalam aplikasi), `InstallApp` + `'tim'`. Chrome CDP:
-  installability errors kosong. **Belum**: pasang di HP Android & iPhone asli. Menunggu "gas".
+  installability errors kosong (juga di produksi). **Belum**: pasang di HP Android & iPhone asli; Bos perlu ganti jabatan akun tim pinjaman ke Petugas.
 
 - **2026-11-16 — 3.40.0 LIVE (run #228, e7c4cb8, SQL = 0049 yang sama): Tim —
   penagih, kas usaha per staf, kartu staf.** `shop_staff.kas_json` {shop_id: kas_id}, `staff_no` STF-001 urut,
