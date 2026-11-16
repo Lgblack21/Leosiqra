@@ -11189,6 +11189,29 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         return json({ ok: true, id, lunas: (r[2]?.meta.changes ?? 0) > 0 }, { status: 201 });
       }
 
+      // Geser jadwal: tanggal yang SUDAH tertutup angsuran tetap; sisanya diganti. Ditolak kalau sementara itu ada
+      // angsuran masuk/dihapus (paid berubah) atau jadwal sudah diubah orang lain (due_dates_json berubah).
+      if (op === "jadwal" && request.method === "PUT") {
+        if (loan.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const paid = Number((await env.DB.prepare(`SELECT ${LOAN_PAID_SQL} AS n`).bind(ownerId, loan.id).first<{ n: number }>())?.n) || 0;
+        let old: string[] = [];
+        try { const v = JSON.parse(loan.due_dates_json); if (Array.isArray(v)) old = v.filter((d): d is string => typeof d === "string"); } catch { old = []; }
+        const covered = Math.min(old.length, Math.floor(paid / Math.max(1, loan.installment)));
+        const dates = Array.isArray(raw.due_dates) ? raw.due_dates : [];
+        const maxDate = new Date(Date.parse(`${todayWIB()}T00:00:00Z`) + 3 * 366 * 86400e3).toISOString().slice(0, 10);
+        const keepOk = dates.length === loan.count && old.slice(0, covered).every((d, i) => dates[i] === d);
+        const restOk = dates.every((d, i) => isRealDateStr(d) && d > loan.disbursed_on && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)));
+        if (!keepOk || !restOk) return json({ error: "Jadwal baru tidak valid. Muat ulang lalu coba lagi." }, { status: 400 });
+        if (typeof raw.expected_paid === "number" && raw.expected_paid !== paid) return json({ error: "Ada angsuran yang baru masuk. Muat ulang lalu geser lagi." }, { status: 409 });
+        const r = await env.DB.prepare(
+          `UPDATE shop_loans SET due_dates_json = ? WHERE id = ? AND owner_id = ? AND status = 'aktif' AND due_dates_json = ? AND ${LOAN_PAID_SQL} = ?`
+        ).bind(JSON.stringify(dates), loan.id, ownerId, loan.due_dates_json, ownerId, loan.id, paid).run();
+        if (!r.meta.changes) return json({ error: "Pinjaman ini baru saja berubah (ada angsuran atau jadwal baru). Muat ulang lalu coba lagi." }, { status: 409 });
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true, kept: covered });
+      }
+
       // Hapus pinjaman: hanya kalau belum ada angsuran. Kas dikembalikan (uang diserahkan +, admin terpisah −).
       if (!op && request.method === "DELETE") {
         if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'angsuran' LIMIT 1").bind(ownerId, loan.id).first()) {

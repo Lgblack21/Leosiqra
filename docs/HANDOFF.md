@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.37.0 SIAP (branch `claude/pinjaman-geser-20261116`, belum deploy, tanpa SQL): Pinjaman tahap 2c —
+  geser jadwal.** Worker `PUT …/pinjaman/loans/:id/jadwal {due_dates, expected_paid}`: tanggal yang sudah tertutup
+  (floor(paid/angsuran)) wajib sama, sisanya valid & urut; UPDATE dijaga `due_dates_json` lama + paid sama (409 kalau
+  ada angsuran/jadwal baru). UI `GeserForm` (mundur N hari / mulai dari tanggal; default "mulai" kalau nunggak).
+  Dites wrangler lokal (prefix, jumlah, urutan, paid basi, lunas, akun lain) + Playwright. **Tahap 2 selesai**
+  (penagih akun tim = nanti). Menunggu "gas".
+
 - **2026-11-16 — 3.36.0 LIVE (run #224, cd700f5, tanpa SQL): Pinjaman tahap 2b —
   notifikasi pagi.** `sendShopLoanDigest` dipanggil dari cron per-menit di 00:00–00:09 UTC (07:00 WIB; trigger cron
   sudah penuh). Hitungan dari `due_dates_json` (json_each) − angsuran, satu push per pemilik, klaim

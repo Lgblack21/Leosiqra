@@ -171,6 +171,13 @@ export const shopLoanService = {
     changed();
     return r;
   },
+  async reschedule(shopId: string, loanId: string, input: { dueDates: string[]; expectedPaid: number }) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jadwal`, {
+      method: 'PUT',
+      json: { due_dates: input.dueDates, expected_paid: input.expectedPaid },
+    });
+    changed();
+  },
   async removeLoan(shopId: string, loanId: string) {
     await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}`, { method: 'DELETE' });
     changed();

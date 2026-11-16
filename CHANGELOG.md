@@ -119,6 +119,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.34.0 | 16 Nov 2026 | Usahaku: jenis usaha Pinjaman |
 | 3.35.0 | 16 Nov 2026 | Pinjaman: laporan & Excel |
 | 3.36.0 | 16 Nov 2026 | Pinjaman: ringkasan tagihan tiap pagi |
+| 3.37.0 | 16 Nov 2026 | Pinjaman: geser jadwal |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -132,6 +133,16 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.37.0 — 2026-11-16 — Pinjaman: geser jadwal
+
+- **Geser jadwal pinjaman.** Peminjam sakit atau pulang kampung? Buka pinjamannya, lalu ketuk **Geser jadwal**. Ada
+  dua pilihan: **mundurkan beberapa hari**, atau **mulai lagi dari tanggal** tertentu (otomatis dipilih kalau dia
+  sudah nunggak).
+- Angsuran yang sudah dibayar gak berubah. Cuma sisanya yang disusun ulang, dan tanggal merah, Minggu, serta cuti
+  bersama tetap dilewati. Sebelum disimpan kelihatan angsuran berikutnya dan tanggal selesai, lama → baru.
+- Total yang harus dibayar tetap sama. Kalau ada angsuran yang baru masuk waktu jadwal digeser, perubahannya ditolak
+  supaya jadwal dan pembayaran gak bentrok.
 
 ## 3.36.0 — 2026-11-16 — Pinjaman: ringkasan tagihan tiap pagi
 

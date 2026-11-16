@@ -12,6 +12,7 @@ Pilihan Minggu/cuti libur ada di form pinjaman (bukan pengaturan toko).
 
 Tahap 2 di-ACC Bos 2026-11-16 ("gas"): urutan **Laporan & Excel (3.35)** → notifikasi pagi **07:00 WIB** (3.36) →
 geser jadwal (3.37). Penagih pakai akun tim = **nanti** (kalau sudah ada penagih).
+Status: 3.35 laporan ✓ · 3.36 notifikasi 07:00 ✓ · 3.37 geser jadwal ✓ — **tahap 2 selesai**.
 
 Catatan: ini pinjaman dari modal pribadi pemilik, **bukan koperasi** (tidak ada anggota/simpanan/SHU).
 Nama usaha sebaiknya tidak memakai kata "Koperasi" sebelum berbadan hukum. Leosiqra hanya alat catat

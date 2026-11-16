@@ -65,6 +65,7 @@ type Form =
   | { k: 'loan'; borrowerId?: string }
   | { k: 'pay'; loan: Loan; st: StatusPinjaman }
   | { k: 'detail'; loanId: string }
+  | { k: 'geser'; loanId: string }
   | { k: 'borrower'; b?: Borrower };
 
 export function PinjamanView({
@@ -476,7 +477,9 @@ export function PinjamanView({
       ? 'Pinjaman baru'
       : form?.k === 'pay'
         ? `Terima angsuran · ${borrowerById.get(form.loan.borrowerId)?.name ?? ''}`
-        : form?.k === 'borrower'
+        : form?.k === 'geser'
+          ? 'Geser jadwal'
+          : form?.k === 'borrower'
           ? form.b
             ? 'Ubah peminjam'
             : 'Tambah peminjam'
@@ -502,6 +505,11 @@ export function PinjamanView({
         )}
         {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} onDone={close} />}
         {form?.k === 'borrower' && <BorrowerForm shop={shop} b={form.b} onDone={close} />}
+        {form?.k === 'geser' &&
+          (() => {
+            const l = data.loans.find((x) => x.id === form.loanId);
+            return l ? <GeserForm shop={shop} loan={l} today={today} onDone={close} /> : null;
+          })()}
         {form?.k === 'detail' && detailLoan && (
           <LoanDetail
             shop={shop}
@@ -510,6 +518,7 @@ export function PinjamanView({
             data={data}
             today={today}
             onPay={(st) => setForm({ k: 'pay', loan: detailLoan, st })}
+            onGeser={() => setForm({ k: 'geser', loanId: detailLoan.id })}
             onDone={close}
             onKas={() => {
               setForm(null);
@@ -925,6 +934,7 @@ function LoanDetail({
   data,
   today,
   onPay,
+  onGeser,
   onDone,
   onKas,
 }: {
@@ -934,6 +944,7 @@ function LoanDetail({
   data: LoanBook;
   today: string;
   onPay: (st: StatusPinjaman) => void;
+  onGeser: () => void;
   onDone: (m?: string) => void;
   onKas: () => void;
 }) {
@@ -990,6 +1001,15 @@ function LoanDetail({
           <HandCoins size={17} /> Terima angsuran{st.tagihan ? ` · tagihan ${formatIDR(st.tagihan)}` : ''}
         </button>
       )}
+      {loan.status === 'aktif' && (
+        <button
+          type="button"
+          onClick={onGeser}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-100 py-2.5 fs-13 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+        >
+          <CalendarDays size={15} /> Geser jadwal (sakit, pulang kampung, dll.)
+        </button>
+      )}
       <details className="rounded-2xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800" open={loan.status === 'aktif'}>
         <summary className="cursor-pointer px-4 py-3 fs-14 font-extrabold text-slate-900 dark:text-white">Jadwal ({loan.dueDates.length} tanggal)</summary>
         <ol className="grid max-h-64 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto px-4 pb-4 fs-12 sm:grid-cols-3">
@@ -1036,3 +1056,114 @@ function LoanDetail({
   );
 }
 
+// ── Geser jadwal: yang sudah dibayar tetap, sisanya disusun ulang dari tanggal baru ────────
+function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; today: string; onDone: (m?: string) => void }) {
+  const covered = Math.min(loan.dueDates.length, Math.floor(loan.paid / Math.max(1, loan.installment)));
+  const kept = loan.dueDates.slice(0, covered);
+  const firstOld = loan.dueDates[covered] ?? today;
+  const lastKept = kept[kept.length - 1] ?? loan.disbursedOn;
+  const minStart = [today, addDays(lastKept, 1), addDays(loan.disbursedOn, 1)].sort().pop() as string;
+  // Sudah nunggak → paling masuk akal mulai lagi dari tanggal tertentu (mis. besok); belum → mundurkan N hari.
+  const [mode, setMode] = useState<'mundur' | 'mulai'>(firstOld < today ? 'mulai' : 'mundur');
+  const [days, setDays] = useState(loan.frequency === 'harian' ? 3 : 7);
+  const [start, setStart] = useState(addDays(today, 1) > minStart ? addDays(today, 1) : minStart);
+  const [minggu, setMinggu] = useState(true);
+  const [cuti, setCuti] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useSyncExternalStore(liburStore.subscribe, liburStore.versi, liburStore.versi);
+  const rest = loan.count - covered;
+  const from = mode === 'mundur' ? addDays(firstOld, Math.max(0, days)) : start;
+  const effFrom = from < minStart ? minStart : from;
+  const baru = useMemo(() => buatJadwal(effFrom, rest, loan.frequency, { minggu, cuti }), [effFrom, rest, loan.frequency, minggu, cuti]);
+  const dates = [...kept, ...baru];
+  const oldEnd = loan.dueDates[loan.dueDates.length - 1] ?? '';
+  const newEnd = dates[dates.length - 1] ?? '';
+  const save = async () => {
+    if (rest <= 0 || baru.length !== rest) return setError('Tidak ada jadwal yang bisa digeser.');
+    setBusy(true);
+    setError('');
+    try {
+      await shopLoanService.reschedule(shop.id, loan.id, { dueDates: dates, expectedPaid: loan.paid });
+      onDone(`Jadwal digeser. Selesai sekarang ${tgl(newEnd, true)}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-4">
+      <p className="rounded-2xl bg-slate-50 p-3 fs-13 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+        {covered > 0 && `${covered} angsuran yang sudah dibayar tidak berubah. `}Yang digeser: <b>{rest} angsuran</b> mulai jadwal{' '}
+        {tgl(firstOld, true)}.
+        Angsuran yang belum dibayar (termasuk yang nunggak) pindah ke tanggal baru, jadi tidak ditagih sebelum tanggal itu.
+        Total yang harus dibayar tetap sama.
+      </p>
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+        {(
+          [
+            ['mundur', 'Mundurkan beberapa hari'],
+            ['mulai', 'Mulai lagi dari tanggal'],
+          ] as const
+        ).map(([v, l]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setMode(v)}
+            className={cn('rounded-xl py-2 fs-13 font-bold', mode === v ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {mode === 'mundur' ? (
+        <label className="block">
+          <span className={labelCls}>Mundur berapa hari</span>
+          <input
+            value={days || ''}
+            onChange={(e) => setDays(Math.min(365, Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0))}
+            inputMode="numeric"
+            className={cn(fieldCls, 'tabular-nums')}
+          />
+        </label>
+      ) : (
+        <label className="block">
+          <span className={labelCls}>Angsuran berikutnya mulai</span>
+          <input type="date" value={start} min={minStart} onChange={(e) => setStart(e.target.value || minStart)} className={fieldCls} />
+        </label>
+      )}
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        <label className="flex items-center gap-2 fs-13 font-semibold text-slate-700 dark:text-slate-200">
+          <input type="checkbox" checked={minggu} onChange={(e) => setMinggu(e.target.checked)} className="h-4 w-4 accent-emerald-600" /> Minggu libur
+        </label>
+        <label className="flex items-center gap-2 fs-13 font-semibold text-slate-700 dark:text-slate-200">
+          <input type="checkbox" checked={cuti} onChange={(e) => setCuti(e.target.checked)} className="h-4 w-4 accent-emerald-600" /> Cuti bersama libur
+        </label>
+      </div>
+      <section className="space-y-1.5 rounded-2xl bg-slate-50 p-4 fs-13 dark:bg-slate-800/50">
+        <p className="flex justify-between gap-3">
+          <span className="text-slate-500">Angsuran berikutnya</span>
+          <b className="tabular-nums text-slate-900 dark:text-white">
+            {tgl(firstOld, true)} → {baru[0] ? tgl(baru[0], true) : '—'}
+          </b>
+        </p>
+        <p className="flex justify-between gap-3">
+          <span className="text-slate-500">Selesai</span>
+          <b className="tabular-nums text-slate-900 dark:text-white">
+            {tgl(oldEnd, true)} → {newEnd ? tgl(newEnd, true) : '—'}
+          </b>
+        </p>
+        {from < minStart && <p className="fs-12 text-amber-700">Tanggal paling awal yang bisa dipilih {tgl(minStart, true)}.</p>}
+      </section>
+      {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy || rest <= 0}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 fs-15 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <CalendarDays size={18} />} Simpan jadwal baru
+      </button>
+    </div>
+  );
+}
