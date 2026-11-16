@@ -99,7 +99,7 @@ export function JaminanInput({ value, onChange }: { value: JaminanDraft; onChang
 }
 
 /** Bagian Jaminan di detail pinjaman. */
-export function JaminanSection({ shop, loan, v, onToast }: { shop: Shop; loan: Loan; v: number; onToast: (m: string) => void }) {
+export function JaminanSection({ shop, loan, v, onToast, readOnly }: { shop: Shop; loan: Loan; v: number; onToast: (m: string) => void; readOnly?: boolean }) {
   const c = loan.collateral;
   const [edit, setEdit] = useState(false);
   const [draft, setDraft] = useState<JaminanDraft>(() => ({ on: true, jenis: c?.jenis ?? 'bpkb_motor', ket: c?.ket ?? '', nilai: c?.nilai ?? 0, photos: [] }));
@@ -127,6 +127,7 @@ export function JaminanSection({ shop, loan, v, onToast }: { shop: Shop; loan: L
       setDraft((d) => ({ ...d, photos: [] }));
     }, 'Jaminan disimpan.');
 
+  if (!c && readOnly) return null;
   if (!c && !edit)
     return (
       <button type="button" onClick={() => setEdit(true)} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-3 fs-13 font-bold text-slate-500 hover:border-slate-300 dark:border-slate-700">
@@ -174,18 +175,20 @@ export function JaminanSection({ shop, loan, v, onToast }: { shop: Shop; loan: L
                       {/* eslint-disable-next-line @next/next/no-img-element -- foto privat lewat endpoint berlogin */}
                       <img src={url} alt={`Foto jaminan ${i + 1}`} className="h-full w-full object-cover" />
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => window.confirm('Hapus foto jaminan ini?') && run('hapus', () => shopLoanService.deleteCollateralPhoto(shop.id, loan.id, i))}
-                      aria-label="Hapus foto jaminan"
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/70 text-white"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => window.confirm('Hapus foto jaminan ini?') && run('hapus', () => shopLoanService.deleteCollateralPhoto(shop.id, loan.id, i))}
+                        aria-label="Hapus foto jaminan"
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/70 text-white"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </span>
                 );
               })}
-              {c.photoCount < JAMINAN_FOTO_MAX && (
+              {!readOnly && c.photoCount < JAMINAN_FOTO_MAX && (
                 <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 fs-11 font-bold text-slate-500 dark:border-slate-600">
                   {busy === 'foto' ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
                   Tambah foto
@@ -202,6 +205,7 @@ export function JaminanSection({ shop, loan, v, onToast }: { shop: Shop; loan: L
                 </label>
               )}
             </div>
+            {!readOnly && (
             <div className="flex flex-wrap gap-2">
               {c.returnedAt ? (
                 <button type="button" onClick={() => run('kembali', () => shopLoanService.returnCollateral(shop.id, loan.id, true))} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -230,12 +234,13 @@ export function JaminanSection({ shop, loan, v, onToast }: { shop: Shop; loan: L
                 Ubah
               </button>
             </div>
+            )}
           </>
         )
       )}
       {error && <p role="alert" className="fs-12 font-semibold text-rose-600">{error}</p>}
       <p className="flex items-start gap-1.5 fs-11 text-slate-400">
-        <Lock size={12} className="mt-0.5 shrink-0" /> Foto jaminan privat — tidak ikut Excel dan tidak terlihat akun tim.
+        <Lock size={12} className="mt-0.5 shrink-0" /> {readOnly ? 'Foto jaminan privat. Hanya pemilik usaha yang bisa mengubah jaminan.' : 'Foto jaminan privat — tidak ikut Excel dan tidak terlihat penagih.'}
       </p>
     </section>
   );

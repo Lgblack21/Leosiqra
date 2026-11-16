@@ -15,6 +15,7 @@ import { fieldCls, labelCls } from './UsahaView';
 // keuangan lain. Jabatan: Kasir (kasir toko) atau Penagih (Tagihan hari ini usaha pinjaman). Foto + kartu staf (0049).
 const JABATAN: [string, string][] = [
   ['kasir', 'Kasir'],
+  ['petugas', 'Petugas'],
   ['penagih', 'Penagih'],
 ];
 const jabatanLabel = (r: string) => JABATAN.find(([k]) => k === r)?.[1] ?? 'Kasir';
@@ -60,7 +61,7 @@ function JabatanPicker({ value, onChange }: { value: string; onChange: (v: strin
   return (
     <div>
       <span className={labelCls}>Jabatan</span>
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+      <div className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
         {JABATAN.map(([k, l]) => (
           <button key={k} type="button" onClick={() => onChange(k)} className={cn('rounded-xl py-2 fs-13 font-bold', value === k ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}>
             {l}
@@ -69,8 +70,10 @@ function JabatanPicker({ value, onChange }: { value: string; onChange: (v: strin
       </div>
       <p className="mt-1 fs-11 text-slate-500">
         {value === 'penagih'
-          ? 'Penagih hanya melihat Tagihan hari ini di usaha pinjaman dan bisa menerima angsuran — tanpa KTP, alamat, atau jaminan.'
-          : 'Kasir membuka kasir toko yang dipilih dan mencatat penjualan.'}
+          ? 'Usaha pinjaman: hanya Tagihan hari ini + terima angsuran — tanpa KTP, alamat, atau jaminan.'
+          : value === 'petugas'
+            ? 'Usaha pinjaman: tampilan sama seperti punyamu — daftar anggota (foto & KTP), kartu, tagihan, terima angsuran. Cairkan pinjaman, hapus, geser jadwal, jaminan, kas, dan laporan tetap khusus kamu.'
+            : 'Toko: membuka kasir toko yang dipilih, catat penjualan, biaya, dan stok. Usaha pinjaman tidak tampil untuk kasir.'}
       </p>
     </div>
   );
@@ -154,8 +157,8 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
     <div className="space-y-4">
       <p className="rounded-2xl bg-slate-50 px-3.5 py-3 fs-12 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
         Anggota tim login di <b>{loginUrl.replace(/^https?:\/\//, '')}</b> (atau halaman login biasa) dengan username &
-        sandi dari kamu. Kasir hanya membuka kasir usaha yang kamu pilih; Penagih hanya melihat tagihan pinjaman hari
-        ini — <b>tanpa saldo, rekening, atau keuangan lainmu</b>. Uang yang mereka catat masuk ke kas usaha yang kamu
+        sandi dari kamu. Kasir membuka kasir toko; Petugas mengurus anggota & angsuran usaha pinjaman; Penagih hanya
+        melihat tagihan hari ini — <b>tanpa saldo, rekening, atau keuangan lainmu</b>. Uang yang mereka catat masuk ke kas usaha yang kamu
         tentukan dan tercatat &ldquo;oleh &lt;nama&gt;&rdquo;.
       </p>
       {error && (

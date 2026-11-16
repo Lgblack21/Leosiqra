@@ -10,6 +10,8 @@ import {
   Loader2,
   LogOut,
   MessageCircle,
+  NotebookPen,
+  Users,
   Package,
   ReceiptText,
   Store,
@@ -20,7 +22,10 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { staffService, staffStockService, type StaffMe, type StaffSale, type StaffTagihan, type TagihanLoan } from '@/lib/services/staffService';
 import { kindOf } from '@/lib/usaha/jenis';
 import { statusPinjaman } from '@/lib/usaha/pinjaman';
-import type { Loan } from '@/lib/services/shopLoanService';
+import { setLoanApiRoot, type Loan } from '@/lib/services/shopLoanService';
+import type { ShopBook } from '@/lib/services/shopBookService';
+import { PinjamanView, type PinjamanTab } from '@/components/usahaku/PinjamanView';
+import { PetugasCtx } from '@/components/usahaku/petugas';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { StockView } from '@/components/ladang/StockView';
 import { fmtQty, isLow, type StockData, type StockMaterial } from '@/lib/services/stockService';
@@ -38,8 +43,12 @@ import { cn, formatIDR } from '@/lib/utils';
 // Tagih, atau Jual barang. Semua yang dicatat tim bertanda "oleh <nama>".
 // Jabatan Penagih (3.40): hanya Tagihan — daftar angsuran usaha pinjaman yang diberikan, terima angsuran
 // ke kas usaha yang ditentukan pemilik. Tanpa alamat, KTP, atau jaminan.
+// Jabatan Petugas (3.41): tampilan pinjaman yang sama dengan pemilik (Tagihan · Pinjaman · Anggota) lewat
+// /api/staff/shops/:id/pinjaman — cairkan pinjaman, hapus, geser jadwal, jaminan, kas & laporan tetap khusus pemilik.
+// Usaha pinjaman tidak pernah tampil di Kasir/Stok.
 
-type Tab = 'ringkas' | 'kasir' | 'stok' | 'tagih';
+type Tab = 'ringkas' | 'kasir' | 'stok' | 'tagih' | 'p-tagihan' | 'p-pinjaman' | 'p-peminjam';
+const isLoanShop = (s: Shop) => kindOf(s.kind)?.id === 'pinjaman';
 const noteText = (n: string | null) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '') || 'Penjualan';
 const isCost = (t: StaffSale) => t.type === 'pengeluaran';
 const sumOf = (list: StaffSale[]) => list.reduce((a, t) => a + Number(t.amount || 0), 0);
@@ -127,7 +136,7 @@ function ShopChips({
 }
 
 export function StaffApp() {
-  const [me, setMe] = useState<StaffMe | null>(null);
+  const [me, setMe] = useState<(StaffMe & { hiddenLoanShops?: boolean }) | null>(null);
   const [state, setState] = useState<'loading' | 'login' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('kasir');
@@ -142,11 +151,13 @@ export function StaffApp() {
   const load = useCallback(async () => {
     try {
       const r = await staffService.me();
-      const penagih = r.staff.role === 'penagih';
-      const list = penagih ? r.shops.filter((s) => kindOf(s.kind)?.id === 'pinjaman') : r.shops;
-      setMe({ ...r, shops: list });
+      const role = r.staff.role;
+      const loanRole = role === 'penagih' || role === 'petugas';
+      const list = r.shops.filter((s) => (loanRole ? isLoanShop(s) : !isLoanShop(s)));
+      if (role === 'petugas') setLoanApiRoot('/api/staff/shops');
+      setMe({ ...r, shops: list, hiddenLoanShops: !loanRole && list.length < r.shops.length });
       setState('ready');
-      setTab((t) => (penagih ? 'tagih' : t === 'tagih' ? 'kasir' : t));
+      setTab((t) => (role === 'penagih' ? 'tagih' : role === 'petugas' ? (t.startsWith('p-') ? t : 'p-tagihan') : t === 'tagih' || t.startsWith('p-') ? 'kasir' : t));
       setShopId((cur) => (list.some((s) => s.id === cur) ? cur : (list[0]?.id ?? '')));
     } catch (e) {
       const m = e instanceof Error ? e.message : '';
@@ -233,7 +244,30 @@ export function StaffApp() {
         <div className={cn(card, 'p-8 text-center')}>
           <Store size={28} className="mx-auto text-slate-300" />
           <p className="mt-2 fs-15 font-bold text-slate-900">Belum ada usaha untukmu</p>
-          <p className="mt-1 fs-13 text-slate-500">Minta pemilik usaha memberi akses di Usahaku › Tim.</p>
+          <p className="mt-1 fs-13 text-slate-500">
+            {me.hiddenLoanShops
+              ? 'Usaha pinjaman tidak punya kasir atau stok. Minta pemilik mengubah jabatanmu jadi Petugas atau Penagih di Usahaku › Tim.'
+              : me.staff.role === 'kasir'
+                ? 'Minta pemilik usaha memberi akses di Usahaku › Tim.'
+                : 'Jabatanmu khusus usaha pinjaman. Minta pemilik mencentang usaha pinjamannya di Usahaku › Tim.'}
+          </p>
+        </div>
+      ) : me.staff.role === 'petugas' ? (
+        <div className="space-y-4">
+          {me.shops.length > 1 && <ShopChips shops={me.shops} value={shopId} onChange={setShopId} lowBy={{}} />}
+          {shop && (
+            <PetugasCtx.Provider value={{ kasName: me.kasNames[shop.id] ?? null }}>
+              <PinjamanView
+                key={shop.id}
+                shop={shop}
+                book={{ accounts: [], range: { from: me.date, to: me.date } } as unknown as ShopBook}
+                variant="app"
+                view={tab.slice(2) as PinjamanTab}
+                onNav={(v) => v !== 'kas' && v !== 'ringkasan' && go(`p-${v}` as Tab)}
+                onToast={say}
+              />
+            </PetugasCtx.Provider>
+          )}
         </div>
       ) : me.staff.role === 'penagih' ? (
         <div className="space-y-4">
@@ -262,18 +296,23 @@ export function StaffApp() {
         </div>
       )}
 
-      {me.staff.role !== 'penagih' && (
+      {me.staff.role !== 'penagih' && me.shops.length > 0 && (
       <nav
         aria-label="Menu tim"
         className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4"
       >
         <div className="flex items-center gap-1 rounded-full bg-slate-950/85 p-1.5 shadow-xl ring-1 ring-white/10 backdrop-blur-xl">
-          {(
-            [
-              ['ringkas', 'Ringkas', LayoutGrid],
-              ['kasir', 'Kasir', Store],
-              ['stok', 'Stok', Package],
-            ] as const
+          {(me.staff.role === 'petugas'
+            ? ([
+                ['p-tagihan', 'Tagihan', ReceiptText],
+                ['p-pinjaman', 'Pinjaman', NotebookPen],
+                ['p-peminjam', 'Anggota', Users],
+              ] as const)
+            : ([
+                ['ringkas', 'Ringkas', LayoutGrid],
+                ['kasir', 'Kasir', Store],
+                ['stok', 'Stok', Package],
+              ] as const)
           ).map(([id, label, Icon]) => {
             const on = tab === id;
             return (

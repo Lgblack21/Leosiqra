@@ -38,6 +38,7 @@ import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { UsahaSheet } from './UsahaSheet';
 import { AnggotaWizard, FotoAnggota, KartuAnggota } from './AnggotaView';
 import { JaminanInput, JaminanSection, jaminanKosong } from './JaminanView';
+import { usePetugas } from './petugas';
 
 // Usahaku › jenis Pinjaman: Ringkasan · Tagihan hari ini · Pinjaman · Peminjam (Kas pakai BerandaUsaha view kas).
 // Rancangan & ACC Bos: docs/rancangan/usahaku-pinjaman.md.
@@ -92,7 +93,10 @@ export function PinjamanView({
   const [error, setError] = useState('');
   const [notReady, setNotReady] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
-  const isPro = usePlan();
+  const petugas = usePetugas();
+  const plan = usePlan(Boolean(petugas));
+  // Petugas: paket PRO pemilik dicek di server; tombol "Pinjaman baru" memang tidak ada untuknya.
+  const isPro = petugas ? true : plan;
   useSyncExternalStore(liburStore.subscribe, liburStore.versi, liburStore.versi);
   useEffect(() => {
     void muatHariLibur();
@@ -150,7 +154,7 @@ export function PinjamanView({
       Membuat pinjaman baru khusus <b>PRO</b>. Pinjaman yang sudah berjalan tetap bisa ditagih.
     </p>
   );
-  const newLoanBtn = (
+  const newLoanBtn = petugas ? null : (
     <button
       type="button"
       onClick={() => setForm({ k: 'loan' })}
@@ -491,7 +495,7 @@ export function PinjamanView({
                         Lihat
                       </button>
                     ) : (
-                      boleh && (
+                      boleh && !petugas && (
                         <button
                           type="button"
                           onClick={() => setForm({ k: 'loan', borrowerId: b.id })}
@@ -555,7 +559,7 @@ export function PinjamanView({
         {form?.k === 'loan' && (
           <LoanForm shop={shop} data={data} kas={kas} today={today} initialBorrower={form.borrowerId} onDone={close} />
         )}
-        {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} onDone={close} />}
+        {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} petugas={petugas} onDone={close} />}
         {form?.k === 'borrower' && <BorrowerForm shop={shop} b={form.b} onDone={close} />}
         {form?.k === 'daftar' && (
           <AnggotaWizard
@@ -574,7 +578,7 @@ export function PinjamanView({
             return b?.registered ? (
               <div className="space-y-3">
                 <KartuAnggota shop={shop} b={b} />
-                {!aktif.some((l) => l.borrowerId === b.id) && isPro !== false && (
+                {!aktif.some((l) => l.borrowerId === b.id) && isPro !== false && !petugas && (
                   <button type="button" onClick={() => setForm({ k: 'loan', borrowerId: b.id })} className="w-full rounded-full bg-emerald-600 py-3 fs-14 font-extrabold text-white hover:bg-emerald-700">
                     Beri pinjaman ke {b.name}
                   </button>
@@ -599,13 +603,18 @@ export function PinjamanView({
             data={data}
             today={today}
             onPay={(st) => setForm({ k: 'pay', loan: detailLoan, st })}
-            onGeser={() => setForm({ k: 'geser', loanId: detailLoan.id })}
+            onGeser={petugas ? undefined : () => setForm({ k: 'geser', loanId: detailLoan.id })}
+            petugas={Boolean(petugas)}
             onToast={onToast}
             onDone={close}
-            onKas={() => {
-              setForm(null);
-              onNav('kas');
-            }}
+            onKas={
+              petugas
+                ? undefined
+                : () => {
+                    setForm(null);
+                    onNav('kas');
+                  }
+            }
           />
         )}
       </UsahaSheet>
@@ -615,6 +624,7 @@ export function PinjamanView({
 
 // ── Form: peminjam ─────────────────────────────────────────────────────────────
 function BorrowerForm({ shop, b, onDone }: { shop: Shop; b?: Borrower; onDone: (m?: string) => void }) {
+  const petugas = usePetugas();
   const [name, setName] = useState(b?.name ?? '');
   const [wa, setWa] = useState(b?.wa ?? '');
   const [note, setNote] = useState(b?.note ?? '');
@@ -663,7 +673,7 @@ function BorrowerForm({ shop, b, onDone }: { shop: Shop; b?: Borrower; onDone: (
       <button type="button" onClick={save} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3 fs-14 font-extrabold text-white disabled:opacity-50">
         {busy ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />} Simpan
       </button>
-      {b && (
+      {b && !petugas && (
         <button type="button" onClick={remove} disabled={busy} className="flex w-full items-center justify-center gap-1.5 py-2 fs-13 font-bold text-rose-600">
           <Trash2 size={14} /> Hapus dari daftar
         </button>
@@ -963,6 +973,7 @@ function PayForm({
   st,
   kas,
   today,
+  petugas,
   onDone,
 }: {
   shop: Shop;
@@ -970,6 +981,8 @@ function PayForm({
   st: StatusPinjaman;
   kas: ShopBook['accounts'];
   today: string;
+  /** Akun Petugas: kas & tanggal ditentukan server (kas pilihan pemilik, hari ini). */
+  petugas?: { kasName: string | null } | null;
   onDone: (m?: string) => void;
 }) {
   const [amount, setAmount] = useState(st.tagihan || Math.min(loan.installment, st.sisa));
@@ -981,6 +994,7 @@ function PayForm({
   const save = async () => {
     if (!amount) return setError('Isi nominal yang dibayar.');
     if (amount > st.sisa) return setError(`Melebihi sisa pinjaman (${formatIDR(st.sisa)}).`);
+    if (petugas && !petugas.kasName) return setError('Pemilik usaha belum menyiapkan kas usaha untuk angsuran.');
     setBusy(true);
     setError('');
     try {
@@ -1009,6 +1023,11 @@ function PayForm({
           </button>
         ))}
       </div>
+      {petugas ? (
+        <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+          Masuk ke <b>{petugas.kasName ?? 'kas usaha'}</b> · tanggal hari ini · tercatat atas namamu.
+        </p>
+      ) : (
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
           <span className={labelCls}>Masuk ke kas</span>
@@ -1025,6 +1044,7 @@ function PayForm({
           <input type="date" value={date} min={loan.disbursedOn} max={today} onChange={(e) => setDate(e.target.value || today)} className={fieldCls} />
         </label>
       </div>
+      )}
       {amount > st.tagihan && st.tagihan >= 0 && amount <= st.sisa && (
         <p className="fs-12 text-slate-500">Lebihnya {formatIDR(amount - st.tagihan)} dihitung bayar di muka untuk tagihan berikutnya.</p>
       )}
@@ -1045,6 +1065,7 @@ function LoanDetail({
   today,
   onPay,
   onGeser,
+  petugas,
   onToast,
   onDone,
   onKas,
@@ -1055,10 +1076,12 @@ function LoanDetail({
   data: LoanBook;
   today: string;
   onPay: (st: StatusPinjaman) => void;
-  onGeser: () => void;
+  /** Tidak ada untuk Petugas (khusus pemilik). */
+  onGeser?: () => void;
+  petugas?: boolean;
   onToast: (m: string) => void;
   onDone: (m?: string) => void;
-  onKas: () => void;
+  onKas?: () => void;
 }) {
   const st = statusPinjaman(loan, today);
   const pays = data.payments.filter((p) => p.loanId === loan.id).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
@@ -1113,7 +1136,7 @@ function LoanDetail({
           <HandCoins size={17} /> Terima angsuran{st.tagihan ? ` · tagihan ${formatIDR(st.tagihan)}` : ''}
         </button>
       )}
-      {loan.status === 'aktif' && (
+      {loan.status === 'aktif' && onGeser && (
         <button
           type="button"
           onClick={onGeser}
@@ -1122,7 +1145,7 @@ function LoanDetail({
           <CalendarDays size={15} /> Geser jadwal (sakit, pulang kampung, dll.)
         </button>
       )}
-      {data.collateralReady && <JaminanSection key={loan.id} shop={shop} loan={loan} v={data.loadedAt} onToast={onToast} />}
+      {data.collateralReady && <JaminanSection key={loan.id} shop={shop} loan={loan} v={data.loadedAt} onToast={onToast} readOnly={petugas} />}
       <details className="rounded-2xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800" open={loan.status === 'aktif'}>
         <summary className="cursor-pointer px-4 py-3 fs-14 font-extrabold text-slate-900 dark:text-white">Jadwal ({loan.dueDates.length} tanggal)</summary>
         <ol className="grid max-h-64 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto px-4 pb-4 fs-12 sm:grid-cols-3">
@@ -1147,20 +1170,22 @@ function LoanDetail({
               <li key={p.id} className="flex items-center gap-3 py-2">
                 <span className="flex-1 fs-13 text-slate-600 dark:text-slate-300">{tgl(p.date, true)}</span>
                 <span className="fs-13 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">+{formatIDR(p.amount)}</span>
-                <button type="button" onClick={() => removePay(p.id, p.amount)} disabled={busy} aria-label="Hapus angsuran" className="p-1 text-slate-300 hover:text-rose-500">
-                  <Trash2 size={14} />
-                </button>
+                {!petugas && (
+                  <button type="button" onClick={() => removePay(p.id, p.amount)} disabled={busy} aria-label="Hapus angsuran" className="p-1 text-slate-300 hover:text-rose-500">
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
-        {loan.paid > pays.reduce((a, p) => a + p.amount, 0) && (
+        {onKas && loan.paid > pays.reduce((a, p) => a + p.amount, 0) && (
           <button type="button" onClick={onKas} className="mt-1 fs-12 font-bold text-violet-600">
             Angsuran lebih lama ada di riwayat Kas →
           </button>
         )}
       </section>
-      {pays.length === 0 && loan.paid === 0 && (
+      {!petugas && pays.length === 0 && loan.paid === 0 && (
         <button type="button" onClick={removeLoan} disabled={busy} className="flex w-full items-center justify-center gap-1.5 py-2 fs-13 font-bold text-rose-600">
           <Trash2 size={14} /> Hapus pinjaman (salah input)
         </button>

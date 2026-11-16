@@ -5,9 +5,10 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 
 // Paket user dari /api/auth/me (GET di-cache bersama komponen lain). PRO dihitung aktif selama belum
 // kedaluwarsa — sama dengan isProUser di Worker. null = belum termuat (jangan tampilkan label dulu).
-export function usePlan() {
+export function usePlan(skip = false) {
   const [isPro, setIsPro] = useState<boolean | null>(null);
   useEffect(() => {
+    if (skip) return;
     let alive = true;
     cloudflareApi<{ user?: { plan?: string | null; expiredAt?: string | null } | null }>('/api/auth/me')
       .then((r) => {
@@ -19,6 +20,6 @@ export function usePlan() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [skip]);
   return isPro;
 }

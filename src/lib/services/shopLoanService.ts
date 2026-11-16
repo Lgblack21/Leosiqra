@@ -1,4 +1,10 @@
 import { cloudflareApi } from '../cloudflare-api';
+
+// Akun pemilik → /api/member/shops; akun tim Petugas (/tim) → /api/staff/shops (izin terbatas di Worker).
+let ROOT = '/api/member/shops';
+export const setLoanApiRoot = (root: '/api/member/shops' | '/api/staff/shops') => {
+  ROOT = root;
+};
 import { notifyCollectionChanged } from '../cf-firestore';
 
 // Usahaku › jenis Pinjaman (Worker /api/member/shops/:id/pinjaman, migrasi 0048).
@@ -100,7 +106,7 @@ const changed = () => notifyCollectionChanged('shop_book');
 
 export const shopLoanService = {
   async get(shopId: string): Promise<LoanBook> {
-    const r = await cloudflareApi<Row>(`/api/member/shops/${shopId}/pinjaman`);
+    const r = await cloudflareApi<Row>(`${ROOT}/${shopId}/pinjaman`);
     return {
       today: String(r.today ?? ''),
       memberReady: Boolean(r.memberReady),
@@ -134,7 +140,7 @@ export const shopLoanService = {
   },
   async laporan(shopId: string, range: { from: string; to: string } | null): Promise<LoanReport> {
     const q = range ? `?from=${range.from}&to=${range.to}` : '';
-    const r = await cloudflareApi<Row>(`/api/member/shops/${shopId}/pinjaman/laporan${q}`);
+    const r = await cloudflareApi<Row>(`${ROOT}/${shopId}/pinjaman/laporan${q}`);
     const rg = (r.range as { from: string; to: string }) ?? { from: '', to: '' };
     return {
       range: rg,
@@ -160,13 +166,13 @@ export const shopLoanService = {
   },
   /** Foto diri / KTP anggota (R2 privat, hanya pemilik yang login). v = penanda versi supaya tidak pakai cache lama. */
   memberFileUrl: (shopId: string, b: Pick<Borrower, 'id' | 'updatedAt'>, kind: MemberFile) =>
-    `/api/member/shops/${shopId}/pinjaman/peminjam/${b.id}/${kind}?v=${encodeURIComponent(b.updatedAt)}`,
+    `${ROOT}/${shopId}/pinjaman/peminjam/${b.id}/${kind}?v=${encodeURIComponent(b.updatedAt)}`,
   async uploadMemberFile(shopId: string, id: string, kind: MemberFile, imageBase64: string) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}/${kind}`, { method: 'PUT', json: { imageBase64 } });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/peminjam/${id}/${kind}`, { method: 'PUT', json: { imageBase64 } });
     changed();
   },
   async register(shopId: string, id: string) {
-    const r = await cloudflareApi<{ member_no: string | null }>(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}/daftar`, {
+    const r = await cloudflareApi<{ member_no: string | null }>(`${ROOT}/${shopId}/pinjaman/peminjam/${id}/daftar`, {
       method: 'POST',
       json: { consent: true },
     });
@@ -174,16 +180,16 @@ export const shopLoanService = {
     return r.member_no;
   },
   async addBorrower(shopId: string, input: { name: string; wa?: string; note?: string; address?: string; job?: string }) {
-    const r = await cloudflareApi<{ id: string }>(`/api/member/shops/${shopId}/pinjaman/peminjam`, { method: 'POST', json: input });
+    const r = await cloudflareApi<{ id: string }>(`${ROOT}/${shopId}/pinjaman/peminjam`, { method: 'POST', json: input });
     changed();
     return r.id;
   },
   async updateBorrower(shopId: string, id: string, input: { name: string; wa?: string; note?: string; address?: string; job?: string }) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}`, { method: 'PUT', json: input });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/peminjam/${id}`, { method: 'PUT', json: input });
     changed();
   },
   async archiveBorrower(shopId: string, id: string) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}`, { method: 'DELETE' });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/peminjam/${id}`, { method: 'DELETE' });
     changed();
   },
   async createLoan(
@@ -204,7 +210,7 @@ export const shopLoanService = {
       collateral?: { jenis: string; ket: string; nilai: number | null };
     },
   ) {
-    const r = await cloudflareApi<{ id: string; handed: number }>(`/api/member/shops/${shopId}/pinjaman/loans`, {
+    const r = await cloudflareApi<{ id: string; handed: number }>(`${ROOT}/${shopId}/pinjaman/loans`, {
       method: 'POST',
       json: {
         request_id: input.requestId,
@@ -226,7 +232,7 @@ export const shopLoanService = {
     return r;
   },
   async pay(shopId: string, loanId: string, input: { requestId: string; amount: number; accountId: string; date?: string }) {
-    const r = await cloudflareApi<{ id: string; lunas: boolean }>(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/pay`, {
+    const r = await cloudflareApi<{ id: string; lunas: boolean }>(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/pay`, {
       method: 'POST',
       json: { request_id: input.requestId, amount: input.amount, shop_account_id: input.accountId, date: input.date },
     });
@@ -234,36 +240,36 @@ export const shopLoanService = {
     return r;
   },
   async reschedule(shopId: string, loanId: string, input: { dueDates: string[]; expectedPaid: number }) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jadwal`, {
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jadwal`, {
       method: 'PUT',
       json: { due_dates: input.dueDates, expected_paid: input.expectedPaid },
     });
     changed();
   },
   collateralPhotoUrl: (shopId: string, loanId: string, n: number, v: number) =>
-    `/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}?v=${v}`,
+    `${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}?v=${v}`,
   async saveCollateral(shopId: string, loanId: string, c: { jenis: string; ket: string; nilai: number | null }) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'PUT', json: c });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'PUT', json: c });
     changed();
   },
   async removeCollateral(shopId: string, loanId: string) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'DELETE' });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'DELETE' });
     changed();
   },
   async uploadCollateralPhoto(shopId: string, loanId: string, n: number, imageBase64: string) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'PUT', json: { imageBase64 } });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'PUT', json: { imageBase64 } });
     changed();
   },
   async deleteCollateralPhoto(shopId: string, loanId: string, n: number) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'DELETE' });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'DELETE' });
     changed();
   },
   async returnCollateral(shopId: string, loanId: string, undo = false) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/kembali`, { method: 'POST', json: { undo } });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jaminan/kembali`, { method: 'POST', json: { undo } });
     changed();
   },
   async removeLoan(shopId: string, loanId: string) {
-    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}`, { method: 'DELETE' });
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}`, { method: 'DELETE' });
     changed();
   },
 };

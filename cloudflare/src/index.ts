@@ -11080,7 +11080,27 @@ async function recordLoanPayment(
   return json({ ok: true, id, lunas: (r[2]?.meta.changes ?? 0) > 0 }, { status: 201 });
 }
 
-async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
+// Izin Petugas (ACC Bos 2026-11-16): lihat semua, daftar/ubah anggota + foto & KTP, terima angsuran, lihat foto jaminan.
+// Khusus pemilik: cairkan pinjaman baru, hapus pinjaman/angsuran, geser jadwal, ubah jaminan, arsip anggota, laporan.
+function staffLoanAllowed(method: string, p: string[]): boolean {
+  const id = (x?: string) => Boolean(x && /^[0-9a-f-]{36}$/i.test(x));
+  if (method === "GET" && p.length === 0) return true;
+  if (p[0] === "peminjam") {
+    if (method === "POST" && p.length === 1) return true;
+    if (method === "PUT" && p.length === 2 && id(p[1])) return true;
+    if ((method === "GET" || method === "PUT") && p.length === 3 && id(p[1]) && (p[2] === "foto" || p[2] === "ktp")) return true;
+    if (method === "POST" && p.length === 3 && id(p[1]) && p[2] === "daftar") return true;
+  }
+  if (p[0] === "loans" && id(p[1])) {
+    if (method === "POST" && p.length === 3 && p[2] === "pay") return true;
+    if (method === "GET" && p.length === 5 && p[2] === "jaminan" && p[3] === "foto" && /^\d$/.test(p[4])) return true;
+  }
+  return false;
+}
+// actor = akun tim (Petugas). Izin sudah disaring di rute /api/staff (staffLoanAllowed); di sini cuma angsuran yang beda:
+// kas dipaksa ke kas pilihan pemilik, tanggal hari ini, tercatat "oleh <nama>".
+type LoanActor = { id: string; name: string; kasId: string | null };
+async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[], actor?: LoanActor) {
   const [res, sub, op] = parts;
   try {
     if (!res && request.method === "GET") {
@@ -11413,6 +11433,10 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
         const amount = shopMoney(raw.amount);
         if (!amount || amount < 1) return json({ error: "Isi nominal yang dibayar." }, { status: 400 });
+        if (actor) {
+          if (!actor.kasId) return json({ error: "Pemilik usaha belum menyiapkan kas usaha untuk angsuran." }, { status: 409 });
+          return await recordLoanPayment(env, ownerId, shop.id, loan, who, { requestId, amount, kasId: actor.kasId, date: todayWIB(), by: { id: actor.id, name: actor.name } });
+        }
         const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= loan.disbursed_on ? raw.date : todayWIB();
         const book = await shopBook(env, ownerId, shop.id);
         const kas = pickBookAccount(raw.shop_account_id, book);
@@ -11870,7 +11894,7 @@ const staffExtraReady = async (env: Env) => {
   staffColsCache = { ok, at: Date.now() };
   return ok;
 };
-const STAFF_ROLES = ["kasir", "penagih"] as const;
+const STAFF_ROLES = ["kasir", "petugas", "penagih"] as const;
 const staffKasMap = (row: { kas_json?: string | null }): Record<string, string> => {
   try { const v = row.kas_json ? JSON.parse(row.kas_json) : null; return v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k, x]) => /^[0-9a-f-]{36}$/i.test(k) && typeof x === "string")) as Record<string, string> : {}; } catch { return {}; }
 };
@@ -11980,8 +12004,21 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       ]);
       return json({ ok: true });
     }
-    // Penagih hanya boleh Tagihan — kasir, biaya, dan stok ditolak di server (bukan sekadar disembunyikan di UI).
-    if (staff.role === "penagih" && /^\/api\/staff\/shops\/[0-9a-f-]{36}\/(stock|sale|expense)(\/|$)/i.test(pathname)) return json({ error: "Akun penagih hanya untuk tagihan." }, { status: 403 });
+    // Penagih & Petugas hanya untuk usaha pinjaman — kasir, biaya, dan stok ditolak di server (bukan sekadar disembunyikan di UI).
+    if (staff.role !== "kasir" && /^\/api\/staff\/shops\/[0-9a-f-]{36}\/(stock|sale|expense)(\/|$)/i.test(pathname)) return json({ error: "Akunmu khusus usaha pinjaman." }, { status: 403 });
+    // Petugas: tampilan pinjaman yang sama dengan pemilik, dengan izin terbatas (lihat staffLoanAllowed).
+    const lm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/pinjaman((?:\/[A-Za-z0-9-]+){0,5})$/i.exec(pathname);
+    if (lm) {
+      if (staff.role !== "petugas") return json({ error: "Hanya jabatan Petugas yang bisa membuka menu pinjaman." }, { status: 403 });
+      if (!ids.includes(lm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
+      const lShop = await env.DB.prepare("SELECT id, name, kind FROM shops WHERE id = ? AND user_id = ?").bind(lm[1], staff.owner_id).first<{ id: string; name: string; kind: string | null }>();
+      if (!lShop || lShop.kind !== "pinjaman") return json({ error: "Usaha pinjaman tidak ditemukan." }, { status: 404 });
+      const parts = lm[2].split("/").filter(Boolean);
+      if (!staffLoanAllowed(request.method, parts)) return json({ error: "Hanya pemilik usaha yang bisa melakukan ini." }, { status: 403 });
+      const book = await shopBook(env, staff.owner_id, lShop.id);
+      const kas = book.on ? staffKas(staff, lShop.id, book) : null;
+      return await handleShopLoans(request, env, staff.owner_id, { id: lShop.id, name: lShop.name }, parts, { id: staff.id, name: staff.name, kasId: kas?.id ?? null });
+    }
     const sm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/stock((?:\/[A-Za-z0-9-]+){0,3})$/i.exec(pathname);
     if (sm) {
       if (!ids.includes(sm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });

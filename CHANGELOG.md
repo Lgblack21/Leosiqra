@@ -123,6 +123,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.38.0 | 16 Nov 2026 | Pinjaman: anggota & kartu anggota |
 | 3.39.0 | 16 Nov 2026 | Pinjaman: jaminan |
 | 3.40.0 | 16 Nov 2026 | Tim: penagih, kas usaha per staf, kartu staf |
+| 3.41.0 | 16 Nov 2026 | Tim di usaha pinjaman: jabatan Petugas |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -136,6 +137,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.41.0 — 2026-11-16 — Tim di usaha pinjaman: jabatan Petugas
+
+- **Jabatan Petugas untuk usaha pinjaman.** Akun tim dengan jabatan Petugas sekarang membuka tampilan pinjaman yang
+  sama seperti punyamu: **Tagihan**, **Pinjaman**, dan **Anggota**. Petugas bisa mendaftarkan anggota baru langkah demi
+  langkah (data, foto diri, foto KTP, persetujuan), melengkapi data anggota lama, membuat kartu anggota, dan menerima
+  angsuran.
+- Angsuran yang diterima petugas masuk ke kas usaha yang kamu tentukan di Usahaku › Tim, bertanggal hari ini, dan
+  tercatat atas nama petugasnya.
+- Yang tetap **khusus pemilik**: mencairkan pinjaman baru, menghapus pinjaman atau angsuran, menggeser jadwal, mengubah
+  jaminan, menghapus anggota, serta Kas dan Laporan. Petugas bisa melihat foto jaminan, tapi gak bisa mengubahnya.
+- **Usaha pinjaman gak lagi muncul di Kasir dan Stok.** Kalau akun berjabatan Kasir cuma diberi usaha pinjaman, aplikasi
+  Tim memberi tahu supaya jabatannya diubah jadi Petugas atau Penagih.
 
 ## 3.40.0 — 2026-11-16 — Tim: penagih, kas usaha per staf, kartu staf
 

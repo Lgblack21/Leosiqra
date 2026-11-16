@@ -29,6 +29,8 @@ export type StaffMe = {
   today: StaffSale[];
   materials?: StockMaterial[];
   date: string;
+  /** Nama kas usaha tujuan per usaha (kas pilihan pemilik untuk akun ini). */
+  kasNames: Record<string, string | null>;
 };
 
 export const staffService = {
@@ -42,10 +44,11 @@ export const staffService = {
     await cloudflareApi('/api/staff/logout', { method: 'POST', json: {} });
   },
   async me(): Promise<StaffMe> {
-    const r = await cloudflareApi<Omit<StaffMe, 'shops'> & { shops: Record<string, unknown>[] }>(
+    const r = await cloudflareApi<Omit<StaffMe, 'shops' | 'kasNames'> & { shops: Record<string, unknown>[] }>(
       `/api/staff/me?t=${Date.now()}`,
     );
-    return { ...r, shops: r.shops.map(shopFromRow) };
+    const kasNames = Object.fromEntries(r.shops.map((s) => [String(s.id), s.kas_name ? String(s.kas_name) : null]));
+    return { ...r, shops: r.shops.map(shopFromRow), kasNames };
   },
   async sale(
     shopId: string,
