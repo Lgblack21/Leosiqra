@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.41.1 notif pasang Tim — run #230)
+Terakhir diperbarui: 2026-11-16 (live: 3.41.2 pinjaman tanpa admin — run #231)
 
 ## Siapa sedang kerja
 
@@ -18,9 +18,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.41.2 SIAP (tanpa SQL): Pinjaman tanpa admin.** LoanForm: segmen ke-3 `tanpa` → kirim
+- **2026-11-16 — 3.41.2 LIVE (run #231, 79ef88f, tanpa SQL): Pinjaman tanpa admin.** LoanForm: segmen ke-3 `tanpa` → kirim
   `admin_fee 0, admin_mode potong` (Worker sudah menerima 0 dari awal). Detail: "Tanpa admin" kalau adminFee 0.
-  Dites lokal: cair penuh, tanpa entri `pinjam_admin`. Menunggu "gas".
+  Dites lokal: cair penuh, tanpa entri `pinjam_admin`. Smoke live bersih.
 
 - **2026-11-16 — 3.41.1 LIVE (run #230, db18146, tanpa SQL; notif terverifikasi di produksi):** permintaan Bos, pasang aplikasi Tim jangan tombol tapi seperti notif →
   `TimInstall` jadi notifikasi atas (muncul 2,5 dtk, Pasang/Nanti/X/usap ke atas, snooze 7 hari di localStorage
