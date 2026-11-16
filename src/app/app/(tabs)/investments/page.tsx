@@ -13,6 +13,7 @@ import { cn, formatIDR, formatMoney } from '@/lib/utils';
 import { lightTap } from '@/lib/haptics';
 import { FadeIn } from '@/components/app/FadeIn';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
+import { NilaiOtomatis } from '@/components/investasi/NilaiOtomatis';
 
 // Rumus ringkasan SAMA dengan halaman web Investasi (/membership/investment):
 // semua posisi (kecuali proyeksi "Planned", sudah difilter service) dijumlah
@@ -140,6 +141,7 @@ export default function AppInvestmentsPage() {
           </>
         )}
       </FadeIn>
+      <NilaiOtomatis className="-mt-2" />
 
       <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
         {(['Aktif', 'Selesai'] as const).map((s) => (

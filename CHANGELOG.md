@@ -126,6 +126,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.41.0 | 16 Nov 2026 | Tim di usaha pinjaman: jabatan Petugas |
 | 3.41.1 | 16 Nov 2026 | Pasang aplikasi Tim lewat notifikasi |
 | 3.41.2 | 16 Nov 2026 | Pinjaman tanpa admin |
+| 3.42.0 | 17 Nov 2026 | Nilai emas, saham & kripto ikut harga pasar |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -139,6 +140,18 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.42.0 — 2026-11-17 — Nilai emas, saham & kripto ikut harga pasar
+
+- **Nilai emas, saham, dan kripto sekarang ikut harga pasar.** Sebelumnya nilai investasi berhenti di harga saat kamu
+  mencatatnya. Sekarang nilainya diperbarui otomatis setiap kali halaman Investasi dibuka (paling sering tiap 3 jam) dan
+  sekali sehari jam 10 pagi. Tombol **Perbarui** ada di bawah kartu nilai portofolio.
+- **Emas pakai harga emas dunia per gram**, dirupiahkan dengan kurs hari ini. Angka ini perkiraan dan bisa beda dari
+  harga Antam. Kalau mau angka yang pas, ketuk **Pakai harga buyback Antam** lalu isi harga buyback per gram (lihat di
+  logammulia.com atau butik). Harga itu dipakai untuk semua emasmu sampai kamu ubah atau kembalikan ke harga dunia.
+- Saham Indonesia dan saham AS ikut harga terakhir bursa, kripto ikut harga di CoinGecko. Deposito, reksa dana, dan
+  investasi lain yang kamu isi sendiri tetap seperti yang kamu catat.
+- Yang berubah cuma **nilai sekarang**. Modal, saldo rekening, dan riwayat transaksimu tidak ikut berubah.
 
 ## 3.41.2 — 2026-11-16 — Pinjaman tanpa admin
 

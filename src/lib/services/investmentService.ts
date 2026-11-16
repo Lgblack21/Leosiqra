@@ -249,6 +249,15 @@ export const investmentService = {
   },
 
   // Harga live saham (via proksi Yahoo Finance di backend, lihat handleStockPrice).
+  /** Perbarui nilai sekarang emas/saham/kripto dari harga pasar (server membatasi: paling sering tiap 3 jam, force tiap 10 menit). */
+  async refreshPrices(force = false) {
+    return cloudflareApi<PriceRefresh>('/api/member/investments/refresh-prices', { method: 'POST', json: { force } });
+  },
+  /** Harga buyback Antam per gram yang diisi sendiri (null = kembali ke harga emas dunia). */
+  async setGoldBuyback(price: number | null) {
+    return cloudflareApi<PriceRefresh>('/api/member/investments/gold-buyback', { method: 'PUT', json: { price } });
+  },
+
   async getStockPrice(symbol: string, exchangeCode: string) {
     return cloudflareApi<{ price: number; currency: string; changePercent: number }>(
       `/api/member/stock-price?symbol=${encodeURIComponent(symbol)}&exchange=${encodeURIComponent(exchangeCode || 'IDX')}`,
@@ -331,3 +340,17 @@ export interface StockSearchResult {
   exchangeCode: string;
   logoUrl: string;
 }
+
+export type PriceRefresh = {
+  ok: boolean;
+  updated: number;
+  at: string;
+  cached?: boolean;
+  gold: {
+    count: number;
+    perGram: number | null;
+    source: 'buyback' | 'dunia';
+    worldPerGram: number | null;
+    buyback: { price: number; date: string } | null;
+  };
+};

@@ -5736,6 +5736,203 @@ async function fetchStockPrice(symbol: string, exchange: string) {
   return result;
 }
 
+// ── Nilai investasi otomatis (3.42) ─────────────────────────────────────────────────────────────
+// Posisi beli yang masih aktif (Beli/Pembelian, bukan Deposito) diperbarui nilai sekarangnya dari harga pasar:
+// emas (gram) = harga buyback Antam yang diisi user (kalau ada) atau harga emas dunia per gram (PAXG × kurs);
+// saham = Yahoo (fetchStockPrice); kripto = CoinGecko per simbol. Hanya current_value(_idr) yang berubah —
+// saldo, modal (amount_invested) dan total di tabel users tidak disentuh (efek buku besar posisi beli hanya
+// bergantung pada modal, lihat investmentEffect). Klaim per baris pakai updated_at supaya tidak menimpa edit user.
+const GOLD_NAME_RE = /\b(emas|antam|gold|logam mulia|lm|ubs|galeri ?24|pegadaian)\b/i;
+const GRAM_UNIT_RE = /^(g|gr|gram|grams|gram\(s\))$/i;
+const COIN_NAME_TO_SYMBOL: Record<string, string> = {
+  bitcoin: "btc", ethereum: "eth", solana: "sol", bnb: "bnb", "binance coin": "bnb", xrp: "xrp", ripple: "xrp",
+  dogecoin: "doge", cardano: "ada", tether: "usdt", usdt: "usdt", "usd coin": "usdc", usdc: "usdc", tron: "trx",
+  polygon: "pol", polkadot: "dot", litecoin: "ltc", "shiba inu": "shib", avalanche: "avax", chainlink: "link", toncoin: "ton",
+  "pax gold": "paxg", paxg: "paxg", "tether gold": "xaut",
+};
+type InvPriceRow = {
+  id: string; name: string | null; type: string | null; category: string | null; currency: string | null; unit: string | null;
+  quantity: number | null; shares_count: number | null; stock_code: string | null; exchange_code: string | null; updated_at: string | null;
+};
+const invKind = (r: InvPriceRow): { k: "emas" } | { k: "saham"; code: string; ex: string } | { k: "kripto"; sym: string } | null => {
+  if (r.type === "Saham") return r.stock_code ? { k: "saham", code: r.stock_code.trim().toUpperCase(), ex: (r.exchange_code || "IDX").toUpperCase() } : null;
+  if (r.type === "Deposito") return null;
+  const unit = (r.unit ?? "").trim();
+  const name = r.name ?? "";
+  const cat = r.category ?? "";
+  if (GRAM_UNIT_RE.test(unit) && (/emas|gold/i.test(cat) || GOLD_NAME_RE.test(name))) return { k: "emas" };
+  if (/kripto|crypto/i.test(cat) || /^koin$/i.test(unit)) {
+    const m = /\(([A-Za-z0-9]{2,10})\)\s*$/.exec(name);
+    const sym = m ? m[1].toLowerCase() : COIN_NAME_TO_SYMBOL[name.trim().toLowerCase()];
+    return sym ? { k: "kripto", sym } : null;
+  }
+  return null;
+};
+
+/** Kurs ke IDR (per 1 unit mata uang) + harga emas dunia per gram dalam IDR. Cache edge 30 menit. */
+async function priceRefs(env: Env): Promise<{ toIdr: Record<string, number>; goldGramIdr: number | null }> {
+  const key = new Request("https://cache.internal.leosiqra.com/inv-price-refs-v1");
+  const hit = await caches.default.match(key);
+  if (hit) return (await hit.json()) as { toIdr: Record<string, number>; goldGramIdr: number | null };
+  const [fxRes, crypto] = await Promise.all([
+    fetch("https://open.er-api.com/v6/latest/USD", { headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" } }).catch(() => null),
+    fetchCryptoFromCoinGecko(env.COINGECKO_API_KEY).then((c) => (c?.["pax-gold"]?.usd ? c : fetchCryptoFromBinance())),
+  ]);
+  const rates = fxRes?.ok ? (((await fxRes.json()) as { rates?: Record<string, number> }).rates ?? {}) : {};
+  const usdIdr = rates.IDR;
+  const toIdr: Record<string, number> = { IDR: 1 };
+  if (usdIdr) for (const [c, r] of Object.entries(rates)) if (r > 0) toIdr[c] = usdIdr / r;
+  const paxg = crypto?.["pax-gold"]?.usd;
+  const out = { toIdr, goldGramIdr: paxg && usdIdr ? Math.round((paxg * usdIdr) / 31.1034768) : null };
+  if (usdIdr) await caches.default.put(key, new Response(JSON.stringify(out), { headers: { "content-type": "application/json", "Cache-Control": "max-age=1800" } }));
+  return out;
+}
+
+/** Harga kripto IDR per simbol (CoinGecko simple/price?symbols=…, token kapitalisasi terbesar). */
+async function cryptoIdrBySymbol(env: Env, all: string[]): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  const ck = (sym: string) => new Request(`https://cache.internal.leosiqra.com/inv-crypto-idr-v1/${encodeURIComponent(sym)}`);
+  const syms: string[] = [];
+  for (const sym of all) {
+    const hit = await caches.default.match(ck(sym));
+    if (hit) out[sym] = Number(await hit.text());
+    else syms.push(sym);
+  }
+  if (!syms.length) return out;
+  try {
+    const headers: Record<string, string> = { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" };
+    if (env.COINGECKO_API_KEY) headers["x-cg-demo-api-key"] = env.COINGECKO_API_KEY;
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?symbols=${encodeURIComponent(syms.join(","))}&vs_currencies=idr`, { headers });
+    if (!res.ok) return out;
+    const d = (await res.json()) as Record<string, { idr?: number }>;
+    for (const [k, v] of Object.entries(d)) {
+      if (typeof v?.idr !== "number" || !(v.idr > 0)) continue;
+      out[k.toLowerCase()] = v.idr;
+      await caches.default.put(ck(k.toLowerCase()), new Response(String(v.idr), { headers: { "Cache-Control": "max-age=900" } }));
+    }
+    return out;
+  } catch {
+    return out;
+  }
+}
+
+type GoldBuyback = { price: number; date: string } | null;
+const readGoldBuyback = (meta: string | null): GoldBuyback => {
+  try {
+    const g = (JSON.parse(meta || "{}") as { goldBuyback?: { price?: unknown; date?: unknown } }).goldBuyback;
+    return g && typeof g.price === "number" && g.price > 0 && typeof g.date === "string" ? { price: g.price, date: g.date } : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Perbarui nilai sekarang posisi aktif satu user. Mengembalikan ringkasan untuk UI. */
+async function refreshInvestmentValues(env: Env, userId: string) {
+  const rows = (await env.DB.prepare(
+    `SELECT id, name, type, category, currency, unit, quantity, shares_count, stock_code, exchange_code, updated_at
+       FROM investments WHERE user_id = ? AND transaction_type IN ('Beli', 'Pembelian') AND COALESCE(status, 'Active') = 'Active' AND type != 'Deposito'
+      LIMIT 500`
+  ).bind(userId).all<InvPriceRow>()).results ?? [];
+  const meta = await env.DB.prepare("SELECT metadata_json FROM users WHERE id = ?").bind(userId).first<{ metadata_json: string | null }>();
+  const buyback = readGoldBuyback(meta?.metadata_json ?? null);
+  const refs = await priceRefs(env);
+  const goldGram = buyback?.price ?? refs.goldGramIdr;
+  const kinds = rows.map((r) => ({ r, k: invKind(r) }));
+  const syms = [...new Set(kinds.flatMap(({ k }) => (k?.k === "kripto" ? [k.sym] : [])))];
+  const crypto = await cryptoIdrBySymbol(env, syms);
+  const stocks = new Map<string, { price: number; currency: string } | null>();
+  for (const { k } of kinds) {
+    if (k?.k !== "saham") continue;
+    const key = `${k.code}:${k.ex}`;
+    if (stocks.has(key)) continue;
+    stocks.set(key, await fetchStockPrice(k.code, k.ex).catch(() => null));
+  }
+  const now = nowIso();
+  const stmts: D1PreparedStatement[] = [];
+  let updated = 0;
+  let gold = 0;
+  for (const { r, k } of kinds) {
+    if (!k) continue;
+    const qty = Number(k.k === "saham" ? r.shares_count : r.quantity) || 0;
+    if (!(qty > 0)) continue;
+    const cur = (r.currency || "IDR").toUpperCase();
+    let priceIdr: number | null = null;
+    let priceCur: number | null = null;
+    if (k.k === "emas") priceIdr = goldGram;
+    else if (k.k === "kripto") priceIdr = crypto[k.sym] ?? null;
+    else {
+      const q = stocks.get(`${k.code}:${k.ex}`);
+      if (q) {
+        const qc = q.currency.toUpperCase();
+        // Yahoo kadang memberi harga saham LSE dalam pence (GBp) — lewati daripada salah 100×.
+        if (qc === cur) priceCur = q.price;
+        else if (refs.toIdr[qc]) priceIdr = q.price * refs.toIdr[qc];
+      }
+    }
+    const rate = refs.toIdr[cur];
+    if (priceCur === null && priceIdr !== null) priceCur = cur === "IDR" ? priceIdr : rate ? priceIdr / rate : null;
+    if (priceIdr === null && priceCur !== null) priceIdr = cur === "IDR" ? priceCur : rate ? priceCur * rate : null;
+    if (priceCur === null || priceIdr === null || !(priceCur > 0)) continue;
+    stmts.push(
+      env.DB.prepare(`UPDATE investments SET current_value = ?, current_value_idr = ?, updated_at = ? WHERE id = ? AND user_id = ? AND updated_at IS ?`)
+        .bind(round2(qty * priceCur), Math.round(qty * priceIdr), now, r.id, userId, r.updated_at)
+    );
+    updated++;
+    if (k.k === "emas") gold++;
+  }
+  stmts.push(
+    env.DB.prepare(`UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.invPricesAt', ?) WHERE id = ?`).bind(now, userId)
+  );
+  for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
+  return { ok: true, updated, at: now, gold: { count: gold, perGram: goldGram, source: buyback ? "buyback" : "dunia", worldPerGram: refs.goldGramIdr, buyback } };
+}
+
+// POST /api/member/investments/refresh-prices  {force?} — paling sering sekali per 10 menit per user.
+// PUT  /api/member/investments/gold-buyback     {price|null} — harga buyback Antam per gram yang diisi user.
+async function handleInvestmentPrices(request: Request, env: Env, action: "refresh" | "buyback") {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const userId = auth.session.user.id;
+  if (action === "buyback") {
+    const raw = await parseJson<{ price?: unknown }>(request);
+    const price = raw.price === null || raw.price === "" || raw.price === undefined ? null : Number(raw.price);
+    if (price !== null && !(Number.isFinite(price) && price >= 10000 && price <= 100000000)) return json({ error: "Isi harga buyback per gram yang wajar (Rp10.000 – Rp100.000.000)." }, { status: 400 });
+    await env.DB.prepare(
+      price === null
+        ? `UPDATE users SET metadata_json = json_remove(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.goldBuyback') WHERE id = ?`
+        : `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.goldBuyback', json(?)) WHERE id = ?`
+    ).bind(...(price === null ? [userId] : [JSON.stringify({ price: Math.round(price), date: todayWIB() }), userId])).run();
+    return json(await refreshInvestmentValues(env, userId));
+  }
+  const body = await parseJson<{ force?: unknown }>(request).catch(() => ({} as { force?: unknown }));
+  const meta = await env.DB.prepare("SELECT metadata_json FROM users WHERE id = ?").bind(userId).first<{ metadata_json: string | null }>();
+  let last = "";
+  try {
+    last = String((JSON.parse(meta?.metadata_json || "{}") as { invPricesAt?: string }).invPricesAt ?? "");
+  } catch {
+    /* metadata rusak → anggap belum pernah */
+  }
+  const ageMs = last ? Date.now() - Date.parse(last) : Infinity;
+  if (ageMs < (body.force === true ? 10 : 180) * 60000) {
+    const refs = await priceRefs(env);
+    const buyback = readGoldBuyback(meta?.metadata_json ?? null);
+    const g = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM investments WHERE user_id = ? AND transaction_type IN ('Beli', 'Pembelian') AND COALESCE(status, 'Active') = 'Active' AND type != 'Deposito' AND LOWER(TRIM(COALESCE(unit, ''))) IN ('g', 'gr', 'gram', 'grams')`
+    ).bind(userId).first<{ n: number }>();
+    return json({ ok: true, updated: 0, at: last, cached: true, gold: { count: Number(g?.n) || 0, perGram: buyback?.price ?? refs.goldGramIdr, source: buyback ? "buyback" : "dunia", worldPerGram: refs.goldGramIdr, buyback } });
+  }
+  return json(await refreshInvestmentValues(env, userId));
+}
+
+/** Cron harian: perbarui nilai untuk user yang punya posisi aktif (maks 300 per jalan, yang paling lama dulu). */
+async function refreshAllInvestmentValues(env: Env) {
+  const users = (await env.DB.prepare(
+    `SELECT u.id FROM users u WHERE EXISTS (SELECT 1 FROM investments i WHERE i.user_id = u.id AND i.transaction_type IN ('Beli', 'Pembelian') AND COALESCE(i.status, 'Active') = 'Active' AND i.type != 'Deposito')
+      ORDER BY COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.invPricesAt') END, '') ASC LIMIT 300`
+  ).all<{ id: string }>()).results ?? [];
+  for (const u of users) await refreshInvestmentValues(env, u.id).catch((e) => console.error("Nilai investasi", u.id, e));
+}
+
 async function handleStockPrice(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -24232,6 +24429,13 @@ const worker = {
         return await handleCreateInvestment(request, env);
       }
 
+      if (url.pathname === "/api/member/investments/refresh-prices" && request.method === "POST") {
+        return await handleInvestmentPrices(request, env, "refresh");
+      }
+      if (url.pathname === "/api/member/investments/gold-buyback" && request.method === "PUT") {
+        return await handleInvestmentPrices(request, env, "buyback");
+      }
+
       if (url.pathname === "/api/member/investments/entry" && request.method === "POST") {
         return await handleInvestmentEntry(request, env);
       }
@@ -24704,6 +24908,8 @@ const worker = {
     // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + eksekusi recurring hari ini.
     ctx.waitUntil(processMaturedDeposits(env));
     ctx.waitUntil(processDueRecurringTransactions(env));
+    // Nilai sekarang emas/saham/kripto dari harga pasar (posisi beli aktif).
+    ctx.waitUntil(refreshAllInvestmentValues(env).catch((error) => console.error("Nilai investasi:", error)));
     ctx.waitUntil(sendCreditCardDueReminders(env));
     // Tanggal 1–7 WIB saja (dicek di dalam): laporan bulanan via email (opt-in).
     ctx.waitUntil(sendMonthlyReports(env).catch((error) => console.error("Laporan bulanan:", error)));

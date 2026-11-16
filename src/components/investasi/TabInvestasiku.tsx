@@ -9,6 +9,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import type { useMarketData } from '@/lib/hooks/useMarketData';
+import { NilaiOtomatis } from './NilaiOtomatis';
 import { CryptoWatchlistModal } from '@/components/modals/CryptoWatchlistModal';
 import { CoinOption } from '@/lib/coingecko';
 import { LogoImage } from '@/components/ui/LogoImage';
@@ -250,6 +251,7 @@ export function TabInvestasiku({
               </div>
             )}
           </section>
+          <NilaiOtomatis className="-mt-2 px-1" />
 
           <section className="overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
             <div className="px-5 pt-5 text-center md:px-6">
