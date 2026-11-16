@@ -146,6 +146,9 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   daftar Pinjaman, pinjaman yang jaminannya masih dipegang diberi tanda **Jaminan**.
 - Foto jaminan disimpan **privat** (cuma kamu yang bisa membukanya), gak ikut Excel, dan ikut terhapus kalau pinjaman
   yang salah input dihapus.
+- **Bingkai logo toko ikut gaya logonya.** Logo berlatar penuh (misalnya lingkaran emas di kotak hitam) sekarang mengisi
+  kotaknya dengan bingkai warna yang sama, gak lagi ditempel di kotak putih. Logo transparan tetap di bingkai terang.
+  Berlaku di daftar toko, menu toko, kasir, aplikasi tim, pengaturan, dan kartu anggota.
 
 ## 3.38.0 — 2026-11-16 — Pinjaman: anggota & kartu anggota
 

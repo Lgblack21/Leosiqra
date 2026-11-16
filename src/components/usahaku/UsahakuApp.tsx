@@ -1,5 +1,6 @@
 'use client';
 
+import { LogoUsaha } from '@/components/usahaku/LogoUsaha';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -23,7 +24,6 @@ import { LaporanUsaha } from '@/components/ladang/LaporanUsaha';
 import { StockView } from '@/components/ladang/StockView';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { ShopDetail, UsahaView } from '@/components/ladang/UsahaView';
-import { CatalogImage } from '@/components/ladang/CatalogImage';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { shopService, type Shop } from '@/lib/services/shopService';
 import { shopBookService, type ShopBook } from '@/lib/services/shopBookService';
@@ -322,9 +322,7 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
           <ArrowLeft size={14} /> Semua toko
         </Link>
         <div className="mt-3 flex items-center gap-3 px-1">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 fsh-22 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-            <CatalogImage src={shop.style.logoUrl} alt="" fallback={shop.emoji || kind?.emoji || '🏪'} className="h-full w-full bg-white p-0.5" />
-          </span>
+          <LogoUsaha src={shop.style.logoUrl} alt="" fallback={shop.emoji || kind?.emoji || '🏪'} className="h-11 w-11 rounded-xl fsh-22" />
           <span className="min-w-0">
             <span className="block truncate fs-15 font-extrabold tracking-tight text-slate-900 dark:text-white">{shop.name}</span>
             <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">{kind ? kind.label : 'Usaha'}</span>

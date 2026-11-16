@@ -1,5 +1,6 @@
 'use client';
 
+import { LogoUsaha } from '@/components/usahaku/LogoUsaha';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -232,14 +233,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                 >
                   <Link href={usahakuHref(variant, s.id)} className="flex flex-1 flex-col p-4 md:p-5">
                     <div className="flex items-center gap-3.5">
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 fsh-26 ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
-                        <CatalogImage
-                          src={s.style.logoUrl}
-                          alt={`Logo ${s.name}`}
-                          fallback={s.emoji || kind?.emoji || '🏪'}
-                          className="h-full w-full bg-white p-1"
-                        />
-                      </span>
+                      <LogoUsaha src={s.style.logoUrl} alt={`Logo ${s.name}`} fallback={s.emoji || kind?.emoji || '🏪'} className="h-14 w-14 rounded-2xl fsh-26" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate fs-17 font-extrabold tracking-tight text-slate-900 dark:text-white">{s.name}</span>
                         <span className="block truncate fs-12 text-slate-500 dark:text-slate-400">

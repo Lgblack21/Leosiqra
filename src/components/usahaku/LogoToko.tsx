@@ -1,12 +1,12 @@
 'use client';
 
+import { LogoUsaha } from './LogoUsaha';
 import { useMemo, useRef, useState } from 'react';
 import { ImagePlus, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { shopService, type Shop } from '@/lib/services/shopService';
 import { kindOf } from '@/lib/usaha/jenis';
 import { cn } from '@/lib/utils';
-import { CatalogImage } from '@/components/ladang/CatalogImage';
 
 // Logo toko (style.logoUrl, dipakai kasir, struk, laporan, daftar toko). Dua cara: unggah gambar sendiri
 // (Cloudinary, https) atau logo otomatis = SVG kecil (inisial/emoji di atas gradien), disimpan sebagai data URL
@@ -80,9 +80,7 @@ export function LogoToko({ shop, onToast }: { shop: Shop; onToast: (m: string) =
       <p className="fs-14 font-extrabold text-slate-900 dark:text-white">Logo toko</p>
       <p className="mb-3 fs-12 text-slate-500 dark:text-slate-400">Tampil di daftar toko, kasir, struk, dan laporan.</p>
       <div className="flex items-center gap-4">
-        <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[26px] bg-slate-50 fsh-40 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-          <CatalogImage src={logo} alt={`Logo ${shop.name}`} fallback={emoji} className="h-full w-full" />
-        </span>
+        <LogoUsaha src={logo} alt={`Logo ${shop.name}`} fallback={emoji} className="h-24 w-24 rounded-[26px] fsh-40" />
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
           <button
             type="button"

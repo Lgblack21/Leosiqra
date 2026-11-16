@@ -23,6 +23,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `collateral` TANPA kunci (photoCount). Endpoint `…/loans/:id/jaminan` PUT/DELETE, `/jaminan/foto/:n` PUT/GET/DELETE
   (maks 3, urut, simpan bersyarat `collateral_json IS <lama>`), `/jaminan/kembali` POST (undo). Hapus pinjaman ikut
   hapus foto. UI `JaminanView.tsx`. Dites wrangler lokal + Playwright. **Belum**: HP asli. Menunggu "gas".
+  + Bingkai logo toko ikut gambar: `src/components/usahaku/LogoUsaha.tsx` (`bacaTepi` = rata-rata warna tepi via canvas,
+  Cloudinary CORS `*`), dipakai di 8 tempat (sidebar, daftar toko, kasir 2×, StaffApp 3×, LogoToko) + kartu canvas.
 
 - **2026-11-16 — 3.38.0 LIVE (run #226, 26f2461): Pinjaman — anggota & kartu.**
   **SQL baru `0049_pinjaman_anggota.sql` — Bos jalankan di D1 Console** (berisi juga kolom untuk 3.39 jaminan & 3.40

@@ -1,5 +1,6 @@
 'use client';
 
+import { LogoUsaha } from '@/components/usahaku/LogoUsaha';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -595,9 +596,7 @@ export function KasirView({
           >
             <ArrowLeft size={16} /> <span className="hidden sm:inline">Keluar</span>
           </button>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 fsh-20 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-            <CatalogImage src={shop.style.logoUrl} alt="" fallback={shop.emoji || '🏪'} className="h-full w-full bg-white p-0.5" />
-          </span>
+          <LogoUsaha src={shop.style.logoUrl} alt="" fallback={shop.emoji || '🏪'} className="h-10 w-10 rounded-xl fsh-20" />
           <div className="min-w-0 flex-1">
             <p className="truncate fs-15 font-extrabold leading-tight text-slate-900 dark:text-white">{shop.name}</p>
             <p className="truncate fs-12 text-slate-500 dark:text-slate-400">
@@ -774,14 +773,7 @@ export function KasirView({
             </Link>
           )}
           {!compactHead && (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
-              <CatalogImage
-                src={shop.style.logoUrl}
-                alt={`Logo ${shop.name}`}
-                fallback={shop.emoji || '🏪'}
-                className="h-full w-full bg-white p-1"
-              />
-            </span>
+            <LogoUsaha src={shop.style.logoUrl} alt={`Logo ${shop.name}`} fallback={shop.emoji || '🏪'} className="h-12 w-12 rounded-2xl fsh-26" />
           )}
           <div className="min-w-0 flex-1">
             {!compactHead && (

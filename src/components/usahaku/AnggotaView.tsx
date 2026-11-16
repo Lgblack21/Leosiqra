@@ -9,6 +9,7 @@ import { fotoKeBase64 } from '@/lib/fotoKecil';
 import { cn } from '@/lib/utils';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { KASIR_THEME } from '@/components/ladang/kasirTheme';
+import { bacaTepi } from './LogoUsaha';
 
 // Anggota usaha Pinjaman: daftar 4 langkah (data diri → foto diri → foto KTP → setujui) lalu kartu anggota.
 // Foto diri & KTP disimpan PRIVAT (R2, endpoint berlogin) — bukan Cloudinary publik. Rancangan:
@@ -346,22 +347,33 @@ export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasE
   g.fill();
   // Kepala: logo + nama usaha + jenis kartu
   const logo = shop.style.logoUrl ? await muatGambar(shop.style.logoUrl, true) : null;
-  g.fillStyle = '#fff';
+  // Bingkai logo ikut gambarnya (sama dengan LogoUsaha): latar penuh → warna tepi & gambar memenuhi kotak; transparan → putih.
+  const tepi = shop.style.logoUrl && logo ? await bacaTepi(shop.style.logoUrl) : null;
+  g.save();
   g.beginPath();
   g.roundRect(48, 40, 84, 84, 20);
+  g.fillStyle = tepi?.mode === 'penuh' && tepi.bg ? tepi.bg : '#fff';
   g.fill();
+  g.clip();
   if (logo) {
+    const pad = tepi?.mode === 'transparan' ? 10 : 0;
+    const box = 84 - pad * 2;
+    const sk = tepi?.mode === 'transparan' || tepi?.mode === 'penuh' ? Math.min(box / logo.width, box / logo.height) : Math.max(box / logo.width, box / logo.height);
+    const w = logo.width * sk;
+    const h = logo.height * sk;
     try {
-      g.drawImage(logo, 54, 46, 72, 72);
+      g.drawImage(logo, 48 + (84 - w) / 2, 40 + (84 - h) / 2, w, h);
     } catch {
       /* logo tanpa CORS → lewati */
     }
   } else {
+    g.fillStyle = '#0b1220';
     g.font = '44px system-ui, sans-serif';
     g.textAlign = 'center';
     g.fillText(shop.emoji || '🤝', 90, 98);
     g.textAlign = 'left';
   }
+  g.restore();
   g.fillStyle = '#fff';
   g.font = '800 38px system-ui, -apple-system, Segoe UI, sans-serif';
   g.fillText(shop.name.slice(0, 26), 154, 82);

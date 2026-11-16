@@ -1,5 +1,6 @@
 'use client';
 
+import { LogoUsaha } from '@/components/usahaku/LogoUsaha';
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -22,7 +23,6 @@ import { fmtQty, isLow, type StockData, type StockMaterial } from '@/lib/service
 import type { Shop, ShopProduct } from '@/lib/services/shopService';
 import { Catalog, Struk, lineKey, type Line } from '@/components/ladang/KasirView';
 import { CustomKasirFrame } from '@/components/ladang/CustomKasirFrame';
-import { CatalogImage } from '@/components/ladang/CatalogImage';
 import { KASIR_THEME } from '@/components/ladang/kasirTheme';
 import { fieldCls, labelCls, short } from '@/components/ladang/UsahaView';
 import { cn, formatIDR } from '@/lib/utils';
@@ -106,9 +106,7 @@ function ShopChips({
               on ? cn(themeHeader(s), 'text-white shadow-md') : 'bg-white text-slate-600 ring-1 ring-slate-200',
             )}
           >
-            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white/90 fs-14">
-              <CatalogImage src={s.style.logoUrl} alt="" fallback={s.emoji || '🏪'} className="h-full w-full p-0.5" />
-            </span>
+            <LogoUsaha src={s.style.logoUrl} alt="" fallback={s.emoji || '🏪'} className="h-7 w-7 rounded-full fs-14" />
             {s.name}
             {lowBy[s.id] > 0 && (
               <span className="rounded-full bg-amber-400 px-1.5 fs-10 font-extrabold text-slate-900">
@@ -489,14 +487,7 @@ function StaffRingkas({
                   themeHeader(s),
                 )}
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 fsh-22">
-                  <CatalogImage
-                    src={s.style.logoUrl}
-                    alt={`Logo ${s.name}`}
-                    fallback={s.emoji || '🏪'}
-                    className="h-full w-full bg-white p-1"
-                  />
-                </span>
+                <LogoUsaha src={s.style.logoUrl} alt={`Logo ${s.name}`} fallback={s.emoji || '🏪'} className="h-11 w-11 rounded-2xl fsh-22" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate fs-16 font-extrabold">{s.name}</span>
                   <span className="block fs-12 text-white/65">{s.products.length} produk</span>
@@ -608,14 +599,7 @@ function StaffKasir({
     <div className="space-y-4">
       <section className={cn('web-keep rounded-[28px] p-4 text-white md:p-5', themeHeader(shop))}>
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 fsh-26">
-            <CatalogImage
-              src={shop.style.logoUrl}
-              alt={`Logo ${shop.name}`}
-              fallback={shop.emoji || '🏪'}
-              className="h-full w-full bg-white p-1"
-            />
-          </span>
+          <LogoUsaha src={shop.style.logoUrl} alt={`Logo ${shop.name}`} fallback={shop.emoji || '🏪'} className="h-12 w-12 rounded-2xl fsh-26" />
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 fs-11 font-bold uppercase tracking-wider text-white/50">
               <Store size={12} /> Kasir
