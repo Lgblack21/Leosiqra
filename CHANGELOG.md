@@ -125,6 +125,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.40.0 | 16 Nov 2026 | Tim: penagih, kas usaha per staf, kartu staf |
 | 3.41.0 | 16 Nov 2026 | Tim di usaha pinjaman: jabatan Petugas |
 | 3.41.1 | 16 Nov 2026 | Pasang aplikasi Tim lewat notifikasi |
+| 3.41.2 | 16 Nov 2026 | Pinjaman tanpa admin |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -138,6 +139,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.41.2 — 2026-11-16 — Pinjaman tanpa admin
+
+- **Pinjaman tanpa admin.** Di form Pinjaman baru sekarang ada tiga pilihan: **Admin dipotong**, **Admin terpisah**,
+  dan **Tanpa admin**. Kalau pilih Tanpa admin, kolom admin hilang, peminjam terima uang penuh, dan untungnya cuma dari
+  jasa angsuran. Di detail pinjaman tertulis "Tanpa admin".
 
 ## 3.41.1 — 2026-11-16 — Pasang aplikasi Tim lewat notifikasi
 

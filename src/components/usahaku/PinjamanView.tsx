@@ -706,8 +706,10 @@ function LoanForm({
   const [newName, setNewName] = useState('');
   const [newWa, setNewWa] = useState('');
   const [principal, setPrincipal] = useState(0);
-  const [admin, setAdmin] = useState(0);
-  const [adminMode, setAdminMode] = useState<'potong' | 'terpisah'>('potong');
+  const [adminInput, setAdmin] = useState(0);
+  // 'tanpa' = pinjaman tanpa biaya admin (disimpan sebagai admin 0, mode potong).
+  const [adminMode, setAdminMode] = useState<'potong' | 'terpisah' | 'tanpa'>('potong');
+  const admin = adminMode === 'tanpa' ? 0 : adminInput;
   const [frequency, setFrequency] = useState<'harian' | 'mingguan'>('harian');
   const [installment, setInstallment] = useState(0);
   const [count, setCount] = useState(0);
@@ -770,7 +772,7 @@ function LoanForm({
         borrowerId: bid,
         principal,
         adminFee: admin,
-        adminMode,
+        adminMode: adminMode === 'tanpa' ? 'potong' : adminMode,
         installment,
         count,
         frequency,
@@ -803,7 +805,7 @@ function LoanForm({
   };
 
   const seg = <T extends string>(value: T, set: (v: T) => void, opts: [T, string][]) => (
-    <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+    <div className={cn('grid gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800', opts.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
       {opts.map(([v, l]) => (
         <button
           key={v}
@@ -849,13 +851,14 @@ function LoanForm({
           <input value={newWa} onChange={(e) => setNewWa(e.target.value)} inputMode="tel" placeholder="WA (opsional)" aria-label="WA peminjam baru" className={fieldCls} />
         </div>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={cn('grid gap-2', adminMode === 'tanpa' ? 'grid-cols-1' : 'grid-cols-2')}>
         {rupiah(principal, setPrincipal, 'Mis. 1.000.000', 'Jumlah pinjaman')}
-        {rupiah(admin, setAdmin, 'Mis. 50.000', 'Admin')}
+        {adminMode !== 'tanpa' && rupiah(adminInput, setAdmin, 'Mis. 50.000', 'Admin')}
       </div>
       {seg(adminMode, setAdminMode, [
-        ['potong', 'Admin dipotong di depan'],
-        ['terpisah', 'Admin dibayar terpisah'],
+        ['potong', 'Admin dipotong'],
+        ['terpisah', 'Admin terpisah'],
+        ['tanpa', 'Tanpa admin'],
       ])}
       {seg(frequency, setFrequency, [
         ['harian', 'Harian'],
@@ -919,7 +922,7 @@ function LoanForm({
           {[
             ['Uang diserahkan ke peminjam', formatIDR(Math.max(0, handed)), ''],
             ['Total yang dibayar balik', `${formatIDR(total)} (${count}× ${formatIDR(installment)})`, ''],
-            ['Untung', `${formatIDR(untung)} (admin ${formatIDR(admin)} + jasa ${formatIDR(total - principal)})`, untung < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300'],
+            ['Untung', admin ? `${formatIDR(untung)} (admin ${formatIDR(admin)} + jasa ${formatIDR(total - principal)})` : `${formatIDR(untung)} (jasa saja, tanpa admin)`, untung < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300'],
             ['Selesai', dates.length ? tgl(dates[dates.length - 1], true) : '—', ''],
           ].map(([k, v, c]) => (
             <p key={k} className="flex justify-between gap-3 fs-13">
@@ -1116,7 +1119,7 @@ function LoanDetail({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           ['Pinjaman', formatIDR(loan.principal)],
-          ['Admin', `${formatIDR(loan.adminFee)}${loan.adminMode === 'potong' ? ' (dipotong)' : ''}`],
+          ['Admin', loan.adminFee ? `${formatIDR(loan.adminFee)}${loan.adminMode === 'potong' ? ' (dipotong)' : ''}` : 'Tanpa admin'],
           ['Dibayar', `${formatIDR(loan.paid)} / ${formatIDR(loan.total)}`],
           ['Sisa', formatIDR(st.sisa)],
         ].map(([k, v]) => (

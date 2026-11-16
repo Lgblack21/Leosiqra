@@ -18,6 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.41.2 SIAP (tanpa SQL): Pinjaman tanpa admin.** LoanForm: segmen ke-3 `tanpa` → kirim
+  `admin_fee 0, admin_mode potong` (Worker sudah menerima 0 dari awal). Detail: "Tanpa admin" kalau adminFee 0.
+  Dites lokal: cair penuh, tanpa entri `pinjam_admin`. Menunggu "gas".
+
 - **2026-11-16 — 3.41.1 LIVE (run #230, db18146, tanpa SQL; notif terverifikasi di produksi):** permintaan Bos, pasang aplikasi Tim jangan tombol tapi seperti notif →
   `TimInstall` jadi notifikasi atas (muncul 2,5 dtk, Pasang/Nanti/X/usap ke atas, snooze 7 hari di localStorage
   `leosiqra:tim-install-snooze`), dipasang sekali di `src/app/tim/page.tsx`.
