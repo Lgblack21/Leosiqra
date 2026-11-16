@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.33.0 tampilan Usahaku baru — sidebar, kasir POS, foto produk — run #220, commit ab391de — tanpa SQL baru)
+Terakhir diperbarui: 2026-11-16 (live: 3.33.1 kasir — keranjang di panel, pembayaran & struk muncul saat Bayar — run #221, commit 5935689 — tanpa SQL baru)
 
 ## Siapa sedang kerja
 
@@ -18,10 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.33.1 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, frontend saja):** kasir POS — panel
+- **2026-11-16 — 3.33.1 LIVE (run #221, 5935689, frontend saja):** kasir POS — panel
   kanan jadi keranjang (item, total, Bayar); detail bayar + struk di modal/sheet "Pembayaran". `Struk` dapat
   `onSaved` → keranjang dikosongkan begitu tercatat (cegah catat dobel kalau modal ditutup ×). Dites Playwright API
-  tiruan (desktop & HP). Menunggu "gas".
+  tiruan (desktop & HP). **Belum**: data asli.
 
 - **2026-11-16 — 3.33.0 LIVE (run #220, ab391de, tanpa SQL, Worker berubah: foto produk):
   tampilan Usahaku baru.** Daftar toko tanpa angka uang (Tim + Buat toko tetap). Di dalam toko ada menu samping
