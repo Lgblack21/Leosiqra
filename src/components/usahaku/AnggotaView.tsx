@@ -444,21 +444,50 @@ export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasE
 }
 
 export function KartuAnggota({ shop, b }: { shop: Shop; b: Borrower }) {
+  return (
+    <KartuView
+      shop={shop}
+      data={{
+        jenis: 'ANGGOTA',
+        nama: b.name,
+        nomor: b.memberNo ?? '—',
+        baris: [['Bergabung', tglKartu(b.registeredAt)], ...(b.job ? ([['Pekerjaan', b.job]] as [string, string][]) : [])],
+        fotoUrl: b.hasPhoto ? shopLoanService.memberFileUrl(shop.id, b, 'foto') : null,
+      }}
+      namaFile={`Kartu-Anggota-${(b.memberNo ?? b.name).replace(/[^\w-]+/g, '-')}.png`}
+      wa={b.wa}
+      pesanWa={`Halo ${b.name}, ini kartu anggota ${shop.name} kamu (No. ${b.memberNo}). Gambarnya sudah kuunduh, kukirim setelah pesan ini ya.`}
+      catatan="Kartu tidak memuat NIK atau foto KTP. QR hanya berisi nomor anggota."
+    />
+  );
+}
+
+/** Kartu (anggota / staf): gambar PNG dibuat di perangkat + Unduh · Kirim WA · Cetak. */
+export function KartuView({
+  shop,
+  data,
+  namaFile,
+  wa,
+  pesanWa,
+  catatan,
+}: {
+  shop: Shop;
+  data: DataKartu;
+  namaFile: string;
+  wa: string | null;
+  pesanWa: string;
+  catatan: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const blobRef = useRef<Blob | null>(null);
+  const kunci = JSON.stringify(data);
   useEffect(() => {
     let alive = true;
     let objectUrl: string | null = null;
     void (async () => {
       try {
-        const c = await gambarKartu(shop, {
-          jenis: 'ANGGOTA',
-          nama: b.name,
-          nomor: b.memberNo ?? '—',
-          baris: [['Bergabung', tglKartu(b.registeredAt)], ...(b.job ? ([['Pekerjaan', b.job]] as [string, string][]) : [])],
-          fotoUrl: b.hasPhoto ? shopLoanService.memberFileUrl(shop.id, b, 'foto') : null,
-        });
+        const c = await gambarKartu(shop, JSON.parse(kunci) as DataKartu);
         const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
         if (!blob) throw new Error('x');
         blobRef.current = blob;
@@ -472,13 +501,13 @@ export function KartuAnggota({ shop, b }: { shop: Shop; b: Borrower }) {
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [shop, b]);
-  const file = () => new File([blobRef.current!], `Kartu-Anggota-${(b.memberNo ?? b.name).replace(/[^\w-]+/g, '-')}.png`, { type: 'image/png' });
+  }, [shop, kunci]);
+  const file = () => new File([blobRef.current!], namaFile, { type: 'image/png' });
   const unduh = () => {
     if (!url) return;
     const a = document.createElement('a');
     a.href = url;
-    a.download = file().name;
+    a.download = namaFile;
     a.click();
   };
   const kirim = async () => {
@@ -486,28 +515,28 @@ export function KartuAnggota({ shop, b }: { shop: Shop; b: Borrower }) {
     const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
     if (nav.canShare?.({ files: [f] })) {
       try {
-        await navigator.share({ files: [f], text: `Kartu anggota ${shop.name} — ${b.name} (${b.memberNo})` });
+        await navigator.share({ files: [f], text: pesanWa });
         return;
       } catch {
         /* dibatalkan */
       }
     }
     unduh();
-    const n = (b.wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
-    window.open(`https://wa.me/${n.length >= 9 ? n : ''}?text=${encodeURIComponent(`Halo ${b.name}, ini kartu anggota ${shop.name} kamu (No. ${b.memberNo}). Gambarnya sudah kuunduh, kukirim setelah pesan ini ya.`)}`, '_blank', 'noopener');
+    const n = (wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
+    window.open(`https://wa.me/${n.length >= 9 ? n : ''}?text=${encodeURIComponent(pesanWa)}`, '_blank', 'noopener');
   };
   const cetak = () => {
     if (!url) return;
     const w = window.open('', '_blank');
     if (!w) return;
-    w.document.write(`<title>Kartu ${b.name}</title><style>@page{size:auto;margin:12mm}body{margin:0}img{width:85.6mm;height:54mm;border-radius:3mm}</style><img src="${url}" onload="window.print()">`);
+    w.document.write(`<title>${data.nama}</title><style>@page{size:auto;margin:12mm}body{margin:0}img{width:85.6mm;height:54mm;border-radius:3mm}</style><img src="${url}" onload="window.print()">`);
     w.document.close();
   };
   return (
     <div className="space-y-3">
       <div className="mx-auto aspect-[1012/638] w-full max-w-md overflow-hidden rounded-[18px] bg-slate-100 shadow-lg dark:bg-slate-800">
         {/* eslint-disable-next-line @next/next/no-img-element -- gambar kartu buatan perangkat (blob) */}
-        {url ? <img src={url} alt={`Kartu anggota ${b.name}`} className="h-full w-full" /> : <div className="flex h-full items-center justify-center">{error ? <p className="px-4 text-center fs-13 text-rose-600">{error}</p> : <Loader2 className="animate-spin text-slate-400" />}</div>}
+        {url ? <img src={url} alt={`Kartu ${data.nama}`} className="h-full w-full" /> : <div className="flex h-full items-center justify-center">{error ? <p className="px-4 text-center fs-13 text-rose-600">{error}</p> : <Loader2 className="animate-spin text-slate-400" />}</div>}
       </div>
       <div className="grid grid-cols-3 gap-2">
         <button type="button" onClick={unduh} disabled={!url} className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 fs-13 font-bold text-white disabled:opacity-40 dark:bg-white dark:text-slate-900">
@@ -520,7 +549,7 @@ export function KartuAnggota({ shop, b }: { shop: Shop; b: Borrower }) {
           <Printer size={15} /> Cetak
         </button>
       </div>
-      <p className="text-center fs-11 text-slate-400">Kartu tidak memuat NIK atau foto KTP. QR hanya berisi nomor anggota.</p>
+      <p className="text-center fs-11 text-slate-400">{catatan}</p>
     </div>
   );
 }

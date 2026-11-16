@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Loader2,
   LogOut,
+  MessageCircle,
   Package,
   ReceiptText,
   Store,
@@ -16,7 +17,10 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { staffService, staffStockService, type StaffMe, type StaffSale } from '@/lib/services/staffService';
+import { staffService, staffStockService, type StaffMe, type StaffSale, type StaffTagihan, type TagihanLoan } from '@/lib/services/staffService';
+import { kindOf } from '@/lib/usaha/jenis';
+import { statusPinjaman } from '@/lib/usaha/pinjaman';
+import type { Loan } from '@/lib/services/shopLoanService';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { StockView } from '@/components/ladang/StockView';
 import { fmtQty, isLow, type StockData, type StockMaterial } from '@/lib/services/stockService';
@@ -32,8 +36,10 @@ import { cn, formatIDR } from '@/lib/utils';
 // jual, catat pengeluaran) dan Stok (lihat, tambah bahan, masuk/pakai/hitung, beli).
 // Tanpa saldo, rekening (selain nama tujuan yang dikunci pemilik), transaksi lain,
 // Tagih, atau Jual barang. Semua yang dicatat tim bertanda "oleh <nama>".
+// Jabatan Penagih (3.40): hanya Tagihan — daftar angsuran usaha pinjaman yang diberikan, terima angsuran
+// ke kas usaha yang ditentukan pemilik. Tanpa alamat, KTP, atau jaminan.
 
-type Tab = 'ringkas' | 'kasir' | 'stok';
+type Tab = 'ringkas' | 'kasir' | 'stok' | 'tagih';
 const noteText = (n: string | null) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '') || 'Penjualan';
 const isCost = (t: StaffSale) => t.type === 'pengeluaran';
 const sumOf = (list: StaffSale[]) => list.reduce((a, t) => a + Number(t.amount || 0), 0);
@@ -136,9 +142,12 @@ export function StaffApp() {
   const load = useCallback(async () => {
     try {
       const r = await staffService.me();
-      setMe(r);
+      const penagih = r.staff.role === 'penagih';
+      const list = penagih ? r.shops.filter((s) => kindOf(s.kind)?.id === 'pinjaman') : r.shops;
+      setMe({ ...r, shops: list });
       setState('ready');
-      setShopId((cur) => (r.shops.some((s) => s.id === cur) ? cur : (r.shops[0]?.id ?? '')));
+      setTab((t) => (penagih ? 'tagih' : t === 'tagih' ? 'kasir' : t));
+      setShopId((cur) => (list.some((s) => s.id === cur) ? cur : (list[0]?.id ?? '')));
     } catch (e) {
       const m = e instanceof Error ? e.message : '';
       if (/Unauthorized/i.test(m)) setState('login');
@@ -226,6 +235,11 @@ export function StaffApp() {
           <p className="mt-2 fs-15 font-bold text-slate-900">Belum ada usaha untukmu</p>
           <p className="mt-1 fs-13 text-slate-500">Minta pemilik usaha memberi akses di Usahaku › Tim.</p>
         </div>
+      ) : me.staff.role === 'penagih' ? (
+        <div className="space-y-4">
+          {me.shops.length > 1 && <ShopChips shops={me.shops} value={shopId} onChange={setShopId} lowBy={{}} />}
+          {shop && <StaffTagih key={shop.id} shop={shop} say={say} />}
+        </div>
       ) : (
         <div className="space-y-4">
           {tab !== 'ringkas' && <ShopChips shops={me.shops} value={shopId} onChange={setShopId} lowBy={lowBy} />}
@@ -248,6 +262,7 @@ export function StaffApp() {
         </div>
       )}
 
+      {me.staff.role !== 'penagih' && (
       <nav
         aria-label="Menu tim"
         className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4"
@@ -286,6 +301,7 @@ export function StaffApp() {
           })}
         </div>
       </nav>
+      )}
 
       <Modal isOpen={pw} onClose={() => setPw(false)} title="Ganti sandi" maxWidth="max-w-sm">
         <ChangePassword
@@ -812,5 +828,208 @@ function StaffStock({
         </div>
       </BottomSheet>
     </section>
+  );
+}
+
+const waLink = (wa: string | null, text: string) => {
+  const n = (wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
+  return `https://wa.me/${n.length >= 9 ? n : ''}?text=${encodeURIComponent(text)}`;
+};
+const asLoan = (l: TagihanLoan) =>
+  ({ ...l, status: 'aktif', principal: 0, adminFee: 0 }) as unknown as Loan;
+
+/** Penagih: siapa yang perlu ditagih hari ini + terima angsuran (masuk ke kas usaha yang ditentukan pemilik). */
+function StaffTagih({ shop, say }: { shop: Shop; say: (m: string) => void }) {
+  const [data, setData] = useState<StaffTagihan | null>(null);
+  const [error, setError] = useState('');
+  const [pay, setPay] = useState<TagihanLoan | null>(null);
+  const [q, setQ] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setData(await staffService.tagihan(shop.id));
+      setError('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memuat tagihan.');
+    }
+  }, [shop.id]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- muat tagihan saat usaha dipilih
+    void load();
+  }, [load]);
+
+  if (error && !data)
+    return (
+      <p role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-600">
+        {error}
+      </p>
+    );
+  if (!data) return <div className="h-40 animate-pulse rounded-[22px] bg-slate-100" />;
+
+  const rows = data.loans
+    .map((l) => ({ l, st: statusPinjaman(asLoan(l), data.today) }))
+    .filter(({ l }) => !q.trim() || `${l.name} ${l.memberNo ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const perlu = rows.filter((r) => r.st.tagihan > 0).sort((a, b) => b.st.telat - a.st.telat || a.l.name.localeCompare(b.l.name));
+  const aman = rows.filter((r) => r.st.tagihan <= 0);
+  const target = perlu.reduce((a, r) => a + r.st.tagihan, 0);
+  const masuk = data.loans.reduce((a, l) => a + l.paidByMeToday, 0);
+
+  const row = ({ l, st }: (typeof rows)[number]) => (
+    <li key={l.id} className="flex items-center gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate fs-14 font-bold text-slate-900">{l.name}</p>
+        <p className="truncate fs-11 text-slate-500">
+          {l.memberNo ? `${l.memberNo} · ` : ''}angsuran ke-{st.ke} dari {l.count} · sisa {formatIDR(st.sisa)}
+        </p>
+        {st.tagihan > 0 ? (
+          <p className={cn('mt-0.5 fs-12 font-bold', st.telat > 0 ? 'text-rose-600' : 'text-slate-700')}>
+            Tagih {formatIDR(st.tagihan)}
+            {st.nunggakKali ? ` · ${st.nunggakKali}× belum bayar` : ''}
+          </p>
+        ) : (
+          <p className="mt-0.5 fs-12 font-semibold text-emerald-600">
+            {l.paidByMeToday > 0 ? `Sudah bayar ${formatIDR(l.paidByMeToday)} hari ini` : st.diMuka > 0 ? `Lebih bayar ${formatIDR(st.diMuka)}` : 'Tidak ada tagihan hari ini'}
+          </p>
+        )}
+      </div>
+      {l.wa && st.tagihan > 0 && (
+        <a
+          href={waLink(l.wa, `Halo ${l.name}, mengingatkan angsuran ${shop.name} hari ini ${formatIDR(st.tagihan)}. Terima kasih 🙏`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`WhatsApp ${l.name}`}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+        >
+          <MessageCircle size={17} />
+        </a>
+      )}
+      <button
+        type="button"
+        onClick={() => setPay(l)}
+        className={cn('h-10 shrink-0 rounded-full px-4 fs-13 font-bold', st.tagihan > 0 ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600')}
+      >
+        Terima
+      </button>
+    </li>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className={cn(card, 'grid grid-cols-2 gap-3 p-4')}>
+        <div>
+          <p className="fs-11 font-bold uppercase tracking-wide text-slate-400">Perlu ditagih</p>
+          <p className="mt-0.5 fs-18 font-extrabold text-slate-900">{formatIDR(target)}</p>
+          <p className="fs-11 text-slate-500">{perlu.length} orang</p>
+        </div>
+        <div>
+          <p className="fs-11 font-bold uppercase tracking-wide text-slate-400">Kamu terima hari ini</p>
+          <p className="mt-0.5 fs-18 font-extrabold text-emerald-600">{formatIDR(masuk)}</p>
+          <p className="truncate fs-11 text-slate-500">{data.kasName ? `masuk ke ${data.kasName}` : 'kas usaha belum disiapkan'}</p>
+        </div>
+      </div>
+      {!data.kasName && (
+        <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 fs-12 font-semibold text-amber-700">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" /> Pemilik usaha belum menyiapkan kas usaha. Angsuran belum bisa dicatat.
+        </p>
+      )}
+      {data.loans.length > 6 && (
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau nomor anggota" className={fieldCls} />
+      )}
+      <section className={card}>
+        <h2 className="px-4 pt-4 fs-14 font-extrabold text-slate-900">Tagihan hari ini</h2>
+        {perlu.length ? (
+          <ul className="divide-y divide-slate-100">{perlu.map(row)}</ul>
+        ) : (
+          <p className="px-4 pb-4 pt-1 fs-13 text-slate-500">Semua sudah beres untuk hari ini. 👍</p>
+        )}
+      </section>
+      {aman.length > 0 && (
+        <section className={card}>
+          <h2 className="px-4 pt-4 fs-14 font-extrabold text-slate-900">Peminjam lain</h2>
+          <ul className="divide-y divide-slate-100">{aman.map(row)}</ul>
+        </section>
+      )}
+
+      <BottomSheet isOpen={!!pay} onClose={() => setPay(null)} title={pay ? `Terima angsuran · ${pay.name}` : 'Terima angsuran'}>
+        {pay && (
+          <TerimaForm
+            key={pay.id}
+            loan={pay}
+            st={statusPinjaman(asLoan(pay), data.today)}
+            kasName={data.kasName}
+            onSave={async (amount, requestId) => {
+              const r = await staffService.terima(shop.id, pay.id, { requestId, amount });
+              setPay(null);
+              say(r.lunas ? `${pay.name} lunas. 🎉` : `Angsuran ${formatIDR(amount)} dari ${pay.name} tercatat.`);
+              await load();
+            }}
+          />
+        )}
+      </BottomSheet>
+    </div>
+  );
+}
+
+function TerimaForm({
+  loan,
+  st,
+  kasName,
+  onSave,
+}: {
+  loan: TagihanLoan;
+  st: ReturnType<typeof statusPinjaman>;
+  kasName: string | null;
+  onSave: (amount: number, requestId: string) => Promise<void>;
+}) {
+  const [amount, setAmount] = useState(String(Math.min(st.sisa, st.tagihan > 0 ? st.tagihan : loan.installment)));
+  const [requestId] = useState(() => crypto.randomUUID());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const n = Math.round(Number(amount.replace(/\D/g, '')) || 0);
+  const pilihan = Array.from(new Set([st.tagihan, loan.installment].filter((v) => v > 0 && v <= st.sisa)));
+  const submit = async () => {
+    if (n < 1) return setError('Isi nominal yang diterima.');
+    if (n > st.sisa) return setError(`Melebihi sisa pinjaman (${formatIDR(st.sisa)}).`);
+    setBusy(true);
+    setError('');
+    try {
+      await onSave(n, requestId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal mencatat. Coba lagi.');
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+      <p className="fs-12 text-slate-500">
+        Tagihan hari ini {formatIDR(st.tagihan)} · sisa pinjaman {formatIDR(st.sisa)}
+      </p>
+      <label className="block">
+        <span className={labelCls}>Uang yang diterima</span>
+        <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} className={fieldCls} />
+      </label>
+      {pilihan.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {pilihan.map((v) => (
+            <button key={v} type="button" onClick={() => setAmount(String(v))} className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700">
+              {formatIDR(v)}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="fs-11 text-slate-500">Masuk ke {kasName ?? 'kas usaha'} · dicatat atas namamu, tanggal hari ini.</p>
+      {error && (
+        <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-12 font-semibold text-rose-600">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={busy || !kasName}
+        onClick={submit}
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 fs-14 font-bold text-white disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Wallet size={18} />} Terima {n > 0 ? formatIDR(n) : ''}
+      </button>
+    </div>
   );
 }

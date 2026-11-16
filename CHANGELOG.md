@@ -122,6 +122,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.37.0 | 16 Nov 2026 | Pinjaman: geser jadwal |
 | 3.38.0 | 16 Nov 2026 | Pinjaman: anggota & kartu anggota |
 | 3.39.0 | 16 Nov 2026 | Pinjaman: jaminan |
+| 3.40.0 | 16 Nov 2026 | Tim: penagih, kas usaha per staf, kartu staf |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -135,6 +136,22 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.40.0 — 2026-11-16 — Tim: penagih, kas usaha per staf, kartu staf
+
+- **Jabatan Penagih.** Di Usahaku › Tim sekarang ada pilihan jabatan **Kasir** atau **Penagih**. Penagih login di
+  halaman Tim seperti biasa, tapi yang dia lihat cuma **Tagihan hari ini** dari usaha pinjaman yang kamu berikan: siapa
+  yang perlu ditagih, berapa, berapa kali nunggak, tombol WhatsApp untuk mengingatkan, dan tombol **Terima** untuk
+  mencatat angsuran. Alamat, foto KTP, dan jaminan anggota gak ikut kelihatan, dan penagih gak bisa membuka kasir,
+  biaya, atau stok.
+- **Uang tim masuk ke kas usaha yang kamu pilih.** Untuk tiap usaha yang dipegang, kamu tentukan kasnya (misalnya
+  Laci atau BCA Usaha). Penjualan kasir dan angsuran yang diterima penagih langsung masuk ke kas itu dan tercatat atas
+  nama orangnya. Rekening pribadi cuma diminta kalau ada usaha yang belum punya buku usaha.
+- **Foto dan kartu staf.** Tiap anggota tim dapat nomor staf (STF-001, dst.). Tambahkan fotonya di **Atur**, lalu ketuk
+  **Kartu staf** untuk unduh, kirim lewat WhatsApp, atau cetak. Kartunya cuma memuat nama, jabatan, nomor staf, dan
+  usaha; fotonya privat.
+- Mengganti jabatan seseorang otomatis mengeluarkan dia dari aplikasi Tim, jadi dia masuk lagi dengan tampilan
+  yang sesuai.
 
 ## 3.39.0 — 2026-11-16 — Pinjaman: jaminan
 

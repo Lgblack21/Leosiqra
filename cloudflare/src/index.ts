@@ -11053,6 +11053,33 @@ const sanitizeCollateralInput = (raw: unknown): Collateral | null => {
 };
 type LoanRow = { id: string; borrower_id: string; principal: number; admin_fee: number; admin_mode: string; installment: number; count: number; total: number; frequency: string; disbursed_on: string; due_dates_json: string; account_id: string | null; status: string; note: string | null; created_at: string; closed_at: string | null };
 
+// Catat angsuran — dipakai pemilik (menu Pinjaman) & penagih (akun tim). ≤ sisa dicek DI DALAM batch, entry_key unik
+// (anti dobel), lunas di batch yang sama. by = akun tim yang menerima (tercatat di riwayat).
+async function recordLoanPayment(
+  env: Env, ownerId: string, shopId: string, loan: { id: string; status: string; disbursed_on: string }, who: string,
+  input: { requestId: string; amount: number; kasId: string; date: string; by?: { id: string; name: string } },
+) {
+  if (loan.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
+  const id = generateId();
+  const key = `angs:${input.requestId}`;
+  const r = await env.DB.batch([
+    bookInsert(env, ownerId, shopId, { id, key, type: "angsuran", date: input.date, amount: input.amount, net: input.amount, accountId: input.kasId, refId: loan.id, party: who, buyer: who, note: `Angsuran · ${who}`, by: input.by ?? null }, {
+      sql: `EXISTS (SELECT 1 FROM shop_loans l WHERE l.id = ? AND l.owner_id = ? AND l.status = 'aktif' AND l.total - ${LOAN_PAID_SQL} >= ?)`,
+      binds: [loan.id, ownerId, ownerId, loan.id, input.amount],
+    }),
+    kasDelta(env, ownerId, input.kasId, input.amount, id),
+    env.DB.prepare(`UPDATE shop_loans SET status = 'lunas', closed_at = ? WHERE id = ? AND owner_id = ? AND status = 'aktif' AND total <= ${LOAN_PAID_SQL}`).bind(nowIso(), loan.id, ownerId, ownerId, loan.id),
+  ]);
+  if (!r[0]?.meta.changes) {
+    if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
+    const left = await env.DB.prepare(`SELECT status, total - ${LOAN_PAID_SQL} AS sisa FROM shop_loans WHERE id = ? AND owner_id = ?`).bind(ownerId, loan.id, loan.id, ownerId).first<{ status: string; sisa: number }>();
+    if (left?.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
+    return json({ error: `Melebihi sisa pinjaman. Sisanya ${rp(Number(left?.sisa) || 0)}.` }, { status: 409 });
+  }
+  await publishShopBook(env, ownerId, shopId);
+  return json({ ok: true, id, lunas: (r[2]?.meta.changes ?? 0) > 0 }, { status: 201 });
+}
+
 async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
   const [res, sub, op] = parts;
   try {
@@ -11390,24 +11417,7 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         const book = await shopBook(env, ownerId, shop.id);
         const kas = pickBookAccount(raw.shop_account_id, book);
         if (!kas) return json({ error: "Pilih kas yang menerima uangnya." }, { status: 400 });
-        const id = generateId();
-        const key = `angs:${requestId}`;
-        const r = await env.DB.batch([
-          bookInsert(env, ownerId, shop.id, { id, key, type: "angsuran", date, amount, net: amount, accountId: kas.id, refId: loan.id, party: who, buyer: who, note: `Angsuran · ${who}` }, {
-            sql: `EXISTS (SELECT 1 FROM shop_loans l WHERE l.id = ? AND l.owner_id = ? AND l.status = 'aktif' AND l.total - ${LOAN_PAID_SQL} >= ?)`,
-            binds: [loan.id, ownerId, ownerId, loan.id, amount],
-          }),
-          kasDelta(env, ownerId, kas.id, amount, id),
-          env.DB.prepare(`UPDATE shop_loans SET status = 'lunas', closed_at = ? WHERE id = ? AND owner_id = ? AND status = 'aktif' AND total <= ${LOAN_PAID_SQL}`).bind(nowIso(), loan.id, ownerId, ownerId, loan.id),
-        ]);
-        if (!r[0]?.meta.changes) {
-          if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
-          const left = await env.DB.prepare(`SELECT status, total - ${LOAN_PAID_SQL} AS sisa FROM shop_loans WHERE id = ? AND owner_id = ?`).bind(ownerId, loan.id, loan.id, ownerId).first<{ status: string; sisa: number }>();
-          if (left?.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
-          return json({ error: `Melebihi sisa pinjaman. Sisanya ${rp(Number(left?.sisa) || 0)}.` }, { status: 409 });
-        }
-        await publishShopBook(env, ownerId, shop.id);
-        return json({ ok: true, id, lunas: (r[2]?.meta.changes ?? 0) > 0 }, { status: 201 });
+        return await recordLoanPayment(env, ownerId, shop.id, loan, who, { requestId, amount, kasId: kas.id, date });
       }
 
       // Geser jadwal: tanggal yang SUDAH tertutup angsuran tetap; sisanya diganti. Ditolak kalau sementara itu ada
@@ -11849,7 +11859,26 @@ const STAFF_SESSION_DAYS = 30;
 const staffCookieName = (env: Env) => `${env.SESSION_COOKIE_NAME}_tim`;
 const staffTableMissing = (e: unknown) => e instanceof Error && /no such table: (shop_staff|staff_sessions)/.test(e.message);
 const STAFF_NOT_READY = "Fitur akun tim belum aktif (menunggu pembaruan database). Coba lagi nanti.";
-type StaffRow = { id: string; owner_id: string; username: string; name: string; password_hash: string; role: string; shop_ids: string; account_id: string | null; disabled_at: string | null; last_login_at: string | null; created_at: string };
+type StaffRow = { id: string; owner_id: string; username: string; name: string; password_hash: string; role: string; shop_ids: string; account_id: string | null; disabled_at: string | null; last_login_at: string | null; created_at: string; kas_json?: string | null; photo_key?: string | null; staff_no?: string | null; title?: string | null; updated_at?: string };
+// Migrasi 0049: kas usaha per toko (kas_json {shopId: kasId}), foto, nomor staf, jabatan. Sebelum migrasi → cara lama.
+let staffColsCache: { ok: boolean; at: number } | null = null;
+const staffExtraReady = async (env: Env) => {
+  if (staffColsCache && Date.now() - staffColsCache.at < 60_000) return staffColsCache.ok;
+  let ok = true;
+  try { await env.DB.prepare("SELECT kas_json, photo_key, staff_no, title FROM shop_staff LIMIT 1").first(); }
+  catch (e) { if (e instanceof Error && /no such column|no such table/i.test(e.message)) ok = false; else throw e; }
+  staffColsCache = { ok, at: Date.now() };
+  return ok;
+};
+const STAFF_ROLES = ["kasir", "penagih"] as const;
+const staffKasMap = (row: { kas_json?: string | null }): Record<string, string> => {
+  try { const v = row.kas_json ? JSON.parse(row.kas_json) : null; return v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k, x]) => /^[0-9a-f-]{36}$/i.test(k) && typeof x === "string")) as Record<string, string> : {}; } catch { return {}; }
+};
+// Kas tujuan uang yang dicatat staf di toko ini: kas pilihan pemilik (kalau masih aktif) → kas utama.
+const staffKas = (row: { kas_json?: string | null }, shopId: string, book: { accounts: ShopAccountRow[]; fallback: ShopAccountRow | null }) => {
+  const want = staffKasMap(row)[shopId];
+  return (want ? book.accounts.find((a) => a.id === want) : null) ?? book.fallback;
+};
 const staffShopIds = (row: Pick<StaffRow, "shop_ids">): string[] => { try { const v = JSON.parse(row.shop_ids); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, SHOPS_MAX_PER_USER) : []; } catch { return []; } };
 
 const readStaff = async (env: Env, request: Request): Promise<{ staff: StaffRow; sessionId: string } | null> => {
@@ -11860,7 +11889,7 @@ const readStaff = async (env: Env, request: Request): Promise<{ staff: StaffRow;
   const id = token.slice(0, dot);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !constantTimeEqual(token.slice(dot + 1), await signSession(env, `staff:${id}`))) return null;
   const row = await env.DB.prepare(
-    `SELECT s.id, s.owner_id, s.username, s.name, s.password_hash, s.role, s.shop_ids, s.account_id, s.disabled_at, s.last_login_at, s.created_at
+    `SELECT s.*
        FROM staff_sessions t JOIN shop_staff s ON s.id = t.staff_id
       WHERE t.id = ? AND t.revoked_at IS NULL AND t.expires_at > ? AND s.disabled_at IS NULL`
   ).bind(id, nowIso()).first<StaffRow>();
@@ -11921,6 +11950,9 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       if (shopIds.length) {
         try {
           const kas = (await env.DB.prepare(`SELECT shop_id, name FROM shop_accounts WHERE owner_id = ? AND shop_id IN (${inList}) AND archived_at IS NULL ORDER BY is_default DESC, created_at ASC`).bind(staff.owner_id, ...shopIds).all<{ shop_id: string; name: string }>()).results ?? [];
+          const kasMap = staffKasMap(staff);
+          const byId = new Map(((await env.DB.prepare(`SELECT id, shop_id, name FROM shop_accounts WHERE owner_id = ? AND shop_id IN (${inList}) AND archived_at IS NULL`).bind(staff.owner_id, ...shopIds).all<{ id: string; shop_id: string; name: string }>()).results ?? []).map((k) => [k.id, k]));
+          for (const [sid, kid] of Object.entries(kasMap)) { const k = byId.get(kid); if (k && k.shop_id === sid) kasByShop[sid] = k.name; }
           for (const k of kas) kasByShop[k.shop_id] ??= k.name;
           const booked = (await env.DB.prepare(
             `SELECT id, shop_id, CASE WHEN type = 'jual' THEN 'pemasukan' ELSE 'pengeluaran' END AS type, amount, note, created_at FROM shop_entries
@@ -11935,7 +11967,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       // Satu akun tim bisa memegang beberapa usaha; kalau semua usahanya pakai kas usaha, tujuan = kas utama.
       const kasNames = [...new Set(shopIds.map((sid) => kasByShop[sid]).filter(Boolean))];
       const allBook = shopIds.length > 0 && shopIds.every((sid) => kasByShop[sid]);
-      return json({ staff: { id: staff.id, name: staff.name, username: staff.username, role: staff.role }, owner: owner?.name ?? "", account: allBook ? kasNames.join(" / ") : account?.name ?? null, shops: shops.map((r) => ({ ...r, kas_name: kasByShop[String(r.id)] ?? null })), today: sales.slice(0, 100), materials, date: todayWIB() });
+      return json({ staff: { id: staff.id, name: staff.name, username: staff.username, role: staff.role, staff_no: staff.staff_no ?? null, title: staff.title ?? null, has_photo: Boolean(staff.photo_key) }, owner: owner?.name ?? "", account: allBook ? kasNames.join(" / ") : account?.name ?? null, shops: shops.map((r) => ({ ...r, kas_name: kasByShop[String(r.id)] ?? null })), today: sales.slice(0, 100), materials, date: todayWIB() });
     }
     if (pathname === "/api/staff/password" && request.method === "POST") {
       const raw = await parseJson<{ current?: unknown; next?: unknown }>(request);
@@ -11948,12 +11980,52 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       ]);
       return json({ ok: true });
     }
+    // Penagih hanya boleh Tagihan — kasir, biaya, dan stok ditolak di server (bukan sekadar disembunyikan di UI).
+    if (staff.role === "penagih" && /^\/api\/staff\/shops\/[0-9a-f-]{36}\/(stock|sale|expense)(\/|$)/i.test(pathname)) return json({ error: "Akun penagih hanya untuk tagihan." }, { status: 403 });
     const sm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/stock((?:\/[A-Za-z0-9-]+){0,3})$/i.exec(pathname);
     if (sm) {
       if (!ids.includes(sm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
       const stockShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(sm[1], staff.owner_id).first<{ id: string; name: string }>();
       if (!stockShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
       return await handleShopStock(request, env, staff.owner_id, stockShop, sm[2].split("/").filter(Boolean), { id: staff.id, name: staff.name });
+    }
+    // Penagih: Tagihan hari ini (tanpa alamat/KTP/jaminan) + terima angsuran ke kas yang ditentukan pemilik.
+    const pm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/tagihan(?:\/([0-9a-f-]{36})\/bayar)?$/i.exec(pathname);
+    if (pm) {
+      if (staff.role !== "penagih") return json({ error: "Akunmu bukan penagih." }, { status: 403 });
+      if (!ids.includes(pm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
+      const lShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(pm[1], staff.owner_id).first<{ id: string; name: string }>();
+      if (!lShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
+      try {
+        const book = await shopBook(env, staff.owner_id, lShop.id);
+        const kas = book.on ? staffKas(staff, lShop.id, book) : null;
+        if (!pm[2] && request.method === "GET") {
+          const mOn = await memberReady(env);
+          const loans = (await env.DB.prepare(
+            `SELECT l.id, l.installment, l.total, l.count, l.frequency, l.due_dates_json, l.disbursed_on, b.name AS borrower_name, b.wa AS borrower_wa${mOn ? ", b.member_no" : ""},
+                    (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid,
+                    (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran' AND a.date = ? AND a.by_staff_id = ?) AS paid_by_me_today
+               FROM shop_loans l LEFT JOIN shop_borrowers b ON b.id = l.borrower_id AND b.owner_id = l.owner_id
+              WHERE l.owner_id = ? AND l.shop_id = ? AND l.status = 'aktif' ORDER BY b.name COLLATE NOCASE LIMIT 1000`
+          ).bind(todayWIB(), staff.id, staff.owner_id, lShop.id).all()).results ?? [];
+          return json({ today: todayWIB(), kas_name: kas?.name ?? null, loans });
+        }
+        if (pm[2] && request.method === "POST") {
+          if (!kas) return json({ error: "Pemilik usaha belum menyiapkan kas usaha untuk tagihan." }, { status: 409 });
+          const raw = await parseJson<Record<string, unknown>>(request);
+          const requestId = reqId(raw.request_id);
+          if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+          const amount = shopMoney(raw.amount);
+          if (!amount || amount < 1) return json({ error: "Isi nominal yang dibayar." }, { status: 400 });
+          const loan = await env.DB.prepare("SELECT l.id, l.status, l.disbursed_on, b.name AS who FROM shop_loans l LEFT JOIN shop_borrowers b ON b.id = l.borrower_id WHERE l.id = ? AND l.owner_id = ? AND l.shop_id = ?").bind(pm[2], staff.owner_id, lShop.id).first<{ id: string; status: string; disbursed_on: string; who: string | null }>();
+          if (!loan) return json({ error: "Pinjaman tidak ditemukan." }, { status: 404 });
+          return await recordLoanPayment(env, staff.owner_id, lShop.id, loan, loan.who ?? "Peminjam", { requestId, amount, kasId: kas.id, date: todayWIB(), by: { id: staff.id, name: staff.name } });
+        }
+      } catch (e) {
+        if (loanTableMissing(e)) return json({ error: LOAN_NOT_READY }, { status: 503 });
+        throw e;
+      }
+      return json({ error: "Not found" }, { status: 404 });
     }
     const m = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/(sale|expense)$/i.exec(pathname);
     if (m && request.method === "POST") {
@@ -11963,7 +12035,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       if (!shop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
       // Usaha dengan kas usaha → uang masuk/keluar kas utama usaha itu (bukan rekening pribadi pemilik).
       const book = await shopBook(env, staff.owner_id, shop.id);
-      const kas = book.on ? book.fallback : null;
+      const kas = book.on ? staffKas(staff, shop.id, book) : null;
       const account = kas ? null : staff.account_id ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(staff.account_id, staff.owner_id).first<{ id: string }>() : null;
       if (!kas && !account) return json({ error: "Pemilik usaha belum menentukan rekening tujuan untuk akunmu." }, { status: 409 });
       const raw = await parseJson<Record<string, unknown>>(request);
@@ -12006,7 +12078,26 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const owner = authResult.session.user;
-  const out = (r: StaffRow) => ({ id: r.id, username: r.username, name: r.name, role: r.role, shop_ids: staffShopIds(r), account_id: r.account_id, disabled: Boolean(r.disabled_at), last_login_at: r.last_login_at, created_at: r.created_at });
+  const out = (r: StaffRow) => ({ id: r.id, username: r.username, name: r.name, role: r.role, shop_ids: staffShopIds(r), account_id: r.account_id, disabled: Boolean(r.disabled_at), last_login_at: r.last_login_at, created_at: r.created_at, kas: staffKasMap(r), staff_no: r.staff_no ?? null, title: r.title ?? null, has_photo: Boolean(r.photo_key), updated_at: r.updated_at ?? r.created_at });
+  // Kas usaha semua toko pemilik (pilihan "uang masuk ke kas mana" per toko).
+  const kasOptions = async () => {
+    try { return (await env.DB.prepare("SELECT id, shop_id, name, kind, is_default FROM shop_accounts WHERE owner_id = ? AND archived_at IS NULL ORDER BY is_default DESC, created_at ASC").bind(owner.id).all<{ id: string; shop_id: string; name: string; kind: string; is_default: number }>()).results ?? []; }
+    catch (e) { if (bookTableMissing(e)) return []; throw e; }
+  };
+  // Hanya kas milik toko itu yang boleh dipetakan; toko tanpa pilihan → kas utama.
+  const sanitizeKas = async (raw: unknown, shopIds: string[]) => {
+    const opts = await kasOptions();
+    const out: Record<string, string> = {};
+    const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+    let bad = false;
+    for (const sid of shopIds) {
+      const k = r[sid];
+      if (k === undefined || k === null || k === "") continue;
+      if (typeof k === "string" && opts.some((o) => o.id === k && o.shop_id === sid)) out[sid] = k;
+      else bad = true; // kas toko lain / sudah diarsip → tolak, jangan diam-diam pindah ke kas utama
+    }
+    return { map: out, bad, allBook: shopIds.every((sid) => opts.some((o) => o.shop_id === sid)) };
+  };
   const ownShopIds = async () => new Set(((await env.DB.prepare("SELECT id FROM shops WHERE user_id = ?").bind(owner.id).all<{ id: string }>()).results ?? []).map((r) => r.id));
   const checkAccount = async (v: unknown) => (typeof v === "string" && v ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' AND COALESCE(type, '') NOT IN ('Credit Card', 'kartu')").bind(v, owner.id).first<{ id: string }>() : null);
   const limit = STAFF_LIMIT[owner.plan === "PRO" ? "PRO" : "FREE"];
@@ -12014,7 +12105,7 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
     if (pathname === "/api/member/staff") {
       if (request.method === "GET") {
         const rows = (await env.DB.prepare("SELECT * FROM shop_staff WHERE owner_id = ? ORDER BY created_at").bind(owner.id).all<StaffRow>()).results ?? [];
-        return json({ items: rows.map(out), limit, plan: owner.plan });
+        return json({ items: rows.map(out), limit, plan: owner.plan, kas_options: await kasOptions(), extras: await staffExtraReady(env) });
       }
       if (request.method === "POST") {
         const raw = await parseJson<Record<string, unknown>>(request);
@@ -12027,20 +12118,67 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
         const mine = await ownShopIds();
         const shopIds = (Array.isArray(raw.shop_ids) ? raw.shop_ids : []).filter((x): x is string => typeof x === "string" && mine.has(x)).slice(0, SHOPS_MAX_PER_USER);
         if (!shopIds.length) return json({ error: "Pilih minimal satu usaha untuk anggota ini." }, { status: 400 });
+        if (raw.role !== undefined && !(STAFF_ROLES as readonly string[]).includes(raw.role as string)) return json({ error: "Jabatan tidak dikenal. Pilih Kasir atau Penagih." }, { status: 400 });
+        const role = (raw.role as string | undefined) ?? "kasir";
+        const extras = await staffExtraReady(env);
+        const kas = await sanitizeKas(raw.kas, shopIds);
+        if (kas.bad) return json({ error: "Kas usaha yang dipilih tidak ditemukan. Muat ulang lalu pilih lagi." }, { status: 400 });
+        // Rekening pribadi hanya wajib kalau ada toko yang belum punya buku usaha (uangnya tidak punya kas usaha).
         const account = await checkAccount(raw.account_id);
-        if (!account) return json({ error: "Pilih rekening Rupiah tempat penjualan anggota ini masuk." }, { status: 400 });
+        if (!account && !(extras && kas.allBook)) return json({ error: "Pilih rekening Rupiah tempat penjualan anggota ini masuk." }, { status: 400 });
         const id = generateId();
         const now = nowIso();
-        const res = await env.DB.prepare(
-          `INSERT INTO shop_staff (id, owner_id, username, name, password_hash, role, shop_ids, account_id, created_at, updated_at)
-           SELECT ?, ?, ?, ?, ?, 'kasir', ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_staff WHERE owner_id = ?) < ?
-             AND NOT EXISTS (SELECT 1 FROM shop_staff WHERE username = ?)`
-        ).bind(id, owner.id, username, name, await hashPassword(env, password), JSON.stringify(shopIds), account.id, now, now, owner.id, limit, username).run();
+        const res = extras
+          ? await env.DB.prepare(
+              `INSERT INTO shop_staff (id, owner_id, username, name, password_hash, role, shop_ids, account_id, kas_json, title, staff_no, created_at, updated_at)
+               SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT 'STF-' || printf('%03d', COALESCE(MAX(CAST(substr(staff_no, 5) AS INTEGER)), 0) + 1) FROM shop_staff WHERE owner_id = ? AND staff_no LIKE 'STF-%'), ?, ?
+                WHERE (SELECT COUNT(*) FROM shop_staff WHERE owner_id = ?) < ? AND NOT EXISTS (SELECT 1 FROM shop_staff WHERE username = ?)`
+            ).bind(id, owner.id, username, name, await hashPassword(env, password), role, JSON.stringify(shopIds), account?.id ?? null, JSON.stringify(kas.map), shopText(raw.title, 40) || null, owner.id, now, now, owner.id, limit, username).run()
+          : await env.DB.prepare(
+              `INSERT INTO shop_staff (id, owner_id, username, name, password_hash, role, shop_ids, account_id, created_at, updated_at)
+               SELECT ?, ?, ?, ?, ?, 'kasir', ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_staff WHERE owner_id = ?) < ?
+                 AND NOT EXISTS (SELECT 1 FROM shop_staff WHERE username = ?)`
+            ).bind(id, owner.id, username, name, await hashPassword(env, password), JSON.stringify(shopIds), account!.id, now, now, owner.id, limit, username).run();
         if (!res.meta.changes) {
           const taken = await env.DB.prepare("SELECT 1 FROM shop_staff WHERE username = ?").bind(username).first();
           return json({ error: taken ? "Username itu sudah dipakai, coba yang lain." : `Batas akun tim paket ${owner.plan === "PRO" ? "PRO" : "FREE"}: ${limit}.` }, { status: 409 });
         }
         return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+    // Foto staf (kartu staf): R2 privat, hanya pemilik.
+    const fm = /^\/api\/member\/staff\/([0-9a-f-]{36})\/foto$/i.exec(pathname);
+    if (fm) {
+      if (!(await staffExtraReady(env))) return json({ error: "Foto staf belum aktif (menunggu pembaruan database)." }, { status: 503 });
+      const st = await env.DB.prepare("SELECT id, photo_key FROM shop_staff WHERE id = ? AND owner_id = ?").bind(fm[1], owner.id).first<{ id: string; photo_key: string | null }>();
+      if (!st) return json({ error: "Akun tim tidak ditemukan." }, { status: 404 });
+      if (request.method === "GET") {
+        if (!st.photo_key) return json({ error: "Belum ada foto." }, { status: 404 });
+        const obj = await env.FILES_BUCKET?.get(st.photo_key);
+        if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+        return new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" } });
+      }
+      if (request.method === "PUT") {
+        if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+        const body = await parseJson<{ imageBase64?: unknown }>(request);
+        if (typeof body.imageBase64 !== "string" || !body.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+        const b64 = body.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+        if (b64.length > Math.ceil((MEMBER_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+        let bytes: Uint8Array;
+        try { bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return json({ error: "Foto tidak terbaca." }, { status: 400 }); }
+        const type = sniffImageType(bytes);
+        if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+        const key = `tim/${owner.id}/${st.id}/foto-${generateId().slice(0, 8)}`;
+        await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+        await env.DB.prepare("UPDATE shop_staff SET photo_key = ?, updated_at = ? WHERE id = ? AND owner_id = ?").bind(key, nowIso(), st.id, owner.id).run();
+        if (st.photo_key) await env.FILES_BUCKET.delete(st.photo_key).catch(() => undefined);
+        return json({ ok: true });
+      }
+      if (request.method === "DELETE") {
+        await env.DB.prepare("UPDATE shop_staff SET photo_key = NULL, updated_at = ? WHERE id = ? AND owner_id = ?").bind(nowIso(), st.id, owner.id).run();
+        if (st.photo_key) await env.FILES_BUCKET?.delete(st.photo_key).catch(() => undefined);
+        return json({ ok: true });
       }
       return json({ error: "Method not allowed" }, { status: 405 });
     }
@@ -12052,6 +12190,7 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
     const revoke = env.DB.prepare("UPDATE staff_sessions SET revoked_at = ? WHERE staff_id = ? AND revoked_at IS NULL").bind(now, id);
     if (request.method === "DELETE") {
       await env.DB.batch([revoke, env.DB.prepare("DELETE FROM shop_staff WHERE id = ? AND owner_id = ?").bind(id, owner.id)]);
+      if (row.photo_key) await env.FILES_BUCKET?.delete(row.photo_key).catch(() => undefined);
       return json({ ok: true });
     }
     if (request.method === "PUT") {
@@ -12072,6 +12211,21 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
       }
       if (raw.account_id !== undefined) { const a = await checkAccount(raw.account_id); if (!a) return json({ error: "Pilih rekening Rupiah." }, { status: 400 }); sets.push("account_id = ?"); vals.push(a.id); }
       if (raw.disabled !== undefined) { sets.push("disabled_at = ?"); vals.push(raw.disabled === true ? now : null); if (raw.disabled === true) kick = true; }
+      if (await staffExtraReady(env)) {
+        if (raw.role !== undefined) {
+          if (!(STAFF_ROLES as readonly string[]).includes(raw.role as string)) return json({ error: "Jabatan tidak dikenal. Pilih Kasir atau Penagih." }, { status: 400 });
+          sets.push("role = ?"); vals.push(raw.role); kick = kick || raw.role !== row.role;
+        }
+        if (raw.title !== undefined) { sets.push("title = ?"); vals.push(shopText(raw.title, 40) || null); }
+        if (raw.kas !== undefined) {
+          const ids = raw.shop_ids !== undefined ? (Array.isArray(raw.shop_ids) ? raw.shop_ids.filter((x): x is string => typeof x === "string") : []) : staffShopIds(row);
+          const k = await sanitizeKas(raw.kas, ids);
+          if (k.bad) return json({ error: "Kas usaha yang dipilih tidak ditemukan. Muat ulang lalu pilih lagi." }, { status: 400 });
+          sets.push("kas_json = ?"); vals.push(JSON.stringify(k.map));
+        }
+        // Nomor staf untuk akun lama (dibuat sebelum 0049).
+        if (!row.staff_no) { sets.push("staff_no = (SELECT 'STF-' || printf('%03d', COALESCE(MAX(CAST(substr(staff_no, 5) AS INTEGER)), 0) + 1) FROM shop_staff WHERE owner_id = ? AND staff_no LIKE 'STF-%')"); vals.push(owner.id); }
+      }
       if (!sets.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
       await env.DB.batch([
         env.DB.prepare(`UPDATE shop_staff SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND owner_id = ?`).bind(...vals, now, id, owner.id),

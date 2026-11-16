@@ -22,7 +22,7 @@ export type StaffSale = {
   created_at: string;
 };
 export type StaffMe = {
-  staff: { id: string; name: string; username: string; role: string };
+  staff: { id: string; name: string; username: string; role: string; staff_no?: string | null; title?: string | null; has_photo?: boolean };
   owner: string;
   account: string | null;
   shops: Shop[];
@@ -85,7 +85,60 @@ export const staffService = {
   async changePassword(current: string, next: string) {
     await cloudflareApi('/api/staff/password', { method: 'POST', json: { current, next } });
   },
+  /** Penagih: pinjaman aktif usaha ini (tanpa alamat/KTP/jaminan). */
+  async tagihan(shopId: string): Promise<StaffTagihan> {
+    const r = await cloudflareApi<{ today: string; kas_name: string | null; loans: Record<string, unknown>[] }>(
+      `/api/staff/shops/${shopId}/tagihan?t=${Date.now()}`,
+    );
+    return {
+      today: r.today,
+      kasName: r.kas_name,
+      loans: r.loans.map((l) => {
+        let dueDates: string[] = [];
+        try {
+          const v = JSON.parse(String(l.due_dates_json ?? '[]'));
+          if (Array.isArray(v)) dueDates = v.filter((d): d is string => typeof d === 'string');
+        } catch {
+          /* jadwal rusak → anggap kosong */
+        }
+        return {
+          id: String(l.id),
+          name: String(l.borrower_name ?? 'Peminjam'),
+          wa: l.borrower_wa ? String(l.borrower_wa) : null,
+          memberNo: l.member_no ? String(l.member_no) : null,
+          installment: Number(l.installment) || 0,
+          total: Number(l.total) || 0,
+          count: Number(l.count) || 0,
+          frequency: l.frequency === 'mingguan' ? 'mingguan' : 'harian',
+          dueDates,
+          paid: Number(l.paid) || 0,
+          paidByMeToday: Number(l.paid_by_me_today) || 0,
+        } as TagihanLoan;
+      }),
+    };
+  },
+  async terima(shopId: string, loanId: string, input: { requestId: string; amount: number }) {
+    return cloudflareApi<{ ok: boolean; lunas: boolean }>(`/api/staff/shops/${shopId}/tagihan/${loanId}/bayar`, {
+      method: 'POST',
+      json: { request_id: input.requestId, amount: input.amount },
+    });
+  },
 };
+
+export type TagihanLoan = {
+  id: string;
+  name: string;
+  wa: string | null;
+  memberNo: string | null;
+  installment: number;
+  total: number;
+  count: number;
+  frequency: 'harian' | 'mingguan';
+  dueDates: string[];
+  paid: number;
+  paidByMeToday: number;
+};
+export type StaffTagihan = { today: string; kasName: string | null; loans: TagihanLoan[] };
 
 // Stok usaha untuk akun tim: lihat, tambah bahan, pakai/masuk/hitung fisik (tanpa harga beli).
 export const staffStockService = {
@@ -125,13 +178,21 @@ export type TeamMember = {
   disabled: boolean;
   last_login_at: string | null;
   created_at: string;
+  /** Migrasi 0049: kas usaha per toko (toko → kas), nomor staf, jabatan tambahan, foto. */
+  kas?: Record<string, string>;
+  staff_no?: string | null;
+  title?: string | null;
+  has_photo?: boolean;
+  updated_at?: string;
 };
+export type KasOption = { id: string; shop_id: string; name: string; kind: string; is_default: number };
+export type TeamList = { items: TeamMember[]; limit: number; plan: string; kas_options?: KasOption[]; extras?: boolean };
 
 export const teamService = {
   async list() {
-    return cloudflareApi<{ items: TeamMember[]; limit: number; plan: string }>('/api/member/staff');
+    return cloudflareApi<TeamList>('/api/member/staff');
   },
-  async create(input: { name: string; username: string; password: string; shopIds: string[]; accountId: string }) {
+  async create(input: { name: string; username: string; password: string; shopIds: string[]; accountId: string; role?: string; kas?: Record<string, string> }) {
     return cloudflareApi<{ id: string }>('/api/member/staff', {
       method: 'POST',
       json: {
@@ -139,13 +200,15 @@ export const teamService = {
         username: normStaffUsername(input.username),
         password: input.password,
         shop_ids: input.shopIds,
-        account_id: input.accountId,
+        account_id: input.accountId || undefined,
+        ...(input.role ? { role: input.role } : {}),
+        ...(input.kas ? { kas: input.kas } : {}),
       },
     });
   },
   async update(
     id: string,
-    input: Partial<{ name: string; password: string; shopIds: string[]; accountId: string; disabled: boolean }>,
+    input: Partial<{ name: string; password: string; shopIds: string[]; accountId: string; disabled: boolean; role: string; kas: Record<string, string> }>,
   ) {
     await cloudflareApi(`/api/member/staff/${id}`, {
       method: 'PUT',
@@ -155,8 +218,17 @@ export const teamService = {
         ...(input.shopIds !== undefined ? { shop_ids: input.shopIds } : {}),
         ...(input.accountId !== undefined ? { account_id: input.accountId } : {}),
         ...(input.disabled !== undefined ? { disabled: input.disabled } : {}),
+        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.kas !== undefined ? { kas: input.kas } : {}),
       },
     });
+  },
+  photoUrl: (m: Pick<TeamMember, 'id' | 'updated_at' | 'created_at'>) => `/api/member/staff/${m.id}/foto?v=${encodeURIComponent(m.updated_at ?? m.created_at)}`,
+  async setPhoto(id: string, imageBase64: string) {
+    await cloudflareApi(`/api/member/staff/${id}/foto`, { method: 'PUT', json: { imageBase64 } });
+  },
+  async removePhoto(id: string) {
+    await cloudflareApi(`/api/member/staff/${id}/foto`, { method: 'DELETE' });
   },
   async remove(id: string) {
     await cloudflareApi(`/api/member/staff/${id}`, { method: 'DELETE' });
