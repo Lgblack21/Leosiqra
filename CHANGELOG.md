@@ -121,6 +121,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.36.0 | 16 Nov 2026 | Pinjaman: ringkasan tagihan tiap pagi |
 | 3.37.0 | 16 Nov 2026 | Pinjaman: geser jadwal |
 | 3.38.0 | 16 Nov 2026 | Pinjaman: anggota & kartu anggota |
+| 3.39.0 | 16 Nov 2026 | Pinjaman: jaminan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -134,6 +135,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.39.0 — 2026-11-16 — Pinjaman: jaminan
+
+- **Jaminan pinjaman (opsional).** Di form Pinjaman baru ada sakelar **Ada jaminan**. Isi jenisnya (BPKB motor/mobil,
+  sertifikat, elektronik, emas, lainnya), keterangan (mis. "BPKB Beat 2019 B 1234 XYZ"), perkiraan nilai, dan
+  sampai **3 foto**.
+- Detail pinjaman menampilkan jaminannya dengan status **Masih dipegang** atau **Dikembalikan (tanggal)**. Foto bisa
+  ditambah atau dihapus, datanya bisa diubah, dan setelah lunas tinggal ketuk **Jaminan sudah dikembalikan**. Di
+  daftar Pinjaman, pinjaman yang jaminannya masih dipegang diberi tanda **Jaminan**.
+- Foto jaminan disimpan **privat** (cuma kamu yang bisa membukanya), gak ikut Excel, dan ikut terhapus kalau pinjaman
+  yang salah input dihapus.
 
 ## 3.38.0 — 2026-11-16 — Pinjaman: anggota & kartu anggota
 

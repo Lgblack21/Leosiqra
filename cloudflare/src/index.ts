@@ -11013,6 +11013,44 @@ const memberReady = async (env: Env) => {
 const MEMBER_NOT_READY = "Data anggota belum aktif (menunggu pembaruan database). Coba lagi nanti.";
 const MEMBER_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
 const MEMBER_FILES = { foto: "photo_key", ktp: "ktp_key" } as const;
+// Jaminan (migrasi 0049, kolom shop_loans.collateral_json): { jenis, ket, nilai, photos: [kunci R2 privat], returnedAt }.
+// Kunci foto TIDAK pernah dikirim ke perangkat — hanya jumlah fotonya.
+const COLLATERAL_KINDS = ["bpkb_motor", "bpkb_mobil", "sertifikat", "elektronik", "emas", "lainnya"] as const;
+const COLLATERAL_PHOTOS_MAX = 3;
+type Collateral = { jenis: string; ket: string; nilai: number | null; photos: string[]; returnedAt: string | null };
+let collColCache: { ok: boolean; at: number } | null = null;
+const collateralReady = async (env: Env) => {
+  if (collColCache && Date.now() - collColCache.at < 60_000) return collColCache.ok;
+  let ok = true;
+  try { await env.DB.prepare("SELECT collateral_json FROM shop_loans LIMIT 1").first(); }
+  catch (e) { if (e instanceof Error && /no such column|no such table/i.test(e.message)) ok = false; else throw e; }
+  collColCache = { ok, at: Date.now() };
+  return ok;
+};
+const parseCollateral = (v: unknown): Collateral | null => {
+  if (typeof v !== "string" || !v) return null;
+  try {
+    const o = JSON.parse(v) as Record<string, unknown>;
+    if (!o || typeof o !== "object") return null;
+    return {
+      jenis: (COLLATERAL_KINDS as readonly string[]).includes(o.jenis as string) ? (o.jenis as string) : "lainnya",
+      ket: typeof o.ket === "string" ? o.ket : "",
+      nilai: typeof o.nilai === "number" && o.nilai > 0 ? o.nilai : null,
+      photos: Array.isArray(o.photos) ? o.photos.filter((x): x is string => typeof x === "string").slice(0, COLLATERAL_PHOTOS_MAX) : [],
+      returnedAt: typeof o.returnedAt === "string" ? o.returnedAt : null,
+    };
+  } catch { return null; }
+};
+// Untuk perangkat: tanpa kunci file.
+const publicCollateral = (c: Collateral | null) => (c ? { jenis: c.jenis, ket: c.ket, nilai: c.nilai, photoCount: c.photos.length, returnedAt: c.returnedAt } : null);
+const sanitizeCollateralInput = (raw: unknown): Collateral | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const ket = shopText(o.ket, 160);
+  const jenis = (COLLATERAL_KINDS as readonly string[]).includes(o.jenis as string) ? (o.jenis as string) : "lainnya";
+  const nilai = o.nilai === undefined || o.nilai === null || o.nilai === "" ? null : shopMoney(o.nilai);
+  return { jenis, ket, nilai: nilai && nilai > 0 ? nilai : null, photos: [], returnedAt: null };
+};
 type LoanRow = { id: string; borrower_id: string; principal: number; admin_fee: number; admin_mode: string; installment: number; count: number; total: number; frequency: string; disbursed_on: string; due_dates_json: string; account_id: string | null; status: string; note: string | null; created_at: string; closed_at: string | null };
 
 async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
@@ -11033,7 +11071,11 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       const payments = (await env.DB.prepare(
         "SELECT id, ref_id, date, amount, account_id, created_at FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 1000"
       ).bind(ownerId, shop.id, new Date(Date.parse(`${todayWIB()}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10)).all()).results ?? [];
-      return json({ ready: true, memberReady: mOn, today: todayWIB(), borrowers, loans, payments });
+      const loansOut = loans.map((l) => {
+        const { collateral_json, ...rest } = l as Record<string, unknown>;
+        return { ...rest, collateral: publicCollateral(parseCollateral(collateral_json)) };
+      });
+      return json({ ready: true, memberReady: mOn, collateralReady: await collateralReady(env), today: todayWIB(), borrowers, loans: loansOut, payments });
     }
 
     // Laporan per periode: pinjaman yang relevan (aktif di rentang / cair di rentang / lunas di rentang) + angsuran di
@@ -11246,6 +11288,10 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         const k = await env.DB.prepare("SELECT name, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(kas.id, ownerId).first<{ name: string; balance: number }>();
         return json({ error: `Saldo ${k?.name ?? "kas"} cuma ${rp(Number(k?.balance) || 0)}. Kas tunai tidak bisa minus — pakai kas lain atau setor modal dulu.`, code: KAS_KURANG }, { status: 409 });
       }
+      const coll = sanitizeCollateralInput(raw.collateral);
+      if (coll && (coll.ket || coll.nilai) && (await collateralReady(env))) {
+        await env.DB.prepare("UPDATE shop_loans SET collateral_json = ? WHERE id = ? AND owner_id = ?").bind(JSON.stringify(coll), id, ownerId).run();
+      }
       await publishShopBook(env, ownerId, shop.id);
       return json({ ok: true, id, handed }, { status: 201 });
     }
@@ -11255,6 +11301,82 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       if (!loan) return json({ error: "Pinjaman tidak ditemukan." }, { status: 404 });
       const borrower = await env.DB.prepare("SELECT name FROM shop_borrowers WHERE id = ? AND owner_id = ?").bind(loan.borrower_id, ownerId).first<{ name: string }>();
       const who = borrower?.name ?? "Peminjam";
+
+      // Jaminan: ubah data (PUT), foto ke-n (PUT/GET/DELETE …/jaminan/foto/:n), tandai dikembalikan (POST …/jaminan/kembali).
+      if (op === "jaminan") {
+        if (!(await collateralReady(env))) return json({ error: "Jaminan belum aktif (menunggu pembaruan database)." }, { status: 503 });
+        const raw2 = parts[3];
+        const nIdx = Number(parts[4]);
+        const curRaw = (await env.DB.prepare("SELECT collateral_json FROM shop_loans WHERE id = ? AND owner_id = ?").bind(loan.id, ownerId).first<{ collateral_json: string | null }>())?.collateral_json ?? null;
+        const cur = parseCollateral(curRaw);
+        const save = (c: Collateral | null) => env.DB.prepare("UPDATE shop_loans SET collateral_json = ? WHERE id = ? AND owner_id = ?").bind(c ? JSON.stringify(c) : null, loan.id, ownerId).run();
+        if (!raw2 && request.method === "PUT") {
+          if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+          const c = sanitizeCollateralInput(await parseJson<Record<string, unknown>>(request));
+          if (!c || (!c.ket && !c.nilai)) return json({ error: "Isi keterangan jaminan (mis. BPKB Beat 2019 B 1234 XYZ)." }, { status: 400 });
+          await save({ ...c, photos: cur?.photos ?? [], returnedAt: cur?.returnedAt ?? null });
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
+        if (!raw2 && request.method === "DELETE") {
+          await save(null);
+          for (const k of cur?.photos ?? []) await env.FILES_BUCKET?.delete(k).catch(() => undefined);
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
+        if (raw2 === "kembali" && request.method === "POST") {
+          if (!cur) return json({ error: "Pinjaman ini tidak punya jaminan." }, { status: 404 });
+          const body = await parseJson<Record<string, unknown>>(request).catch(() => ({} as Record<string, unknown>));
+          await save({ ...cur, returnedAt: body.undo === true ? null : todayWIB() });
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
+        if (raw2 === "foto" && Number.isInteger(nIdx) && nIdx >= 0 && nIdx < COLLATERAL_PHOTOS_MAX) {
+          if (request.method === "GET") {
+            const k = cur?.photos[nIdx];
+            if (!k) return json({ error: "Belum ada foto." }, { status: 404 });
+            const obj = await env.FILES_BUCKET?.get(k);
+            if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+            return new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" } });
+          }
+          if (!cur) return json({ error: "Isi data jaminan dulu." }, { status: 400 });
+          if (request.method === "DELETE") {
+            const k = cur.photos[nIdx];
+            if (!k) return json({ ok: true });
+            await save({ ...cur, photos: cur.photos.filter((_, i) => i !== nIdx) });
+            await env.FILES_BUCKET?.delete(k).catch(() => undefined);
+            await publishShopBook(env, ownerId, shop.id);
+            return json({ ok: true });
+          }
+          if (request.method === "PUT") {
+            if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+            if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+            if (nIdx > cur.photos.length) return json({ error: "Urutan foto tidak valid." }, { status: 400 });
+            const body = await parseJson<{ imageBase64?: unknown }>(request);
+            if (typeof body.imageBase64 !== "string" || !body.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+            const b64 = body.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+            if (b64.length > Math.ceil((MEMBER_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+            let bytes: Uint8Array;
+            try { bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return json({ error: "Foto tidak terbaca." }, { status: 400 }); }
+            const type = sniffImageType(bytes);
+            if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+            const key = `pinjaman/${ownerId}/loan-${loan.id}/jaminan-${generateId().slice(0, 8)}`;
+            await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+            const old = cur.photos[nIdx];
+            const photos = [...cur.photos];
+            photos[nIdx] = key;
+            // Simpan bersyarat: kalau jaminan berubah bersamaan, file baru dibuang (tidak ada file yatim).
+            const u = await env.DB.prepare("UPDATE shop_loans SET collateral_json = ? WHERE id = ? AND owner_id = ? AND collateral_json IS ?").bind(JSON.stringify({ ...cur, photos }), loan.id, ownerId, curRaw).run();
+            if (!u.meta.changes) {
+              await env.FILES_BUCKET.delete(key).catch(() => undefined);
+              return json({ error: "Data jaminan baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+            }
+            if (old) await env.FILES_BUCKET.delete(old).catch(() => undefined);
+            await publishShopBook(env, ownerId, shop.id);
+            return json({ ok: true });
+          }
+        }
+      }
 
       // Terima angsuran: ≤ sisa (dicek di dalam batch). Lunas → status lunas di batch yang sama.
       if (op === "pay" && request.method === "POST") {
@@ -11325,8 +11447,10 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         }
         stmts.push(env.DB.prepare(`DELETE FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type IN ('pinjam_cair', 'pinjam_admin') AND ${noPay}`).bind(ownerId, loan.id, ownerId, loan.id));
         stmts.push(env.DB.prepare(`DELETE FROM shop_loans WHERE id = ? AND owner_id = ? AND ${noPay}`).bind(loan.id, ownerId, ownerId, loan.id));
+        const coll = (await collateralReady(env)) ? parseCollateral((await env.DB.prepare("SELECT collateral_json FROM shop_loans WHERE id = ? AND owner_id = ?").bind(loan.id, ownerId).first<{ collateral_json: string | null }>())?.collateral_json) : null;
         const r = await env.DB.batch(stmts);
         if (!r[r.length - 1]?.meta.changes) return json({ error: "Pinjaman ini sudah ada angsurannya. Hapus angsurannya dulu." }, { status: 409 });
+        for (const k of coll?.photos ?? []) await env.FILES_BUCKET?.delete(k).catch(() => undefined);
         await publishShopBook(env, ownerId, shop.id);
         return json({ ok: true });
       }

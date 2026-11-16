@@ -40,11 +40,22 @@ export type Loan = {
   closedAt: string | null;
   paid: number;
   lastPaid: string | null;
+  /** Jaminan (opsional, migrasi 0049). Foto privat — hanya jumlahnya yang dikirim. */
+  collateral: Collateral | null;
 };
+export type Collateral = { jenis: string; ket: string; nilai: number | null; photoCount: number; returnedAt: string | null };
+export const JENIS_JAMINAN: [string, string][] = [
+  ['bpkb_motor', 'BPKB motor'],
+  ['bpkb_mobil', 'BPKB mobil'],
+  ['sertifikat', 'Sertifikat tanah/rumah'],
+  ['elektronik', 'Barang elektronik'],
+  ['emas', 'Emas / perhiasan'],
+  ['lainnya', 'Lainnya'],
+];
 export type LoanPayment = { id: string; loanId: string; date: string; amount: number; accountId: string | null; createdAt: string };
 export type LoanReportRow = Loan & { borrowerName: string; borrowerWa: string | null; paidBefore: number; paidTo: number };
 export type LoanReport = { range: { from: string; to: string }; today: string; loans: LoanReportRow[]; payments: LoanPayment[]; truncated: boolean };
-export type LoanBook = { today: string; memberReady: boolean; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
+export type LoanBook = { today: string; memberReady: boolean; collateralReady: boolean; loadedAt: number; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
 
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
@@ -76,6 +87,13 @@ const loanFromRow = (r: Row): Loan => {
     closedAt: str(r.closed_at),
     paid: num(r.paid),
     lastPaid: str(r.last_paid),
+    collateral:
+      r.collateral && typeof r.collateral === 'object'
+        ? (() => {
+            const c = r.collateral as Row;
+            return { jenis: String(c.jenis ?? 'lainnya'), ket: String(c.ket ?? ''), nilai: c.nilai ? num(c.nilai) : null, photoCount: num(c.photoCount), returnedAt: str(c.returnedAt) };
+          })()
+        : null,
   };
 };
 const changed = () => notifyCollectionChanged('shop_book');
@@ -86,6 +104,8 @@ export const shopLoanService = {
     return {
       today: String(r.today ?? ''),
       memberReady: Boolean(r.memberReady),
+      collateralReady: Boolean(r.collateralReady),
+      loadedAt: Date.now(),
       borrowers: ((r.borrowers as Row[]) ?? []).map((b) => ({
         id: String(b.id),
         name: String(b.name ?? ''),
@@ -181,6 +201,7 @@ export const shopLoanService = {
       dueDates: string[];
       accountId: string;
       note?: string;
+      collateral?: { jenis: string; ket: string; nilai: number | null };
     },
   ) {
     const r = await cloudflareApi<{ id: string; handed: number }>(`/api/member/shops/${shopId}/pinjaman/loans`, {
@@ -198,6 +219,7 @@ export const shopLoanService = {
         due_dates: input.dueDates,
         shop_account_id: input.accountId,
         note: input.note,
+        collateral: input.collateral,
       },
     });
     changed();
@@ -216,6 +238,28 @@ export const shopLoanService = {
       method: 'PUT',
       json: { due_dates: input.dueDates, expected_paid: input.expectedPaid },
     });
+    changed();
+  },
+  collateralPhotoUrl: (shopId: string, loanId: string, n: number, v: number) =>
+    `/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}?v=${v}`,
+  async saveCollateral(shopId: string, loanId: string, c: { jenis: string; ket: string; nilai: number | null }) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'PUT', json: c });
+    changed();
+  },
+  async removeCollateral(shopId: string, loanId: string) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan`, { method: 'DELETE' });
+    changed();
+  },
+  async uploadCollateralPhoto(shopId: string, loanId: string, n: number, imageBase64: string) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'PUT', json: { imageBase64 } });
+    changed();
+  },
+  async deleteCollateralPhoto(shopId: string, loanId: string, n: number) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/foto/${n}`, { method: 'DELETE' });
+    changed();
+  },
+  async returnCollateral(shopId: string, loanId: string, undo = false) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/loans/${loanId}/jaminan/kembali`, { method: 'POST', json: { undo } });
     changed();
   },
   async removeLoan(shopId: string, loanId: string) {

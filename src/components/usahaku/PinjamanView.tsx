@@ -37,6 +37,7 @@ import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { UsahaSheet } from './UsahaSheet';
 import { AnggotaWizard, FotoAnggota, KartuAnggota } from './AnggotaView';
+import { JaminanInput, JaminanSection, jaminanKosong } from './JaminanView';
 
 // Usahaku › jenis Pinjaman: Ringkasan · Tagihan hari ini · Pinjaman · Peminjam (Kas pakai BerandaUsaha view kas).
 // Rancangan & ACC Bos: docs/rancangan/usahaku-pinjaman.md.
@@ -106,7 +107,7 @@ export function PinjamanView({
       const m = e instanceof Error ? e.message : 'Gagal memuat data pinjaman.';
       if (/belum aktif|pembaruan database/i.test(m)) setNotReady(true);
       setError(m);
-      setData((p) => p ?? { today: '', memberReady: false, borrowers: [], loans: [], payments: [] });
+      setData((p) => p ?? { today: '', memberReady: false, collateralReady: false, loadedAt: 0, borrowers: [], loans: [], payments: [] });
     }
   }, [shop.id]);
   useEffect(() => {
@@ -366,6 +367,11 @@ export function PinjamanView({
                   {formatIDR(l.principal)} · {l.count}× {formatIDR(l.installment)} {l.frequency} · cair {tgl(l.disbursedOn)}
                 </span>
               </span>
+              {l.collateral && !l.collateral.returnedAt && (
+                <span title="Ada jaminan yang masih dipegang" className="rounded-md bg-sky-50 px-2 py-0.5 fs-11 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                  Jaminan
+                </span>
+              )}
               {l.status === 'lunas' ? (
                 <span className="rounded-md bg-emerald-50 px-2 py-0.5 fs-11 font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Lunas</span>
               ) : st.telat > 0 ? (
@@ -594,6 +600,7 @@ export function PinjamanView({
             today={today}
             onPay={(st) => setForm({ k: 'pay', loan: detailLoan, st })}
             onGeser={() => setForm({ k: 'geser', loanId: detailLoan.id })}
+            onToast={onToast}
             onDone={close}
             onKas={() => {
               setForm(null);
@@ -701,6 +708,7 @@ function LoanForm({
   const [cuti, setCuti] = useState(true);
   const [accountId, setAccountId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
   const [showDates, setShowDates] = useState(false);
+  const [jaminan, setJaminan] = useState(jaminanKosong);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId] = useState(() => crypto.randomUUID());
@@ -741,6 +749,7 @@ function LoanForm({
   const save = async () => {
     if (bad) return setError(bad);
     if (!borrowerId && (data.memberReady || !newName.trim())) return setError(data.memberReady ? 'Pilih anggota.' : 'Pilih atau tambah peminjam.');
+    if (jaminan.on && !jaminan.ket.trim() && !jaminan.nilai) return setError('Isi keterangan jaminan (atau matikan "Ada jaminan").');
     setBusy(true);
     setError('');
     try {
@@ -758,8 +767,25 @@ function LoanForm({
         date,
         dueDates: dates,
         accountId,
+        ...(jaminan.on ? { collateral: { jenis: jaminan.jenis, ket: jaminan.ket.trim(), nilai: jaminan.nilai || null } } : {}),
       });
-      onDone(`Pinjaman tercatat. Uang diserahkan ${formatIDR(r.handed)}.`);
+      // Foto jaminan diunggah setelah pinjaman tercatat. Gagal → pinjaman tetap tercatat, foto bisa ditambah dari detail.
+      let fotoGagal = '';
+      if (jaminan.on) {
+        for (let i = 0; i < jaminan.photos.length; i++) {
+          try {
+            await shopLoanService.uploadCollateralPhoto(shop.id, r.id, i, jaminan.photos[i]);
+          } catch (e) {
+            fotoGagal = e instanceof Error ? e.message : 'gagal';
+            break;
+          }
+        }
+      }
+      onDone(
+        fotoGagal
+          ? `Pinjaman tercatat, tapi foto jaminan gagal diunggah (${fotoGagal}). Tambahkan lagi dari detail pinjaman.`
+          : `Pinjaman tercatat. Uang diserahkan ${formatIDR(r.handed)}.`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
       setBusy(false);
@@ -866,6 +892,7 @@ function LoanForm({
         </label>
         <span className="fs-12 text-slate-400">Tanggal merah selalu libur.</span>
       </div>
+      {data.collateralReady && <JaminanInput value={jaminan} onChange={setJaminan} />}
       <label className="block">
         <span className={labelCls}>Uang diambil dari kas</span>
         <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={fieldCls}>
@@ -1018,6 +1045,7 @@ function LoanDetail({
   today,
   onPay,
   onGeser,
+  onToast,
   onDone,
   onKas,
 }: {
@@ -1028,6 +1056,7 @@ function LoanDetail({
   today: string;
   onPay: (st: StatusPinjaman) => void;
   onGeser: () => void;
+  onToast: (m: string) => void;
   onDone: (m?: string) => void;
   onKas: () => void;
 }) {
@@ -1093,6 +1122,7 @@ function LoanDetail({
           <CalendarDays size={15} /> Geser jadwal (sakit, pulang kampung, dll.)
         </button>
       )}
+      {data.collateralReady && <JaminanSection key={loan.id} shop={shop} loan={loan} v={data.loadedAt} onToast={onToast} />}
       <details className="rounded-2xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800" open={loan.status === 'aktif'}>
         <summary className="cursor-pointer px-4 py-3 fs-14 font-extrabold text-slate-900 dark:text-white">Jadwal ({loan.dueDates.length} tanggal)</summary>
         <ol className="grid max-h-64 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto px-4 pb-4 fs-12 sm:grid-cols-3">
