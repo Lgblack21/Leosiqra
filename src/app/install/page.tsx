@@ -11,7 +11,7 @@ import { InstallAnimation, APP_INFO, type InstallApp } from '@/components/instal
 import { useInstallPrompt, detectPlatform, isInAppBrowser, isNativeApp, type Platform } from '@/lib/pwaInstall';
 import { cn } from '@/lib/utils';
 
-const APPS: Record<InstallApp, { tagline: string; points: string[]; when: string }> = {
+const APPS: Record<Exclude<InstallApp, 'tim'>, { tagline: string; points: string[]; when: string }> = {
   leosiqra: {
     tagline: 'Aplikasi lengkap',
     points: ['Saldo semua rekening & kartu', 'Tabungan, budget, investasi, hutang', 'Statistik, laporan & asisten AI'],
@@ -139,7 +139,7 @@ export default function InstallPage() {
           )}
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => {
+            {(['leosiqra', 'input-cepat'] as const).map((app, i) => {
               const info = APP_INFO[app];
               const meta = APPS[app];
               return (
@@ -214,7 +214,7 @@ export default function InstallPage() {
 
           <div className="lp-card flex flex-col items-center gap-6 rounded-[28px] p-7 sm:flex-row sm:p-8">
             <div className="flex shrink-0 items-end gap-4 rounded-3xl bg-gradient-to-b from-indigo-300 via-violet-300 to-rose-200 px-6 pb-4 pt-6">
-              {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => (
+              {(['leosiqra', 'input-cepat'] as const).map((app, i) => (
                 <motion.div
                   key={app}
                   initial={reduce ? false : { scale: 0, rotate: -10 }}

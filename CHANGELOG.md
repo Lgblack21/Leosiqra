@@ -138,7 +138,7 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
 
-## 3.41.0 — 2026-11-16 — Tim di usaha pinjaman: jabatan Petugas
+## 3.41.0 — 2026-11-16 — Tim: jabatan Petugas & aplikasi Tim di HP
 
 - **Jabatan Petugas untuk usaha pinjaman.** Akun tim dengan jabatan Petugas sekarang membuka tampilan pinjaman yang
   sama seperti punyamu: **Tagihan**, **Pinjaman**, dan **Anggota**. Petugas bisa mendaftarkan anggota baru langkah demi
@@ -150,6 +150,9 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   jaminan, menghapus anggota, serta Kas dan Laporan. Petugas bisa melihat foto jaminan, tapi gak bisa mengubahnya.
 - **Usaha pinjaman gak lagi muncul di Kasir dan Stok.** Kalau akun berjabatan Kasir cuma diberi usaha pinjaman, aplikasi
   Tim memberi tahu supaya jabatannya diubah jadi Petugas atau Penagih.
+- **Aplikasi Tim bisa dipasang di HP.** Buka leosiqra.com/tim, ketuk **Pasang aplikasi Tim**, dan ikon hijau "TIM"
+  muncul di layar utama Android maupun iPhone. Ikonnya terpisah dari aplikasi Leosiqra, jadi gak ketuker. Di iPhone,
+  pasangnya lewat Safari (Bagikan › Tambahkan ke Layar Utama), lalu masuk sekali lagi dari aplikasinya.
 
 ## 3.40.0 — 2026-11-16 — Tim: penagih, kas usaha per staf, kartu staf
 

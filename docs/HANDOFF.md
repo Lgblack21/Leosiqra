@@ -27,7 +27,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `PetugasCtx` (`src/components/usahaku/petugas.ts`) yang menyembunyikan Pinjaman baru/Pinjamkan/geser/hapus/arsip/
   ubah jaminan/kas; `shopLoanService` punya `setLoanApiRoot()`; `usePlan(skip)`. Kasir tidak lagi melihat usaha
   pinjaman. Dites wrangler lokal (izin satu per satu, kas dipaksa, kunci file tidak bocor) + Playwright (petugas
-  mobile, kasir@pinjaman, pemilik tetap lengkap). **Belum**: HP asli. Menunggu "gas".
+  mobile, kasir@pinjaman, pemilik tetap lengkap).
+  + PWA Tim: `public/tim-manifest.json` (id/scope `/tim`), `src/app/tim/layout.tsx` (manifest, apple-touch-icon,
+  appleWebApp), ikon `public/images/tim-{180,192,512,maskable-*}.png` (dibuat dari SVG via Playwright), tombol
+  `src/components/install/TimInstall.tsx` (login & dalam aplikasi), `InstallApp` + `'tim'`. Chrome CDP:
+  installability errors kosong. **Belum**: pasang di HP Android & iPhone asli. Menunggu "gas".
 
 - **2026-11-16 — 3.40.0 LIVE (run #228, e7c4cb8, SQL = 0049 yang sama): Tim —
   penagih, kas usaha per staf, kartu staf.** `shop_staff.kas_json` {shop_id: kas_id}, `staff_no` STF-001 urut,

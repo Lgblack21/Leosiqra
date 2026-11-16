@@ -7,11 +7,12 @@ import { Share, MoreVertical, PlusSquare, Download, Lock, RotateCw, Check } from
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/lib/pwaInstall';
 
-export type InstallApp = 'leosiqra' | 'input-cepat';
+export type InstallApp = 'leosiqra' | 'input-cepat' | 'tim';
 
 export const APP_INFO: Record<InstallApp, { name: string; path: string; icon: string }> = {
   leosiqra: { name: 'Leosiqra', path: '/app', icon: '/images/Logo-new.png' },
   'input-cepat': { name: 'Input Cepat', path: '/input-cepat', icon: '/images/input-cepat-192.png' },
+  tim: { name: 'Tim', path: '/tim', icon: '/images/tim-192.png' },
 };
 
 const STEPS: Record<'ios' | 'android', (app: InstallApp) => string[]> = {
@@ -144,6 +145,29 @@ function Phone({ os, app, step }: { os: 'ios' | 'android'; app: InstallApp; step
 }
 
 function PageContent({ app }: { app: InstallApp }) {
+  if (app === 'tim') {
+    return (
+      <div className="space-y-2 px-3 pt-3">
+        <p className="fs-11 font-black text-slate-800">Halo, Rina</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="rounded-xl bg-white p-2 ring-1 ring-slate-100">
+            <p className="fs-8 font-bold text-slate-400">Harus ditagih</p>
+            <p className="fs-10 font-black text-slate-800">Rp 240rb</p>
+          </div>
+          <div className="rounded-xl bg-white p-2 ring-1 ring-slate-100">
+            <p className="fs-8 font-bold text-slate-400">Diterima</p>
+            <p className="fs-10 font-black text-emerald-600">Rp 180rb</p>
+          </div>
+        </div>
+        {[60, 45].map((w, i) => (
+          <div key={i} className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-slate-100">
+            <span className="h-2 rounded-full bg-slate-200" style={{ width: `${w}%` }} />
+            <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 fs-8 font-bold text-white">Terima</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (app === 'input-cepat') {
     return (
       <div className="space-y-2 px-3 pt-3">
