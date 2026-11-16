@@ -117,6 +117,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.33.0 | 16 Nov 2026 | Usahaku tampilan baru: menu samping, kasir layar penuh |
 | 3.33.1 | 16 Nov 2026 | Kasir: struk muncul saat bayar |
 | 3.34.0 | 16 Nov 2026 | Usahaku: jenis usaha Pinjaman |
+| 3.35.0 | 16 Nov 2026 | Pinjaman: laporan & Excel |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -130,6 +131,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.35.0 — 2026-11-16 — Pinjaman: laporan & Excel
+
+- **Laporan pinjaman.** Toko pinjaman sekarang punya menu **Laporan**. Pilih periodenya (hari ini, bulan ini,
+  bulan lalu, pilih bulan/tanggal), lalu kelihatan:
+  - pendapatan, dirinci admin dan jasa;
+  - angsuran yang masuk dan pinjaman yang keluar;
+  - uang beredar dan modal yang masih di luar per akhir periode;
+  - kelancaran pembayaran;
+  - rincian per peminjam: masuk berapa, untung berapa, sisa berapa.
+- **Unduh Excel** dengan 3 lembar: Ringkasan, Peminjam, Angsuran.
+- Hitungan jasanya sama dengan yang di Ringkasan: sedikit-sedikit tiap angsuran masuk, jadi untung per bulan gak
+  menumpuk di bulan pelunasan.
 
 ## 3.34.0 — 2026-11-16 — Usahaku: jenis usaha Pinjaman
 

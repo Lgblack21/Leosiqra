@@ -11020,6 +11020,30 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       return json({ ready: true, today: todayWIB(), borrowers, loans, payments });
     }
 
+    // Laporan per periode: pinjaman yang relevan (aktif di rentang / cair di rentang / lunas di rentang) + angsuran di
+    // rentang. Jasa per periode dihitung di perangkat dari paid_before & paid_to (proporsional, tanpa selisih bulat).
+    if (res === "laporan" && !sub && request.method === "GET") {
+      const q = new URL(request.url).searchParams;
+      const today = todayWIB();
+      const to = isRealDateStr(q.get("to")) && q.get("to")! <= today ? q.get("to")! : today;
+      const fromRaw = q.get("from");
+      let from = isRealDateStr(fromRaw) && fromRaw <= to ? fromRaw : `${to.slice(0, 8)}01`;
+      const minFrom = new Date(Date.parse(`${to}T00:00:00Z`) - 800 * 86400e3).toISOString().slice(0, 10);
+      if (from < minFrom) from = minFrom;
+      const paidSql = (cmp: string) => `(SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran' AND a.date ${cmp} ?)`;
+      const loans = (await env.DB.prepare(
+        `SELECT l.id, l.borrower_id, l.principal, l.admin_fee, l.admin_mode, l.installment, l.count, l.total, l.frequency, l.disbursed_on, l.due_dates_json, l.status, l.closed_at,
+                b.name AS borrower_name, b.wa AS borrower_wa, ${paidSql("<")} AS paid_before, ${paidSql("<=")} AS paid_to
+           FROM shop_loans l LEFT JOIN shop_borrowers b ON b.id = l.borrower_id AND b.owner_id = l.owner_id
+          WHERE l.owner_id = ? AND l.shop_id = ? AND l.disbursed_on <= ? AND (l.status = 'aktif' OR l.disbursed_on >= ? OR l.closed_at >= ?)
+          ORDER BY l.disbursed_on DESC, l.created_at DESC LIMIT 2000`
+      ).bind(from, to, ownerId, shop.id, to, from, from).all()).results ?? [];
+      const payments = (await env.DB.prepare(
+        "SELECT id, ref_id, date, amount, account_id, created_at FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date BETWEEN ? AND ? ORDER BY date ASC, created_at ASC LIMIT 5000"
+      ).bind(ownerId, shop.id, from, to).all()).results ?? [];
+      return json({ range: { from, to }, today, loans, payments, truncated: loans.length >= 2000 || payments.length >= 5000 });
+    }
+
     if (res === "peminjam") {
       if (!sub && request.method === "POST") {
         if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });

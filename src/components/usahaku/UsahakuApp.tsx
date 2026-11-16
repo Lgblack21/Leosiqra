@@ -32,6 +32,7 @@ import { kindOf } from '@/lib/usaha/jenis';
 import { cn } from '@/lib/utils';
 import { BerandaUsaha, MulaiBukuUsaha, type BerandaView } from './BerandaUsaha';
 import { PinjamanView, type PinjamanTab } from './PinjamanView';
+import { PinjamanLaporan } from './PinjamanLaporan';
 import { PengaturanUsaha } from './PengaturanUsaha';
 import { UsahaSheet } from './UsahaSheet';
 
@@ -55,6 +56,7 @@ const LOAN_TABS = [
   { id: 'pinjaman', label: 'Pinjaman', icon: NotebookPen, group: 'Toko', desc: 'Semua pinjaman aktif dan yang sudah lunas', book: true },
   { id: 'peminjam', label: 'Peminjam', icon: Users, group: 'Toko', desc: 'Daftar peminjam dan nomor WA-nya', book: true },
   { id: 'kas', label: 'Kas', icon: Wallet, group: 'Keuangan', desc: 'Saldo kas, setor modal, ambil uang, pindah kas', book: true },
+  { id: 'laporan', label: 'Laporan', icon: BarChart3, group: 'Analisis', desc: 'Pendapatan, angsuran, dan uang beredar per periode, bisa diunduh Excel', book: true },
   { id: 'pengaturan', label: 'Pengaturan', icon: Settings, group: 'Analisis', desc: 'Profil usaha dan kas' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'] | (typeof LOAN_TABS)[number]['id'];
@@ -457,7 +459,7 @@ export function UsahakuApp({ variant }: { variant: 'web' | 'app' }) {
               <StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={(m) => setBuyMat(m.id)} />
             </div>
           )}
-          {current.id === 'laporan' && <LaporanUsaha variant={variant} embedded />}
+          {current.id === 'laporan' && (loanShop ? <PinjamanLaporan shop={shop} /> : <LaporanUsaha variant={variant} embedded />)}
           {current.id === 'pengaturan' && (
             <div className="space-y-5">
               <PengaturanUsaha shop={shop} accounts={book?.accounts ?? null} onToast={say} />

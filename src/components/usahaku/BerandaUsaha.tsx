@@ -820,7 +820,7 @@ export const periodLabel = (r: { from: string; to: string }) => {
   if (r.from.endsWith('-01') && r.to === `${r.from.slice(0, 8)}${lastDay(y, m)}`) return `${BULAN[m - 1]} ${y}`;
   return r.from === r.to ? fmtDay(r.from) : `${fmtDay(r.from)} – ${fmtDay(r.to)}`;
 };
-function PeriodPicker({
+export function PeriodPicker({
   range,
   onRange,
 }: {

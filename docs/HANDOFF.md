@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.35.0 SIAP (branch `claude/pinjaman-laporan-20261116`, belum deploy, tanpa SQL): Pinjaman tahap 2a
+  — Laporan & Excel.** Worker `GET …/pinjaman/laporan?from&to` (pinjaman relevan + paid_before/paid_to + angsuran di
+  rentang, maks ±800 hari). Hitungan `rekapLaporan` di `src/lib/usaha/pinjaman.ts` (jasa periode = jasaDiakui(paid_to)
+  − jasaDiakui(paid_before)); Excel `src/lib/pinjamanXlsx.ts` (pakai helper `table` dari shopReportXlsx). Dites wrangler
+  lokal + Playwright + isi Excel dicocokkan manual. **Berikutnya (ACC)**: notifikasi pagi 07:00 WIB (3.36), geser
+  jadwal (3.37); penagih akun tim = nanti. Menunggu "gas".
+
 - **2026-11-16 — 3.34.0 LIVE (run #222, 7f0c02e): Usahaku jenis Pinjaman
   (tahap 1, PRO).** **SQL baru `0048_shop_pinjaman.sql` — Bos jalankan di D1 Console** (kode aman sebelum migrasi:
   halaman tampil "sedang disiapkan", endpoint 503). Worker: `handleShopLoans` (`/api/member/shops/:id/pinjaman`

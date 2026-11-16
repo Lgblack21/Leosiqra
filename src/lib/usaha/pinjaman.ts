@@ -1,7 +1,7 @@
 // Hitungan usaha Pinjaman (harian/mingguan) — docs/rancangan/usahaku-pinjaman.md bagian 4.
 // Semua rupiah bulat. Jadwal dibuat di sini (melompati tanggal merah/Minggu) lalu dikunci server saat disimpan.
 import { liburPada, parseYmd, tahunTersedia, ymd } from '@/lib/hariLibur';
-import type { Loan, LoanPayment } from '@/lib/services/shopLoanService';
+import type { Loan, LoanPayment, LoanReport, LoanReportRow } from '@/lib/services/shopLoanService';
 
 export type LiburOpsi = { minggu: boolean; cuti: boolean };
 
@@ -117,3 +117,60 @@ export function pendapatan(loans: Loan[], payments: LoanPayment[], from: string,
   }
   return { admin, jasa, total: admin + jasa };
 }
+
+// ── Laporan per periode (data dari /pinjaman/laporan) ─────────────────────────
+export type BarisLaporan = {
+  l: LoanReportRow;
+  /** Angsuran masuk di periode. */
+  masuk: number;
+  /** Jasa yang diakui di periode. */
+  jasa: number;
+  /** Admin yang diakui di periode (pinjaman cair di periode). */
+  admin: number;
+  /** Sisa tagihan di akhir periode. */
+  sisa: number;
+  /** Pokok yang masih di luar di akhir periode. */
+  modal: number;
+  /** Status di akhir periode (telat dihitung per tanggal akhir periode). */
+  st: StatusPinjaman;
+};
+export function rekapLaporan(r: LoanReport) {
+  const { from, to } = r.range;
+  const rows: BarisLaporan[] = r.loans.map((l) => {
+    const cairDiPeriode = l.disbursedOn >= from && l.disbursedOn <= to;
+    const asOf: Loan = { ...l, paid: l.paidTo, status: l.paidTo >= l.total ? 'lunas' : 'aktif' };
+    return {
+      l,
+      masuk: l.paidTo - l.paidBefore,
+      jasa: jasaDiakui(l, l.paidTo) - jasaDiakui(l, l.paidBefore),
+      admin: cairDiPeriode ? l.adminFee : 0,
+      sisa: Math.max(0, l.total - l.paidTo),
+      modal: modalDiLuar(asOf),
+      st: statusPinjaman(asOf, to),
+    };
+  });
+  const cair = rows.filter((x) => x.l.disbursedOn >= from && x.l.disbursedOn <= to);
+  const sum = (list: BarisLaporan[], f: (x: BarisLaporan) => number) => list.reduce((a, x) => a + f(x), 0);
+  const aktifAkhir = rows.filter((x) => x.sisa > 0);
+  return {
+    rows,
+    cair: {
+      n: cair.length,
+      pokok: sum(cair, (x) => x.l.principal),
+      diserahkan: sum(cair, (x) => (x.l.adminMode === 'potong' ? x.l.principal - x.l.adminFee : x.l.principal)),
+    },
+    admin: sum(rows, (x) => x.admin),
+    jasa: sum(rows, (x) => x.jasa),
+    pendapatan: sum(rows, (x) => x.admin + x.jasa),
+    masuk: { n: r.payments.length, total: r.payments.reduce((a, p) => a + p.amount, 0) },
+    beredar: sum(aktifAkhir, (x) => x.sisa),
+    modal: sum(aktifAkhir, (x) => x.modal),
+    aktif: aktifAkhir.length,
+    lunasDiPeriode: rows.filter((x) => x.sisa === 0 && x.l.paidBefore < x.l.total && x.l.paidTo >= x.l.total).length,
+    telat: ['1–7 hari', '8–30 hari', 'lebih dari 30 hari'].map((g) => {
+      const list = aktifAkhir.filter((x) => kelompokTelat(x.st.telat) === g);
+      return { g, n: list.length, tagihan: sum(list, (x) => x.st.tagihan) };
+    }),
+  };
+}
+export type RekapLaporan = ReturnType<typeof rekapLaporan>;

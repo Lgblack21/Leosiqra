@@ -26,6 +26,8 @@ export type Loan = {
   lastPaid: string | null;
 };
 export type LoanPayment = { id: string; loanId: string; date: string; amount: number; accountId: string | null; createdAt: string };
+export type LoanReportRow = Loan & { borrowerName: string; borrowerWa: string | null; paidBefore: number; paidTo: number };
+export type LoanReport = { range: { from: string; to: string }; today: string; loans: LoanReportRow[]; payments: LoanPayment[]; truncated: boolean };
 export type LoanBook = { today: string; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
 
 type Row = Record<string, unknown>;
@@ -75,6 +77,32 @@ export const shopLoanService = {
         archived: Boolean(b.archived_at),
       })),
       loans: ((r.loans as Row[]) ?? []).map(loanFromRow),
+      payments: ((r.payments as Row[]) ?? []).map((p) => ({
+        id: String(p.id),
+        loanId: String(p.ref_id ?? ''),
+        date: String(p.date ?? ''),
+        amount: num(p.amount),
+        accountId: str(p.account_id),
+        createdAt: String(p.created_at ?? ''),
+      })),
+    };
+  },
+  async laporan(shopId: string, range: { from: string; to: string } | null): Promise<LoanReport> {
+    const q = range ? `?from=${range.from}&to=${range.to}` : '';
+    const r = await cloudflareApi<Row>(`/api/member/shops/${shopId}/pinjaman/laporan${q}`);
+    const rg = (r.range as { from: string; to: string }) ?? { from: '', to: '' };
+    return {
+      range: rg,
+      today: String(r.today ?? ''),
+      truncated: Boolean(r.truncated),
+      loans: ((r.loans as Row[]) ?? []).map((x) => ({
+        ...loanFromRow(x),
+        paid: num(x.paid_to),
+        borrowerName: String(x.borrower_name ?? 'Peminjam'),
+        borrowerWa: str(x.borrower_wa),
+        paidBefore: num(x.paid_before),
+        paidTo: num(x.paid_to),
+      })),
       payments: ((r.payments as Row[]) ?? []).map((p) => ({
         id: String(p.id),
         loanId: String(p.ref_id ?? ''),

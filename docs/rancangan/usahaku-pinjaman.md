@@ -8,7 +8,10 @@ Contoh Bos: pinjam Rp1.000.000, admin Rp50.000 dipotong → diterima Rp950.000; 
 Untung Rp250.000 = admin Rp50.000 + jasa Rp200.000 (per angsuran ≈ Rp83.333 pokok + Rp16.667 jasa).
 
 Catatan 3.34: PRO hanya untuk membuat peminjam/pinjaman baru; menerima angsuran tetap bisa walau PRO habis.
-Pilihan Minggu/cuti libur ada di form pinjaman (bukan pengaturan toko). Laporan/Excel & notifikasi pagi = tahap 2.
+Pilihan Minggu/cuti libur ada di form pinjaman (bukan pengaturan toko).
+
+Tahap 2 di-ACC Bos 2026-11-16 ("gas"): urutan **Laporan & Excel (3.35)** → notifikasi pagi **07:00 WIB** (3.36) →
+geser jadwal (3.37). Penagih pakai akun tim = **nanti** (kalau sudah ada penagih).
 
 Catatan: ini pinjaman dari modal pribadi pemilik, **bukan koperasi** (tidak ada anggota/simpanan/SHU).
 Nama usaha sebaiknya tidak memakai kata "Koperasi" sebelum berbadan hukum. Leosiqra hanya alat catat

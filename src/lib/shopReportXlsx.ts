@@ -4,10 +4,10 @@ import { STOCK_PURCHASE_KIND, periodeLabel, saleLines, tglPanjang, todayWIB, typ
 // Excel (.xlsx) laporan Usahaku. Dimuat lewat import() hanya saat tombol "Unduh Excel" diklik
 // (exceljs ±1 MB). Pakai build browser exceljs (tanpa polyfill Node).
 
-const RP = '"Rp" #,##0;[Red]-"Rp" #,##0';
-const argb = (hex: string) => `FF${hex.replace('#', '').toUpperCase()}`;
+export const RP = '"Rp" #,##0;[Red]-"Rp" #,##0';
+export const argb = (hex: string) => `FF${hex.replace('#', '').toUpperCase()}`;
 
-function table(
+export function table(
   ws: Worksheet,
   headers: { h: string; w: number; num?: boolean }[],
   rows: (string | number | Date | null)[][],
