@@ -39,14 +39,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Cloudinary CORS `*`), dipakai di 8 tempat (sidebar, daftar toko, kasir 2×, StaffApp 3×, LogoToko) + kartu canvas.
 
 - **2026-11-16 — 3.38.0 LIVE (run #226, 26f2461): Pinjaman — anggota & kartu.**
-  **SQL baru `0049_pinjaman_anggota.sql` — Bos jalankan di D1 Console** (berisi juga kolom untuk 3.39 jaminan & 3.40
+  **SQL baru `0049_pinjaman_anggota.sql` — SUDAH dijalankan Bos di D1 Console (dikonfirmasi 2026-11-16)** (berisi juga kolom untuk 3.39 jaminan & 3.40
   tim; kode aman sebelum migrasi: `memberReady()` false → cara lama tanpa syarat anggota). Rancangan + ACC:
   `docs/rancangan/usahaku-anggota-jaminan-tim.md`. Worker: kolom anggota di GET (kunci file tidak dikirim),
   `PUT/GET …/peminjam/:id/foto|ktp` (R2 privat `pinjaman/<owner>/<id>/…`, KTP `no-store`), `POST …/daftar`
   (lengkap + consent → `AGT-0001` urut, unique index), arsip menghapus foto & KTP, `loans POST` menolak non-anggota
   (`not_member`). UI `AnggotaView.tsx` (wizard 4 langkah, `gambarKartu` canvas → PNG, dipakai juga untuk kartu staf),
   `src/lib/fotoKecil.ts`. Dites wrangler lokal (aturan, akses KTP 401/404, nomor urut, arsip) + Playwright wizard →
-  kartu → unduh. **Belum**: data & HP asli (kamera). Berikutnya: 3.39 jaminan, 3.40 tim. **Konfirmasi Bos sudah menjalankan SQL 0049.**
+  kartu → unduh. **Belum**: data & HP asli (kamera). Berikutnya: 3.39 jaminan, 3.40 tim.
 
 - **2026-11-16 — 3.37.0 LIVE (run #225, 0dc89ed, tanpa SQL): Pinjaman tahap 2c —
   geser jadwal.** Worker `PUT …/pinjaman/loans/:id/jadwal {due_dates, expected_paid}`: tanggal yang sudah tertutup
