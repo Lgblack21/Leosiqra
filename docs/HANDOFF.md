@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.41.0 petugas + PWA Tim — run #229)
+Terakhir diperbarui: 2026-11-16 (live: 3.41.1 notif pasang Tim — run #230)
 
 ## Siapa sedang kerja
 
@@ -18,9 +18,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.41.1 SIAP (tanpa SQL):** permintaan Bos, pasang aplikasi Tim jangan tombol tapi seperti notif →
+- **2026-11-16 — 3.41.1 LIVE (run #230, db18146, tanpa SQL; notif terverifikasi di produksi):** permintaan Bos, pasang aplikasi Tim jangan tombol tapi seperti notif →
   `TimInstall` jadi notifikasi atas (muncul 2,5 dtk, Pasang/Nanti/X/usap ke atas, snooze 7 hari di localStorage
-  `leosiqra:tim-install-snooze`), dipasang sekali di `src/app/tim/page.tsx`. Menunggu "gas".
+  `leosiqra:tim-install-snooze`), dipasang sekali di `src/app/tim/page.tsx`.
 
 - **2026-11-16 — 3.41.0 LIVE (run #229, 16d3c97, tanpa SQL): Tim di usaha pinjaman —
   jabatan Petugas.** Keluhan Bos: akun tim di usaha pinjaman malah dapat Kasir + Stok. Sekarang role `petugas`
