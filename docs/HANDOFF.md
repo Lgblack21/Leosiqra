@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.36.0 ringkasan tagihan pinjaman 07:00 WIB — run #224, commit cd700f5 — tanpa SQL baru)
+Terakhir diperbarui: 2026-11-16 (live: 3.37.0 geser jadwal — run #225; siap: 3.38.0 anggota + SQL 0049)
 
 ## Siapa sedang kerja
 
@@ -18,12 +18,22 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.37.0 SIAP (branch `claude/pinjaman-geser-20261116`, belum deploy, tanpa SQL): Pinjaman tahap 2c —
+- **2026-11-16 — 3.38.0 SIAP (branch `claude/pinjaman-anggota-20261116`, belum deploy): Pinjaman — anggota & kartu.**
+  **SQL baru `0049_pinjaman_anggota.sql` — Bos jalankan di D1 Console** (berisi juga kolom untuk 3.39 jaminan & 3.40
+  tim; kode aman sebelum migrasi: `memberReady()` false → cara lama tanpa syarat anggota). Rancangan + ACC:
+  `docs/rancangan/usahaku-anggota-jaminan-tim.md`. Worker: kolom anggota di GET (kunci file tidak dikirim),
+  `PUT/GET …/peminjam/:id/foto|ktp` (R2 privat `pinjaman/<owner>/<id>/…`, KTP `no-store`), `POST …/daftar`
+  (lengkap + consent → `AGT-0001` urut, unique index), arsip menghapus foto & KTP, `loans POST` menolak non-anggota
+  (`not_member`). UI `AnggotaView.tsx` (wizard 4 langkah, `gambarKartu` canvas → PNG, dipakai juga untuk kartu staf),
+  `src/lib/fotoKecil.ts`. Dites wrangler lokal (aturan, akses KTP 401/404, nomor urut, arsip) + Playwright wizard →
+  kartu → unduh. **Belum**: data & HP asli (kamera). Berikutnya: 3.39 jaminan, 3.40 tim. Menunggu SQL + "gas".
+
+- **2026-11-16 — 3.37.0 LIVE (run #225, 0dc89ed, tanpa SQL): Pinjaman tahap 2c —
   geser jadwal.** Worker `PUT …/pinjaman/loans/:id/jadwal {due_dates, expected_paid}`: tanggal yang sudah tertutup
   (floor(paid/angsuran)) wajib sama, sisanya valid & urut; UPDATE dijaga `due_dates_json` lama + paid sama (409 kalau
   ada angsuran/jadwal baru). UI `GeserForm` (mundur N hari / mulai dari tanggal; default "mulai" kalau nunggak).
   Dites wrangler lokal (prefix, jumlah, urutan, paid basi, lunas, akun lain) + Playwright. **Tahap 2 selesai**
-  (penagih akun tim = nanti). Menunggu "gas".
+  (penagih akun tim = nanti).
 
 - **2026-11-16 — 3.36.0 LIVE (run #224, cd700f5, tanpa SQL): Pinjaman tahap 2b —
   notifikasi pagi.** `sendShopLoanDigest` dipanggil dari cron per-menit di 00:00–00:09 UTC (07:00 WIB; trigger cron

@@ -11000,13 +11000,29 @@ const loanTableMissing = (e: unknown) => e instanceof Error && /no such table: s
 const LOAN_PAID_SQL = "(SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = ? AND a.ref_id = ? AND a.type = 'angsuran')";
 const reqId = (v: unknown) => (typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
 const rp = (n: number) => `Rp${Math.max(0, Math.round(n)).toLocaleString("id-ID")}`;
+// Anggota (migrasi 0049): data diri + foto diri & KTP di R2 PRIVAT. Sebelum migrasi → cara lama (tanpa syarat anggota).
+let memberColsCache: { ok: boolean; at: number } | null = null;
+const memberReady = async (env: Env) => {
+  if (memberColsCache && Date.now() - memberColsCache.at < 60_000) return memberColsCache.ok;
+  let ok = true;
+  try { await env.DB.prepare("SELECT member_no, address, photo_key, ktp_key, registered_at FROM shop_borrowers LIMIT 1").first(); }
+  catch (e) { if (e instanceof Error && /no such column|no such table/i.test(e.message)) ok = false; else throw e; }
+  memberColsCache = { ok, at: Date.now() };
+  return ok;
+};
+const MEMBER_NOT_READY = "Data anggota belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+const MEMBER_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+const MEMBER_FILES = { foto: "photo_key", ktp: "ktp_key" } as const;
 type LoanRow = { id: string; borrower_id: string; principal: number; admin_fee: number; admin_mode: string; installment: number; count: number; total: number; frequency: string; disbursed_on: string; due_dates_json: string; account_id: string | null; status: string; note: string | null; created_at: string; closed_at: string | null };
 
 async function handleShopLoans(request: Request, env: Env, ownerId: string, shop: { id: string; name: string }, parts: string[]) {
   const [res, sub, op] = parts;
   try {
     if (!res && request.method === "GET") {
-      const borrowers = (await env.DB.prepare("SELECT id, name, wa, note, created_at, archived_at FROM shop_borrowers WHERE owner_id = ? AND shop_id = ? ORDER BY name COLLATE NOCASE ASC LIMIT ?").bind(ownerId, shop.id, BORROWERS_MAX).all()).results ?? [];
+      const mOn = await memberReady(env);
+      // Kunci file TIDAK dikirim — cukup tanda ada/tidak (foto dibuka lewat endpoint berlogin).
+      const mCols = mOn ? ", member_no, address, job, registered_at, consent_at, updated_at, photo_key IS NOT NULL AS has_photo, ktp_key IS NOT NULL AS has_ktp" : "";
+      const borrowers = (await env.DB.prepare(`SELECT id, name, wa, note, created_at, archived_at${mCols} FROM shop_borrowers WHERE owner_id = ? AND shop_id = ? ORDER BY name COLLATE NOCASE ASC LIMIT ?`).bind(ownerId, shop.id, BORROWERS_MAX).all()).results ?? [];
       // Semua pinjaman aktif + 200 lunas terakhir, plus total & tanggal angsuran terakhir per pinjaman.
       const loans = (await env.DB.prepare(
         `SELECT l.*, (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid,
@@ -11017,7 +11033,7 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       const payments = (await env.DB.prepare(
         "SELECT id, ref_id, date, amount, account_id, created_at FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 1000"
       ).bind(ownerId, shop.id, new Date(Date.parse(`${todayWIB()}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10)).all()).results ?? [];
-      return json({ ready: true, today: todayWIB(), borrowers, loans, payments });
+      return json({ ready: true, memberReady: mOn, today: todayWIB(), borrowers, loans, payments });
     }
 
     // Laporan per periode: pinjaman yang relevan (aktif di rentang / cair di rentang / lunas di rentang) + angsuran di
@@ -11052,9 +11068,14 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         if (!name) return json({ error: "Isi nama peminjam." }, { status: 400 });
         const id = generateId();
         const now = nowIso();
-        const r = await env.DB.prepare(
-          "INSERT INTO shop_borrowers (id, owner_id, shop_id, name, wa, note, created_at, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_borrowers WHERE owner_id = ? AND shop_id = ?) < ?"
-        ).bind(id, ownerId, shop.id, name, waNumber(raw.wa), shopText(raw.note, 120) || null, now, now, ownerId, shop.id, BORROWERS_MAX).run();
+        const mOn = await memberReady(env);
+        const r = mOn
+          ? await env.DB.prepare(
+              "INSERT INTO shop_borrowers (id, owner_id, shop_id, name, wa, note, address, job, created_at, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_borrowers WHERE owner_id = ? AND shop_id = ?) < ?"
+            ).bind(id, ownerId, shop.id, name, waNumber(raw.wa), shopText(raw.note, 120) || null, shopText(raw.address, 200) || null, shopText(raw.job, 60) || null, now, now, ownerId, shop.id, BORROWERS_MAX).run()
+          : await env.DB.prepare(
+              "INSERT INTO shop_borrowers (id, owner_id, shop_id, name, wa, note, created_at, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_borrowers WHERE owner_id = ? AND shop_id = ?) < ?"
+            ).bind(id, ownerId, shop.id, name, waNumber(raw.wa), shopText(raw.note, 120) || null, now, now, ownerId, shop.id, BORROWERS_MAX).run();
         if (!r.meta.changes) return json({ error: `Maksimal ${BORROWERS_MAX} peminjam per usaha.` }, { status: 409 });
         await publishShopBook(env, ownerId, shop.id);
         return json({ ok: true, id }, { status: 201 });
@@ -11066,15 +11087,89 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
           const raw = await parseJson<Record<string, unknown>>(request);
           const name = shopText(raw.name, 60);
           if (!name) return json({ error: "Isi nama peminjam." }, { status: 400 });
-          await env.DB.prepare("UPDATE shop_borrowers SET name = ?, wa = ?, note = ?, archived_at = NULL, updated_at = ? WHERE id = ? AND owner_id = ?").bind(name, waNumber(raw.wa), shopText(raw.note, 120) || null, nowIso(), sub, ownerId).run();
+          if (await memberReady(env)) {
+            await env.DB.prepare("UPDATE shop_borrowers SET name = ?, wa = ?, note = ?, address = ?, job = ?, archived_at = NULL, updated_at = ? WHERE id = ? AND owner_id = ?").bind(name, waNumber(raw.wa), shopText(raw.note, 120) || null, shopText(raw.address, 200) || null, shopText(raw.job, 60) || null, nowIso(), sub, ownerId).run();
+          } else {
+            await env.DB.prepare("UPDATE shop_borrowers SET name = ?, wa = ?, note = ?, archived_at = NULL, updated_at = ? WHERE id = ? AND owner_id = ?").bind(name, waNumber(raw.wa), shopText(raw.note, 120) || null, nowIso(), sub, ownerId).run();
+          }
           await publishShopBook(env, ownerId, shop.id);
           return json({ ok: true });
         }
         // Hapus = arsip (riwayat pinjaman tetap utuh). Masih punya pinjaman aktif → tidak bisa.
         const r = await env.DB.prepare("UPDATE shop_borrowers SET archived_at = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND NOT EXISTS (SELECT 1 FROM shop_loans WHERE owner_id = ? AND borrower_id = ? AND status = 'aktif')").bind(nowIso(), nowIso(), sub, ownerId, ownerId, sub).run();
         if (!r.meta.changes) return json({ error: "Peminjam ini masih punya pinjaman aktif." }, { status: 409 });
+        // Data pribadi ikut dihapus: foto diri & KTP (riwayat pinjaman tetap, nama saja).
+        if (await memberReady(env)) {
+          const f = await env.DB.prepare("SELECT photo_key, ktp_key FROM shop_borrowers WHERE id = ? AND owner_id = ?").bind(sub, ownerId).first<{ photo_key: string | null; ktp_key: string | null }>();
+          await env.DB.prepare("UPDATE shop_borrowers SET photo_key = NULL, ktp_key = NULL WHERE id = ? AND owner_id = ?").bind(sub, ownerId).run();
+          for (const k of [f?.photo_key, f?.ktp_key]) if (k) await env.FILES_BUCKET?.delete(k).catch(() => undefined);
+        }
         await publishShopBook(env, ownerId, shop.id);
         return json({ ok: true });
+      }
+      // Foto diri / KTP anggota: R2 privat. GET hanya untuk pemilik (sesi), tidak di-cache publik.
+      if (sub && /^[0-9a-f-]{36}$/i.test(sub) && (op === "foto" || op === "ktp")) {
+        if (!(await memberReady(env))) return json({ error: MEMBER_NOT_READY }, { status: 503 });
+        const col = MEMBER_FILES[op];
+        const b = await env.DB.prepare(`SELECT id, ${col} AS k FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ?`).bind(sub, ownerId, shop.id).first<{ id: string; k: string | null }>();
+        if (!b) return json({ error: "Anggota tidak ditemukan." }, { status: 404 });
+        if (request.method === "GET") {
+          if (!b.k) return json({ error: "Belum ada foto." }, { status: 404 });
+          const obj = await env.FILES_BUCKET?.get(b.k);
+          if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+          return new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": op === "ktp" ? "private, no-store" : "private, max-age=3600", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" } });
+        }
+        if (request.method === "PUT") {
+          if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+          if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+          const raw = await parseJson<{ imageBase64?: unknown }>(request);
+          if (typeof raw.imageBase64 !== "string" || !raw.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+          const b64 = raw.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+          if (b64.length > Math.ceil((MEMBER_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+          let bytes: Uint8Array;
+          try { bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return json({ error: "Foto tidak terbaca." }, { status: 400 }); }
+          const type = sniffImageType(bytes);
+          if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+          const key = `pinjaman/${ownerId}/${b.id}/${op}-${generateId().slice(0, 8)}`;
+          await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+          const u = await env.DB.prepare(`UPDATE shop_borrowers SET ${col} = ?, updated_at = ? WHERE id = ? AND owner_id = ?`).bind(key, nowIso(), b.id, ownerId).run();
+          if (!u.meta.changes) { await env.FILES_BUCKET.delete(key).catch(() => undefined); return json({ error: "Anggota tidak ditemukan." }, { status: 404 }); }
+          if (b.k) await env.FILES_BUCKET.delete(b.k).catch(() => undefined);
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true });
+        }
+      }
+      // Selesai daftar: data wajib lengkap + setuju → nomor anggota (AGT-0001, urut per usaha, unik di DB).
+      if (sub && /^[0-9a-f-]{36}$/i.test(sub) && op === "daftar" && request.method === "POST") {
+        if (!(await memberReady(env))) return json({ error: MEMBER_NOT_READY }, { status: 503 });
+        if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
+        const raw = await parseJson<Record<string, unknown>>(request);
+        if (raw.consent !== true) return json({ error: "Centang persetujuan anggota dulu." }, { status: 400 });
+        const b = await env.DB.prepare("SELECT id, name, wa, address, photo_key, ktp_key, member_no FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ? AND archived_at IS NULL").bind(sub, ownerId, shop.id).first<{ id: string; name: string; wa: string | null; address: string | null; photo_key: string | null; ktp_key: string | null; member_no: string | null }>();
+        if (!b) return json({ error: "Anggota tidak ditemukan." }, { status: 404 });
+        const kurang = [!b.wa && "nomor WA", !b.address && "alamat", !b.photo_key && "foto diri", !b.ktp_key && "foto KTP"].filter(Boolean);
+        if (kurang.length) return json({ error: `Data belum lengkap: ${kurang.join(", ")}.` }, { status: 400 });
+        const now = nowIso();
+        if (b.member_no) {
+          await env.DB.prepare("UPDATE shop_borrowers SET consent_at = COALESCE(consent_at, ?), registered_at = COALESCE(registered_at, ?), updated_at = ? WHERE id = ? AND owner_id = ?").bind(now, now, now, b.id, ownerId).run();
+          await publishShopBook(env, ownerId, shop.id);
+          return json({ ok: true, member_no: b.member_no });
+        }
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await env.DB.prepare(
+              `UPDATE shop_borrowers SET member_no = (SELECT 'AGT-' || printf('%04d', COALESCE(MAX(CAST(substr(member_no, 5) AS INTEGER)), 0) + 1) FROM shop_borrowers WHERE owner_id = ? AND shop_id = ? AND member_no LIKE 'AGT-%'),
+                      consent_at = ?, registered_at = ?, updated_at = ?
+                WHERE id = ? AND owner_id = ? AND member_no IS NULL`
+            ).bind(ownerId, shop.id, now, now, now, b.id, ownerId).run();
+            break;
+          } catch (e) {
+            if (!(e instanceof Error && /UNIQUE/i.test(e.message)) || attempt === 2) throw e;
+          }
+        }
+        const no = await env.DB.prepare("SELECT member_no FROM shop_borrowers WHERE id = ? AND owner_id = ?").bind(b.id, ownerId).first<{ member_no: string | null }>();
+        await publishShopBook(env, ownerId, shop.id);
+        return json({ ok: true, member_no: no?.member_no ?? null }, { status: 201 });
       }
     }
 
@@ -11085,6 +11180,10 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
       const borrower = typeof raw.borrower_id === "string" ? await env.DB.prepare("SELECT id, name FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ? AND archived_at IS NULL").bind(raw.borrower_id, ownerId, shop.id).first<{ id: string; name: string }>() : null;
       if (!borrower) return json({ error: "Pilih peminjam." }, { status: 400 });
+      // Daftar dulu jadi anggota (data lengkap + setuju), baru boleh diberi pinjaman (keputusan Bos 2026-11-16).
+      if ((await memberReady(env)) && !(await env.DB.prepare("SELECT 1 FROM shop_borrowers WHERE id = ? AND owner_id = ? AND registered_at IS NOT NULL AND member_no IS NOT NULL").bind(borrower.id, ownerId).first())) {
+        return json({ error: `${borrower.name} belum terdaftar lengkap sebagai anggota. Lengkapi datanya dulu (foto diri, KTP, alamat).`, code: "not_member" }, { status: 409 });
+      }
       const principal = shopMoney(raw.principal);
       if (!principal || principal < 1 || principal > 1e10) return json({ error: "Isi jumlah pinjaman." }, { status: 400 });
       const adminFee = raw.admin_fee === undefined || raw.admin_fee === null || raw.admin_fee === "" ? 0 : shopMoney(raw.admin_fee);

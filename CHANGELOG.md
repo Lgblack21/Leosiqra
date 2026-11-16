@@ -120,6 +120,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.35.0 | 16 Nov 2026 | Pinjaman: laporan & Excel |
 | 3.36.0 | 16 Nov 2026 | Pinjaman: ringkasan tagihan tiap pagi |
 | 3.37.0 | 16 Nov 2026 | Pinjaman: geser jadwal |
+| 3.38.0 | 16 Nov 2026 | Pinjaman: anggota & kartu anggota |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -133,6 +134,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.38.0 — 2026-11-16 — Pinjaman: anggota & kartu anggota
+
+- **Anggota.** Menu Peminjam di toko pinjaman sekarang bernama **Anggota**. Daftar anggota baru lewat 4 langkah:
+  data diri (nama, WA, alamat), foto diri, foto KTP, lalu persetujuan anggota. Begitu selesai, nomor anggota
+  (AGT-0001, …) dan **kartu anggota** langsung jadi.
+- **Kartu anggota** seukuran KTP, warnanya ikut tema toko: logo, nama usaha, foto, nama, nomor anggota, tanggal
+  bergabung, dan QR. Bisa **diunduh**, **dikirim lewat WA**, atau **dicetak**. Kartu ini gak memuat NIK atau foto
+  KTP, dan QR-nya cuma berisi nomor anggota.
+- **Daftar dulu, baru pinjam.** Pinjaman baru cuma bisa diberikan ke anggota yang datanya lengkap. Peminjam lama
+  bertanda *Belum lengkap* dan cukup dilengkapi sekali. Pinjaman yang sedang berjalan tetap jalan seperti biasa.
+- **Foto KTP disimpan privat**: cuma kamu yang bisa membukanya, gak ikut Excel, dan gak tampil di kartu. Foto dari
+  kamera dikecilkan dulu di HP sebelum diunggah. Kalau anggota dihapus, foto diri dan KTP-nya ikut terhapus.
 
 ## 3.37.0 — 2026-11-16 — Pinjaman: geser jadwal
 

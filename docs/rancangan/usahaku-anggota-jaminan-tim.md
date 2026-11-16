@@ -1,6 +1,7 @@
 # Rancangan — Pinjaman: anggota (daftar step-by-step + kartu), jaminan, tim (kas usaha + kartu staf)
 
-Status: **DRAF, menunggu ACC Bos.** Belum ada kode. Butuh migrasi D1 baru (Bos jalankan di D1 Console).
+Status: **DI-ACC Bos 2026-11-16 ("gas" = semua saran bagian 9).** 3.38 anggota dikerjakan (branch
+`claude/pinjaman-anggota-20261116`, migrasi `0049_pinjaman_anggota.sql` — sekaligus kolom jaminan & tim).
 Permintaan Bos 2026-11-16: kartu anggota, foto anggota & KTP, jaminan (opsional, foto), daftar anggota step by step
 ("daftar dulu jadi anggota, baru boleh dikasih pinjaman"), tim bisa memilih kas usaha, kartu staf + foto staf.
 

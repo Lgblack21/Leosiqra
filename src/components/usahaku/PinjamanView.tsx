@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   HandCoins,
+  IdCard,
   Loader2,
   MessageCircle,
   Pencil,
@@ -35,6 +36,7 @@ import { usePlan } from '@/lib/usePlan';
 import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from '@/components/ladang/UsahaView';
 import { UsahaSheet } from './UsahaSheet';
+import { AnggotaWizard, FotoAnggota, KartuAnggota } from './AnggotaView';
 
 // Usahaku › jenis Pinjaman: Ringkasan · Tagihan hari ini · Pinjaman · Peminjam (Kas pakai BerandaUsaha view kas).
 // Rancangan & ACC Bos: docs/rancangan/usahaku-pinjaman.md.
@@ -66,6 +68,8 @@ type Form =
   | { k: 'pay'; loan: Loan; st: StatusPinjaman }
   | { k: 'detail'; loanId: string }
   | { k: 'geser'; loanId: string }
+  | { k: 'daftar'; b?: Borrower }
+  | { k: 'kartu'; id: string }
   | { k: 'borrower'; b?: Borrower };
 
 export function PinjamanView({
@@ -102,7 +106,7 @@ export function PinjamanView({
       const m = e instanceof Error ? e.message : 'Gagal memuat data pinjaman.';
       if (/belum aktif|pembaruan database/i.test(m)) setNotReady(true);
       setError(m);
-      setData((p) => p ?? { today: '', borrowers: [], loans: [], payments: [] });
+      setData((p) => p ?? { today: '', memberReady: false, borrowers: [], loans: [], payments: [] });
     }
   }, [shop.id]);
   useEffect(() => {
@@ -411,57 +415,91 @@ export function PinjamanView({
   const peminjam = () => {
     const list = data.borrowers.filter((b) => !b.archived);
     const loanOf = (id: string) => aktif.find((l) => l.borrowerId === id);
+    const anggota = data.memberReady;
+    const belum = anggota ? list.filter((b) => !b.registered).length : 0;
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="fs-13 text-slate-500">{list.length} peminjam</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="fs-13 text-slate-500">
+            {list.length} {anggota ? 'anggota' : 'peminjam'}
+            {belum > 0 && <span className="text-amber-700"> · {belum} belum lengkap</span>}
+          </p>
           <button
             type="button"
-            onClick={() => setForm({ k: 'borrower' })}
+            onClick={() => setForm(anggota ? { k: 'daftar' } : { k: 'borrower' })}
             disabled={isPro === false}
             className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 fs-13 font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-white dark:text-slate-900"
           >
-            <UserPlus size={16} /> Tambah peminjam
+            <UserPlus size={16} /> {anggota ? 'Daftar anggota baru' : 'Tambah peminjam'}
           </button>
         </div>
+        {belum > 0 && (
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+            Yang bertanda <b>Belum lengkap</b> perlu dilengkapi (alamat, foto diri, foto KTP) sebelum bisa diberi pinjaman
+            berikutnya. Pinjaman yang sedang berjalan tetap jalan.
+          </p>
+        )}
         {list.length === 0 ? (
           <p className="rounded-[26px] border-2 border-dashed border-slate-200 p-8 text-center fs-13 text-slate-400 dark:border-slate-800">
-            Belum ada peminjam. Tambah dulu, nomor WA opsional (dipakai tombol Ingatkan).
+            {anggota
+              ? 'Belum ada anggota. Daftarkan dulu (data diri, foto, KTP) — setelah jadi anggota baru bisa diberi pinjaman.'
+              : 'Belum ada peminjam. Tambah dulu, nomor WA opsional (dipakai tombol Ingatkan).'}
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 rounded-[26px] bg-white px-4 ring-1 ring-slate-100 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">
             {list.map((b) => {
               const l = loanOf(b.id);
               const st = l ? statusPinjaman(l, today) : null;
+              const boleh = !anggota || b.registered;
               return (
-                <li key={b.id} className="flex items-center gap-3 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 fs-13 font-extrabold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    {b.name.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{b.name}</span>
+                <li key={b.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                  <FotoAnggota shopId={shop.id} b={b} className="h-11 w-11" />
+                  <span className="min-w-0 flex-1 basis-40">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate fs-14 font-bold text-slate-900 dark:text-white">{b.name}</span>
+                      {anggota &&
+                        (b.registered ? (
+                          <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 fs-10 font-bold tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300">{b.memberNo}</span>
+                        ) : (
+                          <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 fs-10 font-bold text-amber-800">Belum lengkap</span>
+                        ))}
+                    </span>
                     <span className="block truncate fs-12 text-slate-500">
                       {l && st ? `aktif · sisa ${formatIDR(st.sisa)}${st.telat ? ` · telat ${st.telat} hr` : ''}` : 'tidak ada pinjaman aktif'}
                       {b.wa ? ` · ${b.wa}` : ''}
                     </span>
                   </span>
-                  {l ? (
-                    <button type="button" onClick={() => setForm({ k: 'detail', loanId: l.id })} className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      Lihat
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {anggota && !b.registered && (
+                      <button type="button" onClick={() => setForm({ k: 'daftar', b })} disabled={isPro === false} className="rounded-full bg-amber-500 px-3 py-1.5 fs-12 font-bold text-white disabled:opacity-40">
+                        Lengkapi
+                      </button>
+                    )}
+                    {anggota && b.registered && (
+                      <button type="button" onClick={() => setForm({ k: 'kartu', id: b.id })} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <IdCard size={13} /> Kartu
+                      </button>
+                    )}
+                    {l ? (
+                      <button type="button" onClick={() => setForm({ k: 'detail', loanId: l.id })} className="rounded-full bg-slate-100 px-3 py-1.5 fs-12 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        Lihat
+                      </button>
+                    ) : (
+                      boleh && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ k: 'loan', borrowerId: b.id })}
+                          disabled={isPro === false}
+                          className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white disabled:opacity-40"
+                        >
+                          Pinjamkan
+                        </button>
+                      )
+                    )}
+                    <button type="button" onClick={() => setForm(anggota && b.registered ? { k: 'daftar', b } : { k: 'borrower', b })} aria-label={`Ubah ${b.name}`} className="p-1.5 text-slate-400 hover:text-slate-700">
+                      <Pencil size={15} />
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setForm({ k: 'loan', borrowerId: b.id })}
-                      disabled={isPro === false}
-                      className="rounded-full bg-emerald-600 px-3 py-1.5 fs-12 font-bold text-white disabled:opacity-40"
-                    >
-                      Pinjamkan
-                    </button>
-                  )}
-                  <button type="button" onClick={() => setForm({ k: 'borrower', b })} aria-label={`Ubah ${b.name}`} className="p-1.5 text-slate-400 hover:text-slate-700">
-                    <Pencil size={15} />
-                  </button>
+                  </span>
                 </li>
               );
             })}
@@ -479,6 +517,14 @@ export function PinjamanView({
         ? `Terima angsuran · ${borrowerById.get(form.loan.borrowerId)?.name ?? ''}`
         : form?.k === 'geser'
           ? 'Geser jadwal'
+          : form?.k === 'daftar'
+            ? form.b
+              ? form.b.registered
+                ? `Ubah data ${form.b.name}`
+                : `Lengkapi data ${form.b.name}`
+              : 'Daftar anggota baru'
+            : form?.k === 'kartu'
+              ? 'Kartu anggota'
           : form?.k === 'borrower'
           ? form.b
             ? 'Ubah peminjam'
@@ -499,12 +545,41 @@ export function PinjamanView({
       {view === 'pinjaman' && pinjaman()}
       {view === 'peminjam' && peminjam()}
 
-      <UsahaSheet variant={variant} open={form !== null} onClose={() => setForm(null)} title={title} wide={form?.k === 'loan' || form?.k === 'detail'}>
+      <UsahaSheet variant={variant} open={form !== null} onClose={() => setForm(null)} title={title} wide={form?.k === 'loan' || form?.k === 'detail' || form?.k === 'kartu'}>
         {form?.k === 'loan' && (
           <LoanForm shop={shop} data={data} kas={kas} today={today} initialBorrower={form.borrowerId} onDone={close} />
         )}
         {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} onDone={close} />}
         {form?.k === 'borrower' && <BorrowerForm shop={shop} b={form.b} onDone={close} />}
+        {form?.k === 'daftar' && (
+          <AnggotaWizard
+            key={form.b?.id ?? 'baru'}
+            shop={shop}
+            existing={form.b}
+            onDone={(r) => {
+              onToast(r.memberNo ? `${r.name} terdaftar · ${r.memberNo}` : `${r.name} tersimpan.`);
+              setForm({ k: 'kartu', id: r.id });
+            }}
+          />
+        )}
+        {form?.k === 'kartu' &&
+          (() => {
+            const b = data.borrowers.find((x) => x.id === form.id);
+            return b?.registered ? (
+              <div className="space-y-3">
+                <KartuAnggota shop={shop} b={b} />
+                {!aktif.some((l) => l.borrowerId === b.id) && isPro !== false && (
+                  <button type="button" onClick={() => setForm({ k: 'loan', borrowerId: b.id })} className="w-full rounded-full bg-emerald-600 py-3 fs-14 font-extrabold text-white hover:bg-emerald-700">
+                    Beri pinjaman ke {b.name}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex h-40 items-center justify-center">
+                <Loader2 className="animate-spin text-slate-400" />
+              </div>
+            );
+          })()}
         {form?.k === 'geser' &&
           (() => {
             const l = data.loans.find((x) => x.id === form.loanId);
@@ -607,7 +682,9 @@ function LoanForm({
   onDone: (m?: string) => void;
 }) {
   const busyIds = new Set(data.loans.filter((l) => l.status === 'aktif').map((l) => l.borrowerId));
-  const free = data.borrowers.filter((b) => !b.archived && !busyIds.has(b.id));
+  // Fitur anggota aktif → hanya anggota terdaftar lengkap yang boleh diberi pinjaman (keputusan Bos 2026-11-16).
+  const free = data.borrowers.filter((b) => !b.archived && !busyIds.has(b.id) && (!data.memberReady || b.registered));
+  const belumLengkap = data.memberReady ? data.borrowers.filter((b) => !b.archived && !busyIds.has(b.id) && !b.registered).length : 0;
   const [borrowerId, setBorrowerId] = useState(initialBorrower ?? '');
   const [newName, setNewName] = useState('');
   const [newWa, setNewWa] = useState('');
@@ -663,7 +740,7 @@ function LoanForm({
 
   const save = async () => {
     if (bad) return setError(bad);
-    if (!borrowerId && !newName.trim()) return setError('Pilih atau tambah peminjam.');
+    if (!borrowerId && (data.memberReady || !newName.trim())) return setError(data.memberReady ? 'Pilih anggota.' : 'Pilih atau tambah peminjam.');
     setBusy(true);
     setError('');
     try {
@@ -715,16 +792,22 @@ function LoanForm({
       <label className="block">
         <span className={labelCls}>Peminjam</span>
         <select value={borrowerId} onChange={(e) => setBorrowerId(e.target.value)} className={fieldCls}>
-          <option value="">+ Peminjam baru</option>
+          <option value="">{data.memberReady ? '— Pilih anggota —' : '+ Peminjam baru'}</option>
           {free.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
           ))}
         </select>
-        {busyIds.size > 0 && <span className="mt-1 block fs-11 text-slate-400">Peminjam yang masih punya pinjaman aktif tidak muncul di sini.</span>}
+        {busyIds.size > 0 && <span className="mt-1 block fs-11 text-slate-400">Yang masih punya pinjaman aktif tidak muncul di sini.</span>}
+        {data.memberReady && (free.length === 0 || belumLengkap > 0) && (
+          <span className="mt-1 block fs-12 text-amber-700">
+            {free.length === 0 ? 'Belum ada anggota yang bisa diberi pinjaman. ' : ''}
+            {belumLengkap > 0 ? `${belumLengkap} peminjam belum lengkap datanya. ` : ''}Daftarkan / lengkapi dulu di menu <b>Anggota</b>.
+          </span>
+        )}
       </label>
-      {!borrowerId && (
+      {!borrowerId && !data.memberReady && (
         <div className="grid grid-cols-2 gap-2">
           <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={60} placeholder="Nama peminjam" aria-label="Nama peminjam baru" className={fieldCls} />
           <input value={newWa} onChange={(e) => setNewWa(e.target.value)} inputMode="tel" placeholder="WA (opsional)" aria-label="WA peminjam baru" className={fieldCls} />

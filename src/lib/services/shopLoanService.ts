@@ -4,7 +4,23 @@ import { notifyCollectionChanged } from '../cf-firestore';
 // Usahaku › jenis Pinjaman (Worker /api/member/shops/:id/pinjaman, migrasi 0048).
 // Uang lewat buku usaha (kas): pinjam_cair (kas −), pinjam_admin (kas +), angsuran (kas +).
 
-export type Borrower = { id: string; name: string; wa: string | null; note: string | null; archived: boolean };
+export type Borrower = {
+  id: string;
+  name: string;
+  wa: string | null;
+  note: string | null;
+  archived: boolean;
+  /** Anggota (migrasi 0049). registered = sudah daftar lengkap & setuju → boleh diberi pinjaman. */
+  memberNo: string | null;
+  address: string | null;
+  job: string | null;
+  registered: boolean;
+  registeredAt: string | null;
+  hasPhoto: boolean;
+  hasKtp: boolean;
+  updatedAt: string;
+};
+export type MemberFile = 'foto' | 'ktp';
 export type Loan = {
   id: string;
   borrowerId: string;
@@ -28,7 +44,7 @@ export type Loan = {
 export type LoanPayment = { id: string; loanId: string; date: string; amount: number; accountId: string | null; createdAt: string };
 export type LoanReportRow = Loan & { borrowerName: string; borrowerWa: string | null; paidBefore: number; paidTo: number };
 export type LoanReport = { range: { from: string; to: string }; today: string; loans: LoanReportRow[]; payments: LoanPayment[]; truncated: boolean };
-export type LoanBook = { today: string; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
+export type LoanBook = { today: string; memberReady: boolean; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
 
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
@@ -69,12 +85,21 @@ export const shopLoanService = {
     const r = await cloudflareApi<Row>(`/api/member/shops/${shopId}/pinjaman`);
     return {
       today: String(r.today ?? ''),
+      memberReady: Boolean(r.memberReady),
       borrowers: ((r.borrowers as Row[]) ?? []).map((b) => ({
         id: String(b.id),
         name: String(b.name ?? ''),
         wa: str(b.wa),
         note: str(b.note),
         archived: Boolean(b.archived_at),
+        memberNo: str(b.member_no),
+        address: str(b.address),
+        job: str(b.job),
+        registered: Boolean(b.registered_at && b.member_no),
+        registeredAt: str(b.registered_at),
+        hasPhoto: Boolean(b.has_photo),
+        hasKtp: Boolean(b.has_ktp),
+        updatedAt: String(b.updated_at ?? b.created_at ?? ''),
       })),
       loans: ((r.loans as Row[]) ?? []).map(loanFromRow),
       payments: ((r.payments as Row[]) ?? []).map((p) => ({
@@ -113,12 +138,27 @@ export const shopLoanService = {
       })),
     };
   },
-  async addBorrower(shopId: string, input: { name: string; wa?: string; note?: string }) {
+  /** Foto diri / KTP anggota (R2 privat, hanya pemilik yang login). v = penanda versi supaya tidak pakai cache lama. */
+  memberFileUrl: (shopId: string, b: Pick<Borrower, 'id' | 'updatedAt'>, kind: MemberFile) =>
+    `/api/member/shops/${shopId}/pinjaman/peminjam/${b.id}/${kind}?v=${encodeURIComponent(b.updatedAt)}`,
+  async uploadMemberFile(shopId: string, id: string, kind: MemberFile, imageBase64: string) {
+    await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}/${kind}`, { method: 'PUT', json: { imageBase64 } });
+    changed();
+  },
+  async register(shopId: string, id: string) {
+    const r = await cloudflareApi<{ member_no: string | null }>(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}/daftar`, {
+      method: 'POST',
+      json: { consent: true },
+    });
+    changed();
+    return r.member_no;
+  },
+  async addBorrower(shopId: string, input: { name: string; wa?: string; note?: string; address?: string; job?: string }) {
     const r = await cloudflareApi<{ id: string }>(`/api/member/shops/${shopId}/pinjaman/peminjam`, { method: 'POST', json: input });
     changed();
     return r.id;
   },
-  async updateBorrower(shopId: string, id: string, input: { name: string; wa?: string; note?: string }) {
+  async updateBorrower(shopId: string, id: string, input: { name: string; wa?: string; note?: string; address?: string; job?: string }) {
     await cloudflareApi(`/api/member/shops/${shopId}/pinjaman/peminjam/${id}`, { method: 'PUT', json: input });
     changed();
   },
