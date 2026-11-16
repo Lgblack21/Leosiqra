@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.39.0 jaminan — run #227; siap: 3.40.0 tim)
+Terakhir diperbarui: 2026-11-16 (live: 3.40.0 tim — run #228)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.40.0 SIAP (branch `claude/pinjaman-tim-20261116`, belum deploy, SQL = 0049 yang sama): Tim —
+- **2026-11-16 — 3.40.0 LIVE (run #228, e7c4cb8, SQL = 0049 yang sama): Tim —
   penagih, kas usaha per staf, kartu staf.** `shop_staff.kas_json` {shop_id: kas_id}, `staff_no` STF-001 urut,
   `photo_key` (R2 privat `tim/<owner>/<id>/…`), role `kasir|penagih` (role/kas tidak valid → 400, bukan diam-diam
   diganti). `staffKas()` = kas pilihan kalau masih aktif, selain itu kas utama. Rekening pribadi hanya wajib kalau ada
@@ -28,7 +28,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `/api/member/staff/:id/foto` PUT/GET/DELETE, hapus staf ikut hapus foto. UI: `TeamManager.tsx` (jabatan, kas per
   toko, foto, kartu staf via `KartuView` jenis STAF), `StaffApp.tsx` (`StaffTagih` + `TerimaForm`). Dites wrangler
   lokal (validasi, 401/404 foto, 403 penagih, double-tap 409, saldo kas naik, kick sesi) + Playwright (pemilik buat
-  penagih → foto → kartu; penagih login mobile → Terima). **Belum**: HP asli, data asli. Menunggu "gas".
+  penagih → foto → kartu; penagih login mobile → Terima). **Belum**: HP asli, data asli. Smoke live bersih (foto staf & tagihan staf tanpa login → 401).
 
 - **2026-11-16 — 3.39.0 LIVE (run #227, 89eed6a):
   Pinjaman — jaminan.** `shop_loans.collateral_json` {jenis, ket, nilai, photos[kunci R2], returnedAt}; GET mengirim
