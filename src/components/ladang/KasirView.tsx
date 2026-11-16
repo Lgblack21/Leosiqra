@@ -336,6 +336,7 @@ export function KasirView({
       inSheet={inSheet}
       panel={panel}
       onNew={() => setSheet(false)}
+      onSaved={() => setLines([])}
       book={book ? { accounts: book.accounts.filter((a) => !a.archived), bonReady: book.bonReady } : undefined}
       reseller={shop.products.some((p) => p.resellerPrice) ? { on: reseller, set: toggleReseller } : undefined}
     />
@@ -345,7 +346,7 @@ export function KasirView({
     <>
     {app ? (
       <>
-        <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk">
+        <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title={onExit ? 'Pembayaran' : 'Struk'}>
           <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div>
         </BottomSheet>
         <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga">
@@ -412,7 +413,7 @@ export function KasirView({
       </>
     ) : (
       <>
-        <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">
+        <Modal isOpen={sheet} onClose={() => setSheet(false)} title={onExit ? 'Pembayaran' : 'Struk'} maxWidth="max-w-md">
           {strukFor(true)}
         </Modal>
         <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg">
@@ -642,14 +643,85 @@ export function KasirView({
             {!has ? emptyCatalog : custom ? customFrame : <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />}
           </main>
           {has && (
+            // Keranjang: hanya item + total. Detail bayar (cara bayar, kas, pembeli) & struk muncul setelah "Bayar".
             <aside
-              aria-label="Struk"
+              aria-label="Keranjang"
               className={cn(
-                'hidden w-[360px] shrink-0 overflow-y-auto border-slate-200 bg-white p-4 md:block lg:w-[400px] dark:border-slate-800 dark:bg-slate-900',
+                'hidden w-[340px] shrink-0 flex-col border-slate-200 bg-white md:flex lg:w-[380px] dark:border-slate-800 dark:bg-slate-900',
                 strukLeft ? 'order-first border-r' : 'border-l',
               )}
             >
-              {strukFor(false, true)}
+              <div className="flex items-center justify-between px-4 pb-2 pt-4">
+                <p className="flex items-center gap-1.5 fs-15 font-extrabold text-slate-900 dark:text-white">
+                  <ReceiptText size={17} className="text-emerald-600" /> Pesanan
+                  {count > 0 && <span className="fs-12 font-semibold text-slate-400">· {count} item</span>}
+                </p>
+                {count > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLines([])}
+                    className="flex items-center gap-1 fs-12 font-bold text-slate-400 hover:text-rose-500"
+                  >
+                    <Trash2 size={13} /> Kosongkan
+                  </button>
+                )}
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4">
+                {count === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 pb-10 text-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
+                      <ShoppingBag size={24} />
+                    </span>
+                    <p className="fs-13 text-slate-400">Ketuk produk di katalog untuk mulai.</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {lines.map((l) => (
+                      <li key={l.key} className="flex items-center gap-2 py-2.5">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate fs-14 font-bold text-slate-900 dark:text-white">{l.name}</span>
+                          <span className="block fs-12 tabular-nums text-slate-500 dark:text-slate-400">
+                            {formatIDR(l.price)} × {l.qty} = <b className="text-slate-700 dark:text-slate-200">{formatIDR(l.price * l.qty)}</b>
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setQty(l.key, l.qty - 1)}
+                            aria-label={`Kurangi ${l.name}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                          >
+                            {l.qty === 1 ? <Trash2 size={13} /> : <Minus size={13} />}
+                          </button>
+                          <span className="w-6 text-center fs-13 font-extrabold tabular-nums text-slate-900 dark:text-white">{l.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => setQty(l.key, l.qty + 1)}
+                            aria-label={`Tambah ${l.name}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                          >
+                            <Plus size={13} />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="space-y-3 border-t border-slate-200 p-4 dark:border-slate-800">
+                <div className="flex items-baseline justify-between">
+                  <span className="fs-14 font-bold text-slate-500 dark:text-slate-400">Total</span>
+                  <span className="fsh-28 font-black tabular-nums text-slate-900 dark:text-white">{formatIDR(sum)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSheet(true)}
+                  disabled={!count}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 fs-16 font-extrabold text-white hover:bg-emerald-700 disabled:opacity-40"
+                >
+                  <Check size={19} /> Bayar
+                </button>
+              </div>
             </aside>
           )}
         </div>
@@ -1170,6 +1242,7 @@ export function Struk({
   inSheet,
   panel = false,
   onNew,
+  onSaved,
   staff,
   book,
   reseller,
@@ -1185,6 +1258,9 @@ export function Struk({
   /** Panel struk di kasir penuh: tanpa kartu (panelnya sudah jadi wadah). */
   panel?: boolean;
   onNew: () => void;
+  /** Dipanggil setelah penjualan tercatat: keranjang langsung dikosongkan supaya tidak bisa tercatat dua kali
+   *  (mis. jendela pembayaran ditutup pakai × lalu dibuka lagi). Struk yang tampil sudah disimpan di `done`. */
+  onSaved?: () => void;
   staff?: { accountName: string | null; sell: StaffSell };
   /** Usaha dengan kas usaha: pilih jalur jualan (langsung / marketplace + biaya), cara bayar, kas tujuan. */
   book?: { accounts: ShopAccount[]; bonReady?: boolean };
@@ -1372,6 +1448,7 @@ export function Struk({
         shop.style.receiptFooter || 'Terima kasih sudah belanja! 🙏',
       ].join('\n');
       setDone({ text, amount: total, buyer: buyer.trim() });
+      onSaved?.();
       onDone(
         book
           ? isOrder

@@ -115,6 +115,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.31.0 | 16 Nov 2026 | Usahaku: pesanan & DP |
 | 3.32.0 | 16 Nov 2026 | Usahaku: utang ke supplier |
 | 3.33.0 | 16 Nov 2026 | Usahaku tampilan baru: menu samping, kasir layar penuh |
+| 3.33.1 | 16 Nov 2026 | Kasir: struk muncul saat bayar |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -128,6 +129,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.33.1 — 2026-11-16 — Kasir: struk muncul saat bayar
+
+- **Panel kanan kasir sekarang keranjang.** Isinya cuma barang, jumlah, total, dan tombol **Bayar**, jadi gak penuh
+  pilihan lagi.
+- **Cara bayar & struk muncul saat Bayar.** Ketuk **Bayar**, baru keluar jendela pembayaran (cara bayar, kas,
+  pembeli, bon/pesanan). Setelah **Bayar & catat**, struknya langsung tampil, siap disalin dan dikirim ke pembeli.
+- Begitu penjualan tercatat, keranjang langsung kosong. Menutup jendela struk pakai × gak bikin penjualan yang sama
+  bisa tercatat dua kali.
 
 ## 3.33.0 — 2026-11-16 — Usahaku tampilan baru: menu samping, kasir layar penuh
 

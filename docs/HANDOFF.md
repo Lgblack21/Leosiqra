@@ -18,6 +18,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.33.1 SIAP (branch `claude/usahaku-sidebar-20261116`, belum deploy, frontend saja):** kasir POS — panel
+  kanan jadi keranjang (item, total, Bayar); detail bayar + struk di modal/sheet "Pembayaran". `Struk` dapat
+  `onSaved` → keranjang dikosongkan begitu tercatat (cegah catat dobel kalau modal ditutup ×). Dites Playwright API
+  tiruan (desktop & HP). Menunggu "gas".
+
 - **2026-11-16 — 3.33.0 LIVE (run #220, ab391de, tanpa SQL, Worker berubah: foto produk):
   tampilan Usahaku baru.** Daftar toko tanpa angka uang (Tim + Buat toko tetap). Di dalam toko ada menu samping
   (`UsahakuApp` TABS: beranda/kasir/tagihan/biaya/kas/stok/laporan/pengaturan, di hash; HP = laci ☰). `BerandaUsaha`
