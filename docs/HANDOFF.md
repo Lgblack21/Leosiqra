@@ -18,6 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-16 — 3.41.1 SIAP (tanpa SQL):** permintaan Bos, pasang aplikasi Tim jangan tombol tapi seperti notif →
+  `TimInstall` jadi notifikasi atas (muncul 2,5 dtk, Pasang/Nanti/X/usap ke atas, snooze 7 hari di localStorage
+  `leosiqra:tim-install-snooze`), dipasang sekali di `src/app/tim/page.tsx`. Menunggu "gas".
+
 - **2026-11-16 — 3.41.0 LIVE (run #229, 16d3c97, tanpa SQL): Tim di usaha pinjaman —
   jabatan Petugas.** Keluhan Bos: akun tim di usaha pinjaman malah dapat Kasir + Stok. Sekarang role `petugas`
   (STAFF_ROLES), rute `/api/staff/shops/:id/pinjaman/*` → `handleShopLoans(..., actor)` dengan allowlist

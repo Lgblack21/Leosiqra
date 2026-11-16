@@ -124,6 +124,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.39.0 | 16 Nov 2026 | Pinjaman: jaminan |
 | 3.40.0 | 16 Nov 2026 | Tim: penagih, kas usaha per staf, kartu staf |
 | 3.41.0 | 16 Nov 2026 | Tim di usaha pinjaman: jabatan Petugas |
+| 3.41.1 | 16 Nov 2026 | Pasang aplikasi Tim lewat notifikasi |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -137,6 +138,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.41.1 — 2026-11-16 — Pasang aplikasi Tim lewat notifikasi
+
+- **Ajakan pasang aplikasi Tim sekarang muncul seperti notifikasi** dari atas layar, beberapa detik setelah halaman Tim
+  dibuka. Ketuk **Pasang** untuk langsung memasang (Android) atau melihat langkahnya (iPhone). **Nanti**, tanda silang,
+  atau usap ke atas menyembunyikannya selama 7 hari. Gak muncul lagi kalau Tim sudah dibuka dari layar utama.
+- Judul halaman masuk Tim sekarang "Akun tim dari pemilik usaha", bukan cuma kasir.
 
 ## 3.41.0 — 2026-11-16 — Tim: jabatan Petugas & aplikasi Tim di HP
 

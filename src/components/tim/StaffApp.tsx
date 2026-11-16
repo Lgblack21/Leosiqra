@@ -26,7 +26,6 @@ import { setLoanApiRoot, type Loan } from '@/lib/services/shopLoanService';
 import type { ShopBook } from '@/lib/services/shopBookService';
 import { PinjamanView, type PinjamanTab } from '@/components/usahaku/PinjamanView';
 import { PetugasCtx } from '@/components/usahaku/petugas';
-import { TimInstall } from '@/components/install/TimInstall';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import { StockView } from '@/components/ladang/StockView';
 import { fmtQty, isLow, type StockData, type StockMaterial } from '@/lib/services/stockService';
@@ -297,8 +296,6 @@ export function StaffApp() {
         </div>
       )}
 
-      <TimInstall className="mt-6" />
-
       {me.staff.role !== 'penagih' && me.shops.length > 0 && (
       <nav
         aria-label="Menu tim"
@@ -386,7 +383,7 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
           </span>
           <div>
             <p className="fs-18 font-extrabold text-slate-900">Masuk Tim</p>
-            <p className="fs-12 text-slate-500">Akun kasir dari pemilik usaha</p>
+            <p className="fs-12 text-slate-500">Akun tim dari pemilik usaha</p>
           </div>
         </div>
         {error && (
@@ -430,7 +427,6 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
           .
         </p>
       </form>
-      <TimInstall className="mt-5" />
     </div>
   );
 }
