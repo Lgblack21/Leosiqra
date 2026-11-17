@@ -103,6 +103,10 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    `{type, text, say}`) lalu jalankan `node promo/cek-kata.mjs <file>` — jangan
    menaksir jumlah kata manual. Exit ≠ 0 = revisi dulu (hook ≤ 6 kata, ≤ 25
    kata/scene, total ≤ 75; `--total N` kalau playbook memakai batas lebih ketat).
+   Sertakan `shot` di scene `device` dan `items` di scene `list`: skrip yang sama
+   mencocokkan nama fitur dengan judul layar yang direkam (mis. layar `recurring`
+   = "Transaksi Rutin", bukan "Transaksi Berulang") dan kutipan chip AI dengan
+   label chip di layar (mis. "Cek budget", bukan "Budget mana mau habis?").
 7. **Tower**: tulis `status/hari-ini` (stage 0), `metrik/ringkas`, dan
    `konten/<id>` (7 video terakhir, sudah termasuk rating & views kemarin);
    perbarui `otak/analisis` (+ `otak/promosi` hari Senin) — lihat TEAMS.md.
@@ -119,7 +123,8 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    `node promo/cek-kata.mjs script.json` (bukan ditaksir). Skrip yang sama
    mengecek `hashtags`: huruf kecil, tanpa dobel, dan typo dari daftar baku
    (`HASHTAG_BAKU`, mis. #atururang → ❌). Peringatan "di luar daftar baku" =
-   baca ulang ejaannya. Revisi sampai lolos.
+   baca ulang ejaannya. Nama fitur/chip AI yang beda dari layar rekaman = ❌
+   (judul layar dibaca langsung dari kode aplikasi). Revisi sampai lolos.
 3. Simpan draft `{stage: "naskah", …, script}`.
 4. **Tower**: `status/hari-ini` (stage 1) + perbarui `otak/konten` (pelajaran
    dari review: klaim/angka/hook yang diperbaiki).
