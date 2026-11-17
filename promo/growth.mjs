@@ -80,6 +80,8 @@ const SEEDS = [
   "aplikasi budgeting", "cara melunasi hutang", "aplikasi pencatat pengeluaran", "cara mencatat pengeluaran", "lapor spt tahunan", "aplikasi keuangan gratis",
   // seed dari nama fitur produk (Tabungan, Hutang & Piutang, Investasi, Laporan) — gap 12 seed lama sudah hampir habis
   "catatan tabungan", "catatan hutang piutang", "cara menghitung bunga deposito", "laporan keuangan pribadi",
+  // seed dari fitur Usahaku (kas usaha, bon pelanggan, Stok + HPP di laporan PRO, Pinjaman) — dicek ke kode 2026-11-17
+  "buku kas warung", "cara menghitung hpp", "catatan pinjaman", "cara mencatat stok barang",
 ];
 const MODIFIERS = ["", " cara", " contoh", " untuk", " gratis", " terbaik", " tips"];
 
