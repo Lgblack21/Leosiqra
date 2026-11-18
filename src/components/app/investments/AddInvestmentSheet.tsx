@@ -299,7 +299,7 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
                     : undefined
                 }
               >
-                <NumberField value={price} onChange={setPrice} placeholder="9000" ariaLabel="Harga per lembar" />
+                <NumberField value={price} onChange={setPrice} placeholder="mis. 9,000" ariaLabel="Harga per lembar" />
               </Field>
             </div>
             <p className="fs-11 text-slate-400 px-1">Di bursa Indonesia 1 lot = 100 lembar.</p>
@@ -321,7 +321,7 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
               <NumberField
                 value={principal}
                 onChange={setPrincipal}
-                placeholder="10000000"
+                placeholder="mis. 10,000,000"
                 ariaLabel="Pokok deposito"
               />
             </Field>
@@ -334,11 +334,11 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
               </Field>
             </div>
             <div>
-              <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Tenor</p>
+              <p className="block fs-12 font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Tenor</p>
               <Chips options={TENORS} value={tenor} onChange={setTenor} />
             </div>
             <div>
-              <p className="fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Saat jatuh tempo</p>
+              <p className="block fs-12 font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Saat jatuh tempo</p>
               <Chips options={MATURITY} value={maturity} onChange={setMaturity} />
             </div>
             {n(principal) > 0 && (
@@ -367,6 +367,12 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
               />
             </Field>
             <Chips options={UNITS} value={unit} onChange={setUnit} />
+            {/^gram$/i.test(unit) && /emas|antam|gold|logam mulia/i.test(name) && (
+              <p className="rounded-2xl bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-xs text-amber-800 dark:text-amber-200">
+                🥇 Nilai emas ikut harga emas otomatis setiap hari (harga dunia, atau harga buyback Antam yang kamu isi di
+                halaman Investasi). Cukup isi berapa gram dan harga belimu.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label={`Jumlah (${unit})`}>
                 <NumberField value={qty} onChange={setQty} placeholder="10" ariaLabel="Jumlah" />
@@ -375,7 +381,7 @@ export function AddInvestmentSheet({ isOpen, onClose, accounts, initialKind = 'S
                 <NumberField
                   value={unitPrice}
                   onChange={setUnitPrice}
-                  placeholder="1500000"
+                  placeholder="mis. 1,500,000"
                   ariaLabel="Harga per unit"
                 />
               </Field>

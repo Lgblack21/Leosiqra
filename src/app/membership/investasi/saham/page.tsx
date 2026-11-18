@@ -234,10 +234,7 @@ export default function SahamPage() {
             <span className="hidden md:inline">Refresh Harga</span>
           </button>
           <button
-            onClick={() => {
-              setEditingInvestment(undefined);
-              setShowModal(true);
-            }}
+            onClick={() => openModal('saham')}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
             <PlusCircle size={18} />

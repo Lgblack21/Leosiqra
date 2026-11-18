@@ -7,7 +7,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
 import { DepositModal } from '@/components/modals/DepositModal';
-import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
+import { AddInvestmentModal } from '@/components/kekayaan/AddInvestmentModal';
 import { SavingsModal } from '@/components/modals/SavingsModal';
 import { DebtModal } from '@/components/modals/DebtModal';
 import { TopUpModal } from '@/components/modals/TopUpModal';
@@ -47,16 +47,22 @@ export const GlobalModalWrapper = () => {
     <>
       <AddTransactionModal isOpen={activeModal === 'harian'} onClose={closeModal} userId={user.id} />
 
+      {/* Jual saham (ada data) tetap di form lama; tambah investasi baru pakai form yang lebih ramah (3.43). */}
       <StockInvestmentModal
-        isOpen={activeModal === 'saham'}
+        isOpen={activeModal === 'saham' && Boolean(modalData)}
         onClose={closeModal}
         userId={user.id}
         initialData={modalData ? (modalData as unknown as Investment) : undefined}
       />
+      <AddInvestmentModal
+        isOpen={(activeModal === 'saham' && !modalData) || activeModal === 'investasi_lain'}
+        initialKind={activeModal === 'saham' ? 'idx' : 'emas'}
+        onClose={closeModal}
+        onDeposito={() => openModal('deposito')}
+      />
 
       <DepositModal isOpen={activeModal === 'deposito'} onClose={closeModal} userId={user.id} />
 
-      <OtherInvestmentModal isOpen={activeModal === 'investasi_lain'} onClose={closeModal} userId={user.id} />
 
       <SavingsModal isOpen={activeModal === 'tabungan'} onClose={closeModal} userId={user.id} />
 

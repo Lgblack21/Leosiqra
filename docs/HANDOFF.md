@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232)
+Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232; siap: 3.43.0 form investasi)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,17 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-18 — 3.43.0 SIAP (tanpa SQL): form tambah investasi.** Permintaan Bos: kolom input lebih ramah. Hasil
+  audit: Catat transaksi (web `AddTransactionModal`, app `AddTransactionSheet`) sudah modern — tidak diubah. Yang
+  membingungkan = form lama `OtherInvestmentModal`/`StockInvestmentModal`. Sekarang tambah BARU di GlobalModalWrapper
+  (`saham` tanpa data, `investasi_lain`) & tombol Tambah di /membership/investasi/{saham,lainnya} → `AddInvestmentModal`
+  (kekayaan) dengan `initialKind`; form lama tetap untuk edit/jual. AddInvestmentModal: rekening otomatis terpilih,
+  keterangan "Tinggal …", panduan emas + harga/gram hari ini (dari refresh-prices). App: label sentence case
+  (`Field`, `AccountPicker`), `NumberField` → `NumberInput` (pemisah ribuan), petunjuk emas. Dites build + Playwright
+  (web emas tersimpan 5 g, app). Menunggu "gas". Catatan: `next build` di sesi agen kadang berhenti dengan
+  SecurityFatalError (nudge upgrade Next 16.4.2); ulangi build lolos; di CI tidak terpicu (cek ci-info). Bos belum
+  memutuskan upgrade Next.
 
 - **2026-11-18 — 3.42.0 LIVE (run #232, 3870aa5, tanpa SQL): nilai investasi ikut harga pasar.** Keluhan Bos: emas Antam tidak update.
   Akar: TIDAK ada mekanisme update nilai sama sekali (emas manual, saham/kripto hanya saat simpan). Worker:

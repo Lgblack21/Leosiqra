@@ -14,6 +14,7 @@ import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
 import { useCountUp } from '@/lib/hooks/useCountUp';
+import { useModal } from '@/context/ModalContext';
 
 // Deteksi posisi crypto dari teks bebas di "name"/"unit" (tidak ada field
 // simbol terstruktur untuk Investasi Lainnya) — kalau salah satu kata cocok
@@ -54,6 +55,7 @@ const detectCryptoId = (inv: Investment): string | null => {
 type LivePrice = { priceUsd: number; changePercent: number };
 
 export default function OtherInvestmentsPage() {
+  const { openModal } = useModal();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -272,11 +274,7 @@ export default function OtherInvestmentsPage() {
             <span className="hidden md:inline">Refresh Harga Crypto</span>
           </button>
           <button
-            onClick={() => {
-              setEditingInvestment(undefined);
-              setSellingInvestment(undefined);
-              setShowModal(true);
-            }}
+            onClick={() => openModal('investasi_lain')}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
             <PlusCircle size={18} />

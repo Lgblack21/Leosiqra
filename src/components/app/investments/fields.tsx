@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { lightTap } from '@/lib/haptics';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 export const inputClass =
   'w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-medium focus:outline-none focus:border-indigo-500';
@@ -9,7 +10,7 @@ export const inputClass =
 export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block fs-10 font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">{label}</span>
+      <span className="block fs-12 font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">{label}</span>
       {children}
       {hint ? <span className="block mt-1.5 px-1 fs-11 text-slate-400">{hint}</span> : null}
     </label>
@@ -29,9 +30,10 @@ export function NumberField({
   ariaLabel: string;
 }) {
   return (
-    <input
+    // Angka besar tampil dengan pemisah ribuan (1,500,000) supaya tidak salah ketik nol; nilai tetap angka polos.
+    <NumberInput
       value={value}
-      onChange={(e) => onChange(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))}
+      onChange={onChange}
       inputMode="decimal"
       placeholder={placeholder ?? '0'}
       aria-label={ariaLabel}

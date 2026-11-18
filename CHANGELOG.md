@@ -127,6 +127,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.41.1 | 16 Nov 2026 | Pasang aplikasi Tim lewat notifikasi |
 | 3.41.2 | 16 Nov 2026 | Pinjaman tanpa admin |
 | 3.42.0 | 17 Nov 2026 | Nilai emas, saham & kripto ikut harga pasar |
+| 3.43.0 | 18 Nov 2026 | Form tambah investasi lebih ramah |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -140,6 +141,21 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.43.0 — 2026-11-18 — Form tambah investasi lebih ramah
+
+- **Tambah investasi sekarang pakai satu form yang lebih mudah**, dari mana pun dibuka: tombol **+ Saham** dan
+  **+ Lainnya** di Investasiku, halaman Saham dan Investasi Lainnya, sampai Kekayaan. Pilih jenisnya lewat ikon (Saham
+  Indonesia, Kripto, Saham AS, Emas, Reksa dana, Obligasi, Deposito, Lainnya), lalu cari kode saham atau koin dengan harga
+  live. Gak ada lagi isian membingungkan seperti "Tipe transaksi", "Kategori investasi", satuan yang diketik sendiri, atau
+  upload logo.
+- **Mencatat emas jadi lebih jelas.** Form memberi tahu bahwa nilai emas ikut harga otomatis, menampilkan harga emas per
+  gram hari ini, dan ada tombol **Pakai sebagai harga beli**.
+- Rekening yang saldonya paling besar langsung terpilih. Kalau tombol simpan belum aktif, di atasnya ada keterangan apa
+  yang masih kurang (misalnya "Tinggal isi jumlah gram, isi harga beli").
+- Di aplikasi HP, label isian jadi kalimat biasa (bukan huruf kapital kecil), dan nominal besar tampil dengan pemisah
+  ribuan supaya gak salah ketik nol.
+- Edit dan jual investasi yang sudah ada tetap memakai form sebelumnya.
 
 ## 3.42.0 — 2026-11-17 — Nilai emas, saham & kripto ikut harga pasar
 

@@ -17,7 +17,8 @@ import { cn, formatMoney, toLocalDateString } from '@/lib/utils';
 // sumber & mencatat transaksi tertaut. Worker belum mengonversi mata uang posisi ↔ rekening, jadi
 // saham berharga USD hanya boleh dibayar dari rekening USD.
 
-type Kind = 'idx' | 'us' | 'crypto' | 'emas' | 'reksadana' | 'obligasi' | 'lainnya' | 'deposito';
+export type InvestKind = 'idx' | 'us' | 'crypto' | 'emas' | 'reksadana' | 'obligasi' | 'lainnya' | 'deposito';
+type Kind = InvestKind;
 type Pick = { symbol: string; name: string; logoUrl?: string; exchangeCode?: string; coinId?: string };
 type Live = { price: number; currency: string };
 
@@ -67,10 +68,13 @@ export function AddInvestmentModal({
   isOpen,
   onClose,
   onDeposito,
+  initialKind = 'idx',
 }: {
   isOpen: boolean;
   onClose: () => void;
   onDeposito: () => void;
+  /** Jenis yang langsung terpilih saat dibuka (mis. dari tombol "+ Saham" / "+ Lainnya"). */
+  initialKind?: Exclude<InvestKind, 'deposito'>;
 }) {
   const reduce = useReducedMotion();
   const { toast } = useFeedback();
@@ -94,6 +98,8 @@ export function AddInvestmentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const seq = useRef(0);
+  // Harga emas per gram yang dipakai menghitung nilai emas (buyback Antam yang diisi user, atau harga dunia).
+  const [goldRef, setGoldRef] = useState<{ perGram: number; source: 'buyback' | 'dunia' } | null>(null);
 
   const meta = KINDS.find((k) => k.id === kind)!;
   const isAuto = Boolean(meta.auto) && auto;
@@ -118,10 +124,32 @@ export function AddInvestmentModal({
   };
 
   useEffect(() => {
+    if (isOpen) reset(initialKind);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya saat form dibuka
+  }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen || kind !== 'emas' || goldRef) return;
+    let alive = true;
+    investmentService
+      .refreshPrices()
+      .then((r) => alive && r.gold.perGram && setGoldRef({ perGram: r.gold.perGram, source: r.gold.source }))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, kind, goldRef]);
+
+  useEffect(() => {
     if (!isOpen) return;
     accountService
       .getUserAccounts('session')
-      .then((a) => setAccounts(a.filter((x) => !isCreditAccountType(x.type))))
+      .then((a) => {
+        const list = a.filter((x) => !isCreditAccountType(x.type));
+        setAccounts(list);
+        // Rekening terpilih otomatis (yang saldonya terbesar) — sebelumnya tombol simpan mati tanpa penjelasan
+        // sampai rekening diketuk.
+        setAccountId((cur) => (cur && list.some((x) => x.id === cur) ? cur : ([...list].sort((x, y) => (Number(y.balance) || 0) - (Number(x.balance) || 0))[0]?.id ?? '')));
+      })
       .catch(() => setAccounts([]));
   }, [isOpen]);
 
@@ -201,7 +229,8 @@ export function AddInvestmentModal({
   const qtyNum = parseFloat(qty) || 0;
   const units = kind === 'idx' && lot ? qtyNum * 100 : qtyNum;
   const avgNum = parseFloat(avg) || 0;
-  const curNum = isAuto ? (live?.price ?? 0) : parseFloat(cur) || 0;
+  // Emas: nilai sekarang langsung pakai harga emas hari ini (sama dengan yang dipakai pembaruan otomatis).
+  const curNum = isAuto ? (live?.price ?? 0) : kind === 'emas' ? (goldRef?.perGram ?? 0) : parseFloat(cur) || 0;
   const cost = units * avgNum;
   const value = curNum > 0 ? units * curNum : 0;
   const gain = value > 0 ? value - cost : 0;
@@ -210,6 +239,13 @@ export function AddInvestmentModal({
   const lowBalance = account && !currencyMismatch && cost > (Number(account.balance) || 0);
   const label = isAuto ? picked?.symbol : name.trim();
   const canSave = Boolean(label) && units > 0 && avgNum > 0 && accountId && !currencyMismatch && !saving;
+  // Kenapa tombol simpan belum aktif — dikatakan terus terang di dekat tombolnya.
+  const missing = [
+    !label && (isAuto ? (isStock ? 'pilih kode saham' : 'pilih koin') : isStock ? 'isi kode saham' : 'isi nama'),
+    !(units > 0) && `isi jumlah ${kind === 'idx' ? (lot ? 'lot' : 'lembar') : UNIT[kind]}`,
+    !(avgNum > 0) && 'isi harga beli',
+    !accountId && 'pilih rekening',
+  ].filter(Boolean) as string[];
 
   const save = async () => {
     if (!canSave || !label) return;
@@ -350,9 +386,35 @@ export function AddInvestmentModal({
             </div>
           </LayoutGroup>
         ) : (
-          <p className="rounded-2xl bg-amber-50 px-3.5 py-2.5 fs-12 text-amber-800">
-            Harga {meta.label.toLowerCase()} diisi manual — belum ada sumber harga resmi yang bisa diambil otomatis.
-          </p>
+          kind === 'emas' ? (
+            <div className="space-y-2 rounded-2xl bg-amber-50 px-3.5 py-3 fs-12 text-amber-900">
+              <p>
+                Cukup isi berapa gram dan harga belimu. <b>Nilainya ikut harga emas otomatis</b> setiap hari
+                {goldRef?.source === 'buyback' ? ' (pakai harga buyback Antam yang kamu isi di Investasiku).' : ' (harga emas dunia, perkiraan — bisa diganti harga buyback Antam di Investasiku).'}
+              </p>
+              {goldRef && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>
+                    Hari ini ≈ <b>{formatMoney(goldRef.perGram, 'IDR')}/gram</b>
+                  </span>
+                  {!avg && (
+                    <button
+                      type="button"
+                      onClick={() => setAvg(String(goldRef.perGram))}
+                      className="rounded-full bg-white px-3 py-1 font-bold text-amber-800 ring-1 ring-amber-200"
+                    >
+                      Pakai sebagai harga beli
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="rounded-2xl bg-slate-50 px-3.5 py-2.5 fs-12 text-slate-600">
+              Nilai {meta.label.toLowerCase()} kamu isi sendiri — belum ada sumber harga otomatis. Isi &ldquo;harga
+              sekarang&rdquo; kalau tahu, atau biarkan kosong.
+            </p>
+          )
         )}
 
         {isAuto ? (
@@ -529,7 +591,7 @@ export function AddInvestmentModal({
                 </label>
                 <NumberInput value={avg} onChange={setAvg} placeholder="0" className={field} />
               </div>
-              {!isAuto && (
+              {!isAuto && kind !== 'emas' && (
                 <div className="col-span-2 space-y-2">
                   <label className={lbl}>
                     Harga sekarang / {kind === 'idx' || kind === 'us' ? 'lembar' : UNIT[kind]}{' '}
@@ -671,6 +733,9 @@ export function AddInvestmentModal({
           </motion.div>
         )}
 
+        {!saving && missing.length > 0 && (
+          <p className="text-center fs-12 text-slate-500">Tinggal {missing.join(', ')}.</p>
+        )}
         <button
           type="button"
           onClick={save}
