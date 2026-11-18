@@ -23,9 +23,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   CHANGELOG (3.34.0–3.38.0, 3.41.2, 3.44.0, 3.45.0, 3.45.1), versi campuran dibersihkan (3.39.0 logo, 3.40.0 kas &
   kartu staf, 3.41.0 PWA Tim, 3.44.1 kartu staf), 3.45.2 jadi "Perbaikan kecil". Mulai sekarang JANGAN menulis fitur
   pinjaman di CHANGELOG. Fitur & kodenya TIDAK dihapus. Keputusan Bos: fitur TETAP terbuka untuk semua user;
-  GitHub Release/tag versi pinjaman BOLEH dihapus — belum terlaksana (perlu izin aksi hapus; rencana: input
-  `hapus_versi` di sync-releases.yml lalu jalankan dengan 3.34.0 3.35.0 3.36.0 3.37.0 3.38.0 3.41.2 3.44.0 3.45.0 3.45.1,
-  perbarui_catatan=ya untuk membersihkan 3.39.0/3.40.0/3.41.0/3.44.1/3.45.2).
+  GitHub Release + tag versi pinjaman SUDAH DIHAPUS (Sinkron Release run #2, input baru `hapus_versi`:
+  3.34.0–3.38.0, 3.41.2, 3.44.0, 3.45.0, 3.45.1 → 404); catatan Release 3.39.0/3.40.0/3.41.0/3.44.1/3.45.2 diperbarui
+  dari CHANGELOG yang bersih.
 
 - **2026-11-18 — 3.45.2 LIVE (tanpa SQL): koreksi jadwal.** Keluhan Bos (Juli Agustina): jadwal mulai 18 padahal bayar
   sejak 17. Jadwal kini boleh `>= disbursed_on` (create & PUT jadwal); PUT jadwal `all:true` boleh mengubah tanggal yang
