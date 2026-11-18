@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.2 + uang dipisah per jenis, tanpa catatan rilis)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.2 + uang dipisah per jenis; 3.46.0 sesuaikan saldo siap, belum deploy)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-18 — 3.46.0 SIAP (branch claude/rekening-adjustment-20261118, BELUM deploy, tanpa SQL): Sesuaikan saldo rekening.**
+  `POST /api/member/accounts/:id/adjust {actual, expected, note, request_id}` (handleAdjustAccountToActual): baris transaksi
+  type 'transfer', category 'Penyesuaian saldo', sub_category 'Penyesuaian Masuk/Keluar', target NULL, payload {adjustRef, before, after}
+  → netral di semua laporan (sama dengan transfer), dibalik otomatis saat dihapus (side regex di buildReversalStatements; findTransferPair
+  tidak memasangkan karena note tanpa "[..]"). Guard: idempoten via adjustRef, 409 kalau saldo berubah sejak dilihat (expected), tolak
+  kartu kredit. UI: tombol "Sesuaikan saldo" di AccountDetail (web /membership/rekening). Juga: `/balance` lama kini menolak delta
+  non-angka. Belum ada di app /app (wallet) — tambah kalau Bos minta.
 - **2026-11-18 — Kas simpan pinjam: Admin/Simpanan nama+nominal + "Uang kas kita" LIVE run #239 3f8b476 (tanpa SQL, TANPA catatan rilis/bump, versi tetap 3.45.2).**
   Permintaan Bos: filter Admin & Simpanan cukup nama + nominal (admin hijau), total admin + cicilan = "Uang kas kita".
   `uangPinjaman()`/`RincianUang` di BerandaUsaha: admin = pinjam_admin + fees 'admin' pinjam_cair (pinjaman lama tanpa fees → seluruh

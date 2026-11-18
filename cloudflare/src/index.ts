@@ -5556,6 +5556,7 @@ async function handleAdjustAccountBalance(request: Request, env: Env, accountId:
 
   const payload = await parseJson<{ delta?: number }>(request);
   const delta = Number(payload.delta ?? 0);
+  if (!Number.isFinite(delta) || Math.abs(delta) > 1e15) return json({ error: "Perubahan saldo tidak valid." }, { status: 400 });
   const result = await env.DB.prepare(
     `UPDATE accounts
         SET balance = balance + ?
@@ -5569,6 +5570,79 @@ async function handleAdjustAccountBalance(request: Request, env: Env, accountId:
   }
 
   return json({ ok: true });
+}
+
+// POST /api/member/accounts/:id/adjust { actual, expected, note?, request_id, date? }
+// Koreksi saldo rekening ke saldo sebenarnya. Dicatat sebagai baris netral bertipe
+// "transfer" sisi "Penyesuaian Masuk/Keluar" (bukan pemasukan/pengeluaran, jadi
+// laporan tidak terpengaruh) dan dibalik otomatis saat dihapus (buildReversalStatements).
+// Aman dikirim dua kali (adjustRef) dan gagal kalau saldo berubah sejak dilihat (expected).
+async function handleAdjustAccountToActual(request: Request, env: Env, accountId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ actual?: unknown; expected?: unknown; note?: unknown; request_id?: unknown; date?: unknown }>(request);
+  const actual = Math.round(Number(payload.actual) * 100) / 100;
+  const expected = Number(payload.expected);
+  const ref = String(payload.request_id ?? "").trim();
+  if (!Number.isFinite(actual) || Math.abs(actual) > 1e15) return json({ error: "Saldo sebenarnya tidak valid." }, { status: 400 });
+  if (!Number.isFinite(expected)) return json({ error: "Muat ulang halaman lalu coba lagi." }, { status: 400 });
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(ref)) return json({ error: "Permintaan tidak valid. Muat ulang halaman lalu coba lagi." }, { status: 400 });
+  const rawDate = String(payload.date ?? "");
+  const today = todayWIB();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && rawDate <= today ? rawDate : today;
+  const userNote = String(payload.note ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+
+  const account = await env.DB.prepare("SELECT id, name, type, currency, balance FROM accounts WHERE id = ? AND user_id = ?")
+    .bind(accountId, userId)
+    .first<{ id: string; name: string; type: string | null; currency: string | null; balance: number | null }>();
+  if (!account) return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
+  if (account.type === "Credit Card" || account.type === "kartu") {
+    return json({ error: "Tagihan kartu kredit diperbaiki lewat edit kartu, bukan penyesuaian saldo." }, { status: 400 });
+  }
+
+  const refTaken = `CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.adjustRef') END = ?`;
+  const already = await env.DB.prepare(`SELECT id FROM transactions WHERE user_id = ? AND ${refTaken} LIMIT 1`).bind(userId, ref).first<{ id: string }>();
+  if (already) return json({ ok: true, duplicate: true, id: already.id });
+
+  const before = Math.round((Number(account.balance) || 0) * 100) / 100;
+  if (Math.abs(before - expected) >= 0.005) {
+    return json({ error: "Saldo rekening ini baru saja berubah. Cek lagi angkanya lalu simpan ulang.", balance: before }, { status: 409 });
+  }
+  const delta = Math.round((actual - before) * 100) / 100;
+  if (delta === 0) return json({ error: "Saldo sudah sama dengan yang tercatat — tidak ada yang perlu disesuaikan." }, { status: 400 });
+
+  const side = delta > 0 ? "Masuk" : "Keluar";
+  const amount = Math.abs(delta);
+  const currency = account.currency || "IDR";
+  const amountIdr = await resolveIdrAmount(currency, amount, undefined);
+  const now = nowIso();
+  const iso = `${date}T00:00:00.000Z`;
+  const displayDate = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+  const note = `Penyesuaian saldo${userNote ? ` · ${userNote}` : ""}`;
+  const meta = JSON.stringify({ adjustRef: ref, adjustment: true, before, after: actual });
+  const id = generateId();
+  const balanceOk = "ABS(COALESCE(balance, 0) - ?) < 0.005";
+
+  const res = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, target_account_id,
+                                 date, display_date, note, status, payload_json, created_at, updated_at)
+       SELECT ?, ?, 'transfer', ?, ?, 'Penyesuaian saldo', ?, ?, ?, NULL, ?, ?, ?, 'VERIFIED', ?, ?, ?
+        WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND ${refTaken})
+          AND EXISTS (SELECT 1 FROM accounts WHERE id = ? AND user_id = ? AND ${balanceOk})`
+    ).bind(id, userId, amount, amountIdr, `Penyesuaian ${side}`, currency, accountId, iso, displayDate, note, meta, now, now, userId, ref, accountId, userId, before),
+    env.DB.prepare(
+      `UPDATE accounts SET balance = ROUND(balance + ?, 2)
+        WHERE id = ? AND user_id = ? AND ${balanceOk} AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
+    ).bind(delta, accountId, userId, before, id, userId),
+  ]);
+  if (!res[0].meta.changes) {
+    const dup = await env.DB.prepare(`SELECT id FROM transactions WHERE user_id = ? AND ${refTaken} LIMIT 1`).bind(userId, ref).first<{ id: string }>();
+    if (dup) return json({ ok: true, duplicate: true, id: dup.id });
+    return json({ error: "Saldo rekening ini baru saja berubah. Cek lagi angkanya lalu simpan ulang." }, { status: 409 });
+  }
+  return json({ ok: true, id, delta, balance: actual }, { status: 201 });
 }
 
 async function handleListBudgets(request: Request, env: Env) {
@@ -24429,6 +24503,9 @@ const worker = {
         const accountPath = url.pathname.slice("/api/member/accounts/".length);
         if (accountPath.endsWith("/pay") && request.method === "POST") {
           return await handlePayCreditCard(request, env, accountPath.slice(0, -"/pay".length));
+        }
+        if (accountPath.endsWith("/adjust") && request.method === "POST") {
+          return await handleAdjustAccountToActual(request, env, accountPath.slice(0, -"/adjust".length));
         }
         if (accountPath.endsWith("/balance") && request.method === "POST") {
           const accountId = accountPath.slice(0, -"/balance".length);

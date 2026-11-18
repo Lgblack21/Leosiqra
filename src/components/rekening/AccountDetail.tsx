@@ -1,7 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Edit2, Scale, Trash2 } from 'lucide-react';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { useFeedback } from '@/components/ui/Feedback';
+import { accountService } from '@/lib/services/accountService';
 import { Modal } from '@/components/ui/Modal';
 import type { Account } from '@/lib/services/accountService';
 import type { Transaction } from '@/lib/services/transactionService';
@@ -40,6 +44,25 @@ export function AccountDetail({
 }) {
   const acc = account;
   const cur = acc?.currency || 'IDR';
+  const { toast } = useFeedback();
+  // Form "Sesuaikan saldo": isi saldo sebenarnya (cek m-banking/dompet), selisihnya dicatat.
+  const [adjRaw, setAdj] = useState<{ accId: string; actual: string; note: string; rid: string; saving: boolean; error: string } | null>(null);
+  const adj = adjRaw && adjRaw.accId === acc?.id ? adjRaw : null; // form tidak terbawa ke rekening lain
+  const bukaAdj = () =>
+    setAdj({ accId: acc?.id ?? '', actual: '', note: '', rid: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, saving: false, error: '' });
+  const adjActual = adj && adj.actual !== '' ? Number(adj.actual) : null;
+  const adjDelta = acc && adjActual !== null && Number.isFinite(adjActual) ? Math.round((adjActual - (acc.balance || 0)) * 100) / 100 : null;
+  const simpanAdj = async () => {
+    if (!acc?.id || !adj || adjActual === null || adjDelta === null || adjDelta === 0 || adj.saving) return;
+    setAdj({ ...adj, saving: true, error: '' });
+    try {
+      await accountService.adjustToActual(acc.id, { actual: adjActual, expected: acc.balance || 0, note: adj.note.trim(), requestId: adj.rid });
+      toast.success(`Saldo ${acc.name} disesuaikan ${adjDelta > 0 ? '+' : '−'}${formatMoney(Math.abs(adjDelta), cur)}`);
+      setAdj(null);
+    } catch (e) {
+      setAdj((p) => (p ? { ...p, saving: false, error: e instanceof Error ? e.message : 'Gagal menyimpan. Coba lagi.' } : p));
+    }
+  };
   const money = (n: number) => (hidden ? '••••••' : formatMoney(n, cur));
 
   const own = acc ? transactions.filter((t) => t.accountId === acc.id && t.type !== 'debt') : [];
@@ -97,6 +120,72 @@ export function AccountDetail({
               >
                 {money(acc.balance || 0)}
               </p>
+              {!adj ? (
+                <button
+                  type="button"
+                  onClick={bukaAdj}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 fs-13 font-bold text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300"
+                >
+                  <Scale size={15} /> Sesuaikan saldo
+                </button>
+              ) : (
+                <div className="mt-3 space-y-3 rounded-2xl bg-white p-3.5 ring-1 ring-slate-200">
+                  <div>
+                    <p className="fs-14 font-extrabold text-slate-900">Sesuaikan saldo</p>
+                    <p className="fs-12 text-slate-500">Isi saldo yang benar sesuai m-banking atau dompet. Selisihnya dicatat sebagai penyesuaian — tidak dihitung pemasukan atau pengeluaran.</p>
+                  </div>
+                  <label className="block">
+                    <span className="fs-12 font-semibold text-slate-500">Saldo sebenarnya ({cur})</span>
+                    <NumberInput
+                      value={adj.actual}
+                      onChange={(v) => setAdj({ ...adj, actual: v, error: '' })}
+                      placeholder="0"
+                      autoFocus
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 fsh-20 font-extrabold tabular-nums text-slate-900 outline-none focus:border-slate-400"
+                    />
+                  </label>
+                  {adjDelta !== null && (
+                    <p
+                      className={cn(
+                        'flex justify-between rounded-xl px-3 py-2 fs-13 font-bold',
+                        adjDelta === 0 ? 'bg-slate-50 text-slate-500' : adjDelta > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700',
+                      )}
+                    >
+                      <span>{adjDelta === 0 ? 'Sudah sama, tidak ada selisih' : adjDelta > 0 ? 'Saldo naik' : 'Saldo turun'}</span>
+                      {adjDelta !== 0 && (
+                        <span className="tabular-nums">
+                          {adjDelta > 0 ? '+' : '−'}
+                          {formatMoney(Math.abs(adjDelta), cur)}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  <label className="block">
+                    <span className="fs-12 font-semibold text-slate-500">Catatan (opsional)</span>
+                    <input
+                      value={adj.note}
+                      maxLength={120}
+                      onChange={(e) => setAdj({ ...adj, note: e.target.value })}
+                      placeholder="mis. biaya admin bank, lupa catat"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 fs-14 text-slate-900 outline-none focus:border-slate-400"
+                    />
+                  </label>
+                  {adj.error && <p className="fs-12 font-semibold text-rose-600">{adj.error}</p>}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setAdj(null)} className="flex-1 rounded-full bg-slate-100 py-2.5 fs-13 font-bold text-slate-600">
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={simpanAdj}
+                      disabled={adj.saving || adjDelta === null || adjDelta === 0}
+                      className="flex-1 rounded-full bg-slate-900 py-2.5 fs-13 font-bold text-white disabled:opacity-40"
+                    >
+                      {adj.saving ? 'Menyimpan…' : 'Simpan'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

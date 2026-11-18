@@ -38,6 +38,7 @@ const RULES: { keys: string[]; emoji: string; tile: string }[] = [
   { keys: ['bonus', 'thr', 'hadiah'], emoji: '🎁', tile: 'bg-pink-50' },
   { keys: ['investasi', 'saham', 'reksa', 'deposito', 'emas', 'dividen', 'bunga'], emoji: '📈', tile: 'bg-violet-50' },
   { keys: ['tabungan', 'nabung'], emoji: '🐷', tile: 'bg-pink-50' },
+  { keys: ['penyesuaian'], emoji: '⚖️', tile: 'bg-slate-100' },
   { keys: ['transfer', 'top up', 'topup'], emoji: '🔁', tile: 'bg-slate-100' },
   { keys: ['usaha', 'bisnis', 'freelance', 'penjualan', 'pendapatan'], emoji: '💰', tile: 'bg-emerald-50' },
 ];

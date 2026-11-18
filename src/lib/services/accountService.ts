@@ -184,6 +184,19 @@ export const accountService = {
     notifyCollectionChanged('accounts');
   },
 
+  // Koreksi saldo ke saldo sebenarnya: server mencatat baris "Penyesuaian saldo"
+  // (netral, tidak masuk pemasukan/pengeluaran) + mengubah saldo dalam satu batch.
+  // expected = saldo yang sedang dilihat user; requestId sama = aman dikirim ulang.
+  async adjustToActual(id: string, input: { actual: number; expected: number; note?: string; requestId: string }) {
+    const r = await cloudflareApi<{ ok: boolean; delta?: number; duplicate?: boolean }>(`/api/member/accounts/${id}/adjust`, {
+      method: 'POST',
+      json: { actual: input.actual, expected: input.expected, note: input.note ?? '', request_id: input.requestId },
+    });
+    notifyCollectionChanged('accounts');
+    notifyCollectionChanged('transactions');
+    return r;
+  },
+
   // Index tiap id di array jadi sort_order barunya (berlaku di semua daftar rekening).
   async reorderAccounts(ids: string[]) {
     await cloudflareApi('/api/member/accounts/reorder', {
