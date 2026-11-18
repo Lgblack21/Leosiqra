@@ -11,6 +11,10 @@ on:
         description: 'Perbarui juga catatan Release yang sudah ada (ya/tidak)'
         default: 'ya'
         required: true
+      hapus_versi:
+        description: 'Hapus Release + tag versi ini (pisahkan spasi, mis. "3.34.0 3.35.0"). Kosongkan kalau tidak ada.'
+        default: ''
+        required: false
 
 permissions:
   contents: write
@@ -26,11 +30,32 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       PERBARUI: ${{ inputs.perbarui_catatan }}
+      HAPUS: ${{ inputs.hapus_versi }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+
+      # Versi yang catatannya sudah dikeluarkan dari CHANGELOG (mis. fitur pribadi) — Release & tag-nya ikut dihapus.
+      # Hanya versi yang memang TIDAK ada lagi di CHANGELOG.md yang boleh dihapus (pengaman salah ketik).
+      - name: Hapus Release yang diminta
+        if: ${{ inputs.hapus_versi != '' }}
+        run: |
+          set -euo pipefail
+          for V in $HAPUS; do
+            if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "lewati '$V' (bukan nomor versi)"; continue; fi
+            if grep -qE "^## $V " CHANGELOG.md; then echo "v$V masih ada di CHANGELOG.md — tidak dihapus"; continue; fi
+            if gh release view "v$V" >/dev/null 2>&1; then
+              gh release delete "v$V" --cleanup-tag --yes
+              echo "v$V: Release + tag dihapus"
+            elif git ls-remote --exit-code --tags origin "refs/tags/v$V" >/dev/null 2>&1; then
+              git push origin ":refs/tags/v$V"
+              echo "v$V: tag dihapus"
+            else
+              echo "v$V: tidak ada"
+            fi
+          done
 
       - name: Sinkronkan
         run: |
