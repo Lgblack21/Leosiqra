@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232; siap: 3.43.0 + 3.44.0)
+Terakhir diperbarui: 2026-11-18 (live: 3.44.0 pinjaman bulanan/lunas/tabungan — run #233)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.44.0 SIAP (tanpa SQL, satu rilis dengan 3.43.0 yang belum deploy): pinjaman bulanan, bayar lunas,
+- **2026-11-18 — 3.44.0 LIVE (run #233, 1a0d923, tanpa SQL, bersama 3.43.0): pinjaman bulanan, bayar lunas,
   tabungan.** `frequency` + `bulanan` (kolom tanpa CHECK); `buatJadwal` bulanan (tgl sama, akhir bulan, libur → maju).
   Loans POST: `total` opsional (syarat angsuran×(kali−1) < total ≤ angsuran×kali → angsuran terakhir lebih kecil),
   `savings` → entri `simpanan_masuk` (TANPA gerak kas; cair net = pokok − admin potong − tabungan; fee + payload.fees).
@@ -28,16 +28,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   pelunasan memulihkan total & menghapus diskon; hapus diskon/simpanan_masuk langsung ditolak; batal tarik → kas +.
   Hapus pinjaman ditolak kalau tabungannya sudah diambil. Petugas: settle tanpa potongan, tarik 403. Catatan: potongan
   menurunkan total → jasa periode lama di Laporan ikut sedikit turun (proporsional). Dites wrangler lokal (semua
-  skenario + saldo kas) + Playwright. Menunggu "gas".
+  skenario + saldo kas) + Playwright. Smoke live bersih; tarik tanpa login 401. **Belum**: data asli.
 
-- **2026-11-18 — 3.43.0 SIAP (tanpa SQL): form tambah investasi.** Permintaan Bos: kolom input lebih ramah. Hasil
+- **2026-11-18 — 3.43.0 LIVE (run #233, bersama 3.44.0): form tambah investasi.** Permintaan Bos: kolom input lebih ramah. Hasil
   audit: Catat transaksi (web `AddTransactionModal`, app `AddTransactionSheet`) sudah modern — tidak diubah. Yang
   membingungkan = form lama `OtherInvestmentModal`/`StockInvestmentModal`. Sekarang tambah BARU di GlobalModalWrapper
   (`saham` tanpa data, `investasi_lain`) & tombol Tambah di /membership/investasi/{saham,lainnya} → `AddInvestmentModal`
   (kekayaan) dengan `initialKind`; form lama tetap untuk edit/jual. AddInvestmentModal: rekening otomatis terpilih,
   keterangan "Tinggal …", panduan emas + harga/gram hari ini (dari refresh-prices). App: label sentence case
   (`Field`, `AccountPicker`), `NumberField` → `NumberInput` (pemisah ribuan), petunjuk emas. Dites build + Playwright
-  (web emas tersimpan 5 g, app). Menunggu "gas". Catatan: `next build` di sesi agen kadang berhenti dengan
+  (web emas tersimpan 5 g, app). Catatan: `next build` di sesi agen kadang berhenti dengan
   SecurityFatalError (nudge upgrade Next 16.4.2); ulangi build lolos; di CI tidak terpicu (cek ci-info). Bos belum
   memutuskan upgrade Next.
 
