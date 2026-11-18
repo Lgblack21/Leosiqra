@@ -1,4 +1,4 @@
-// Hitungan usaha Pinjaman (harian/mingguan) — docs/rancangan/usahaku-pinjaman.md bagian 4.
+// Hitungan usaha Pinjaman (harian/mingguan/bulanan) — docs/rancangan/usahaku-pinjaman.md bagian 4.
 // Semua rupiah bulat. Jadwal dibuat di sini (melompati tanggal merah/Minggu) lalu dikunci server saat disimpan.
 import { liburPada, parseYmd, tahunTersedia, ymd } from '@/lib/hariLibur';
 import type { Loan, LoanPayment, LoanReport, LoanReportRow } from '@/lib/services/shopLoanService';
@@ -19,10 +19,24 @@ export const isLiburTagih = (d: Date, o: LiburOpsi) =>
  * Harian: tiap hari yang bukan libur. Mingguan: tiap 7 hari dari tanggal pertama; kalau jatuh di hari libur,
  * digeser ke hari tagih berikutnya (minggu berikutnya tetap dihitung dari jadwal asal, tidak ikut bergeser).
  */
-export function buatJadwal(first: string, count: number, frequency: 'harian' | 'mingguan', o: LiburOpsi): string[] {
+export function buatJadwal(first: string, count: number, frequency: 'harian' | 'mingguan' | 'bulanan', o: LiburOpsi): string[] {
   const out: string[] = [];
   if (!first || count < 1) return out;
   const start = parseYmd(first);
+  if (frequency === 'bulanan') {
+    // Tanggal yang sama tiap bulan (tgl 29–31 → akhir bulan kalau bulannya lebih pendek); hari libur → hari tagih berikutnya.
+    const day = start.getDate();
+    for (let i = 0; i < count; i++) {
+      const y = start.getFullYear();
+      const m = start.getMonth() + i;
+      const last = new Date(y, m + 1, 0).getDate();
+      let d = new Date(y, m, Math.min(day, last));
+      for (let g = 0; g < 14 && isLiburTagih(d, o); g++) d = plus(d, 1);
+      const s = ymd(d);
+      out.push(out.length && s <= out[out.length - 1] ? ymd(plus(parseYmd(out[out.length - 1]), 1)) : s);
+    }
+    return out;
+  }
   if (frequency === 'harian') {
     let d = start;
     for (let guard = 0; out.length < count && guard < count * 3 + 60; guard++, d = plus(d, 1)) {
@@ -174,3 +188,16 @@ export function rekapLaporan(r: LoanReport) {
   };
 }
 export type RekapLaporan = ReturnType<typeof rekapLaporan>;
+
+/**
+ * Angsuran per kali dari total kembali (dibulatkan ke atas ke ribuan, kalau bisa) — sisa pembulatan masuk angsuran
+ * terakhir yang lebih kecil. Syarat server: angsuran × (kali − 1) < total ≤ angsuran × kali.
+ */
+export function angsuranDariTotal(total: number, count: number) {
+  if (!(total > 0) || !(count > 0)) return 0;
+  for (const step of [1000, 100, 1]) {
+    const a = Math.ceil(total / count / step) * step;
+    if (a * (count - 1) < total) return a;
+  }
+  return Math.ceil(total / count);
+}

@@ -21,7 +21,7 @@ import { liburPada, liburStore, parseYmd } from '@/lib/hariLibur';
 import { muatHariLibur } from '@/lib/hariLiburApi';
 import type { Shop } from '@/lib/services/shopService';
 import { shopBookService, type ShopBook } from '@/lib/services/shopBookService';
-import { shopLoanService, type Borrower, type Loan, type LoanBook } from '@/lib/services/shopLoanService';
+import { shopLoanService, type Borrower, type Frekuensi, type Loan, type LoanBook } from '@/lib/services/shopLoanService';
 import {
   buatJadwal,
   isLiburTagih,
@@ -31,6 +31,7 @@ import {
   statusPinjaman,
   tahunTanpaData,
   type StatusPinjaman,
+  angsuranDariTotal,
 } from '@/lib/usaha/pinjaman';
 import { usePlan } from '@/lib/usePlan';
 import { cn, formatIDR } from '@/lib/utils';
@@ -53,6 +54,13 @@ const tgl = (s: string, hari = false) => {
   const d = parseYmd(s);
   return `${hari ? `${HARI[d.getDay()]}, ` : ''}${d.getDate()} ${BULAN[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 };
+/** Tanggal yang sama bulan depan (tgl 29–31 → akhir bulan kalau bulannya lebih pendek). */
+const addMonths = (s: string, n: number) => {
+  const d = parseYmd(s);
+  const last = new Date(d.getFullYear(), d.getMonth() + n + 1, 0).getDate();
+  const x = new Date(d.getFullYear(), d.getMonth() + n, Math.min(d.getDate(), last));
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+};
 const addDays = (s: string, n: number) => {
   const d = parseYmd(s);
   d.setDate(d.getDate() + n);
@@ -72,7 +80,8 @@ type Form =
   | { k: 'geser'; loanId: string }
   | { k: 'daftar'; b?: Borrower }
   | { k: 'kartu'; id: string }
-  | { k: 'borrower'; b?: Borrower };
+  | { k: 'borrower'; b?: Borrower }
+  | { k: 'tarik'; b: Borrower };
 
 export function PinjamanView({
   shop,
@@ -224,6 +233,12 @@ export function PinjamanView({
             'text-emerald-700 dark:text-emerald-300',
           )}
           {stat('Peminjam aktif', String(aktif.length), `${rows.filter((r) => r.st.telat > 0).length} nunggak`)}
+          {data.borrowers.some((b) => b.savings > 0) &&
+            stat(
+              'Tabungan anggota',
+              formatIDR(data.borrowers.reduce((a, b) => a + b.savings, 0)),
+              'dipegang di kas, milik anggota',
+            )}
         </div>
         <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <div className="flex items-center justify-between gap-3">
@@ -478,8 +493,18 @@ export function PinjamanView({
                       {l && st ? `aktif · sisa ${formatIDR(st.sisa)}${st.telat ? ` · telat ${st.telat} hr` : ''}` : 'tidak ada pinjaman aktif'}
                       {b.wa ? ` · ${b.wa}` : ''}
                     </span>
+                    {b.savings > 0 && (
+                      <span className="mt-0.5 inline-block rounded-md bg-sky-50 px-1.5 py-0.5 fs-11 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                        Tabungan {formatIDR(b.savings)}
+                      </span>
+                    )}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
+                    {b.savings > 0 && !petugas && (
+                      <button type="button" onClick={() => setForm({ k: 'tarik', b })} className="rounded-full bg-sky-50 px-3 py-1.5 fs-12 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                        Tarik
+                      </button>
+                    )}
                     {anggota && !b.registered && (
                       <button type="button" onClick={() => setForm({ k: 'daftar', b })} disabled={isPro === false} className="rounded-full bg-amber-500 px-3 py-1.5 fs-12 font-bold text-white disabled:opacity-40">
                         Lengkapi
@@ -535,6 +560,8 @@ export function PinjamanView({
               : 'Daftar anggota baru'
             : form?.k === 'kartu'
               ? 'Kartu anggota'
+          : form?.k === 'tarik'
+          ? `Tarik tabungan · ${form.b.name}`
           : form?.k === 'borrower'
           ? form.b
             ? 'Ubah peminjam'
@@ -561,6 +588,7 @@ export function PinjamanView({
         )}
         {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} petugas={petugas} onDone={close} />}
         {form?.k === 'borrower' && <BorrowerForm shop={shop} b={form.b} onDone={close} />}
+        {form?.k === 'tarik' && <TarikForm shop={shop} b={form.b} kas={kas} onDone={close} />}
         {form?.k === 'daftar' && (
           <AnggotaWizard
             key={form.b?.id ?? 'baru'}
@@ -618,6 +646,53 @@ export function PinjamanView({
           />
         )}
       </UsahaSheet>
+    </div>
+  );
+}
+
+// ── Form: anggota mengambil tabungan (kas keluar) ─────────────────────────────────
+function TarikForm({ shop, b, kas, onDone }: { shop: Shop; b: Borrower; kas: ShopBook['accounts']; onDone: (m?: string) => void }) {
+  const [amount, setAmount] = useState(b.savings);
+  const [accountId, setAccountId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [requestId] = useState(() => crypto.randomUUID());
+  const save = async () => {
+    if (!amount) return setError('Isi berapa yang diambil.');
+    if (amount > b.savings) return setError(`Tabungan ${b.name} cuma ${formatIDR(b.savings)}.`);
+    setBusy(true);
+    setError('');
+    try {
+      await shopLoanService.tarikTabungan(shop.id, b.id, { requestId, amount, accountId });
+      onDone(`Tabungan ${formatIDR(amount)} diambil ${b.name}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-sky-50 p-3 fs-13 text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+        Saldo tabungan <b>{formatIDR(b.savings)}</b>
+      </div>
+      <label className="block">
+        <span className={labelCls}>Diambil</span>
+        <input value={moneyText(amount)} onChange={(e) => setAmount(money(e.target.value))} inputMode="numeric" className={cn(fieldCls, 'fsh-22 font-extrabold tabular-nums')} />
+      </label>
+      <label className="block">
+        <span className={labelCls}>Uang keluar dari kas</span>
+        <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={fieldCls}>
+          {kas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name} · {formatIDR(a.balance)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
+      <button type="button" onClick={save} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-sky-600 py-3.5 fs-15 font-extrabold text-white hover:bg-sky-700 disabled:opacity-50">
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Wallet size={18} />} Serahkan {amount > 0 ? formatIDR(amount) : 'tabungan'}
+      </button>
     </div>
   );
 }
@@ -710,8 +785,13 @@ function LoanForm({
   // 'tanpa' = pinjaman tanpa biaya admin (disimpan sebagai admin 0, mode potong).
   const [adminMode, setAdminMode] = useState<'potong' | 'terpisah' | 'tanpa'>('potong');
   const admin = adminMode === 'tanpa' ? 0 : adminInput;
-  const [frequency, setFrequency] = useState<'harian' | 'mingguan'>('harian');
-  const [installment, setInstallment] = useState(0);
+  const [frequency, setFrequency] = useState<Frekuensi>('harian');
+  // Cara isi: angsuran per kali (lama), total kembali (mis. 1,1 jt), atau jasa % (bulanan: per bulan).
+  const [cara, setCara] = useState<'angsuran' | 'total' | 'persen'>('angsuran');
+  const [installmentIn, setInstallment] = useState(0);
+  const [totalIn, setTotalIn] = useState(0);
+  const [jasaPct, setJasaPct] = useState('');
+  const [savings, setSavings] = useState(0);
   const [count, setCount] = useState(0);
   const [date, setDate] = useState(today);
   const [first, setFirst] = useState(addDays(today, 1));
@@ -726,11 +806,17 @@ function LoanForm({
   const [requestId] = useState(() => crypto.randomUUID());
   useSyncExternalStore(liburStore.subscribe, liburStore.versi, liburStore.versi);
 
-  const firstDate = firstTouched ? first : addDays(date, frequency === 'harian' ? 1 : 7);
+  const firstDate = firstTouched ? first : frequency === 'bulanan' ? addMonths(date, 1) : addDays(date, frequency === 'harian' ? 1 : 7);
   const dates = useMemo(() => buatJadwal(firstDate, count, frequency, { minggu, cuti }), [firstDate, count, frequency, minggu, cuti]);
-  const total = installment * count;
-  const handed = adminMode === 'potong' ? principal - admin : principal;
+  const pct = Number(jasaPct.replace(',', '.')) || 0;
+  const totalTarget =
+    cara === 'total' ? totalIn : cara === 'persen' ? Math.round(principal * (1 + (pct / 100) * (frequency === 'bulanan' ? count : 1))) : 0;
+  const installment = cara === 'angsuran' ? installmentIn : angsuranDariTotal(totalTarget, count);
+  const total = cara === 'angsuran' ? installment * count : totalTarget;
+  const last = total - installment * (count - 1);
+  const handed = principal - (adminMode === 'potong' ? admin : 0) - savings;
   const untung = total - principal + admin;
+  const per = frequency === 'harian' ? 'hari' : frequency === 'mingguan' ? 'minggu' : 'bulan';
   const skipped = useMemo(() => {
     if (!dates.length) return [] as string[];
     const out: string[] = [];
@@ -748,6 +834,8 @@ function LoanForm({
       ? 'Isi jumlah pinjaman.'
       : admin >= principal
         ? 'Admin harus lebih kecil dari pinjaman.'
+        : handed < 1
+          ? 'Admin + tabungan harus lebih kecil dari pinjaman.'
         : !installment || !count
           ? 'Isi angsuran per kali dan berapa kali.'
           : total < principal
@@ -779,6 +867,8 @@ function LoanForm({
         date,
         dueDates: dates,
         accountId,
+        ...(cara !== 'angsuran' ? { total } : {}),
+        ...(savings > 0 ? { savings } : {}),
         ...(jaminan.on ? { collateral: { jenis: jaminan.jenis, ket: jaminan.ket.trim(), nilai: jaminan.nilai || null } } : {}),
       });
       // Foto jaminan diunggah setelah pinjaman tercatat. Gagal → pinjaman tetap tercatat, foto bisa ditambah dari detail.
@@ -863,11 +953,29 @@ function LoanForm({
       {seg(frequency, setFrequency, [
         ['harian', 'Harian'],
         ['mingguan', 'Mingguan'],
+        ['bulanan', 'Bulanan'],
       ])}
+      <div>
+        <span className={labelCls}>Hitungan pengembalian</span>
+        {seg(cara, setCara, [
+          ['angsuran', `Angsuran per ${per}`],
+          ['total', 'Total kembali'],
+          ['persen', frequency === 'bulanan' ? 'Jasa %/bulan' : 'Jasa %'],
+        ])}
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        {rupiah(installment, setInstallment, 'Mis. 100.000', `Angsuran per ${frequency === 'harian' ? 'hari' : 'minggu'}`)}
+        {cara === 'angsuran' ? (
+          rupiah(installmentIn, setInstallment, 'Mis. 100.000', `Angsuran per ${per}`)
+        ) : cara === 'total' ? (
+          rupiah(totalIn, setTotalIn, 'Mis. 1.100.000', 'Total yang dibayar balik')
+        ) : (
+          <label className="block">
+            <span className={labelCls}>{frequency === 'bulanan' ? 'Jasa per bulan (%)' : 'Jasa (%) dari pinjaman'}</span>
+            <input value={jasaPct} onChange={(e) => setJasaPct(e.target.value.replace(/[^\d.,]/g, '').slice(0, 6))} inputMode="decimal" placeholder="Mis. 10" className={cn(fieldCls, 'tabular-nums')} />
+          </label>
+        )}
         <label className="block">
-          <span className={labelCls}>Berapa kali</span>
+          <span className={labelCls}>{frequency === 'bulanan' ? 'Berapa bulan' : 'Berapa kali'}</span>
           <input
             value={count || ''}
             onChange={(e) => setCount(Math.min(400, Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0))}
@@ -877,6 +985,18 @@ function LoanForm({
           />
         </label>
       </div>
+      {cara !== 'angsuran' && installment > 0 && count > 0 && (
+        <p className="-mt-2 fs-12 text-slate-500">
+          Angsuran {formatIDR(installment)} per {per}
+          {last !== installment ? ` (yang terakhir ${formatIDR(last)})` : ''} · total {formatIDR(total)}
+        </p>
+      )}
+      {rupiah(savings, setSavings, 'Kosongkan kalau tidak ada', 'Tabungan dipotong di awal (opsional)')}
+      {savings > 0 && (
+        <p className="-mt-2 fs-12 text-slate-500">
+          Tabungan milik anggota — tetap di kas, bukan untung. Bisa diambil anggota kapan saja dari menu Anggota.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
           <span className={labelCls}>Tanggal uang diserahkan</span>
@@ -921,7 +1041,8 @@ function LoanForm({
         <section className="space-y-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
           {[
             ['Uang diserahkan ke peminjam', formatIDR(Math.max(0, handed)), ''],
-            ['Total yang dibayar balik', `${formatIDR(total)} (${count}× ${formatIDR(installment)})`, ''],
+            ...(savings > 0 ? [['Tabungan anggota (dipotong)', formatIDR(savings), '']] : []),
+            ['Total yang dibayar balik', last !== installment ? `${formatIDR(total)} (${count - 1}× ${formatIDR(installment)} + ${formatIDR(last)})` : `${formatIDR(total)} (${count}× ${formatIDR(installment)})`, ''],
             ['Untung', admin ? `${formatIDR(untung)} (admin ${formatIDR(admin)} + jasa ${formatIDR(total - principal)})` : `${formatIDR(untung)} (jasa saja, tanpa admin)`, untung < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300'],
             ['Selesai', dates.length ? tgl(dates[dates.length - 1], true) : '—', ''],
           ].map(([k, v, c]) => (
@@ -988,21 +1109,33 @@ function PayForm({
   petugas?: { kasName: string | null } | null;
   onDone: (m?: string) => void;
 }) {
-  const [amount, setAmount] = useState(st.tagihan || Math.min(loan.installment, st.sisa));
+  const [amountIn, setAmount] = useState(st.tagihan || Math.min(loan.installment, st.sisa));
+  // Bayar lunas: bayar seluruh sisa sekaligus, boleh dengan potongan (khusus pemilik, maks sebesar jasa).
+  const [lunas, setLunas] = useState(false);
+  const [potongan, setPotongan] = useState(0);
+  const maxPotongan = Math.max(0, loan.total - loan.principal);
+  const amount = lunas ? Math.max(0, st.sisa - potongan) : amountIn;
   const [accountId, setAccountId] = useState(loan.accountId && kas.some((a) => a.id === loan.accountId) ? loan.accountId : (kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? ''));
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId] = useState(() => crypto.randomUUID());
   const save = async () => {
+    if (lunas && potongan > maxPotongan) return setError(`Potongan maksimal sebesar jasanya, ${formatIDR(maxPotongan)}.`);
     if (!amount) return setError('Isi nominal yang dibayar.');
     if (amount > st.sisa) return setError(`Melebihi sisa pinjaman (${formatIDR(st.sisa)}).`);
     if (petugas && !petugas.kasName) return setError('Pemilik usaha belum menyiapkan kas usaha untuk angsuran.');
     setBusy(true);
     setError('');
     try {
-      const r = await shopLoanService.pay(shop.id, loan.id, { requestId, amount, accountId, date });
-      onDone(r.lunas ? 'Angsuran diterima — pinjaman LUNAS. 🎉' : `Angsuran ${formatIDR(amount)} diterima.`);
+      const r = await shopLoanService.pay(shop.id, loan.id, { requestId, amount, accountId, date, ...(lunas ? { settle: { discount: potongan } } : {}) });
+      onDone(
+        r.lunas
+          ? lunas && potongan > 0
+            ? `Lunas dengan potongan ${formatIDR(potongan)}. 🎉`
+            : 'Angsuran diterima — pinjaman LUNAS. 🎉'
+          : `Angsuran ${formatIDR(amount)} diterima.`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
       setBusy(false);
@@ -1015,9 +1148,46 @@ function PayForm({
         Tagihan hari ini <b className="text-slate-900 dark:text-white">{formatIDR(st.tagihan)}</b>
         {st.nunggakKali > 0 ? ` (termasuk nunggak ${st.nunggakKali}×)` : ''} · sisa pinjaman {formatIDR(st.sisa)}
       </div>
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+        {([
+          [false, 'Angsuran biasa'],
+          [true, 'Bayar lunas'],
+        ] as const).map(([v, l]) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => {
+              setLunas(v);
+              setPotongan(0);
+            }}
+            className={cn('rounded-xl py-2 fs-13 font-bold', lunas === v ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {lunas ? (
+        <div className="space-y-3">
+          {!petugas && maxPotongan > 0 && (
+            <label className="block">
+              <span className={labelCls}>Potongan pelunasan (opsional, maks {formatIDR(maxPotongan)})</span>
+              <input value={moneyText(potongan)} onChange={(e) => setPotongan(Math.min(maxPotongan, money(e.target.value)))} inputMode="numeric" placeholder="Kosongkan kalau tanpa potongan" className={cn(fieldCls, 'tabular-nums')} />
+            </label>
+          )}
+          <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
+            <p className="fs-12 text-emerald-800 dark:text-emerald-200">Yang dibayar untuk melunasi</p>
+            <p className="fsh-22 font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(amount)}</p>
+            <p className="fs-12 text-emerald-800/80 dark:text-emerald-200/80">
+              Sisa {formatIDR(st.sisa)}
+              {potongan > 0 ? ` − potongan ${formatIDR(potongan)} (jasa berkurang)` : ''} · pinjaman langsung lunas.
+            </p>
+          </div>
+        </div>
+      ) : (
+      <>
       <label className="block">
         <span className={labelCls}>Dibayar</span>
-        <input value={moneyText(amount)} onChange={(e) => setAmount(money(e.target.value))} inputMode="numeric" className={cn(fieldCls, 'fsh-22 font-extrabold tabular-nums')} />
+        <input value={moneyText(amountIn)} onChange={(e) => setAmount(money(e.target.value))} inputMode="numeric" className={cn(fieldCls, 'fsh-22 font-extrabold tabular-nums')} />
       </label>
       <div className="flex flex-wrap gap-2">
         {chips.map((n) => (
@@ -1026,6 +1196,8 @@ function PayForm({
           </button>
         ))}
       </div>
+      </>
+      )}
       {petugas ? (
         <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
           Masuk ke <b>{petugas.kasName ?? 'kas usaha'}</b> · tanggal hari ini · tercatat atas namamu.
@@ -1048,7 +1220,7 @@ function PayForm({
         </label>
       </div>
       )}
-      {amount > st.tagihan && st.tagihan >= 0 && amount <= st.sisa && (
+      {!lunas && amount > st.tagihan && st.tagihan >= 0 && amount <= st.sisa && (
         <p className="fs-12 text-slate-500">Lebihnya {formatIDR(amount - st.tagihan)} dihitung bayar di muka untuk tagihan berikutnya.</p>
       )}
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
@@ -1133,6 +1305,8 @@ function LoanDetail({
         {loan.count}× {formatIDR(loan.installment)} {loan.frequency} · cair {tgl(loan.disbursedOn)} ·{' '}
         {loan.status === 'lunas' ? <b className="text-emerald-700">lunas</b> : st.telat ? <b className="text-rose-600">telat {st.telat} hari</b> : 'lancar'}
         {borrower?.wa ? ` · WA ${borrower.wa}` : ''}
+        {loan.savings > 0 ? ` · tabungan dipotong ${formatIDR(loan.savings)}` : ''}
+        {loan.discount > 0 ? ` · potongan pelunasan ${formatIDR(loan.discount)}` : ''}
       </p>
       {loan.status === 'aktif' && (
         <button type="button" onClick={() => onPay(st)} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3 fs-14 font-extrabold text-white hover:bg-emerald-700">
@@ -1206,7 +1380,7 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
   const minStart = [today, addDays(lastKept, 1), addDays(loan.disbursedOn, 1)].sort().pop() as string;
   // Sudah nunggak → paling masuk akal mulai lagi dari tanggal tertentu (mis. besok); belum → mundurkan N hari.
   const [mode, setMode] = useState<'mundur' | 'mulai'>(firstOld < today ? 'mulai' : 'mundur');
-  const [days, setDays] = useState(loan.frequency === 'harian' ? 3 : 7);
+  const [days, setDays] = useState(loan.frequency === 'harian' ? 3 : loan.frequency === 'bulanan' ? 30 : 7);
   const [start, setStart] = useState(addDays(today, 1) > minStart ? addDays(today, 1) : minStart);
   const [minggu, setMinggu] = useState(true);
   const [cuti, setCuti] = useState(true);

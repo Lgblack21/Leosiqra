@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232; siap: 3.43.0 form investasi)
+Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232; siap: 3.43.0 + 3.44.0)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,18 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-18 — 3.44.0 SIAP (tanpa SQL, satu rilis dengan 3.43.0 yang belum deploy): pinjaman bulanan, bayar lunas,
+  tabungan.** `frequency` + `bulanan` (kolom tanpa CHECK); `buatJadwal` bulanan (tgl sama, akhir bulan, libur → maju).
+  Loans POST: `total` opsional (syarat angsuran×(kali−1) < total ≤ angsuran×kali → angsuran terakhir lebih kecil),
+  `savings` → entri `simpanan_masuk` (TANPA gerak kas; cair net = pokok − admin potong − tabungan; fee + payload.fees).
+  Saldo tabungan = SAVINGS_SQL (masuk via loan.borrower − `simpanan_tarik` ref borrower). `POST …/peminjam/:id/tarik`
+  (pemilik saja; guard saldo + kas). Bayar lunas: `settle:true, discount` → nominal+potongan = sisa tepat, potongan ≤
+  total−pokok; `UPDATE total = total − potongan` + entri `pinjam_diskon` (tanpa kas, payload.payId); hapus angsuran
+  pelunasan memulihkan total & menghapus diskon; hapus diskon/simpanan_masuk langsung ditolak; batal tarik → kas +.
+  Hapus pinjaman ditolak kalau tabungannya sudah diambil. Petugas: settle tanpa potongan, tarik 403. Catatan: potongan
+  menurunkan total → jasa periode lama di Laporan ikut sedikit turun (proporsional). Dites wrangler lokal (semua
+  skenario + saldo kas) + Playwright. Menunggu "gas".
 
 - **2026-11-18 — 3.43.0 SIAP (tanpa SQL): form tambah investasi.** Permintaan Bos: kolom input lebih ramah. Hasil
   audit: Catat transaksi (web `AddTransactionModal`, app `AddTransactionSheet`) sudah modern — tidak diubah. Yang

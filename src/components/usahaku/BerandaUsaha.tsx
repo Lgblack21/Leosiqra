@@ -153,7 +153,7 @@ type Form =
   | { k: 'bon' | 'utang'; entry: BookEntry; sisa: number }
   | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
 export type BerandaView = 'ringkasan' | 'kas' | 'biaya' | 'tagihan';
-const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal', 'pinjam_cair', 'pinjam_admin', 'angsuran']);
+const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal', 'pinjam_cair', 'pinjam_admin', 'angsuran', 'simpanan_tarik']);
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
 const waLink = (wa: string | null, text: string) => {
@@ -671,6 +671,7 @@ const ENTRY_LABEL: Record<string, string> = {
   dp: 'DP',
   pinjam_cair: 'Pinjaman keluar',
   pinjam_admin: 'Admin pinjaman',
+  simpanan_tarik: 'Tabungan diambil',
   angsuran: 'Angsuran',
 };
 function Riwayat({
@@ -746,7 +747,8 @@ function Riwayat({
                 <span className="block truncate fs-11 text-slate-400">{detail}</span>
                 {cair && e.fee > 0 ? (
                   <span className="block truncate fs-11 text-slate-500">
-                    Pinjaman {formatIDR(e.amount)} · admin dipotong {formatIDR(e.fee)}
+                    Pinjaman {formatIDR(e.amount)} · dipotong{' '}
+                    {e.fees.length ? e.fees.map((f) => `${f.label} ${formatIDR(f.amount)}`).join(', ') : `admin ${formatIDR(e.fee)}`}
                   </span>
                 ) : e.fee > 0 && (
                   <span className="block truncate fs-11 text-orange-600">

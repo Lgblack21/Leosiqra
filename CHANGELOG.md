@@ -128,6 +128,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.41.2 | 16 Nov 2026 | Pinjaman tanpa admin |
 | 3.42.0 | 17 Nov 2026 | Nilai emas, saham & kripto ikut harga pasar |
 | 3.43.0 | 18 Nov 2026 | Form tambah investasi lebih ramah |
+| 3.44.0 | 18 Nov 2026 | Pinjaman: bulanan, bayar lunas, tabungan anggota |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -141,6 +142,23 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.44.0 — 2026-11-18 — Pinjaman: bulanan, bayar lunas, tabungan anggota
+
+- **Pinjaman bulanan.** Selain harian dan mingguan, sekarang ada **Bulanan**. Tagihannya jatuh di tanggal yang sama tiap
+  bulan. Kalau tanggal itu tanggal merah, tagihan pindah ke hari berikutnya. Pinjaman tanggal 31 ditagih di akhir bulan
+  untuk bulan yang lebih pendek.
+- **Tiga cara menghitung pengembalian.** Isi **angsuran per kali** seperti biasa, isi **total kembali** (misalnya 1 juta
+  balik 1,1 juta dalam 3 bulan), atau isi **jasa %** (bulanan: per bulan, jadi 10% × 2 bulan = 1,2 juta). Angsurannya
+  dihitung otomatis dan dibulatkan ke ribuan. Selisih pembulatannya masuk ke angsuran terakhir.
+- **Bayar lunas.** Di form Terima angsuran ada pilihan **Bayar lunas** untuk melunasi seluruh sisa sekaligus. Pemilik
+  bisa memberi **potongan pelunasan** (maksimal sebesar jasanya). Potongan mengurangi jasa, bukan uang masuk, dan
+  pinjaman langsung lunas. Kalau angsuran pelunasannya dihapus, potongannya ikut batal.
+- **Tabungan anggota dipotong di awal.** Saat pinjaman cair, kamu bisa memotong tabungan (misalnya 50 ribu), jadi yang
+  diserahkan berkurang. Tabungan itu milik anggota, bukan untung: tetap di kas dan tidak masuk pendapatan. Saldonya
+  terlihat di daftar Anggota dan di Ringkasan. Anggota bisa mengambilnya kapan saja lewat tombol **Tarik**, dan uangnya
+  keluar dari kas yang kamu pilih.
+- Petugas bisa melunasi pinjaman, tapi tidak bisa memberi potongan dan tidak bisa mencairkan tabungan.
 
 ## 3.43.0 — 2026-11-18 — Form tambah investasi lebih ramah
 

@@ -25,7 +25,10 @@ export type Borrower = {
   hasPhoto: boolean;
   hasKtp: boolean;
   updatedAt: string;
+  /** Saldo tabungan anggota (dipotong saat pinjaman cair − yang sudah diambil). */
+  savings: number;
 };
+export type Frekuensi = 'harian' | 'mingguan' | 'bulanan';
 export type MemberFile = 'foto' | 'ktp';
 export type Loan = {
   id: string;
@@ -36,7 +39,7 @@ export type Loan = {
   installment: number;
   count: number;
   total: number;
-  frequency: 'harian' | 'mingguan';
+  frequency: Frekuensi;
   disbursedOn: string;
   dueDates: string[];
   accountId: string | null;
@@ -46,6 +49,9 @@ export type Loan = {
   closedAt: string | null;
   paid: number;
   lastPaid: string | null;
+  /** Tabungan yang dipotong saat cair & potongan pelunasan (sudah mengurangi total). */
+  savings: number;
+  discount: number;
   /** Jaminan (opsional, migrasi 0049). Foto privat — hanya jumlahnya yang dikirim. */
   collateral: Collateral | null;
 };
@@ -83,7 +89,7 @@ const loanFromRow = (r: Row): Loan => {
     installment: num(r.installment),
     count: num(r.count),
     total: num(r.total),
-    frequency: r.frequency === 'mingguan' ? 'mingguan' : 'harian',
+    frequency: r.frequency === 'mingguan' || r.frequency === 'bulanan' ? r.frequency : 'harian',
     disbursedOn: String(r.disbursed_on ?? ''),
     dueDates,
     accountId: str(r.account_id),
@@ -93,6 +99,8 @@ const loanFromRow = (r: Row): Loan => {
     closedAt: str(r.closed_at),
     paid: num(r.paid),
     lastPaid: str(r.last_paid),
+    savings: num(r.savings),
+    discount: num(r.discount),
     collateral:
       r.collateral && typeof r.collateral === 'object'
         ? (() => {
@@ -126,6 +134,7 @@ export const shopLoanService = {
         hasPhoto: Boolean(b.has_photo),
         hasKtp: Boolean(b.has_ktp),
         updatedAt: String(b.updated_at ?? b.created_at ?? ''),
+        savings: num(b.savings),
       })),
       loans: ((r.loans as Row[]) ?? []).map(loanFromRow),
       payments: ((r.payments as Row[]) ?? []).map((p) => ({
@@ -202,10 +211,14 @@ export const shopLoanService = {
       adminMode: 'potong' | 'terpisah';
       installment: number;
       count: number;
-      frequency: 'harian' | 'mingguan';
+      frequency: Frekuensi;
       date: string;
       dueDates: string[];
       accountId: string;
+      /** Total kembali yang diisi sendiri (angsuran terakhir boleh lebih kecil). */
+      total?: number;
+      /** Tabungan dipotong saat uang diserahkan. */
+      savings?: number;
       note?: string;
       collateral?: { jenis: string; ket: string; nilai: number | null };
     },
@@ -226,18 +239,34 @@ export const shopLoanService = {
         shop_account_id: input.accountId,
         note: input.note,
         collateral: input.collateral,
+        ...(input.total ? { total: input.total } : {}),
+        ...(input.savings ? { savings: input.savings } : {}),
       },
     });
     changed();
     return r;
   },
-  async pay(shopId: string, loanId: string, input: { requestId: string; amount: number; accountId: string; date?: string }) {
+  async pay(shopId: string, loanId: string, input: { requestId: string; amount: number; accountId: string; date?: string; settle?: { discount: number } }) {
     const r = await cloudflareApi<{ id: string; lunas: boolean }>(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/pay`, {
       method: 'POST',
-      json: { request_id: input.requestId, amount: input.amount, shop_account_id: input.accountId, date: input.date },
+      json: {
+        request_id: input.requestId,
+        amount: input.amount,
+        shop_account_id: input.accountId,
+        date: input.date,
+        ...(input.settle ? { settle: true, discount: input.settle.discount } : {}),
+      },
     });
     changed();
     return r;
+  },
+  /** Anggota mengambil tabungannya (kas keluar). */
+  async tarikTabungan(shopId: string, borrowerId: string, input: { requestId: string; amount: number; accountId: string }) {
+    await cloudflareApi(`${ROOT}/${shopId}/pinjaman/peminjam/${borrowerId}/tarik`, {
+      method: 'POST',
+      json: { request_id: input.requestId, amount: input.amount, shop_account_id: input.accountId },
+    });
+    changed();
   },
   async reschedule(shopId: string, loanId: string, input: { dueDates: string[]; expectedPaid: number }) {
     await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jadwal`, {
