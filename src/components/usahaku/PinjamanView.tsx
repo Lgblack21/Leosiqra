@@ -1088,7 +1088,7 @@ function LoanForm({
           <input
             type="date"
             value={firstDate}
-            min={addDays(date, 1)}
+            min={date}
             onChange={(e) => {
               setFirst(e.target.value);
               setFirstTouched(Boolean(e.target.value));
@@ -1521,13 +1521,16 @@ function LoanDetail({
 
 // ── Geser jadwal: yang sudah dibayar tetap, sisanya disusun ulang dari tanggal baru ────────
 function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; today: string; onDone: (m?: string) => void }) {
-  const covered = Math.min(loan.dueDates.length, Math.floor(loan.paid / Math.max(1, loan.installment)));
+  const tertutup = Math.min(loan.dueDates.length, Math.floor(loan.paid / Math.max(1, loan.installment)));
+  // Semua = koreksi salah input: susun ulang SELURUH jadwal (termasuk yang sudah dibayar). Uang tidak berubah.
+  const [semua, setSemua] = useState(false);
+  const covered = semua ? 0 : tertutup;
   const kept = loan.dueDates.slice(0, covered);
   const firstOld = loan.dueDates[covered] ?? today;
-  const lastKept = kept[kept.length - 1] ?? loan.disbursedOn;
-  // Boleh ke tanggal mana pun setelah tanggal pinjaman & setelah angsuran terakhir yang sudah dibayar — termasuk
-  // tanggal yang sudah lewat (mis. salah input 18 padahal 17). Tanggal yang sudah lewat langsung jadi tagihan.
-  const minStart = [addDays(lastKept, 1), addDays(loan.disbursedOn, 1)].sort().pop() as string;
+  const lastKept = kept[kept.length - 1] ?? null;
+  // Boleh ke tanggal mana pun mulai tanggal pinjaman (hari yang sama boleh) & setelah angsuran terakhir yang tetap —
+  // termasuk tanggal yang sudah lewat (mis. salah input 18 padahal 17). Tanggal yang sudah lewat langsung jadi tagihan.
+  const minStart = [lastKept ? addDays(lastKept, 1) : loan.disbursedOn, loan.disbursedOn].sort().pop() as string;
   const [mode, setMode] = useState<'mundur' | 'maju' | 'mulai'>(firstOld < today ? 'mulai' : 'mundur');
   const [days, setDays] = useState(loan.frequency === 'harian' ? 3 : loan.frequency === 'bulanan' ? 30 : 7);
   const [start, setStart] = useState(addDays(today, 1) > minStart ? addDays(today, 1) : minStart);
@@ -1548,7 +1551,7 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
     setBusy(true);
     setError('');
     try {
-      await shopLoanService.reschedule(shop.id, loan.id, { dueDates: dates, expectedPaid: loan.paid });
+      await shopLoanService.reschedule(shop.id, loan.id, { dueDates: dates, expectedPaid: loan.paid, all: semua });
       onDone(`Jadwal digeser. Selesai sekarang ${tgl(newEnd, true)}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
@@ -1563,6 +1566,15 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
         Angsuran yang belum dibayar (termasuk yang nunggak) pindah ke tanggal baru, jadi tidak ditagih sebelum tanggal itu.
         Total yang harus dibayar tetap sama.
       </p>
+      {tertutup > 0 && (
+        <label className="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 fs-13 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+          <input type="checkbox" checked={semua} onChange={(e) => setSemua(e.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-600" />
+          <span>
+            <b>Ubah juga jadwal yang sudah dibayar</b> ({tertutup} angsuran) — untuk koreksi salah input tanggal. Uang dan angsuran
+            yang sudah masuk tidak berubah, hanya tanggal tagihnya.
+          </span>
+        </label>
+      )}
       <div className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
         {(
           [

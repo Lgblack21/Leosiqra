@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.1 geser jadwal lebih cepat — run #236)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.1 geser jadwal lebih cepat — run #236; siap: 3.45.2)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,12 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-18 — 3.45.2 SIAP (tanpa SQL): koreksi jadwal.** Keluhan Bos (Juli Agustina): jadwal mulai 18 padahal bayar
+  sejak 17. Jadwal kini boleh `>= disbursed_on` (create & PUT jadwal); PUT jadwal `all:true` boleh mengubah tanggal yang
+  sudah tertutup angsuran (uang tak berubah). GeserForm: centang "Ubah juga jadwal yang sudah dibayar". LoanForm:
+  angsuran pertama min = tanggal cair. Dites wrangler lokal. Data produksi TIDAK dicek (tidak ada akses D1 dari sesi).
+  Menunggu "gas".
 
 - **2026-11-18 — 3.45.1 LIVE (run #236, 97f8958, tanpa SQL): geser jadwal ke tanggal lebih awal.** GeserForm: batas minimum tidak lagi
   hari ini, cukup > tanggal pinjaman & > angsuran terakhir yang sudah tertutup (server memang sudah mengizinkan);

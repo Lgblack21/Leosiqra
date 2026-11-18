@@ -11616,7 +11616,8 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       // Jadwal dibuat di perangkat (melompati tanggal merah/Minggu) lalu DIKUNCI di sini: dicek bentuknya.
       const dates = Array.isArray(raw.due_dates) ? raw.due_dates : [];
       const maxDate = new Date(Date.parse(`${disbursedOn}T00:00:00Z`) + 3 * 366 * 86400e3).toISOString().slice(0, 10);
-      if (dates.length !== count || !dates.every((d, i) => isRealDateStr(d) && d > disbursedOn && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)))) {
+      // Angsuran pertama boleh di hari yang sama dengan uang diserahkan (pinjaman harian biasa ditagih mulai hari itu).
+      if (dates.length !== count || !dates.every((d, i) => isRealDateStr(d) && d >= disbursedOn && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)))) {
         return json({ error: "Jadwal angsuran tidak valid. Muat ulang lalu coba lagi." }, { status: 400 });
       }
       const book = await shopBook(env, ownerId, shop.id);
@@ -11794,8 +11795,11 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         const covered = Math.min(old.length, Math.floor(paid / Math.max(1, loan.installment)));
         const dates = Array.isArray(raw.due_dates) ? raw.due_dates : [];
         const maxDate = new Date(Date.parse(`${todayWIB()}T00:00:00Z`) + 3 * 366 * 86400e3).toISOString().slice(0, 10);
-        const keepOk = dates.length === loan.count && old.slice(0, covered).every((d, i) => dates[i] === d);
-        const restOk = dates.every((d, i) => isRealDateStr(d) && d > loan.disbursed_on && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)));
+        // all = susun ulang SEMUA tanggal termasuk yang sudah dibayar (koreksi salah input). Uang tidak berubah — hanya
+        // tanggal tagih; status tagihan dihitung ulang dari tanggal baru.
+        const all = raw.all === true;
+        const keepOk = dates.length === loan.count && (all || old.slice(0, covered).every((d, i) => dates[i] === d));
+        const restOk = dates.every((d, i) => isRealDateStr(d) && d >= loan.disbursed_on && d <= maxDate && (i === 0 || d > (dates[i - 1] as string)));
         if (!keepOk || !restOk) return json({ error: "Jadwal baru tidak valid. Muat ulang lalu coba lagi." }, { status: 400 });
         if (typeof raw.expected_paid === "number" && raw.expected_paid !== paid) return json({ error: "Ada angsuran yang baru masuk. Muat ulang lalu geser lagi." }, { status: 409 });
         const r = await env.DB.prepare(

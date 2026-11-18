@@ -282,10 +282,10 @@ export const shopLoanService = {
     });
     changed();
   },
-  async reschedule(shopId: string, loanId: string, input: { dueDates: string[]; expectedPaid: number }) {
+  async reschedule(shopId: string, loanId: string, input: { dueDates: string[]; expectedPaid: number; all?: boolean }) {
     await cloudflareApi(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/jadwal`, {
       method: 'PUT',
-      json: { due_dates: input.dueDates, expected_paid: input.expectedPaid },
+      json: { due_dates: input.dueDates, expected_paid: input.expectedPaid, ...(input.all ? { all: true } : {}) },
     });
     changed();
   },
