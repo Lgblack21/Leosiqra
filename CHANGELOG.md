@@ -166,6 +166,8 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   sebagian menunjukkan kurangnya.
 - Kartu pinjaman bisa dicetak atau disimpan sebagai PDF lewat tombol **Cetak / simpan PDF**. Rincian dan riwayat lama
   tetap ada di tab **Rincian & riwayat**.
+- Jenis usaha "Pinjaman harian/mingguan" sekarang bernama **Simpan pinjam**, karena sudah ada pinjaman bulanan dan
+  simpanan anggota.
 - **Tim juga bisa melihat kartu pinjaman.** Petugas melihatnya saat membuka pinjaman, sama seperti pemilik. Penagih
   punya tombol kartu di tiap baris Tagihan hari ini; kartunya memuat nama, WA, nomor anggota, rincian, dan kotak angsuran,
   tanpa alamat.

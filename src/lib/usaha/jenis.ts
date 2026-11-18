@@ -118,9 +118,9 @@ export const SHOP_KINDS: ShopKind[] = [
   },
   {
     id: 'pinjaman',
-    label: 'Pinjaman harian/mingguan',
+    label: 'Simpan pinjam',
     emoji: '🤝',
-    contoh: 'Pinjam uang dicicil harian atau mingguan',
+    contoh: 'Pinjaman harian, mingguan, atau bulanan + simpanan anggota',
     channels: { langsung: ['Offline'], marketplace: [] },
     stok: false,
     tip: 'Buka Tagihan hari ini tiap pagi: angka yang tampil sudah termasuk tunggakan, tanggal merah tidak ditagih.',
