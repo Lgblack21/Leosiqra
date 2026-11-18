@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.44.1 kartu putih — run #234; siap: 3.45.0 simpanan)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.0 simpan pinjam & kartu pinjaman — run #235)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.45.0 SIAP (tanpa SQL): kartu pinjaman + simpanan peminjam dengan peruntukan.** Kartu Pinjaman
+- **2026-11-18 — 3.45.0 LIVE (run #235, 1e5841c, tanpa SQL): kartu pinjaman + simpanan peminjam dengan peruntukan.** Kartu Pinjaman
   (`src/components/usahaku/KartuPinjaman.tsx`, contoh kartu kertas Bos, navy+emas): tab default di LoanDetail; kotak
   Ke-1..Ke-N dari `kotakAngsuran()` (pembayaran dibagi berurutan; tanggal & `by_name` pembayaran yang menutup kotak;
   payments GET kini menyertakan `by_name` & `from_savings`); cetak lewat jendela baru + stylesheet halaman.
@@ -30,7 +30,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   angsuran TANPA kas (account_id NULL, payload.fromSavings) + entri `simpanan_pakai` (ref borrower, payload loanId/payId;
   ikut dikurangkan di SAVINGS_SQL); hapus angsuran itu menghapus simpanan_pakai; hapus simpanan_pakai langsung ditolak.
   Petugas: from_savings 403. GET: borrowers.savings_locked, loans.savings_policy/savings_used. Dites wrangler lokal
-  (kunci, lunas→tarik, pakai simpanan kas tetap, hapus → kembali, petugas 403) + Playwright form. Menunggu "gas".
+  (kunci, lunas→tarik, pakai simpanan kas tetap, hapus → kembali, petugas 403) + Playwright form. Smoke live bersih. Jenis usaha kini "Simpan pinjam". **Belum**: data asli, cetak kertas.
 
 - **2026-11-18 — 3.44.1 LIVE (run #234, ad0e522): kartu anggota/staf putih.** Keluhan Bos: kartu ungu gelap jelek, minta putih
   & tanpa "Dibuat dengan Leosiqra". `gambarKartu` (AnggotaView.tsx) digambar ulang: latar putih + glow aksen, motif
