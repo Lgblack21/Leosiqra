@@ -124,7 +124,6 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.43.0 | 18 Nov 2026 | Form tambah investasi lebih ramah |
 | 3.44.1 | 18 Nov 2026 | Kartu staf desain putih |
 | 3.45.2 | 18 Nov 2026 | Perbaikan kecil |
-| 3.45.3 | 18 Nov 2026 | Perbaikan kecil |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -138,10 +137,6 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
-
-## 3.45.3 — 2026-11-18 — Perbaikan kecil
-
-- Perapian tampilan ringkasan dan riwayat kas di Usahaku.
 
 ## 3.45.2 — 2026-11-18 — Perbaikan kecil
 
