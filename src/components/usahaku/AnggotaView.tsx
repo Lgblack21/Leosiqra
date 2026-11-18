@@ -322,7 +322,8 @@ export type DataKartu = {
   baris: [string, string][];
   fotoUrl: string | null;
 };
-/** Gambar kartu 1012×638 px (rasio KTP 85,6×54 mm). Dipakai juga untuk kartu staf (3.40). */
+/** Gambar kartu 1012×638 px (rasio KTP 85,6×54 mm). Dipakai juga untuk kartu staf (3.40).
+ *  Desain 3.45: kartu putih bersih, warna tema usaha hanya sebagai aksen; tanpa tulisan "Dibuat dengan Leosiqra". */
 export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasElement> {
   const W = 1012;
   const H = 638;
@@ -330,30 +331,64 @@ export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasE
   c.width = W;
   c.height = H;
   const g = c.getContext('2d')!;
-  const warna = (KASIR_THEME[shop.style.theme] ?? KASIR_THEME.ungu).swatch;
+  const aksen = (KASIR_THEME[shop.style.theme] ?? KASIR_THEME.ungu).swatch;
+  const ink = '#0f172a';
+  const muted = '#64748b';
+  const spasi = (px: number) => {
+    // letterSpacing belum ada di semua browser lama — abaikan kalau tidak didukung.
+    (g as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${px}px`;
+  };
   const r = 36;
   g.save();
   g.beginPath();
   g.roundRect(0, 0, W, H, r);
   g.clip();
+  // Latar putih dengan gradasi sangat halus + lengkung aksen lembut di kanan atas.
   const bg = g.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, warna);
-  bg.addColorStop(1, '#0b1220');
+  bg.addColorStop(0, '#ffffff');
+  bg.addColorStop(1, '#f4f6fa');
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = 'rgba(255,255,255,0.06)';
-  g.beginPath();
-  g.arc(W - 80, 60, 260, 0, Math.PI * 2);
-  g.fill();
+  const glow = g.createRadialGradient(W - 40, -20, 20, W - 40, -20, 520);
+  glow.addColorStop(0, `${aksen}33`);
+  glow.addColorStop(1, `${aksen}00`);
+  g.fillStyle = glow;
+  g.fillRect(0, 0, W, H);
+  // Garis tipis bergelombang (motif pengaman kartu) — sangat samar.
+  g.strokeStyle = `${aksen}14`;
+  g.lineWidth = 1.5;
+  for (let i = 0; i < 9; i++) {
+    g.beginPath();
+    for (let x = 0; x <= W; x += 8) {
+      const y = 430 + i * 14 + Math.sin((x / W) * Math.PI * 3 + i * 0.4) * 22;
+      if (x === 0) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  // Pita aksen di bawah.
+  const pita = g.createLinearGradient(0, 0, W, 0);
+  pita.addColorStop(0, aksen);
+  pita.addColorStop(1, `${aksen}99`);
+  g.fillStyle = pita;
+  g.fillRect(0, H - 14, W, 14);
+
   // Kepala: logo + nama usaha + jenis kartu
   const logo = shop.style.logoUrl ? await muatGambar(shop.style.logoUrl, true) : null;
   // Bingkai logo ikut gambarnya (sama dengan LogoUsaha): latar penuh → warna tepi & gambar memenuhi kotak; transparan → putih.
   const tepi = shop.style.logoUrl && logo ? await bacaTepi(shop.style.logoUrl) : null;
   g.save();
+  g.shadowColor = 'rgba(15,23,42,0.14)';
+  g.shadowBlur = 18;
+  g.shadowOffsetY = 6;
   g.beginPath();
-  g.roundRect(48, 40, 84, 84, 20);
+  g.roundRect(52, 44, 84, 84, 22);
   g.fillStyle = tepi?.mode === 'penuh' && tepi.bg ? tepi.bg : '#fff';
   g.fill();
+  g.restore();
+  g.save();
+  g.beginPath();
+  g.roundRect(52, 44, 84, 84, 22);
   g.clip();
   if (logo) {
     const pad = tepi?.mode === 'transparan' ? 10 : 0;
@@ -362,38 +397,62 @@ export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasE
     const w = logo.width * sk;
     const h = logo.height * sk;
     try {
-      g.drawImage(logo, 48 + (84 - w) / 2, 40 + (84 - h) / 2, w, h);
+      g.drawImage(logo, 52 + (84 - w) / 2, 44 + (84 - h) / 2, w, h);
     } catch {
       /* logo tanpa CORS → lewati */
     }
   } else {
-    g.fillStyle = '#0b1220';
+    g.fillStyle = ink;
     g.font = '44px system-ui, sans-serif';
     g.textAlign = 'center';
-    g.fillText(shop.emoji || '🤝', 90, 98);
+    g.fillText(shop.emoji || '🤝', 94, 102);
     g.textAlign = 'left';
   }
   g.restore();
-  g.fillStyle = '#fff';
+  g.fillStyle = ink;
   g.font = '800 38px system-ui, -apple-system, Segoe UI, sans-serif';
-  g.fillText(shop.name.slice(0, 26), 154, 82);
-  g.fillStyle = 'rgba(255,255,255,0.7)';
-  g.font = '700 22px system-ui, sans-serif';
-  g.fillText(`KARTU ${k.jenis}`, 156, 116);
-  // Foto
-  const fx = 48;
-  const fy = 168;
-  const fw = 250;
-  const fh = 320;
-  g.fillStyle = 'rgba(255,255,255,0.15)';
+  spasi(0);
+  g.fillText(shop.name.slice(0, 26), 160, 88);
+  g.fillStyle = aksen;
   g.beginPath();
-  g.roundRect(fx, fy, fw, fh, 24);
+  g.arc(166, 113, 5, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = muted;
+  g.font = '700 19px system-ui, sans-serif';
+  spasi(3);
+  g.fillText(`KARTU ${k.jenis}`, 180, 120);
+  spasi(0);
+  // Garis pemisah tipis
+  g.strokeStyle = '#e2e8f0';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(52, 156);
+  g.lineTo(W - 52, 156);
+  g.stroke();
+
+  // Foto: bingkai putih + bayangan lembut
+  const fx = 52;
+  const fy = 192;
+  const fw = 232;
+  const fh = 296;
+  g.save();
+  g.shadowColor = 'rgba(15,23,42,0.18)';
+  g.shadowBlur = 28;
+  g.shadowOffsetY = 10;
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.roundRect(fx - 8, fy - 8, fw + 16, fh + 16, 28);
+  g.fill();
+  g.restore();
+  g.fillStyle = '#eef2f7';
+  g.beginPath();
+  g.roundRect(fx, fy, fw, fh, 22);
   g.fill();
   const foto = k.fotoUrl ? await muatGambar(k.fotoUrl) : null;
   if (foto) {
     g.save();
     g.beginPath();
-    g.roundRect(fx, fy, fw, fh, 24);
+    g.roundRect(fx, fy, fw, fh, 22);
     g.clip();
     const s = Math.max(fw / foto.width, fh / foto.height);
     const w = foto.width * s;
@@ -401,45 +460,73 @@ export async function gambarKartu(shop: Shop, k: DataKartu): Promise<HTMLCanvasE
     g.drawImage(foto, fx + (fw - w) / 2, fy + (fh - h) / 2, w, h);
     g.restore();
   } else {
-    g.fillStyle = 'rgba(255,255,255,0.8)';
+    g.fillStyle = '#94a3b8';
     g.font = '800 96px system-ui, sans-serif';
     g.textAlign = 'center';
     g.fillText(k.nama.slice(0, 2).toUpperCase(), fx + fw / 2, fy + fh / 2 + 34);
     g.textAlign = 'left';
   }
+
   // Data
-  const tx = 336;
-  g.fillStyle = '#fff';
-  g.font = '800 46px system-ui, sans-serif';
+  const tx = 330;
+  const label = (t: string, y: number) => {
+    g.fillStyle = muted;
+    g.font = '700 17px system-ui, sans-serif';
+    spasi(2.5);
+    g.fillText(t.toUpperCase(), tx, y);
+    spasi(0);
+  };
+  g.fillStyle = ink;
+  g.font = '800 46px system-ui, -apple-system, Segoe UI, sans-serif';
   const nama = k.nama.length > 22 ? `${k.nama.slice(0, 21)}…` : k.nama;
-  g.fillText(nama, tx, 222);
-  g.fillStyle = 'rgba(255,255,255,0.65)';
-  g.font = '600 22px system-ui, sans-serif';
-  g.fillText(k.jenis === 'ANGGOTA' ? 'No. anggota' : 'No. staf', tx, 274);
-  g.fillStyle = '#fff';
-  g.font = '800 40px ui-monospace, SFMono-Regular, Menlo, monospace';
-  g.fillText(k.nomor, tx, 318);
-  k.baris.slice(0, 2).forEach(([label, isi], i) => {
-    const y = 372 + i * 66;
-    g.fillStyle = 'rgba(255,255,255,0.65)';
-    g.font = '600 22px system-ui, sans-serif';
-    g.fillText(label, tx, y);
-    g.fillStyle = '#fff';
-    g.font = '700 28px system-ui, sans-serif';
+  g.fillText(nama, tx, 232);
+  label(k.jenis === 'ANGGOTA' ? 'No. anggota' : 'No. staf', 282);
+  // Nomor dalam kapsul aksen lembut
+  g.font = '800 34px ui-monospace, SFMono-Regular, Menlo, monospace';
+  spasi(2);
+  const nw = g.measureText(k.nomor).width;
+  g.fillStyle = `${aksen}1f`;
+  g.beginPath();
+  g.roundRect(tx - 14, 296, nw + 28, 52, 14);
+  g.fill();
+  g.fillStyle = ink;
+  g.fillText(k.nomor, tx, 334);
+  spasi(0);
+  k.baris.slice(0, 2).forEach(([lbl, isi], i) => {
+    const y = 402 + i * 78;
+    label(lbl, y);
+    g.fillStyle = ink;
+    g.font = '700 27px system-ui, sans-serif';
     g.fillText(isi.slice(0, 26), tx, y + 34);
   });
+
   // QR: hanya nomor kartu + nama usaha (tanpa data pribadi)
   const qr = document.createElement('canvas');
-  await QRCode.toCanvas(qr, `${k.nomor} · ${shop.name}`, { width: 168, margin: 1, color: { dark: '#0b1220', light: '#ffffff' } });
+  await QRCode.toCanvas(qr, `${k.nomor} · ${shop.name}`, { width: 150, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } });
+  const qx = W - 52 - 166;
+  const qy = H - 46 - 166;
+  g.save();
+  g.shadowColor = 'rgba(15,23,42,0.12)';
+  g.shadowBlur = 16;
+  g.shadowOffsetY = 4;
   g.fillStyle = '#fff';
   g.beginPath();
-  g.roundRect(W - 48 - 184, H - 48 - 184, 184, 184, 18);
+  g.roundRect(qx, qy, 166, 166, 20);
   g.fill();
-  g.drawImage(qr, W - 48 - 176, H - 48 - 176, 168, 168);
-  g.fillStyle = 'rgba(255,255,255,0.55)';
-  g.font = '500 18px system-ui, sans-serif';
-  g.fillText('Dibuat dengan Leosiqra', 48, H - 40);
   g.restore();
+  g.strokeStyle = '#e2e8f0';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.roundRect(qx, qy, 166, 166, 20);
+  g.stroke();
+  g.drawImage(qr, qx + 8, qy + 8, 150, 150);
+  g.restore();
+  // Tepi kartu tipis supaya rapi di latar putih saat dicetak.
+  g.strokeStyle = '#e2e8f0';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.roundRect(1, 1, W - 2, H - 2, r);
+  g.stroke();
   return c;
 }
 

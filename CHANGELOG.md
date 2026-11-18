@@ -129,6 +129,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.42.0 | 17 Nov 2026 | Nilai emas, saham & kripto ikut harga pasar |
 | 3.43.0 | 18 Nov 2026 | Form tambah investasi lebih ramah |
 | 3.44.0 | 18 Nov 2026 | Pinjaman: bulanan, bayar lunas, tabungan anggota |
+| 3.44.1 | 18 Nov 2026 | Kartu anggota & staf desain putih |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -142,6 +143,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.44.1 — 2026-11-18 — Kartu anggota & staf desain putih
+
+- **Kartu anggota dan kartu staf tampil baru.** Latarnya putih bersih, warna tema usahamu jadi aksen tipis (titik di
+  judul, kapsul nomor anggota, dan garis di bawah). Foto punya bingkai putih dengan bayangan lembut, QR di kartu putih
+  sendiri, dan ada motif garis samar seperti kartu resmi. Lebih enak dicetak dan dikirim lewat WhatsApp.
+- Tulisan "Dibuat dengan Leosiqra" di kartu dihapus.
 
 ## 3.44.0 — 2026-11-18 — Pinjaman: bulanan, bayar lunas, tabungan anggota
 

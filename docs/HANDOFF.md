@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.44.0 pinjaman bulanan/lunas/tabungan — run #233)
+Terakhir diperbarui: 2026-11-18 (live: 3.44.0 pinjaman bulanan/lunas/tabungan — run #233; siap: 3.44.1 kartu putih)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,11 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-18 — 3.44.1 SIAP (tanpa SQL): kartu anggota/staf putih.** Keluhan Bos: kartu ungu gelap jelek, minta putih
+  & tanpa "Dibuat dengan Leosiqra". `gambarKartu` (AnggotaView.tsx) digambar ulang: latar putih + glow aksen, motif
+  gelombang samar, pita aksen bawah, foto berbingkai bayangan, nomor dalam kapsul aksen, QR berbingkai; teks merek
+  dihapus. Dipakai kartu anggota & staf. Dicek render PNG lokal. Menunggu "gas".
 
 - **2026-11-18 — 3.44.0 LIVE (run #233, 1a0d923, tanpa SQL, bersama 3.43.0): pinjaman bulanan, bayar lunas,
   tabungan.** `frequency` + `bulanan` (kolom tanpa CHECK); `buatJadwal` bulanan (tgl sama, akhir bulan, libur → maju).
