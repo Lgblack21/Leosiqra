@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.0 simpan pinjam & kartu pinjaman — run #235; siap: 3.45.1)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.1 geser jadwal lebih cepat — run #236)
 
 ## Siapa sedang kerja
 
@@ -18,10 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.45.1 SIAP (tanpa SQL): geser jadwal ke tanggal lebih awal.** GeserForm: batas minimum tidak lagi
+- **2026-11-18 — 3.45.1 LIVE (run #236, 97f8958, tanpa SQL): geser jadwal ke tanggal lebih awal.** GeserForm: batas minimum tidak lagi
   hari ini, cukup > tanggal pinjaman & > angsuran terakhir yang sudah tertutup (server memang sudah mengizinkan);
-  mode Lebih lambat / Lebih cepat / Pilih tanggal; peringatan kalau tanggal sudah lewat. Dites Playwright lokal.
-  Menunggu "gas".
+  mode Lebih lambat / Lebih cepat / Pilih tanggal; peringatan kalau tanggal sudah lewat. Dites Playwright lokal;
+  smoke live bersih.
 
 - **2026-11-18 — 3.45.0 LIVE (run #235, 1e5841c, tanpa SQL): kartu pinjaman + simpanan peminjam dengan peruntukan.** Kartu Pinjaman
   (`src/components/usahaku/KartuPinjaman.tsx`, contoh kartu kertas Bos, navy+emas): tab default di LoanDetail; kotak
