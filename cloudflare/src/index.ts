@@ -10397,7 +10397,7 @@ const shopBook = async (env: Env, ownerId: string, shopId: string) => {
     throw e;
   }
 };
-type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang" | "pesanan" | "dp" | "bayar_utang" | "pinjam_cair" | "pinjam_admin" | "angsuran" | "pinjam_diskon" | "simpanan_masuk" | "simpanan_tarik";
+type BookEntryType = "jual" | "biaya" | "setor" | "ambil" | "pindah" | "saldo_awal" | "bayar_piutang" | "pesanan" | "dp" | "bayar_utang" | "pinjam_cair" | "pinjam_admin" | "angsuran" | "pinjam_diskon" | "simpanan_masuk" | "simpanan_tarik" | "simpanan_pakai";
 type BookEntry = {
   id: string; key: string; type: BookEntryType; date: string; amount: number; fee?: number; net: number;
   accountId: string | null; toAccountId?: string | null; personalAccountId?: string | null; personalTxId?: string | null;
@@ -11091,6 +11091,7 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
         // Pinjaman: uang diserahkan/admin dihapus lewat "Hapus pinjaman" (cek angsuran + kas di sana).
         if (entry.type === "pinjam_cair" || entry.type === "pinjam_admin" || entry.type === "simpanan_masuk") return json({ error: "Catatan ini bagian dari pinjaman. Hapus lewat menu Pinjaman." }, { status: 409 });
         if (entry.type === "pinjam_diskon") return json({ error: "Potongan ini bagian dari pelunasan. Hapus angsuran pelunasannya kalau mau membatalkan." }, { status: 409 });
+        if (entry.type === "simpanan_pakai") return json({ error: "Ini simpanan yang dipakai bayar angsuran. Hapus angsurannya kalau mau membatalkan." }, { status: 409 });
         // Tabungan diambil dibatalkan → uangnya kembali ke kas, saldo tabungan anggota naik lagi.
         if (entry.type === "simpanan_tarik") {
           const st: D1PreparedStatement[] = [];
@@ -11120,6 +11121,8 @@ async function handleShopBook(request: Request, env: Env, ownerId: string, shop:
           } catch {
             disc = 0;
           }
+          // Angsuran dari simpanan: tidak ada kas yang dibalik (account_id kosong); catatan pemakaian simpanannya ikut dihapus.
+          stmts2.push(env.DB.prepare("DELETE FROM shop_entries WHERE owner_id = ? AND type = 'simpanan_pakai' AND json_extract(payload_json, '$.payId') = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(ownerId, entry.id, entry.id, ownerId));
           if (lr && disc > 0) {
             stmts2.push(env.DB.prepare("UPDATE shop_loans SET total = total + ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(disc, lr.id, ownerId, entry.id, ownerId));
             stmts2.push(env.DB.prepare("DELETE FROM shop_entries WHERE owner_id = ? AND ref_id = ? AND type = 'pinjam_diskon' AND json_extract(payload_json, '$.payId') = ? AND EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)").bind(ownerId, lr.id, entry.id, entry.id, ownerId));
@@ -11219,7 +11222,16 @@ const LOAN_PAID_SQL = "(SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WH
 // Saldo tabungan anggota = tabungan dipotong saat pinjaman cair − yang sudah diambil. Bind: owner, borrower, owner, borrower.
 const SAVINGS_SQL = `((SELECT COALESCE(SUM(s.amount), 0) FROM shop_entries s JOIN shop_loans sl ON sl.id = s.ref_id AND sl.owner_id = s.owner_id
      WHERE s.owner_id = ? AND s.type = 'simpanan_masuk' AND sl.borrower_id = ?)
-  - (SELECT COALESCE(SUM(t.amount), 0) FROM shop_entries t WHERE t.owner_id = ? AND t.type = 'simpanan_tarik' AND t.ref_id = ?))`;
+  - (SELECT COALESCE(SUM(t.amount), 0) FROM shop_entries t WHERE t.owner_id = ? AND t.type IN ('simpanan_tarik', 'simpanan_pakai') AND t.ref_id = ?))`;
+// Bagian simpanan yang DIKUNCI: simpanan dari pinjaman yang masih aktif dengan peruntukan "lunas" (dikembalikan setelah
+// lunas) atau "akhir" (dipakai bayar cicilan terakhir), dikurangi yang sudah dipakai bayar cicilan pinjaman itu.
+// Bind: owner, borrower, owner, borrower.
+const SAVINGS_LOCKED_SQL = `((SELECT COALESCE(SUM(s.amount), 0) FROM shop_entries s JOIN shop_loans sl ON sl.id = s.ref_id AND sl.owner_id = s.owner_id
+     WHERE s.owner_id = ? AND s.type = 'simpanan_masuk' AND sl.borrower_id = ? AND sl.status = 'aktif'
+       AND COALESCE(json_extract(s.payload_json, '$.policy'), 'bebas') <> 'bebas')
+  - (SELECT COALESCE(SUM(p.amount), 0) FROM shop_entries p JOIN shop_loans pl ON pl.id = json_extract(p.payload_json, '$.loanId') AND pl.owner_id = p.owner_id
+     WHERE p.owner_id = ? AND p.type = 'simpanan_pakai' AND pl.borrower_id = ? AND pl.status = 'aktif'))`;
+const SAVINGS_POLICIES = ["bebas", "lunas", "akhir"] as const;
 const reqId = (v: unknown) => (typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
 const rp = (n: number) => `Rp${Math.max(0, Math.round(n)).toLocaleString("id-ID")}`;
 // Anggota (migrasi 0049): data diri + foto diri & KTP di R2 PRIVAT. Sebelum migrasi → cara lama (tanpa syarat anggota).
@@ -11279,7 +11291,7 @@ type LoanRow = { id: string; borrower_id: string; principal: number; admin_fee: 
 // (anti dobel), lunas di batch yang sama. by = akun tim yang menerima (tercatat di riwayat).
 async function recordLoanPayment(
   env: Env, ownerId: string, shopId: string, loan: { id: string; status: string; disbursed_on: string }, who: string,
-  input: { requestId: string; amount: number; kasId: string; date: string; by?: { id: string; name: string }; settle?: { discount: number } },
+  input: { requestId: string; amount: number; kasId: string; date: string; by?: { id: string; name: string }; settle?: { discount: number }; fromSavings?: { borrowerId: string } },
 ) {
   if (loan.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
   const id = generateId();
@@ -11297,9 +11309,22 @@ async function recordLoanPayment(
         binds: [loan.id, ownerId, ownerId, loan.id, input.amount],
       };
   const paidNow = { sql: "EXISTS (SELECT 1 FROM shop_entries WHERE id = ? AND owner_id = ?)", binds: [id, ownerId] };
+  // Bayar pakai simpanan anggota: uangnya memang sudah di kas (dipotong saat cair) → TANPA gerak kas; saldo simpanan
+  // berkurang lewat entri "simpanan_pakai". Tidak boleh melebihi saldo simpanan anggota.
+  const fs = input.fromSavings;
+  if (fs) {
+    guard.sql = `${guard.sql} AND ${SAVINGS_SQL} >= ?`;
+    guard.binds = [...guard.binds, ownerId, fs.borrowerId, ownerId, fs.borrowerId, input.amount];
+  }
   const r = await env.DB.batch([
-    bookInsert(env, ownerId, shopId, { id, key, type: "angsuran", date: input.date, amount: input.amount, net: input.amount, accountId: input.kasId, refId: loan.id, party: who, buyer: who, note: input.settle ? `Pelunasan · ${who}` : `Angsuran · ${who}`, by: input.by ?? null, ...(discount ? { payload: { settleDiscount: discount } } : {}) }, guard),
-    kasDelta(env, ownerId, input.kasId, input.amount, id),
+    bookInsert(env, ownerId, shopId, {
+      id, key, type: "angsuran", date: input.date, amount: input.amount, net: input.amount, accountId: fs ? null : input.kasId, refId: loan.id, party: who, buyer: who,
+      note: fs ? `Angsuran dari simpanan · ${who}` : input.settle ? `Pelunasan · ${who}` : `Angsuran · ${who}`, by: input.by ?? null,
+      ...(discount || fs ? { payload: { ...(discount ? { settleDiscount: discount } : {}), ...(fs ? { fromSavings: true } : {}) } } : {}),
+    }, guard),
+    ...(fs
+      ? [bookInsert(env, ownerId, shopId, { id: generateId(), key: `angssav:${input.requestId}`, type: "simpanan_pakai", date: input.date, amount: input.amount, net: 0, accountId: null, refId: fs.borrowerId, party: who, buyer: who, note: `Simpanan dipakai bayar angsuran · ${who}`, payload: { loanId: loan.id, payId: id } }, paidNow)]
+      : [kasDelta(env, ownerId, input.kasId, input.amount, id)]),
     ...(discount
       ? [
           env.DB.prepare(`UPDATE shop_loans SET total = total - ? WHERE id = ? AND owner_id = ? AND ${paidNow.sql}`).bind(discount, loan.id, ownerId, ...paidNow.binds),
@@ -11314,6 +11339,10 @@ async function recordLoanPayment(
     if (left?.status !== "aktif") return json({ error: "Pinjaman ini sudah lunas." }, { status: 409 });
     if (input.settle && discount > Number(left?.total) - Number(left?.principal)) return json({ error: `Potongan maksimal sebesar jasanya, ${rp(Number(left?.total) - Number(left?.principal))}.` }, { status: 409 });
     if (input.settle) return json({ error: `Sisa pinjaman sekarang ${rp(Number(left?.sisa) || 0)}. Muat ulang lalu coba lagi.` }, { status: 409 });
+    if (fs) {
+      const bal = Number((await env.DB.prepare(`SELECT ${SAVINGS_SQL} AS n`).bind(ownerId, fs.borrowerId, ownerId, fs.borrowerId).first<{ n: number }>())?.n) || 0;
+      if (bal < input.amount) return json({ error: `Simpanan ${who} cuma ${rp(bal)}.` }, { status: 409 });
+    }
     return json({ error: `Melebihi sisa pinjaman. Sisanya ${rp(Number(left?.sisa) || 0)}.` }, { status: 409 });
   }
   await publishShopBook(env, ownerId, shopId);
@@ -11349,14 +11378,17 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       const bCols = mOn ? ", b.member_no, b.address, b.job, b.registered_at, b.consent_at, b.updated_at, b.photo_key IS NOT NULL AS has_photo, b.ktp_key IS NOT NULL AS has_ktp" : "";
       // Saldo tabungan per anggota (dipotong saat pinjaman cair − yang sudah diambil).
       const savCol = SAVINGS_SQL.replace("sl.borrower_id = ?", "sl.borrower_id = b.id").replace("t.ref_id = ?", "t.ref_id = b.id");
+      const lockCol = SAVINGS_LOCKED_SQL.replace("sl.borrower_id = ?", "sl.borrower_id = b.id").replace("pl.borrower_id = ?", "pl.borrower_id = b.id");
       const borrowers = (await env.DB.prepare(
-        `SELECT b.id, b.name, b.wa, b.note, b.created_at, b.archived_at${bCols}, ${savCol} AS savings
+        `SELECT b.id, b.name, b.wa, b.note, b.created_at, b.archived_at${bCols}, ${savCol} AS savings, ${lockCol} AS savings_locked
            FROM shop_borrowers b WHERE b.owner_id = ? AND b.shop_id = ? ORDER BY b.name COLLATE NOCASE ASC LIMIT ?`
-      ).bind(ownerId, ownerId, ownerId, shop.id, BORROWERS_MAX).all()).results ?? [];
+      ).bind(ownerId, ownerId, ownerId, ownerId, ownerId, shop.id, BORROWERS_MAX).all()).results ?? [];
       // Semua pinjaman aktif + 200 lunas terakhir, plus total & tanggal angsuran terakhir per pinjaman.
       const loans = (await env.DB.prepare(
         `SELECT l.*, (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid,
                 (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'simpanan_masuk') AS savings,
+                (SELECT json_extract(a.payload_json, '$.policy') FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'simpanan_masuk' LIMIT 1) AS savings_policy,
+                (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.type = 'simpanan_pakai' AND json_extract(a.payload_json, '$.loanId') = l.id) AS savings_used,
                 (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'pinjam_diskon') AS discount,
                 (SELECT MAX(a.date) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS last_paid
            FROM shop_loans l WHERE l.owner_id = ? AND l.shop_id = ? AND (l.status = 'aktif' OR l.id IN (SELECT id FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND status != 'aktif' ORDER BY closed_at DESC LIMIT 200))
@@ -11493,15 +11525,17 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         const cash = cashEnough(ownerId, kas.id, amount);
         const r = await env.DB.batch([
           bookInsert(env, ownerId, shop.id, { id, key, type: "simpanan_tarik", date: todayWIB(), amount, net: amount, accountId: kas.id, refId: b.id, party: b.name, buyer: b.name, note: `Tabungan diambil · ${b.name}` }, {
-            sql: `${SAVINGS_SQL} >= ? AND ${cash.sql}`,
-            binds: [ownerId, b.id, ownerId, b.id, amount, ...cash.binds],
+            sql: `${SAVINGS_SQL} - ${SAVINGS_LOCKED_SQL} >= ? AND ${cash.sql}`,
+            binds: [ownerId, b.id, ownerId, b.id, ownerId, b.id, ownerId, b.id, amount, ...cash.binds],
           }),
           kasDelta(env, ownerId, kas.id, -amount, id),
         ]);
         if (!r[0]?.meta.changes) {
           if (await env.DB.prepare("SELECT 1 FROM shop_entries WHERE owner_id = ? AND entry_key = ?").bind(ownerId, key).first()) return json({ error: "Sudah tercatat." }, { status: 409 });
-          const bal = Number((await env.DB.prepare(`SELECT ${SAVINGS_SQL} AS n`).bind(ownerId, b.id, ownerId, b.id).first<{ n: number }>())?.n) || 0;
-          if (bal < amount) return json({ error: `Tabungan ${b.name} cuma ${rp(bal)}.` }, { status: 409 });
+          const sb = await env.DB.prepare(`SELECT ${SAVINGS_SQL} AS bal, ${SAVINGS_LOCKED_SQL} AS kunci`).bind(ownerId, b.id, ownerId, b.id, ownerId, b.id, ownerId, b.id).first<{ bal: number; kunci: number }>();
+          const bal = Number(sb?.bal) || 0;
+          const kunci = Math.max(0, Number(sb?.kunci) || 0);
+          if (bal - kunci < amount) return json({ error: kunci > 0 ? `Simpanan ${b.name} yang bisa diambil sekarang ${rp(bal - kunci)} — ${rp(kunci)} dikunci sampai pinjamannya lunas.` : `Simpanan ${b.name} cuma ${rp(bal)}.` }, { status: 409 });
           const k = await env.DB.prepare("SELECT name, balance FROM shop_accounts WHERE id = ? AND owner_id = ?").bind(kas.id, ownerId).first<{ name: string; balance: number }>();
           return json({ error: `Saldo ${k?.name ?? "kas"} cuma ${rp(Number(k?.balance) || 0)}. Kas tunai tidak bisa minus.`, code: KAS_KURANG }, { status: 409 });
         }
@@ -11575,6 +11609,8 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
       const savings = raw.savings === undefined || raw.savings === null || raw.savings === "" ? 0 : shopMoney(raw.savings);
       if (savings === null || savings < 0) return json({ error: "Isi tabungan dengan angka." }, { status: 400 });
       if ((adminMode === "potong" ? adminFee : 0) + savings >= principal) return json({ error: "Admin + tabungan harus lebih kecil dari jumlah pinjaman." }, { status: 400 });
+      // Peruntukan simpanan: bebas (tabungan, ambil kapan saja), lunas (dikembalikan setelah lunas), akhir (bayar cicilan terakhir).
+      const savingsPolicy = (SAVINGS_POLICIES as readonly string[]).includes(raw.savings_policy as string) ? (raw.savings_policy as string) : "bebas";
       const today = todayWIB();
       const disbursedOn = isRealDateStr(raw.date) && raw.date <= today && raw.date >= "2000-01-01" ? raw.date : today;
       // Jadwal dibuat di perangkat (melompati tanggal merah/Minggu) lalu DIKUNCI di sini: dicek bentuknya.
@@ -11616,7 +11652,7 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         }, loanExists),
         // Tabungan: tanpa gerak kas (uangnya memang tidak ikut diserahkan) — catatan saldo tabungan anggota.
         ...(savings > 0
-          ? [bookInsert(env, ownerId, shop.id, { id: savId, key: `loansav:${requestId}`, type: "simpanan_masuk", date: disbursedOn, amount: savings, net: savings, accountId: kas.id, refId: id, party: borrower.name, buyer: borrower.name, note: `Tabungan · ${borrower.name}`, payload: { borrowerId: borrower.id } }, loanExists)]
+          ? [bookInsert(env, ownerId, shop.id, { id: savId, key: `loansav:${requestId}`, type: "simpanan_masuk", date: disbursedOn, amount: savings, net: savings, accountId: kas.id, refId: id, party: borrower.name, buyer: borrower.name, note: `Simpanan · ${borrower.name}`, payload: { borrowerId: borrower.id, policy: savingsPolicy } }, loanExists)]
           : []),
         kasDelta(env, ownerId, kas.id, -handed, cairId),
         ...(adminMode === "terpisah" && adminFee > 0
@@ -11734,6 +11770,7 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
           if (!actor.kasId) return json({ error: "Pemilik usaha belum menyiapkan kas usaha untuk angsuran." }, { status: 409 });
           // Petugas boleh melunasi penuh, tapi potongan pelunasan khusus pemilik.
           if (raw.settle === true && raw.discount !== undefined && raw.discount !== null && Number(raw.discount) !== 0) return json({ error: "Potongan pelunasan hanya bisa diberikan pemilik usaha." }, { status: 403 });
+          if (raw.from_savings === true) return json({ error: "Bayar pakai simpanan hanya bisa dilakukan pemilik usaha." }, { status: 403 });
           return await recordLoanPayment(env, ownerId, shop.id, loan, who, { requestId, amount, kasId: actor.kasId, date: todayWIB(), by: { id: actor.id, name: actor.name }, ...(raw.settle === true ? { settle: { discount: 0 } } : {}) });
         }
         const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= loan.disbursed_on ? raw.date : todayWIB();
@@ -11742,7 +11779,8 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
         if (!kas) return json({ error: "Pilih kas yang menerima uangnya." }, { status: 400 });
         const settle = raw.settle === true ? { discount: raw.discount === undefined || raw.discount === null || raw.discount === "" ? 0 : (shopMoney(raw.discount) ?? -1) } : undefined;
         if (settle && settle.discount < 0) return json({ error: "Isi potongan dengan angka." }, { status: 400 });
-        return await recordLoanPayment(env, ownerId, shop.id, loan, who, { requestId, amount, kasId: kas.id, date, settle });
+        const fromSavings = raw.from_savings === true ? { borrowerId: loan.borrower_id } : undefined;
+        return await recordLoanPayment(env, ownerId, shop.id, loan, who, { requestId, amount, kasId: kas.id, date, settle, fromSavings });
       }
 
       // Geser jadwal: tanggal yang SUDAH tertutup angsuran tetap; sisanya diganti. Ditolak kalau sementara itu ada

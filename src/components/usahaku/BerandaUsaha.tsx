@@ -671,7 +671,7 @@ const ENTRY_LABEL: Record<string, string> = {
   dp: 'DP',
   pinjam_cair: 'Pinjaman keluar',
   pinjam_admin: 'Admin pinjaman',
-  simpanan_tarik: 'Tabungan diambil',
+  simpanan_tarik: 'Simpanan diambil',
   angsuran: 'Angsuran',
 };
 function Riwayat({

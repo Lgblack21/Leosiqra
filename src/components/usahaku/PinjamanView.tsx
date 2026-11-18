@@ -21,7 +21,7 @@ import { liburPada, liburStore, parseYmd } from '@/lib/hariLibur';
 import { muatHariLibur } from '@/lib/hariLiburApi';
 import type { Shop } from '@/lib/services/shopService';
 import { shopBookService, type ShopBook } from '@/lib/services/shopBookService';
-import { shopLoanService, type Borrower, type Frekuensi, type Loan, type LoanBook } from '@/lib/services/shopLoanService';
+import { shopLoanService, type Borrower, type Frekuensi, type Loan, type LoanBook, type PeruntukanSimpanan } from '@/lib/services/shopLoanService';
 import {
   buatJadwal,
   isLiburTagih,
@@ -235,9 +235,9 @@ export function PinjamanView({
           {stat('Peminjam aktif', String(aktif.length), `${rows.filter((r) => r.st.telat > 0).length} nunggak`)}
           {data.borrowers.some((b) => b.savings > 0) &&
             stat(
-              'Tabungan anggota',
+              'Simpanan anggota',
               formatIDR(data.borrowers.reduce((a, b) => a + b.savings, 0)),
-              'dipegang di kas, milik anggota',
+              'dipegang di kas, milik peminjam',
             )}
         </div>
         <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
@@ -495,12 +495,13 @@ export function PinjamanView({
                     </span>
                     {b.savings > 0 && (
                       <span className="mt-0.5 inline-block rounded-md bg-sky-50 px-1.5 py-0.5 fs-11 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-                        Tabungan {formatIDR(b.savings)}
+                        Simpanan {formatIDR(b.savings)}
+                        {b.savingsLocked > 0 ? ` · ${formatIDR(Math.min(b.savings, b.savingsLocked))} dikunci sampai lunas` : ''}
                       </span>
                     )}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    {b.savings > 0 && !petugas && (
+                    {b.savings - b.savingsLocked > 0 && !petugas && (
                       <button type="button" onClick={() => setForm({ k: 'tarik', b })} className="rounded-full bg-sky-50 px-3 py-1.5 fs-12 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
                         Tarik
                       </button>
@@ -561,7 +562,7 @@ export function PinjamanView({
             : form?.k === 'kartu'
               ? 'Kartu anggota'
           : form?.k === 'tarik'
-          ? `Tarik tabungan · ${form.b.name}`
+          ? `Ambil simpanan · ${form.b.name}`
           : form?.k === 'borrower'
           ? form.b
             ? 'Ubah peminjam'
@@ -586,7 +587,9 @@ export function PinjamanView({
         {form?.k === 'loan' && (
           <LoanForm shop={shop} data={data} kas={kas} today={today} initialBorrower={form.borrowerId} onDone={close} />
         )}
-        {form?.k === 'pay' && <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} petugas={petugas} onDone={close} />}
+        {form?.k === 'pay' && (
+          <PayForm shop={shop} loan={form.loan} st={form.st} kas={kas} today={today} petugas={petugas} simpanan={borrowerById.get(form.loan.borrowerId)?.savings ?? 0} onDone={close} />
+        )}
         {form?.k === 'borrower' && <BorrowerForm shop={shop} b={form.b} onDone={close} />}
         {form?.k === 'tarik' && <TarikForm shop={shop} b={form.b} kas={kas} onDone={close} />}
         {form?.k === 'daftar' && (
@@ -652,19 +655,20 @@ export function PinjamanView({
 
 // ── Form: anggota mengambil tabungan (kas keluar) ─────────────────────────────────
 function TarikForm({ shop, b, kas, onDone }: { shop: Shop; b: Borrower; kas: ShopBook['accounts']; onDone: (m?: string) => void }) {
-  const [amount, setAmount] = useState(b.savings);
+  const bisa = Math.max(0, b.savings - b.savingsLocked);
+  const [amount, setAmount] = useState(bisa);
   const [accountId, setAccountId] = useState(kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId] = useState(() => crypto.randomUUID());
   const save = async () => {
     if (!amount) return setError('Isi berapa yang diambil.');
-    if (amount > b.savings) return setError(`Tabungan ${b.name} cuma ${formatIDR(b.savings)}.`);
+    if (amount > bisa) return setError(`Simpanan ${b.name} yang bisa diambil sekarang ${formatIDR(bisa)}.`);
     setBusy(true);
     setError('');
     try {
       await shopLoanService.tarikTabungan(shop.id, b.id, { requestId, amount, accountId });
-      onDone(`Tabungan ${formatIDR(amount)} diambil ${b.name}.`);
+      onDone(`Simpanan ${formatIDR(amount)} diserahkan ke ${b.name}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan.');
       setBusy(false);
@@ -673,7 +677,8 @@ function TarikForm({ shop, b, kas, onDone }: { shop: Shop; b: Borrower; kas: Sho
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-sky-50 p-3 fs-13 text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
-        Saldo tabungan <b>{formatIDR(b.savings)}</b>
+        Simpanan <b>{formatIDR(b.savings)}</b> · bisa diambil sekarang <b>{formatIDR(bisa)}</b>
+        {b.savingsLocked > 0 && <span className="block fs-12">Sisanya dikunci sampai pinjamannya lunas.</span>}
       </div>
       <label className="block">
         <span className={labelCls}>Diambil</span>
@@ -691,7 +696,7 @@ function TarikForm({ shop, b, kas, onDone }: { shop: Shop; b: Borrower; kas: Sho
       </label>
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
       <button type="button" onClick={save} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-sky-600 py-3.5 fs-15 font-extrabold text-white hover:bg-sky-700 disabled:opacity-50">
-        {busy ? <Loader2 size={18} className="animate-spin" /> : <Wallet size={18} />} Serahkan {amount > 0 ? formatIDR(amount) : 'tabungan'}
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Wallet size={18} />} Serahkan {amount > 0 ? formatIDR(amount) : 'simpanan'}
       </button>
     </div>
   );
@@ -791,7 +796,11 @@ function LoanForm({
   const [installmentIn, setInstallment] = useState(0);
   const [totalIn, setTotalIn] = useState(0);
   const [jasaPct, setJasaPct] = useState('');
-  const [savings, setSavings] = useState(0);
+  // Simpanan peminjam (opsional, seperti admin): dipotong saat cair, milik peminjam, dengan peruntukannya.
+  const [adaSimpanan, setAdaSimpanan] = useState<'tanpa' | 'ada'>('tanpa');
+  const [savingsIn, setSavings] = useState(0);
+  const [savingsPolicy, setSavingsPolicy] = useState<PeruntukanSimpanan>('lunas');
+  const savings = adaSimpanan === 'ada' ? savingsIn : 0;
   const [count, setCount] = useState(0);
   const [date, setDate] = useState(today);
   const [first, setFirst] = useState(addDays(today, 1));
@@ -868,7 +877,7 @@ function LoanForm({
         dueDates: dates,
         accountId,
         ...(cara !== 'angsuran' ? { total } : {}),
-        ...(savings > 0 ? { savings } : {}),
+        ...(savings > 0 ? { savings, savingsPolicy } : {}),
         ...(jaminan.on ? { collateral: { jenis: jaminan.jenis, ket: jaminan.ket.trim(), nilai: jaminan.nilai || null } } : {}),
       });
       // Foto jaminan diunggah setelah pinjaman tercatat. Gagal → pinjaman tetap tercatat, foto bisa ditambah dari detail.
@@ -908,6 +917,15 @@ function LoanForm({
       ))}
     </div>
   );
+  const kartu = (judul: string, sub: string, tone: string, isi: React.ReactNode) => (
+    <section className="space-y-3 rounded-[22px] bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+      <div className="flex items-center gap-2">
+        <span className={cn('rounded-lg px-2 py-0.5 fs-12 font-extrabold', tone)}>{judul}</span>
+        <span className="fs-12 text-slate-500">{sub}</span>
+      </div>
+      {isi}
+    </section>
+  );
   const rupiah = (v: number, set: (n: number) => void, ph: string, label: string) => (
     <label className="block">
       <span className={labelCls}>{label}</span>
@@ -941,15 +959,81 @@ function LoanForm({
           <input value={newWa} onChange={(e) => setNewWa(e.target.value)} inputMode="tel" placeholder="WA (opsional)" aria-label="WA peminjam baru" className={fieldCls} />
         </div>
       )}
-      <div className={cn('grid gap-2', adminMode === 'tanpa' ? 'grid-cols-1' : 'grid-cols-2')}>
-        {rupiah(principal, setPrincipal, 'Mis. 1.000.000', 'Jumlah pinjaman')}
-        {adminMode !== 'tanpa' && rupiah(adminInput, setAdmin, 'Mis. 50.000', 'Admin')}
-      </div>
-      {seg(adminMode, setAdminMode, [
-        ['potong', 'Admin dipotong'],
-        ['terpisah', 'Admin terpisah'],
-        ['tanpa', 'Tanpa admin'],
-      ])}
+      {rupiah(principal, setPrincipal, 'Mis. 1.000.000', 'Jumlah pinjaman')}
+
+      {kartu(
+        'Admin',
+        'Untuk kamu — masuk pendapatan',
+        'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+        <>
+          {seg(adminMode, setAdminMode, [
+            ['potong', 'Dipotong'],
+            ['terpisah', 'Dibayar terpisah'],
+            ['tanpa', 'Tanpa admin'],
+          ])}
+          {adminMode !== 'tanpa' && rupiah(adminInput, setAdmin, 'Mis. 50.000', 'Besar admin')}
+          <p className="fs-12 text-slate-500">
+            {adminMode === 'potong'
+              ? 'Dipotong dari uang yang diserahkan.'
+              : adminMode === 'terpisah'
+                ? 'Peminjam membayar admin sendiri; uang pinjaman diserahkan utuh.'
+                : 'Tidak ada biaya admin.'}
+          </p>
+        </>,
+      )}
+
+      {kartu(
+        'Simpanan',
+        'Milik peminjam — bukan untung',
+        'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+        <>
+          {seg(adaSimpanan, setAdaSimpanan, [
+            ['tanpa', 'Tanpa simpanan'],
+            ['ada', 'Ada simpanan'],
+          ])}
+          {adaSimpanan === 'ada' && (
+            <>
+              {rupiah(savingsIn, setSavings, 'Mis. 50.000', 'Besar simpanan (dipotong saat uang diserahkan)')}
+              <div className="space-y-2" role="radiogroup" aria-label="Peruntukan simpanan">
+                <span className={labelCls}>Nanti simpanannya untuk</span>
+                {(
+                  [
+                    ['lunas', 'Dikembalikan setelah lunas', 'Dikunci selama cicilan berjalan, lalu bisa diambil peminjam.'],
+                    ['akhir', 'Bayar cicilan terakhir', 'Dipakai melunasi angsuran terakhir — tinggal ketuk "Pakai simpanan".'],
+                    ['bebas', 'Jadi tabungan', 'Bisa diambil peminjam kapan saja.'],
+                  ] as const
+                ).map(([v, t, d]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={savingsPolicy === v}
+                    onClick={() => setSavingsPolicy(v)}
+                    className={cn(
+                      'flex w-full items-start gap-3 rounded-2xl p-3 text-left ring-1 transition',
+                      savingsPolicy === v ? 'bg-sky-50 ring-2 ring-sky-500 dark:bg-sky-500/10' : 'bg-white ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:ring-slate-700',
+                    )}
+                  >
+                    <span className={cn('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-2', savingsPolicy === v ? 'bg-sky-500 ring-sky-500' : 'ring-slate-300')}>
+                      {savingsPolicy === v && <Check size={12} className="text-white" />}
+                    </span>
+                    <span>
+                      <span className="block fs-13 font-bold text-slate-900 dark:text-white">{t}</span>
+                      <span className="block fs-12 text-slate-500">{d}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </>,
+      )}
+
+      {kartu(
+        'Cicilan',
+        'Cara peminjam mengembalikan',
+        'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+        <>
       {seg(frequency, setFrequency, [
         ['harian', 'Harian'],
         ['mingguan', 'Mingguan'],
@@ -986,16 +1070,12 @@ function LoanForm({
         </label>
       </div>
       {cara !== 'angsuran' && installment > 0 && count > 0 && (
-        <p className="-mt-2 fs-12 text-slate-500">
+        <p className="fs-12 text-slate-500">
           Angsuran {formatIDR(installment)} per {per}
           {last !== installment ? ` (yang terakhir ${formatIDR(last)})` : ''} · total {formatIDR(total)}
         </p>
       )}
-      {rupiah(savings, setSavings, 'Kosongkan kalau tidak ada', 'Tabungan dipotong di awal (opsional)')}
-      {savings > 0 && (
-        <p className="-mt-2 fs-12 text-slate-500">
-          Tabungan milik anggota — tetap di kas, bukan untung. Bisa diambil anggota kapan saja dari menu Anggota.
-        </p>
+        </>,
       )}
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
@@ -1041,7 +1121,9 @@ function LoanForm({
         <section className="space-y-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
           {[
             ['Uang diserahkan ke peminjam', formatIDR(Math.max(0, handed)), ''],
-            ...(savings > 0 ? [['Tabungan anggota (dipotong)', formatIDR(savings), '']] : []),
+            ...(savings > 0
+              ? [[`Simpanan peminjam (${savingsPolicy === 'lunas' ? 'kembali setelah lunas' : savingsPolicy === 'akhir' ? 'bayar cicilan terakhir' : 'tabungan'})`, formatIDR(savings), '']]
+              : []),
             ['Total yang dibayar balik', last !== installment ? `${formatIDR(total)} (${count - 1}× ${formatIDR(installment)} + ${formatIDR(last)})` : `${formatIDR(total)} (${count}× ${formatIDR(installment)})`, ''],
             ['Untung', admin ? `${formatIDR(untung)} (admin ${formatIDR(admin)} + jasa ${formatIDR(total - principal)})` : `${formatIDR(untung)} (jasa saja, tanpa admin)`, untung < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300'],
             ['Selesai', dates.length ? tgl(dates[dates.length - 1], true) : '—', ''],
@@ -1098,6 +1180,7 @@ function PayForm({
   kas,
   today,
   petugas,
+  simpanan = 0,
   onDone,
 }: {
   shop: Shop;
@@ -1107,14 +1190,22 @@ function PayForm({
   today: string;
   /** Akun Petugas: kas & tanggal ditentukan server (kas pilihan pemilik, hari ini). */
   petugas?: { kasName: string | null } | null;
+  /** Saldo simpanan peminjam — bisa dipakai bayar angsuran (khusus pemilik). */
+  simpanan?: number;
   onDone: (m?: string) => void;
 }) {
   const [amountIn, setAmount] = useState(st.tagihan || Math.min(loan.installment, st.sisa));
   // Bayar lunas: bayar seluruh sisa sekaligus, boleh dengan potongan (khusus pemilik, maks sebesar jasa).
-  const [lunas, setLunas] = useState(false);
+  const bisaSimpanan = !petugas && simpanan > 0;
+  const [mode, setMode] = useState<'biasa' | 'lunas' | 'simpanan'>(
+    bisaSimpanan && loan.savingsPolicy === 'akhir' && st.sisa <= simpanan ? 'simpanan' : 'biasa',
+  );
+  const lunas = mode === 'lunas';
   const [potongan, setPotongan] = useState(0);
   const maxPotongan = Math.max(0, loan.total - loan.principal);
-  const amount = lunas ? Math.max(0, st.sisa - potongan) : amountIn;
+  const maxSimpanan = Math.min(simpanan, st.sisa);
+  const [dariSimpanan, setDariSimpanan] = useState(Math.min(simpanan, st.sisa));
+  const amount = lunas ? Math.max(0, st.sisa - potongan) : mode === 'simpanan' ? Math.min(dariSimpanan, maxSimpanan) : amountIn;
   const [accountId, setAccountId] = useState(loan.accountId && kas.some((a) => a.id === loan.accountId) ? loan.accountId : (kas.find((a) => a.isDefault)?.id ?? kas[0]?.id ?? ''));
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState(false);
@@ -1128,9 +1219,20 @@ function PayForm({
     setBusy(true);
     setError('');
     try {
-      const r = await shopLoanService.pay(shop.id, loan.id, { requestId, amount, accountId, date, ...(lunas ? { settle: { discount: potongan } } : {}) });
+      const r = await shopLoanService.pay(shop.id, loan.id, {
+        requestId,
+        amount,
+        accountId,
+        date,
+        ...(lunas ? { settle: { discount: potongan } } : {}),
+        ...(mode === 'simpanan' ? { fromSavings: true } : {}),
+      });
       onDone(
-        r.lunas
+        mode === 'simpanan'
+          ? r.lunas
+            ? `Lunas dibayar dari simpanan ${formatIDR(amount)}. 🎉`
+            : `Angsuran ${formatIDR(amount)} dibayar dari simpanan.`
+          : r.lunas
           ? lunas && potongan > 0
             ? `Lunas dengan potongan ${formatIDR(potongan)}. 🎉`
             : 'Angsuran diterima — pinjaman LUNAS. 🎉'
@@ -1148,25 +1250,40 @@ function PayForm({
         Tagihan hari ini <b className="text-slate-900 dark:text-white">{formatIDR(st.tagihan)}</b>
         {st.nunggakKali > 0 ? ` (termasuk nunggak ${st.nunggakKali}×)` : ''} · sisa pinjaman {formatIDR(st.sisa)}
       </div>
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
-        {([
-          [false, 'Angsuran biasa'],
-          [true, 'Bayar lunas'],
-        ] as const).map(([v, l]) => (
+      <div className={cn('grid gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800', bisaSimpanan ? 'grid-cols-3' : 'grid-cols-2')}>
+        {(
+          [
+            ['biasa', 'Angsuran'],
+            ['lunas', 'Bayar lunas'],
+            ...(bisaSimpanan ? ([['simpanan', 'Pakai simpanan']] as const) : []),
+          ] as const
+        ).map(([v, l]) => (
           <button
-            key={l}
+            key={v}
             type="button"
             onClick={() => {
-              setLunas(v);
+              setMode(v);
               setPotongan(0);
             }}
-            className={cn('rounded-xl py-2 fs-13 font-bold', lunas === v ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}
+            className={cn('rounded-xl py-2 fs-13 font-bold', mode === v ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}
           >
             {l}
           </button>
         ))}
       </div>
-      {lunas ? (
+      {mode === 'simpanan' ? (
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-sky-50 p-3 fs-13 text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+            Simpanan peminjam <b>{formatIDR(simpanan)}</b>
+            {loan.savingsPolicy === 'akhir' ? ' — memang disiapkan untuk cicilan terakhir.' : '.'} Uangnya sudah di kas, jadi saldo kas tidak berubah.
+          </div>
+          <label className="block">
+            <span className={labelCls}>Dipakai dari simpanan (maks {formatIDR(maxSimpanan)})</span>
+            <input value={moneyText(dariSimpanan)} onChange={(e) => setDariSimpanan(Math.min(maxSimpanan, money(e.target.value)))} inputMode="numeric" className={cn(fieldCls, 'fsh-22 font-extrabold tabular-nums')} />
+          </label>
+          {amount >= st.sisa && <p className="fs-12 font-semibold text-emerald-700 dark:text-emerald-300">Cukup untuk melunasi — pinjaman langsung lunas.</p>}
+        </div>
+      ) : lunas ? (
         <div className="space-y-3">
           {!petugas && maxPotongan > 0 && (
             <label className="block">
@@ -1198,7 +1315,7 @@ function PayForm({
       </div>
       </>
       )}
-      {petugas ? (
+      {mode === 'simpanan' ? null : petugas ? (
         <p className="rounded-2xl bg-slate-50 px-3 py-2.5 fs-12 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
           Masuk ke <b>{petugas.kasName ?? 'kas usaha'}</b> · tanggal hari ini · tercatat atas namamu.
         </p>
@@ -1220,7 +1337,7 @@ function PayForm({
         </label>
       </div>
       )}
-      {!lunas && amount > st.tagihan && st.tagihan >= 0 && amount <= st.sisa && (
+      {mode === 'biasa' && amount > st.tagihan && st.tagihan >= 0 && amount <= st.sisa && (
         <p className="fs-12 text-slate-500">Lebihnya {formatIDR(amount - st.tagihan)} dihitung bayar di muka untuk tagihan berikutnya.</p>
       )}
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
@@ -1305,7 +1422,9 @@ function LoanDetail({
         {loan.count}× {formatIDR(loan.installment)} {loan.frequency} · cair {tgl(loan.disbursedOn)} ·{' '}
         {loan.status === 'lunas' ? <b className="text-emerald-700">lunas</b> : st.telat ? <b className="text-rose-600">telat {st.telat} hari</b> : 'lancar'}
         {borrower?.wa ? ` · WA ${borrower.wa}` : ''}
-        {loan.savings > 0 ? ` · tabungan dipotong ${formatIDR(loan.savings)}` : ''}
+        {loan.savings > 0
+          ? ` · simpanan ${formatIDR(loan.savings)} (${loan.savingsPolicy === 'lunas' ? 'kembali setelah lunas' : loan.savingsPolicy === 'akhir' ? 'untuk cicilan terakhir' : 'tabungan'}${loan.savingsUsed ? `, terpakai ${formatIDR(loan.savingsUsed)}` : ''})`
+          : ''}
         {loan.discount > 0 ? ` · potongan pelunasan ${formatIDR(loan.discount)}` : ''}
       </p>
       {loan.status === 'aktif' && (

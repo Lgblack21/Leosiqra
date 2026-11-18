@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.44.0 pinjaman bulanan/lunas/tabungan — run #233; siap: 3.44.1 kartu putih)
+Terakhir diperbarui: 2026-11-18 (live: 3.44.1 kartu putih — run #234; siap: 3.45.0 simpanan)
 
 ## Siapa sedang kerja
 
@@ -18,10 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.44.1 SIAP (tanpa SQL): kartu anggota/staf putih.** Keluhan Bos: kartu ungu gelap jelek, minta putih
+- **2026-11-18 — 3.45.0 SIAP (tanpa SQL): simpanan peminjam dengan peruntukan.** Bos: admin = untuk pemilik, simpanan
+  = untuk peminjam, keduanya opsional. LoanForm dibagi kartu Admin / Simpanan / Cicilan. `savings_policy`
+  (bebas|lunas|akhir) disimpan di payload `simpanan_masuk`. `SAVINGS_LOCKED_SQL` = simpanan pinjaman aktif ber-policy
+  lunas/akhir − yang sudah dipakai; tarik hanya dari (saldo − dikunci). Bayar pakai simpanan: `from_savings:true` →
+  angsuran TANPA kas (account_id NULL, payload.fromSavings) + entri `simpanan_pakai` (ref borrower, payload loanId/payId;
+  ikut dikurangkan di SAVINGS_SQL); hapus angsuran itu menghapus simpanan_pakai; hapus simpanan_pakai langsung ditolak.
+  Petugas: from_savings 403. GET: borrowers.savings_locked, loans.savings_policy/savings_used. Dites wrangler lokal
+  (kunci, lunas→tarik, pakai simpanan kas tetap, hapus → kembali, petugas 403) + Playwright form. Menunggu "gas".
+
+- **2026-11-18 — 3.44.1 LIVE (run #234, ad0e522): kartu anggota/staf putih.** Keluhan Bos: kartu ungu gelap jelek, minta putih
   & tanpa "Dibuat dengan Leosiqra". `gambarKartu` (AnggotaView.tsx) digambar ulang: latar putih + glow aksen, motif
   gelombang samar, pita aksen bawah, foto berbingkai bayangan, nomor dalam kapsul aksen, QR berbingkai; teks merek
-  dihapus. Dipakai kartu anggota & staf. Dicek render PNG lokal. Menunggu "gas".
+  dihapus. Dipakai kartu anggota & staf. Dicek render PNG lokal; smoke live bersih.
 
 - **2026-11-18 — 3.44.0 LIVE (run #233, 1a0d923, tanpa SQL, bersama 3.43.0): pinjaman bulanan, bayar lunas,
   tabungan.** `frequency` + `bulanan` (kolom tanpa CHECK); `buatJadwal` bulanan (tgl sama, akhir bulan, libur → maju).

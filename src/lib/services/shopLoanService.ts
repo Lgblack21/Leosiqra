@@ -25,9 +25,13 @@ export type Borrower = {
   hasPhoto: boolean;
   hasKtp: boolean;
   updatedAt: string;
-  /** Saldo tabungan anggota (dipotong saat pinjaman cair − yang sudah diambil). */
+  /** Saldo simpanan anggota (dipotong saat pinjaman cair − yang sudah diambil/dipakai bayar). */
   savings: number;
+  /** Bagian yang dikunci sampai pinjamannya lunas (peruntukan "lunas"/"akhir"). Yang bisa diambil = savings − savingsLocked. */
+  savingsLocked: number;
 };
+/** Peruntukan simpanan: bebas = tabungan (ambil kapan saja), lunas = dikembalikan setelah lunas, akhir = bayar cicilan terakhir. */
+export type PeruntukanSimpanan = 'bebas' | 'lunas' | 'akhir';
 export type Frekuensi = 'harian' | 'mingguan' | 'bulanan';
 export type MemberFile = 'foto' | 'ktp';
 export type Loan = {
@@ -51,6 +55,9 @@ export type Loan = {
   lastPaid: string | null;
   /** Tabungan yang dipotong saat cair & potongan pelunasan (sudah mengurangi total). */
   savings: number;
+  savingsPolicy: PeruntukanSimpanan | null;
+  /** Simpanan pinjaman ini yang sudah dipakai bayar angsuran. */
+  savingsUsed: number;
   discount: number;
   /** Jaminan (opsional, migrasi 0049). Foto privat — hanya jumlahnya yang dikirim. */
   collateral: Collateral | null;
@@ -100,6 +107,8 @@ const loanFromRow = (r: Row): Loan => {
     paid: num(r.paid),
     lastPaid: str(r.last_paid),
     savings: num(r.savings),
+    savingsPolicy: r.savings_policy === 'lunas' || r.savings_policy === 'akhir' || r.savings_policy === 'bebas' ? r.savings_policy : null,
+    savingsUsed: num(r.savings_used),
     discount: num(r.discount),
     collateral:
       r.collateral && typeof r.collateral === 'object'
@@ -135,6 +144,7 @@ export const shopLoanService = {
         hasKtp: Boolean(b.has_ktp),
         updatedAt: String(b.updated_at ?? b.created_at ?? ''),
         savings: num(b.savings),
+        savingsLocked: Math.max(0, num(b.savings_locked)),
       })),
       loans: ((r.loans as Row[]) ?? []).map(loanFromRow),
       payments: ((r.payments as Row[]) ?? []).map((p) => ({
@@ -217,8 +227,9 @@ export const shopLoanService = {
       accountId: string;
       /** Total kembali yang diisi sendiri (angsuran terakhir boleh lebih kecil). */
       total?: number;
-      /** Tabungan dipotong saat uang diserahkan. */
+      /** Simpanan dipotong saat uang diserahkan + peruntukannya. */
       savings?: number;
+      savingsPolicy?: PeruntukanSimpanan;
       note?: string;
       collateral?: { jenis: string; ket: string; nilai: number | null };
     },
@@ -240,13 +251,13 @@ export const shopLoanService = {
         note: input.note,
         collateral: input.collateral,
         ...(input.total ? { total: input.total } : {}),
-        ...(input.savings ? { savings: input.savings } : {}),
+        ...(input.savings ? { savings: input.savings, savings_policy: input.savingsPolicy ?? 'bebas' } : {}),
       },
     });
     changed();
     return r;
   },
-  async pay(shopId: string, loanId: string, input: { requestId: string; amount: number; accountId: string; date?: string; settle?: { discount: number } }) {
+  async pay(shopId: string, loanId: string, input: { requestId: string; amount: number; accountId: string; date?: string; settle?: { discount: number }; fromSavings?: boolean }) {
     const r = await cloudflareApi<{ id: string; lunas: boolean }>(`${ROOT}/${shopId}/pinjaman/loans/${loanId}/pay`, {
       method: 'POST',
       json: {
@@ -255,6 +266,7 @@ export const shopLoanService = {
         shop_account_id: input.accountId,
         date: input.date,
         ...(input.settle ? { settle: true, discount: input.settle.discount } : {}),
+        ...(input.fromSavings ? { from_savings: true } : {}),
       },
     });
     changed();
