@@ -25,6 +25,7 @@ import { shopLoanService, type Borrower, type Frekuensi, type Loan, type LoanBoo
 import {
   buatJadwal,
   isLiburTagih,
+  jasaDiakui,
   kelompokTelat,
   modalDiLuar,
   pendapatan,
@@ -187,6 +188,66 @@ export function PinjamanView({
     </button>
   );
 
+  // ── Uang dipisah: admin (pendapatan), cicilan (pokok kembali + jasa), simpanan (milik peminjam) ──
+  const uangTerpisah = () => {
+    const month = `${today.slice(0, 8)}01`;
+    const inMonth = (d: string) => d >= month && d <= today;
+    const adminTotal = data.loans.reduce((a, l) => a + l.adminFee, 0);
+    // Cicilan bulan ini dipecah pokok/jasa secara proporsional (sama dengan hitungan pendapatan jasa).
+    const pend = pendapatan(data.loans, data.payments, month, today);
+    const adminBulan = pend.admin;
+    const bayarBulan = data.payments.filter((p) => inMonth(p.date));
+    const cicilanBulan = bayarBulan.reduce((a, p) => a + p.amount, 0);
+    const dariSimpananBulan = bayarBulan.filter((p) => p.fromSavings).reduce((a, p) => a + p.amount, 0);
+    const cicilanTotal = data.loans.reduce((a, l) => a + l.paid, 0);
+    const jasaTotal = data.loans.reduce((a, l) => a + jasaDiakui(l, l.paid), 0);
+    const simpananMasuk = data.loans.reduce((a, l) => a + l.savings, 0);
+    const simpananDipakai = data.loans.reduce((a, l) => a + l.savingsUsed, 0);
+    const simpananSaldo = data.borrowers.reduce((a, b) => a + b.savings, 0);
+    const simpananDiambil = Math.max(0, simpananMasuk - simpananDipakai - simpananSaldo);
+    const kartuUang = (judul: string, sub: string, tone: string, utama: string, utamaLabel: string, rinci: [string, string][]) => (
+      <div className="min-w-0 rounded-3xl bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+        <div className="flex items-center gap-2">
+          <span className={cn('rounded-lg px-2 py-0.5 fs-12 font-extrabold', tone)}>{judul}</span>
+          <span className="truncate fs-11 text-slate-500">{sub}</span>
+        </div>
+        <p className="mt-2 fs-11 font-semibold text-slate-500">{utamaLabel}</p>
+        <p className="truncate fsh-22 font-black tabular-nums text-slate-900 dark:text-white">{utama}</p>
+        <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-slate-800">
+          {rinci.map(([k, v]) => (
+            <li key={k} className="flex justify-between gap-2 fs-12">
+              <span className="text-slate-500">{k}</span>
+              <b className="tabular-nums text-slate-800 dark:text-slate-100">{v}</b>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+    return (
+      <section className="space-y-2">
+        <p className="px-1 fs-13 font-extrabold text-slate-900 dark:text-white">Uang dipisah per jenis</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {kartuUang('Admin', 'pendapatan kamu', 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300', formatIDR(adminBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
+            ['Total semua', formatIDR(adminTotal)],
+          ])}
+          {kartuUang('Cicilan', 'angsuran masuk', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300', formatIDR(cicilanBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
+            ['· pokok kembali', formatIDR(Math.max(0, cicilanBulan - pend.jasa))],
+            ['· jasa (untung)', formatIDR(pend.jasa)],
+            ...(dariSimpananBulan > 0 ? ([['Dibayar dari simpanan', formatIDR(dariSimpananBulan)]] as [string, string][]) : []),
+            ['Semua angsuran', formatIDR(cicilanTotal)],
+            ['Semua jasa', formatIDR(jasaTotal)],
+          ])}
+          {kartuUang('Simpanan', 'milik peminjam, bukan untung', 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300', formatIDR(simpananSaldo), 'Dipegang sekarang', [
+            ['Dipotong saat cair', formatIDR(simpananMasuk)],
+            ['Dipakai bayar cicilan', formatIDR(simpananDipakai)],
+            ['Sudah diambil', formatIDR(simpananDiambil)],
+          ])}
+        </div>
+        <p className="px-1 fs-11 text-slate-400">Uangnya tetap di kas yang sama — ini pemisahan catatan. Riwayat per jenis ada di menu Kas.</p>
+      </section>
+    );
+  };
+
   // ── Ringkasan ──
   const ringkasan = () => {
     const month = `${today.slice(0, 8)}01`;
@@ -241,6 +302,7 @@ export function PinjamanView({
               'dipegang di kas, milik peminjam',
             )}
         </div>
+        {uangTerpisah()}
         <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <div className="flex items-center justify-between gap-3">
             <p className="fs-15 font-extrabold text-slate-900 dark:text-white">Kelancaran</p>

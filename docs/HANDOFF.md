@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.2 koreksi jadwal + versi tanpa pinjaman)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.2; 3.45.3 uang dipisah per jenis siap, belum deploy)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-18 — 3.45.3 SIAP (branch claude/pinjaman-keuangan-terpisah-20261118, BELUM deploy, tanpa SQL): uang dipisah per jenis.**
+  Permintaan Bos: "uang admin, tabungan, dan cicilan dibuat terpisah". Dipilih opsi A = pemisahan TAMPILAN (alur kas tidak
+  berubah). Ringkasan simpan pinjam (`uangTerpisah()` di PinjamanView): kartu Admin (bulan ini via `pendapatan().admin` + total),
+  Cicilan (bulan ini = pokok kembali + jasa, dari-simpanan bila ada, total angsuran & jasa), Simpanan (dipegang = Σ borrower.savings,
+  dipotong saat cair, dipakai, sudah diambil). Kas (BerandaUsaha): chip Semua/Pencairan/Admin/Cicilan/Simpanan/Modal & pindah,
+  muncul hanya kalau ada entri pinjam_cair/angsuran; Admin & Simpanan juga menangkap potongan di `fees` pinjam_cair (label
+  'admin'/'tabungan'). CHANGELOG generik ("Perbaikan kecil"). Opsi B (kas/rekening terpisah sungguhan per jenis) belum dibuat.
 - **2026-11-18 — CHANGELOG tanpa pinjaman LIVE (d9cfce9, bersama kode 3.45.2; halaman versi 0 kata "pinjam").** Permintaan Bos: fitur
   simpan pinjam itu untuk dirinya sendiri, bukan produk Leosiqra → catatan versi yang khusus pinjaman DIHAPUS dari
   CHANGELOG (3.34.0–3.38.0, 3.41.2, 3.44.0, 3.45.0, 3.45.1), versi campuran dibersihkan (3.39.0 logo, 3.40.0 kas &

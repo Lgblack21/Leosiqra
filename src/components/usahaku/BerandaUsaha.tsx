@@ -154,6 +154,18 @@ type Form =
   | { k: 'o_dp' | 'o_ambil' | 'o_batal'; entry: BookEntry; dp: number };
 export type BerandaView = 'ringkasan' | 'kas' | 'biaya' | 'tagihan';
 const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal', 'pinjam_cair', 'pinjam_admin', 'angsuran', 'simpanan_tarik']);
+// Filter riwayat Kas per jenis uang (usaha simpan pinjam): admin, cicilan, simpanan dipisah.
+type KasEntry = ShopBook['entries'][number];
+// Admin/simpanan yang dipotong saat pencairan ada di fees entri pinjam_cair (label 'admin' / 'tabungan').
+const cairPotong = (e: KasEntry, label: string) => e.type === 'pinjam_cair' && e.fees.some((f) => f.label === label && f.amount > 0);
+const KAS_FILTER: [string, string, (e: KasEntry) => boolean][] = [
+  ['semua', 'Semua', () => true],
+  ['cair', 'Pencairan', (e) => e.type === 'pinjam_cair'],
+  ['admin', 'Admin', (e) => e.type === 'pinjam_admin' || cairPotong(e, 'admin')],
+  ['cicilan', 'Cicilan', (e) => e.type === 'angsuran'],
+  ['simpanan', 'Simpanan', (e) => e.type === 'simpanan_tarik' || cairPotong(e, 'tabungan')],
+  ['modal', 'Modal & pindah', (e) => e.type === 'setor' || e.type === 'ambil' || e.type === 'pindah' || e.type === 'saldo_awal'],
+];
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
 // WA pelanggan → nomor internasional untuk wa.me (08… → 628…). Tanpa nomor: pilih kontak di WA.
 const waLink = (wa: string | null, text: string) => {
@@ -183,6 +195,7 @@ export function BerandaUsaha({
   onNav?: (v: Exclude<BerandaView, 'ringkasan'>) => void;
 }) {
   const [form, setForm] = useState<Form | null>(null);
+  const [kasFilter, setKasFilter] = useState('semua');
   const [materials, setMaterials] = useState<StockMaterial[]>([]);
   const kas = book.accounts.filter((a) => !a.archived);
   const totalKas = kas.reduce((a, k) => a + k.balance, 0);
@@ -332,7 +345,32 @@ export function BerandaUsaha({
             {action('pindah', 'Pindah kas', ArrowLeftRight, 'bg-sky-50 text-sky-600 dark:bg-sky-500/10')}
           </div>
           <PeriodPicker range={book.range} onRange={onRange} />
-          <Riwayat entries={book.entries.filter((e) => KAS_TYPES.has(e.type))} accName={accName} onRemove={remove} label={label} truncated={book.truncated} />
+          {book.entries.some((e) => e.type === 'pinjam_cair' || e.type === 'angsuran') && (
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 no-scrollbar" role="tablist" aria-label="Jenis uang">
+              {KAS_FILTER.map(([id, l]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={kasFilter === id}
+                  onClick={() => setKasFilter(id)}
+                  className={cn(
+                    'shrink-0 rounded-full px-3.5 py-1.5 fs-12 font-bold',
+                    kasFilter === id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700',
+                  )}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          <Riwayat
+            entries={book.entries.filter((e) => KAS_TYPES.has(e.type) && (KAS_FILTER.find(([id]) => id === kasFilter)?.[2] ?? (() => true))(e))}
+            accName={accName}
+            onRemove={remove}
+            label={label}
+            truncated={book.truncated}
+          />
         </>
       )}
 
