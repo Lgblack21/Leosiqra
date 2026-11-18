@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — uang dipisah LIVE tanpa naik versi (tetap 3.45.2, tanpa catatan rilis — permintaan Bos, tanpa SQL): uang dipisah per jenis.**
+- **2026-11-18 — uang dipisah LIVE run #238 b173a17 tanpa naik versi (tetap 3.45.2, tanpa catatan rilis — permintaan Bos, tanpa SQL): uang dipisah per jenis.**
   Permintaan Bos: "uang admin, tabungan, dan cicilan dibuat terpisah". Dipilih opsi A = pemisahan TAMPILAN (alur kas tidak
   berubah). Ringkasan simpan pinjam (`uangTerpisah()` di PinjamanView): kartu Admin (bulan ini via `pendapatan().admin` + total),
   Cicilan (bulan ini = pokok kembali + jasa, dari-simpanan bila ada, total angsuran & jasa), Simpanan (dipegang = Σ borrower.savings,
