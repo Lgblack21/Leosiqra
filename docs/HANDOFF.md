@@ -18,6 +18,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-18 — Kas simpan pinjam: Admin/Simpanan nama+nominal + "Uang kas kita" (branch claude/pinjaman-keuangan-terpisah-20261118, BELUM deploy, tanpa SQL, TANPA catatan rilis/bump).**
+  Permintaan Bos: filter Admin & Simpanan cukup nama + nominal (admin hijau), total admin + cicilan = "Uang kas kita".
+  `uangPinjaman()`/`RincianUang` di BerandaUsaha: admin = pinjam_admin + fees 'admin' pinjam_cair (pinjaman lama tanpa fees → seluruh
+  `fee` = admin); simpanan = simpanan_masuk (+), tarik/pakai (−). Kartu hijau "Uang kas kita · periode" (admin + cicilan; simpanan
+  titipan ditulis terpisah). Ringkasan PinjamanView: kartu hijau uang kas bulan ini; badge Admin hijau, Cicilan teal.
 - **2026-11-18 — uang dipisah LIVE run #238 b173a17 tanpa naik versi (tetap 3.45.2, tanpa catatan rilis — permintaan Bos, tanpa SQL): uang dipisah per jenis.**
   Permintaan Bos: "uang admin, tabungan, dan cicilan dibuat terpisah". Dipilih opsi A = pemisahan TAMPILAN (alur kas tidak
   berubah). Ringkasan simpan pinjam (`uangTerpisah()` di PinjamanView): kartu Admin (bulan ini via `pendapatan().admin` + total),

@@ -156,14 +156,12 @@ export type BerandaView = 'ringkasan' | 'kas' | 'biaya' | 'tagihan';
 const KAS_TYPES = new Set(['setor', 'ambil', 'pindah', 'saldo_awal', 'pinjam_cair', 'pinjam_admin', 'angsuran', 'simpanan_tarik']);
 // Filter riwayat Kas per jenis uang (usaha simpan pinjam): admin, cicilan, simpanan dipisah.
 type KasEntry = ShopBook['entries'][number];
-// Admin/simpanan yang dipotong saat pencairan ada di fees entri pinjam_cair (label 'admin' / 'tabungan').
-const cairPotong = (e: KasEntry, label: string) => e.type === 'pinjam_cair' && e.fees.some((f) => f.label === label && f.amount > 0);
 const KAS_FILTER: [string, string, (e: KasEntry) => boolean][] = [
   ['semua', 'Semua', () => true],
   ['cair', 'Pencairan', (e) => e.type === 'pinjam_cair'],
-  ['admin', 'Admin', (e) => e.type === 'pinjam_admin' || cairPotong(e, 'admin')],
+  ['admin', 'Admin', () => false], // dirender RincianUang (nama + nominal)
   ['cicilan', 'Cicilan', (e) => e.type === 'angsuran'],
-  ['simpanan', 'Simpanan', (e) => e.type === 'simpanan_tarik' || cairPotong(e, 'tabungan')],
+  ['simpanan', 'Simpanan', () => false], // dirender RincianUang
   ['modal', 'Modal & pindah', (e) => e.type === 'setor' || e.type === 'ambil' || e.type === 'pindah' || e.type === 'saldo_awal'],
 ];
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
@@ -213,6 +211,8 @@ export function BerandaUsaha({
   const today = toLocalDateString();
   const pendingTotal = marketPending.reduce((a, e) => a + e.net, 0);
   const label = periodLabel(book.range);
+  const usahaPinjam = book.entries.some((e) => e.type === 'pinjam_cair' || e.type === 'angsuran');
+  const uang = useMemo(() => uangPinjaman(book.entries), [book.entries]);
   const laba = book.period.omzet - book.period.fee - book.period.biaya;
   const kind = kindOf(shop.kind);
   const accName = (id: string | null) => kas.find((a) => a.id === id)?.name ?? book.accounts.find((a) => a.id === id)?.name ?? '—';
@@ -345,7 +345,27 @@ export function BerandaUsaha({
             {action('pindah', 'Pindah kas', ArrowLeftRight, 'bg-sky-50 text-sky-600 dark:bg-sky-500/10')}
           </div>
           <PeriodPicker range={book.range} onRange={onRange} />
-          {book.entries.some((e) => e.type === 'pinjam_cair' || e.type === 'angsuran') && (
+          {usahaPinjam && (
+            <section className="rounded-[26px] bg-emerald-600 p-4 text-white">
+              <p className="fs-12 font-semibold text-emerald-100">Uang kas kita · {label}</p>
+              <p className="fsh-26 font-black tabular-nums">{formatIDR(uang.adminTotal + uang.cicilan)}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <span className="rounded-2xl bg-white/15 px-3 py-2">
+                  <span className="block fs-11 text-emerald-100">Admin</span>
+                  <b className="block truncate fs-14 tabular-nums">{formatIDR(uang.adminTotal)}</b>
+                </span>
+                <span className="rounded-2xl bg-white/15 px-3 py-2">
+                  <span className="block fs-11 text-emerald-100">Cicilan</span>
+                  <b className="block truncate fs-14 tabular-nums">{formatIDR(uang.cicilan)}</b>
+                </span>
+              </div>
+              <p className="mt-2 flex justify-between gap-2 fs-12 text-emerald-50">
+                <span>Simpanan peminjam (titipan, terpisah)</span>
+                <b className="tabular-nums">{formatIDR(uang.simpananTotal)}</b>
+              </p>
+            </section>
+          )}
+          {usahaPinjam && (
             <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 no-scrollbar" role="tablist" aria-label="Jenis uang">
               {KAS_FILTER.map(([id, l]) => (
                 <button
@@ -364,13 +384,19 @@ export function BerandaUsaha({
               ))}
             </div>
           )}
-          <Riwayat
-            entries={book.entries.filter((e) => KAS_TYPES.has(e.type) && (KAS_FILTER.find(([id]) => id === kasFilter)?.[2] ?? (() => true))(e))}
-            accName={accName}
-            onRemove={remove}
-            label={label}
-            truncated={book.truncated}
-          />
+          {usahaPinjam && kasFilter === 'admin' ? (
+            <RincianUang judul="Admin" baris={uang.admin} total={uang.adminTotal} label={label} />
+          ) : usahaPinjam && kasFilter === 'simpanan' ? (
+            <RincianUang judul="Simpanan" baris={uang.simpanan} total={uang.simpananTotal} label={label} />
+          ) : (
+            <Riwayat
+              entries={book.entries.filter((e) => KAS_TYPES.has(e.type) && (KAS_FILTER.find(([id]) => id === kasFilter)?.[2] ?? (() => true))(e))}
+              accName={accName}
+              onRemove={remove}
+              label={label}
+              truncated={book.truncated}
+            />
+          )}
         </>
       )}
 
@@ -712,6 +738,60 @@ const ENTRY_LABEL: Record<string, string> = {
   simpanan_tarik: 'Simpanan diambil',
   angsuran: 'Angsuran',
 };
+type BarisUang = { id: string; nama: string; nominal: number; ket?: string };
+// Uang usaha simpan pinjam per jenis (periode terpilih). Admin + cicilan = uang kas kita; simpanan = titipan peminjam.
+function uangPinjaman(entries: BookEntry[]) {
+  const admin: BarisUang[] = [];
+  const simpanan: BarisUang[] = [];
+  let cicilan = 0;
+  for (const e of entries) {
+    if (e.status === 'batal') continue;
+    const nama = e.buyer || e.party || e.note || 'Peminjam';
+    if (e.type === 'pinjam_admin') admin.push({ id: e.id, nama, nominal: e.amount });
+    else if (e.type === 'pinjam_cair') {
+      // Pinjaman lama tanpa rincian fees: seluruh potongan = admin (simpanan baru ada belakangan, selalu punya fees).
+      const adm = e.fees.length ? (e.fees.find((x) => x.label === 'admin')?.amount ?? 0) : e.fee;
+      if (adm > 0) admin.push({ id: `${e.id}:admin`, nama, nominal: adm });
+    } else if (e.type === 'angsuran') cicilan += e.amount;
+    else if (e.type === 'simpanan_masuk') simpanan.push({ id: e.id, nama, nominal: e.amount });
+    else if (e.type === 'simpanan_tarik') simpanan.push({ id: e.id, nama, nominal: -e.amount, ket: 'diambil' });
+    else if (e.type === 'simpanan_pakai') simpanan.push({ id: e.id, nama, nominal: -e.amount, ket: 'bayar cicilan' });
+  }
+  const sum = (l: BarisUang[]) => l.reduce((a, b) => a + b.nominal, 0);
+  return { admin, simpanan, cicilan, adminTotal: sum(admin), simpananTotal: sum(simpanan) };
+}
+
+function RincianUang({ judul, baris, total, label }: { judul: string; baris: BarisUang[]; total: number; label: string }) {
+  if (!baris.length)
+    return (
+      <p className="rounded-[26px] border-2 border-dashed border-slate-200 p-6 text-center fs-13 text-slate-400 dark:border-slate-800">
+        Belum ada {judul.toLowerCase()} {label}.
+      </p>
+    );
+  return (
+    <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        {baris.map((b) => (
+          <li key={b.id} className="flex items-center gap-3 py-2.5">
+            <span className="min-w-0 flex-1 truncate fs-14 font-semibold text-slate-800 dark:text-slate-100">
+              {b.nama}
+              {b.ket && <span className="ml-1.5 fs-11 font-normal text-slate-400">{b.ket}</span>}
+            </span>
+            <span className={cn('shrink-0 fs-14 font-extrabold tabular-nums', b.nominal < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300')}>
+              {b.nominal < 0 ? '−' : '+'}
+              {formatIDR(Math.abs(b.nominal))}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 flex items-center justify-between border-t-2 border-slate-900 pt-2.5 fs-14 font-extrabold text-slate-900 dark:border-white dark:text-white">
+        <span>Total {judul.toLowerCase()}</span>
+        <span className="tabular-nums">{formatIDR(total)}</span>
+      </p>
+    </section>
+  );
+}
+
 function Riwayat({
   entries,
   accName,

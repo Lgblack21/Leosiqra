@@ -226,11 +226,16 @@ export function PinjamanView({
     return (
       <section className="space-y-2">
         <p className="px-1 fs-13 font-extrabold text-slate-900 dark:text-white">Uang dipisah per jenis</p>
+        <div className="rounded-3xl bg-emerald-600 p-4 text-white">
+          <p className="fs-12 font-semibold text-emerald-100">Uang kas kita bulan {BULAN[parseYmd(today).getMonth()]} · admin + cicilan</p>
+          <p className="fsh-26 font-black tabular-nums">{formatIDR(adminBulan + cicilanBulan)}</p>
+          <p className="fs-11 text-emerald-100">Simpanan peminjam {formatIDR(simpananSaldo)} dicatat terpisah — bukan uang kita.</p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          {kartuUang('Admin', 'pendapatan kamu', 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300', formatIDR(adminBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
+          {kartuUang('Admin', 'pendapatan kamu', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300', formatIDR(adminBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
             ['Total semua', formatIDR(adminTotal)],
           ])}
-          {kartuUang('Cicilan', 'angsuran masuk', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300', formatIDR(cicilanBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
+          {kartuUang('Cicilan', 'angsuran masuk', 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300', formatIDR(cicilanBulan), `Bulan ${BULAN[parseYmd(today).getMonth()]}`, [
             ['· pokok kembali', formatIDR(Math.max(0, cicilanBulan - pend.jasa))],
             ['· jasa (untung)', formatIDR(pend.jasa)],
             ...(dariSimpananBulan > 0 ? ([['Dibayar dari simpanan', formatIDR(dariSimpananBulan)]] as [string, string][]) : []),
