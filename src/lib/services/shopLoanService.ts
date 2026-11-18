@@ -71,7 +71,7 @@ export const JENIS_JAMINAN: [string, string][] = [
   ['emas', 'Emas / perhiasan'],
   ['lainnya', 'Lainnya'],
 ];
-export type LoanPayment = { id: string; loanId: string; date: string; amount: number; accountId: string | null; createdAt: string };
+export type LoanPayment = { id: string; loanId: string; date: string; amount: number; accountId: string | null; createdAt: string; byName?: string | null; fromSavings?: boolean };
 export type LoanReportRow = Loan & { borrowerName: string; borrowerWa: string | null; paidBefore: number; paidTo: number };
 export type LoanReport = { range: { from: string; to: string }; today: string; loans: LoanReportRow[]; payments: LoanPayment[]; truncated: boolean };
 export type LoanBook = { today: string; memberReady: boolean; collateralReady: boolean; loadedAt: number; borrowers: Borrower[]; loans: Loan[]; payments: LoanPayment[] };
@@ -154,6 +154,8 @@ export const shopLoanService = {
         amount: num(p.amount),
         accountId: str(p.account_id),
         createdAt: String(p.created_at ?? ''),
+        byName: str(p.by_name),
+        fromSavings: Boolean(p.from_savings),
       })),
     };
   },

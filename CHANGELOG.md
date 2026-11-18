@@ -145,7 +145,7 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
 
-## 3.45.0 — 2026-11-18 — Simpanan peminjam dengan peruntukan
+## 3.45.0 — 2026-11-18 — Kartu pinjaman & simpanan peminjam
 
 - **Form Pinjaman baru lebih rapi**, dibagi jadi tiga kartu: **Admin** (untukmu, masuk pendapatan), **Simpanan**
   (milik peminjam, bukan untung), dan **Cicilan**. Admin dan simpanan sama-sama boleh ada, boleh tidak.
@@ -158,6 +158,14 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 - Di daftar Anggota terlihat simpanan tiap peminjam beserta bagian yang masih dikunci sampai lunas. Tombol **Tarik**
   hanya bisa mengambil bagian yang tidak dikunci.
 - Petugas tidak bisa membayar angsuran pakai simpanan; itu khusus pemilik.
+- **Kartu Pinjaman.** Buka pinjaman mana pun dan yang tampil pertama sekarang kartu pinjaman seperti kartu angsuran kertas:
+  nama usaha dan logo, nomor pinjaman, nomor anggota, data peminjam, jenis pinjaman, jumlah, jasa, admin, total kembali,
+  uang yang diterima, tanggal pinjam dan jatuh tempo, tanda terima simpanan, lalu kotak **Ke-1 sampai Ke-N**. Kotaknya
+  terisi sendiri: tanggal tagih, tanggal bayar, dan siapa yang menerima (atau "simpanan" kalau dibayar dari simpanan).
+  Kotak yang lunas bertanda centang hijau, yang telat merah, yang jatuh hari ini disorot, dan yang baru dibayar
+  sebagian menunjukkan kurangnya.
+- Kartu pinjaman bisa dicetak atau disimpan sebagai PDF lewat tombol **Cetak / simpan PDF**. Rincian dan riwayat lama
+  tetap ada di tab **Rincian & riwayat**.
 
 ## 3.44.1 — 2026-11-18 — Kartu anggota & staf desain putih
 

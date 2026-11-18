@@ -11395,7 +11395,7 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
           ORDER BY l.created_at DESC`
       ).bind(ownerId, shop.id, ownerId, shop.id).all()).results ?? [];
       const payments = (await env.DB.prepare(
-        "SELECT id, ref_id, date, amount, account_id, created_at FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 1000"
+        "SELECT id, ref_id, date, amount, account_id, created_at, by_name, CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.fromSavings') END AS from_savings FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran' AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 1000"
       ).bind(ownerId, shop.id, new Date(Date.parse(`${todayWIB()}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10)).all()).results ?? [];
       const loansOut = loans.map((l) => {
         const { collateral_json, ...rest } = l as Record<string, unknown>;

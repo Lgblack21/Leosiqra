@@ -40,6 +40,7 @@ import { UsahaSheet } from './UsahaSheet';
 import { AnggotaWizard, FotoAnggota, KartuAnggota } from './AnggotaView';
 import { JaminanInput, JaminanSection, jaminanKosong } from './JaminanView';
 import { usePetugas } from './petugas';
+import { KartuPinjaman } from './KartuPinjaman';
 
 // Usahaku › jenis Pinjaman: Ringkasan · Tagihan hari ini · Pinjaman · Peminjam (Kas pakai BerandaUsaha view kas).
 // Rancangan & ACC Bos: docs/rancangan/usahaku-pinjaman.md.
@@ -1376,6 +1377,7 @@ function LoanDetail({
   onKas?: () => void;
 }) {
   const st = statusPinjaman(loan, today);
+  const [tab, setTab] = useState<'kartu' | 'rincian'>('kartu');
   const pays = data.payments.filter((p) => p.loanId === loan.id).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1405,6 +1407,31 @@ function LoanDetail({
   return (
     <div className="space-y-4">
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+        {(
+          [
+            ['kartu', 'Kartu pinjaman'],
+            ['rincian', 'Rincian & riwayat'],
+          ] as const
+        ).map(([v, l]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setTab(v)}
+            className={cn('rounded-xl py-2 fs-13 font-bold', tab === v ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {loan.status === 'aktif' && tab === 'kartu' && (
+        <button type="button" onClick={() => onPay(st)} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3 fs-14 font-extrabold text-white hover:bg-emerald-700">
+          <HandCoins size={17} /> Terima angsuran{st.tagihan ? ` · tagihan ${formatIDR(st.tagihan)}` : ''}
+        </button>
+      )}
+      {tab === 'kartu' && <KartuPinjaman shop={shop} loan={loan} borrower={borrower} payments={data.payments} today={today} />}
+      {tab === 'rincian' && (
+        <>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           ['Pinjaman', formatIDR(loan.principal)],
@@ -1485,6 +1512,8 @@ function LoanDetail({
         <button type="button" onClick={removeLoan} disabled={busy} className="flex w-full items-center justify-center gap-1.5 py-2 fs-13 font-bold text-rose-600">
           <Trash2 size={14} /> Hapus pinjaman (salah input)
         </button>
+      )}
+        </>
       )}
     </div>
   );
