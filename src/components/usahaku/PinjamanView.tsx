@@ -1525,9 +1525,10 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
   const kept = loan.dueDates.slice(0, covered);
   const firstOld = loan.dueDates[covered] ?? today;
   const lastKept = kept[kept.length - 1] ?? loan.disbursedOn;
-  const minStart = [today, addDays(lastKept, 1), addDays(loan.disbursedOn, 1)].sort().pop() as string;
-  // Sudah nunggak → paling masuk akal mulai lagi dari tanggal tertentu (mis. besok); belum → mundurkan N hari.
-  const [mode, setMode] = useState<'mundur' | 'mulai'>(firstOld < today ? 'mulai' : 'mundur');
+  // Boleh ke tanggal mana pun setelah tanggal pinjaman & setelah angsuran terakhir yang sudah dibayar — termasuk
+  // tanggal yang sudah lewat (mis. salah input 18 padahal 17). Tanggal yang sudah lewat langsung jadi tagihan.
+  const minStart = [addDays(lastKept, 1), addDays(loan.disbursedOn, 1)].sort().pop() as string;
+  const [mode, setMode] = useState<'mundur' | 'maju' | 'mulai'>(firstOld < today ? 'mulai' : 'mundur');
   const [days, setDays] = useState(loan.frequency === 'harian' ? 3 : loan.frequency === 'bulanan' ? 30 : 7);
   const [start, setStart] = useState(addDays(today, 1) > minStart ? addDays(today, 1) : minStart);
   const [minggu, setMinggu] = useState(true);
@@ -1536,7 +1537,7 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
   const [error, setError] = useState('');
   useSyncExternalStore(liburStore.subscribe, liburStore.versi, liburStore.versi);
   const rest = loan.count - covered;
-  const from = mode === 'mundur' ? addDays(firstOld, Math.max(0, days)) : start;
+  const from = mode === 'mundur' ? addDays(firstOld, Math.max(0, days)) : mode === 'maju' ? addDays(firstOld, -Math.max(0, days)) : start;
   const effFrom = from < minStart ? minStart : from;
   const baru = useMemo(() => buatJadwal(effFrom, rest, loan.frequency, { minggu, cuti }), [effFrom, rest, loan.frequency, minggu, cuti]);
   const dates = [...kept, ...baru];
@@ -1562,11 +1563,12 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
         Angsuran yang belum dibayar (termasuk yang nunggak) pindah ke tanggal baru, jadi tidak ditagih sebelum tanggal itu.
         Total yang harus dibayar tetap sama.
       </p>
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+      <div className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
         {(
           [
-            ['mundur', 'Mundurkan beberapa hari'],
-            ['mulai', 'Mulai lagi dari tanggal'],
+            ['mundur', 'Lebih lambat'],
+            ['maju', 'Lebih cepat'],
+            ['mulai', 'Pilih tanggal'],
           ] as const
         ).map(([v, l]) => (
           <button
@@ -1579,9 +1581,9 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
           </button>
         ))}
       </div>
-      {mode === 'mundur' ? (
+      {mode !== 'mulai' ? (
         <label className="block">
-          <span className={labelCls}>Mundur berapa hari</span>
+          <span className={labelCls}>{mode === 'mundur' ? 'Diundur berapa hari' : 'Dimajukan berapa hari'}</span>
           <input
             value={days || ''}
             onChange={(e) => setDays(Math.min(365, Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0))}
@@ -1617,6 +1619,9 @@ function GeserForm({ shop, loan, today, onDone }: { shop: Shop; loan: Loan; toda
           </b>
         </p>
         {from < minStart && <p className="fs-12 text-amber-700">Tanggal paling awal yang bisa dipilih {tgl(minStart, true)}.</p>}
+        {baru[0] && baru[0] < today && (
+          <p className="fs-12 text-amber-700">Tanggal yang sudah lewat langsung dihitung sebagai tagihan (bisa jadi tunggakan).</p>
+        )}
       </section>
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 fs-13 font-semibold text-rose-600 dark:bg-rose-500/10">{error}</p>}
       <button

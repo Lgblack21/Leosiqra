@@ -131,6 +131,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.44.0 | 18 Nov 2026 | Pinjaman: bulanan, bayar lunas, tabungan anggota |
 | 3.44.1 | 18 Nov 2026 | Kartu anggota & staf desain putih |
 | 3.45.0 | 18 Nov 2026 | Simpanan peminjam dengan peruntukan |
+| 3.45.1 | 18 Nov 2026 | Geser jadwal bisa lebih cepat |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -144,6 +145,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.45.1 — 2026-11-18 — Geser jadwal bisa lebih cepat
+
+- **Geser jadwal sekarang bisa ke tanggal yang lebih awal.** Ada tiga pilihan: **Lebih lambat** (diundur beberapa
+  hari), **Lebih cepat** (dimajukan beberapa hari), atau **Pilih tanggal** — termasuk tanggal yang sudah lewat, misalnya
+  kalau salah input tanggal 18 padahal 17. Batasnya: setelah tanggal pinjaman dan setelah angsuran terakhir yang sudah
+  dibayar. Tanggal yang sudah lewat langsung dihitung sebagai tagihan.
 
 ## 3.45.0 — 2026-11-18 — Kartu pinjaman & simpanan peminjam
 
