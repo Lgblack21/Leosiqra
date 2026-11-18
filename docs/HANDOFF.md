@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-18 — CHANGELOG tanpa pinjaman (SIAP, belum deploy; ikut membawa kode 3.45.2).** Permintaan Bos: fitur
+  simpan pinjam itu untuk dirinya sendiri, bukan produk Leosiqra → catatan versi yang khusus pinjaman DIHAPUS dari
+  CHANGELOG (3.34.0–3.38.0, 3.41.2, 3.44.0, 3.45.0, 3.45.1), versi campuran dibersihkan (3.39.0 logo, 3.40.0 kas &
+  kartu staf, 3.41.0 PWA Tim, 3.44.1 kartu staf), 3.45.2 jadi "Perbaikan kecil". Mulai sekarang JANGAN menulis fitur
+  pinjaman di CHANGELOG. Fitur & kodenya TIDAK dihapus. Belum diputuskan: sembunyikan jenis "Simpan pinjam" dari user
+  lain? hapus GitHub Release/tag versi itu? Menunggu "gas".
+
 - **2026-11-18 — 3.45.2 SIAP (tanpa SQL): koreksi jadwal.** Keluhan Bos (Juli Agustina): jadwal mulai 18 padahal bayar
   sejak 17. Jadwal kini boleh `>= disbursed_on` (create & PUT jadwal); PUT jadwal `all:true` boleh mengubah tanggal yang
   sudah tertutup angsuran (uang tak berubah). GeserForm: centang "Ubah juga jadwal yang sudah dibayar". LoanForm:

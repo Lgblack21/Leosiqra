@@ -116,23 +116,14 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.32.0 | 16 Nov 2026 | Usahaku: utang ke supplier |
 | 3.33.0 | 16 Nov 2026 | Usahaku tampilan baru: menu samping, kasir layar penuh |
 | 3.33.1 | 16 Nov 2026 | Kasir: struk muncul saat bayar |
-| 3.34.0 | 16 Nov 2026 | Usahaku: jenis usaha Pinjaman |
-| 3.35.0 | 16 Nov 2026 | Pinjaman: laporan & Excel |
-| 3.36.0 | 16 Nov 2026 | Pinjaman: ringkasan tagihan tiap pagi |
-| 3.37.0 | 16 Nov 2026 | Pinjaman: geser jadwal |
-| 3.38.0 | 16 Nov 2026 | Pinjaman: anggota & kartu anggota |
-| 3.39.0 | 16 Nov 2026 | Pinjaman: jaminan |
-| 3.40.0 | 16 Nov 2026 | Tim: penagih, kas usaha per staf, kartu staf |
-| 3.41.0 | 16 Nov 2026 | Tim di usaha pinjaman: jabatan Petugas |
+| 3.39.0 | 16 Nov 2026 | Bingkai logo toko ikut gaya logonya |
+| 3.40.0 | 16 Nov 2026 | Tim: kas usaha per staf & kartu staf |
+| 3.41.0 | 16 Nov 2026 | Aplikasi Tim bisa dipasang di HP |
 | 3.41.1 | 16 Nov 2026 | Pasang aplikasi Tim lewat notifikasi |
-| 3.41.2 | 16 Nov 2026 | Pinjaman tanpa admin |
 | 3.42.0 | 17 Nov 2026 | Nilai emas, saham & kripto ikut harga pasar |
 | 3.43.0 | 18 Nov 2026 | Form tambah investasi lebih ramah |
-| 3.44.0 | 18 Nov 2026 | Pinjaman: bulanan, bayar lunas, tabungan anggota |
-| 3.44.1 | 18 Nov 2026 | Kartu anggota & staf desain putih |
-| 3.45.0 | 18 Nov 2026 | Simpanan peminjam dengan peruntukan |
-| 3.45.1 | 18 Nov 2026 | Geser jadwal bisa lebih cepat |
-| 3.45.2 | 18 Nov 2026 | Koreksi jadwal termasuk yang sudah dibayar |
+| 3.44.1 | 18 Nov 2026 | Kartu staf desain putih |
+| 3.45.2 | 18 Nov 2026 | Perbaikan kecil |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -147,71 +138,15 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
 
-## 3.45.2 — 2026-11-18 — Koreksi jadwal termasuk yang sudah dibayar
+## 3.45.2 — 2026-11-18 — Perbaikan kecil
 
-- **Angsuran pertama boleh di hari yang sama dengan uang diserahkan.** Sebelumnya pinjaman harian selalu mulai ditagih
-  besoknya, jadi pembayaran di hari pinjam membuat jadwal terlihat bergeser sehari.
-- **Koreksi jadwal yang salah input.** Di **Geser jadwal** ada pilihan **Ubah juga jadwal yang sudah dibayar**, jadi
-  seluruh jadwal bisa disusun ulang mulai tanggal yang benar (paling awal tanggal pinjaman). Uang dan angsuran yang
-  sudah masuk tidak berubah, hanya tanggal tagihnya.
+- Perbaikan dan perapian kecil di Usahaku.
 
-## 3.45.1 — 2026-11-18 — Geser jadwal bisa lebih cepat
+## 3.44.1 — 2026-11-18 — Kartu staf desain putih
 
-- **Geser jadwal sekarang bisa ke tanggal yang lebih awal.** Ada tiga pilihan: **Lebih lambat** (diundur beberapa
-  hari), **Lebih cepat** (dimajukan beberapa hari), atau **Pilih tanggal** — termasuk tanggal yang sudah lewat, misalnya
-  kalau salah input tanggal 18 padahal 17. Batasnya: setelah tanggal pinjaman dan setelah angsuran terakhir yang sudah
-  dibayar. Tanggal yang sudah lewat langsung dihitung sebagai tagihan.
-
-## 3.45.0 — 2026-11-18 — Kartu pinjaman & simpanan peminjam
-
-- **Form Pinjaman baru lebih rapi**, dibagi jadi tiga kartu: **Admin** (untukmu, masuk pendapatan), **Simpanan**
-  (milik peminjam, bukan untung), dan **Cicilan**. Admin dan simpanan sama-sama boleh ada, boleh tidak.
-- **Simpanan sekarang punya peruntukan.** Waktu memotong simpanan, pilih:
-  - **Dikembalikan setelah lunas**: dikunci selama cicilan berjalan, lalu bisa diambil peminjam.
-  - **Bayar cicilan terakhir**: dipakai melunasi angsuran terakhir.
-  - **Jadi tabungan**: bisa diambil kapan saja.
-- **Bayar angsuran pakai simpanan.** Di form Terima angsuran ada pilihan **Pakai simpanan**. Uangnya sudah ada di kas,
-  jadi saldo kas tidak berubah; yang berkurang saldo simpanan peminjam. Kalau angsuran itu dihapus, simpanannya kembali.
-- Di daftar Anggota terlihat simpanan tiap peminjam beserta bagian yang masih dikunci sampai lunas. Tombol **Tarik**
-  hanya bisa mengambil bagian yang tidak dikunci.
-- Petugas tidak bisa membayar angsuran pakai simpanan; itu khusus pemilik.
-- **Kartu Pinjaman.** Buka pinjaman mana pun dan yang tampil pertama sekarang kartu pinjaman seperti kartu angsuran kertas:
-  nama usaha dan logo, nomor pinjaman, nomor anggota, data peminjam, jenis pinjaman, jumlah, jasa, admin, total kembali,
-  uang yang diterima, tanggal pinjam dan jatuh tempo, tanda terima simpanan, lalu kotak **Ke-1 sampai Ke-N**. Kotaknya
-  terisi sendiri: tanggal tagih, tanggal bayar, dan siapa yang menerima (atau "simpanan" kalau dibayar dari simpanan).
-  Kotak yang lunas bertanda centang hijau, yang telat merah, yang jatuh hari ini disorot, dan yang baru dibayar
-  sebagian menunjukkan kurangnya.
-- Kartu pinjaman bisa dicetak atau disimpan sebagai PDF lewat tombol **Cetak / simpan PDF**. Rincian dan riwayat lama
-  tetap ada di tab **Rincian & riwayat**.
-- Jenis usaha "Pinjaman harian/mingguan" sekarang bernama **Simpan pinjam**, karena sudah ada pinjaman bulanan dan
-  simpanan anggota.
-- **Tim juga bisa melihat kartu pinjaman.** Petugas melihatnya saat membuka pinjaman, sama seperti pemilik. Penagih
-  punya tombol kartu di tiap baris Tagihan hari ini; kartunya memuat nama, WA, nomor anggota, rincian, dan kotak angsuran,
-  tanpa alamat.
-
-## 3.44.1 — 2026-11-18 — Kartu anggota & staf desain putih
-
-- **Kartu anggota dan kartu staf tampil baru.** Latarnya putih bersih, warna tema usahamu jadi aksen tipis (titik di
-  judul, kapsul nomor anggota, dan garis di bawah). Foto punya bingkai putih dengan bayangan lembut, QR di kartu putih
-  sendiri, dan ada motif garis samar seperti kartu resmi. Lebih enak dicetak dan dikirim lewat WhatsApp.
+- **Kartu staf tampil baru.** Latarnya putih bersih, warna tema usahamu jadi aksen tipis, foto punya bingkai putih
+  dengan bayangan lembut, dan QR di kotak putih sendiri. Lebih enak dicetak dan dikirim lewat WhatsApp.
 - Tulisan "Dibuat dengan Leosiqra" di kartu dihapus.
-
-## 3.44.0 — 2026-11-18 — Pinjaman: bulanan, bayar lunas, tabungan anggota
-
-- **Pinjaman bulanan.** Selain harian dan mingguan, sekarang ada **Bulanan**. Tagihannya jatuh di tanggal yang sama tiap
-  bulan. Kalau tanggal itu tanggal merah, tagihan pindah ke hari berikutnya. Pinjaman tanggal 31 ditagih di akhir bulan
-  untuk bulan yang lebih pendek.
-- **Tiga cara menghitung pengembalian.** Isi **angsuran per kali** seperti biasa, isi **total kembali** (misalnya 1 juta
-  balik 1,1 juta dalam 3 bulan), atau isi **jasa %** (bulanan: per bulan, jadi 10% × 2 bulan = 1,2 juta). Angsurannya
-  dihitung otomatis dan dibulatkan ke ribuan. Selisih pembulatannya masuk ke angsuran terakhir.
-- **Bayar lunas.** Di form Terima angsuran ada pilihan **Bayar lunas** untuk melunasi seluruh sisa sekaligus. Pemilik
-  bisa memberi **potongan pelunasan** (maksimal sebesar jasanya). Potongan mengurangi jasa, bukan uang masuk, dan
-  pinjaman langsung lunas. Kalau angsuran pelunasannya dihapus, potongannya ikut batal.
-- **Tabungan anggota dipotong di awal.** Saat pinjaman cair, kamu bisa memotong tabungan (misalnya 50 ribu), jadi yang
-  diserahkan berkurang. Tabungan itu milik anggota, bukan untung: tetap di kas dan tidak masuk pendapatan. Saldonya
-  terlihat di daftar Anggota dan di Ringkasan. Anggota bisa mengambilnya kapan saja lewat tombol **Tarik**, dan uangnya
-  keluar dari kas yang kamu pilih.
-- Petugas bisa melunasi pinjaman, tapi tidak bisa memberi potongan dan tidak bisa mencairkan tabungan.
 
 ## 3.43.0 — 2026-11-18 — Form tambah investasi lebih ramah
 
@@ -240,12 +175,6 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   investasi lain yang kamu isi sendiri tetap seperti yang kamu catat.
 - Yang berubah cuma **nilai sekarang**. Modal, saldo rekening, dan riwayat transaksimu tidak ikut berubah.
 
-## 3.41.2 — 2026-11-16 — Pinjaman tanpa admin
-
-- **Pinjaman tanpa admin.** Di form Pinjaman baru sekarang ada tiga pilihan: **Admin dipotong**, **Admin terpisah**,
-  dan **Tanpa admin**. Kalau pilih Tanpa admin, kolom admin hilang, peminjam terima uang penuh, dan untungnya cuma dari
-  jasa angsuran. Di detail pinjaman tertulis "Tanpa admin".
-
 ## 3.41.1 — 2026-11-16 — Pasang aplikasi Tim lewat notifikasi
 
 - **Ajakan pasang aplikasi Tim sekarang muncul seperti notifikasi** dari atas layar, beberapa detik setelah halaman Tim
@@ -253,112 +182,28 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   atau usap ke atas menyembunyikannya selama 7 hari. Gak muncul lagi kalau Tim sudah dibuka dari layar utama.
 - Judul halaman masuk Tim sekarang "Akun tim dari pemilik usaha", bukan cuma kasir.
 
-## 3.41.0 — 2026-11-16 — Tim: jabatan Petugas & aplikasi Tim di HP
+## 3.41.0 — 2026-11-16 — Aplikasi Tim bisa dipasang di HP
 
-- **Jabatan Petugas untuk usaha pinjaman.** Akun tim dengan jabatan Petugas sekarang membuka tampilan pinjaman yang
-  sama seperti punyamu: **Tagihan**, **Pinjaman**, dan **Anggota**. Petugas bisa mendaftarkan anggota baru langkah demi
-  langkah (data, foto diri, foto KTP, persetujuan), melengkapi data anggota lama, membuat kartu anggota, dan menerima
-  angsuran.
-- Angsuran yang diterima petugas masuk ke kas usaha yang kamu tentukan di Usahaku › Tim, bertanggal hari ini, dan
-  tercatat atas nama petugasnya.
-- Yang tetap **khusus pemilik**: mencairkan pinjaman baru, menghapus pinjaman atau angsuran, menggeser jadwal, mengubah
-  jaminan, menghapus anggota, serta Kas dan Laporan. Petugas bisa melihat foto jaminan, tapi gak bisa mengubahnya.
-- **Usaha pinjaman gak lagi muncul di Kasir dan Stok.** Kalau akun berjabatan Kasir cuma diberi usaha pinjaman, aplikasi
-  Tim memberi tahu supaya jabatannya diubah jadi Petugas atau Penagih.
 - **Aplikasi Tim bisa dipasang di HP.** Buka leosiqra.com/tim, ketuk **Pasang aplikasi Tim**, dan ikon hijau "TIM"
   muncul di layar utama Android maupun iPhone. Ikonnya terpisah dari aplikasi Leosiqra, jadi gak ketuker. Di iPhone,
   pasangnya lewat Safari (Bagikan › Tambahkan ke Layar Utama), lalu masuk sekali lagi dari aplikasinya.
 
-## 3.40.0 — 2026-11-16 — Tim: penagih, kas usaha per staf, kartu staf
+## 3.40.0 — 2026-11-16 — Tim: kas usaha per staf & kartu staf
 
-- **Jabatan Penagih.** Di Usahaku › Tim sekarang ada pilihan jabatan **Kasir** atau **Penagih**. Penagih login di
-  halaman Tim seperti biasa, tapi yang dia lihat cuma **Tagihan hari ini** dari usaha pinjaman yang kamu berikan: siapa
-  yang perlu ditagih, berapa, berapa kali nunggak, tombol WhatsApp untuk mengingatkan, dan tombol **Terima** untuk
-  mencatat angsuran. Alamat, foto KTP, dan jaminan anggota gak ikut kelihatan, dan penagih gak bisa membuka kasir,
-  biaya, atau stok.
 - **Uang tim masuk ke kas usaha yang kamu pilih.** Untuk tiap usaha yang dipegang, kamu tentukan kasnya (misalnya
-  Laci atau BCA Usaha). Penjualan kasir dan angsuran yang diterima penagih langsung masuk ke kas itu dan tercatat atas
-  nama orangnya. Rekening pribadi cuma diminta kalau ada usaha yang belum punya buku usaha.
+  Laci atau BCA Usaha). Penjualan yang dicatat kasir langsung masuk ke kas itu dan tercatat atas nama orangnya.
+  Rekening pribadi cuma diminta kalau ada usaha yang belum punya buku usaha.
 - **Foto dan kartu staf.** Tiap anggota tim dapat nomor staf (STF-001, dst.). Tambahkan fotonya di **Atur**, lalu ketuk
   **Kartu staf** untuk unduh, kirim lewat WhatsApp, atau cetak. Kartunya cuma memuat nama, jabatan, nomor staf, dan
   usaha; fotonya privat.
 - Mengganti jabatan seseorang otomatis mengeluarkan dia dari aplikasi Tim, jadi dia masuk lagi dengan tampilan
   yang sesuai.
 
-## 3.39.0 — 2026-11-16 — Pinjaman: jaminan
+## 3.39.0 — 2026-11-16 — Bingkai logo toko ikut gaya logonya
 
-- **Jaminan pinjaman (opsional).** Di form Pinjaman baru ada sakelar **Ada jaminan**. Isi jenisnya (BPKB motor/mobil,
-  sertifikat, elektronik, emas, lainnya), keterangan (mis. "BPKB Beat 2019 B 1234 XYZ"), perkiraan nilai, dan
-  sampai **3 foto**.
-- Detail pinjaman menampilkan jaminannya dengan status **Masih dipegang** atau **Dikembalikan (tanggal)**. Foto bisa
-  ditambah atau dihapus, datanya bisa diubah, dan setelah lunas tinggal ketuk **Jaminan sudah dikembalikan**. Di
-  daftar Pinjaman, pinjaman yang jaminannya masih dipegang diberi tanda **Jaminan**.
-- Foto jaminan disimpan **privat** (cuma kamu yang bisa membukanya), gak ikut Excel, dan ikut terhapus kalau pinjaman
-  yang salah input dihapus.
 - **Bingkai logo toko ikut gaya logonya.** Logo berlatar penuh (misalnya lingkaran emas di kotak hitam) sekarang mengisi
   kotaknya dengan bingkai warna yang sama, gak lagi ditempel di kotak putih. Logo transparan tetap di bingkai terang.
-  Berlaku di daftar toko, menu toko, kasir, aplikasi tim, pengaturan, dan kartu anggota.
-
-## 3.38.0 — 2026-11-16 — Pinjaman: anggota & kartu anggota
-
-- **Anggota.** Menu Peminjam di toko pinjaman sekarang bernama **Anggota**. Daftar anggota baru lewat 4 langkah:
-  data diri (nama, WA, alamat), foto diri, foto KTP, lalu persetujuan anggota. Begitu selesai, nomor anggota
-  (AGT-0001, …) dan **kartu anggota** langsung jadi.
-- **Kartu anggota** seukuran KTP, warnanya ikut tema toko: logo, nama usaha, foto, nama, nomor anggota, tanggal
-  bergabung, dan QR. Bisa **diunduh**, **dikirim lewat WA**, atau **dicetak**. Kartu ini gak memuat NIK atau foto
-  KTP, dan QR-nya cuma berisi nomor anggota.
-- **Daftar dulu, baru pinjam.** Pinjaman baru cuma bisa diberikan ke anggota yang datanya lengkap. Peminjam lama
-  bertanda *Belum lengkap* dan cukup dilengkapi sekali. Pinjaman yang sedang berjalan tetap jalan seperti biasa.
-- **Foto KTP disimpan privat**: cuma kamu yang bisa membukanya, gak ikut Excel, dan gak tampil di kartu. Foto dari
-  kamera dikecilkan dulu di HP sebelum diunggah. Kalau anggota dihapus, foto diri dan KTP-nya ikut terhapus.
-
-## 3.37.0 — 2026-11-16 — Pinjaman: geser jadwal
-
-- **Geser jadwal pinjaman.** Peminjam sakit atau pulang kampung? Buka pinjamannya, lalu ketuk **Geser jadwal**. Ada
-  dua pilihan: **mundurkan beberapa hari**, atau **mulai lagi dari tanggal** tertentu (otomatis dipilih kalau dia
-  sudah nunggak).
-- Angsuran yang sudah dibayar gak berubah. Cuma sisanya yang disusun ulang, dan tanggal merah, Minggu, serta cuti
-  bersama tetap dilewati. Sebelum disimpan kelihatan angsuran berikutnya dan tanggal selesai, lama → baru.
-- Total yang harus dibayar tetap sama. Kalau ada angsuran yang baru masuk waktu jadwal digeser, perubahannya ditolak
-  supaya jadwal dan pembayaran gak bentrok.
-
-## 3.36.0 — 2026-11-16 — Pinjaman: ringkasan tagihan tiap pagi
-
-- **Ringkasan tagihan pinjaman tiap pagi.** Jam 07:00 WIB masuk notifikasi, misalnya *"Tagihan hari ini:
-  12 peminjam · Rp1.240.000"* plus berapa orang yang nunggak. Diketuk, langsung terbuka halaman Tagihan hari ini.
-- Di tanggal merah atau hari tanpa jadwal, notifikasinya cuma mengingatkan tunggakan, dan gak dikirim sama sekali
-  kalau semua sudah beres.
-- Dikirim sekali sehari, gabungan semua toko pinjamanmu. Bisa dimatikan di Pengaturan › Notifikasi ›
-  **Tagihan pinjaman (Usahaku)**.
-
-## 3.35.0 — 2026-11-16 — Pinjaman: laporan & Excel
-
-- **Laporan pinjaman.** Toko pinjaman sekarang punya menu **Laporan**. Pilih periodenya (hari ini, bulan ini,
-  bulan lalu, pilih bulan/tanggal), lalu kelihatan:
-  - pendapatan, dirinci admin dan jasa;
-  - angsuran yang masuk dan pinjaman yang keluar;
-  - uang beredar dan modal yang masih di luar per akhir periode;
-  - kelancaran pembayaran;
-  - rincian per peminjam: masuk berapa, untung berapa, sisa berapa.
-- **Unduh Excel** dengan 3 lembar: Ringkasan, Peminjam, Angsuran.
-- Hitungan jasanya sama dengan yang di Ringkasan: sedikit-sedikit tiap angsuran masuk, jadi untung per bulan gak
-  menumpuk di bulan pelunasan.
-
-## 3.34.0 — 2026-11-16 — Usahaku: jenis usaha Pinjaman
-
-- **Jenis usaha baru: Pinjaman harian/mingguan.** Pilih jenisnya di Pengaturan toko, dan menu tokonya berubah
-  sendiri: Ringkasan, Tagihan hari ini, Pinjaman, Peminjam, Kas. Kasir dan stok tidak muncul. (PRO)
-- **Pinjaman baru:** isi jumlah pinjaman, admin (dipotong di depan atau dibayar terpisah), harian/mingguan, angsuran
-  per kali, dan berapa kali. Sebelum disimpan kelihatan langsung: uang yang diserahkan, total yang kembali, untung,
-  dan tanggal selesai. **Tanggal merah, Minggu, dan cuti bersama otomatis tidak ditagih** (Minggu & cuti bisa
-  dimatikan).
-- **Tagihan hari ini:** siapa yang harus bayar dan berapa, sudah termasuk tunggakan ("hari ini 40rb + nunggak 2×").
-  Tanpa denda. Tombol **Terima** (bisa sebagian, lebihnya jadi bayar di muka) dan **Ingatkan** lewat WhatsApp.
-- **Untungnya dihitung benar:** uang yang diserahkan bukan biaya, angsuran bukan omzet. Pendapatan = admin + jasa,
-  dan jasanya masuk sedikit-sedikit tiap angsuran, pas sampai rupiah terakhir waktu lunas. Ringkasan menampilkan uang
-  beredar, modal yang masih di luar, dan siapa yang telat (1–7, 8–30, lebih dari 30 hari).
-- Satu peminjam cuma boleh punya satu pinjaman aktif, kas tunai tidak bisa minus, dan angsuran tidak bisa tercatat
-  dua kali atau melebihi sisa.
+  Berlaku di daftar toko, menu toko, kasir, aplikasi tim, dan pengaturan.
 
 ## 3.33.1 — 2026-11-16 — Kasir: struk muncul saat bayar
 
