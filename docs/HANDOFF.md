@@ -21,7 +21,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **2026-11-18 — 3.45.0 SIAP (tanpa SQL): kartu pinjaman + simpanan peminjam dengan peruntukan.** Kartu Pinjaman
   (`src/components/usahaku/KartuPinjaman.tsx`, contoh kartu kertas Bos, navy+emas): tab default di LoanDetail; kotak
   Ke-1..Ke-N dari `kotakAngsuran()` (pembayaran dibagi berurutan; tanggal & `by_name` pembayaran yang menutup kotak;
-  payments GET kini menyertakan `by_name` & `from_savings`); cetak lewat jendela baru + stylesheet halaman. Bos: admin = untuk pemilik, simpanan
+  payments GET kini menyertakan `by_name` & `from_savings`); cetak lewat jendela baru + stylesheet halaman.
+  Tim: petugas otomatis (PinjamanView sama); penagih: GET `/api/staff/shops/:id/tagihan` kini + kolom kartu & `payments`
+  pinjaman aktif (tanpa alamat) → tombol Kartu di StaffTagih. Dites Playwright penagih & petugas. Bos: admin = untuk pemilik, simpanan
   = untuk peminjam, keduanya opsional. LoanForm dibagi kartu Admin / Simpanan / Cicilan. `savings_policy`
   (bebas|lunas|akhir) disimpan di payload `simpanan_masuk`. `SAVINGS_LOCKED_SQL` = simpanan pinjaman aktif ber-policy
   lunas/akhir − yang sudah dipakai; tarik hanya dari (saldo − dikunci). Bayar pakai simpanan: `from_savings:true` →

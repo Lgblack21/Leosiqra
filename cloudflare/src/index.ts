@@ -12384,13 +12384,23 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
         if (!pm[2] && request.method === "GET") {
           const mOn = await memberReady(env);
           const loans = (await env.DB.prepare(
-            `SELECT l.id, l.installment, l.total, l.count, l.frequency, l.due_dates_json, l.disbursed_on, b.name AS borrower_name, b.wa AS borrower_wa${mOn ? ", b.member_no" : ""},
+            `SELECT l.id, l.installment, l.total, l.count, l.frequency, l.due_dates_json, l.disbursed_on, l.principal, l.admin_fee, l.admin_mode, l.status, b.name AS borrower_name, b.wa AS borrower_wa${mOn ? ", b.member_no" : ""},
+                    (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'simpanan_masuk') AS savings,
+                    (SELECT json_extract(a.payload_json, '$.policy') FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'simpanan_masuk' LIMIT 1) AS savings_policy,
+                    (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.type = 'simpanan_pakai' AND json_extract(a.payload_json, '$.loanId') = l.id) AS savings_used,
+                    (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'pinjam_diskon') AS discount,
                     (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran') AS paid,
                     (SELECT COALESCE(SUM(a.amount), 0) FROM shop_entries a WHERE a.owner_id = l.owner_id AND a.ref_id = l.id AND a.type = 'angsuran' AND a.date = ? AND a.by_staff_id = ?) AS paid_by_me_today
                FROM shop_loans l LEFT JOIN shop_borrowers b ON b.id = l.borrower_id AND b.owner_id = l.owner_id
               WHERE l.owner_id = ? AND l.shop_id = ? AND l.status = 'aktif' ORDER BY b.name COLLATE NOCASE LIMIT 1000`
           ).bind(todayWIB(), staff.id, staff.owner_id, lShop.id).all()).results ?? [];
-          return json({ today: todayWIB(), kas_name: kas?.name ?? null, loans });
+          // Angsuran pinjaman aktif untuk Kartu Pinjaman (tanggal + siapa yang menerima) — tanpa data pribadi lain.
+          const payments = (await env.DB.prepare(
+            `SELECT id, ref_id, date, amount, created_at, by_name, CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.fromSavings') END AS from_savings
+               FROM shop_entries WHERE owner_id = ? AND shop_id = ? AND type = 'angsuran'
+                AND ref_id IN (SELECT id FROM shop_loans WHERE owner_id = ? AND shop_id = ? AND status = 'aktif') ORDER BY date ASC, created_at ASC LIMIT 5000`
+          ).bind(staff.owner_id, lShop.id, staff.owner_id, lShop.id).all()).results ?? [];
+          return json({ today: todayWIB(), kas_name: kas?.name ?? null, loans, payments });
         }
         if (pm[2] && request.method === "POST") {
           if (!kas) return json({ error: "Pemilik usaha belum menyiapkan kas usaha untuk tagihan." }, { status: 409 });

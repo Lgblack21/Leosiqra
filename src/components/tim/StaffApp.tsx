@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Loader2,
   LogOut,
+  IdCard,
   MessageCircle,
   NotebookPen,
   Users,
@@ -22,7 +23,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { staffService, staffStockService, type StaffMe, type StaffSale, type StaffTagihan, type TagihanLoan } from '@/lib/services/staffService';
 import { kindOf } from '@/lib/usaha/jenis';
 import { statusPinjaman } from '@/lib/usaha/pinjaman';
-import { setLoanApiRoot, type Loan } from '@/lib/services/shopLoanService';
+import { setLoanApiRoot, type Borrower, type Loan } from '@/lib/services/shopLoanService';
+import { KartuPinjaman } from '@/components/usahaku/KartuPinjaman';
 import type { ShopBook } from '@/lib/services/shopBookService';
 import { PinjamanView, type PinjamanTab } from '@/components/usahaku/PinjamanView';
 import { PetugasCtx } from '@/components/usahaku/petugas';
@@ -874,14 +876,56 @@ const waLink = (wa: string | null, text: string) => {
   const n = (wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
   return `https://wa.me/${n.length >= 9 ? n : ''}?text=${encodeURIComponent(text)}`;
 };
-const asLoan = (l: TagihanLoan) =>
-  ({ ...l, status: 'aktif', principal: 0, adminFee: 0 }) as unknown as Loan;
+const asLoan = (l: TagihanLoan): Loan => ({
+  id: l.id,
+  borrowerId: '',
+  principal: l.principal,
+  adminFee: l.adminFee,
+  adminMode: l.adminMode,
+  installment: l.installment,
+  count: l.count,
+  total: l.total,
+  frequency: l.frequency,
+  disbursedOn: l.disbursedOn,
+  dueDates: l.dueDates,
+  accountId: null,
+  status: 'aktif',
+  note: null,
+  createdAt: '',
+  closedAt: null,
+  paid: l.paid,
+  lastPaid: null,
+  savings: l.savings,
+  savingsPolicy: l.savingsPolicy,
+  savingsUsed: l.savingsUsed,
+  discount: l.discount,
+  collateral: null,
+});
+// Kartu Pinjaman untuk penagih: nama, WA & nomor anggota saja (tanpa alamat).
+const asBorrower = (l: TagihanLoan): Borrower => ({
+  id: '',
+  name: l.name,
+  wa: l.wa,
+  note: null,
+  archived: false,
+  memberNo: l.memberNo,
+  address: null,
+  job: null,
+  registered: Boolean(l.memberNo),
+  registeredAt: null,
+  hasPhoto: false,
+  hasKtp: false,
+  updatedAt: '',
+  savings: 0,
+  savingsLocked: 0,
+});
 
 /** Penagih: siapa yang perlu ditagih hari ini + terima angsuran (masuk ke kas usaha yang ditentukan pemilik). */
 function StaffTagih({ shop, say }: { shop: Shop; say: (m: string) => void }) {
   const [data, setData] = useState<StaffTagihan | null>(null);
   const [error, setError] = useState('');
   const [pay, setPay] = useState<TagihanLoan | null>(null);
+  const [kartu, setKartu] = useState<TagihanLoan | null>(null);
   const [q, setQ] = useState('');
   const load = useCallback(async () => {
     try {
@@ -943,6 +987,14 @@ function StaffTagih({ shop, say }: { shop: Shop; say: (m: string) => void }) {
       )}
       <button
         type="button"
+        onClick={() => setKartu(l)}
+        aria-label={`Kartu pinjaman ${l.name}`}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
+      >
+        <IdCard size={17} />
+      </button>
+      <button
+        type="button"
         onClick={() => setPay(l)}
         className={cn('h-10 shrink-0 rounded-full px-4 fs-13 font-bold', st.tagihan > 0 ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600')}
       >
@@ -988,6 +1040,13 @@ function StaffTagih({ shop, say }: { shop: Shop; say: (m: string) => void }) {
         </section>
       )}
 
+      <BottomSheet isOpen={!!kartu} onClose={() => setKartu(null)} title={kartu ? `Kartu pinjaman · ${kartu.name}` : 'Kartu pinjaman'}>
+        {kartu && (
+          <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            <KartuPinjaman shop={shop} loan={asLoan(kartu)} borrower={asBorrower(kartu)} payments={data.payments} today={data.today} />
+          </div>
+        )}
+      </BottomSheet>
       <BottomSheet isOpen={!!pay} onClose={() => setPay(null)} title={pay ? `Terima angsuran · ${pay.name}` : 'Terima angsuran'}>
         {pay && (
           <TerimaForm

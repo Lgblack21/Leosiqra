@@ -1,6 +1,7 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { shopFromRow, type Shop, type ShopExpenseInput } from './shopService';
 import type { StockData, StockMaterial } from './stockService';
+import type { LoanPayment } from './shopLoanService';
 
 // Usahaku › Tim. Anggota tim (kasir) login dengan username "toko-nama" ke /tim —
 // sesi terpisah dari akun pemilik (/api/staff/*). Pemilik mengelola akun lewat
@@ -90,7 +91,7 @@ export const staffService = {
   },
   /** Penagih: pinjaman aktif usaha ini (tanpa alamat/KTP/jaminan). */
   async tagihan(shopId: string): Promise<StaffTagihan> {
-    const r = await cloudflareApi<{ today: string; kas_name: string | null; loans: Record<string, unknown>[] }>(
+    const r = await cloudflareApi<{ today: string; kas_name: string | null; loans: Record<string, unknown>[]; payments?: Record<string, unknown>[] }>(
       `/api/staff/shops/${shopId}/tagihan?t=${Date.now()}`,
     );
     return {
@@ -112,12 +113,30 @@ export const staffService = {
           installment: Number(l.installment) || 0,
           total: Number(l.total) || 0,
           count: Number(l.count) || 0,
-          frequency: l.frequency === 'mingguan' ? 'mingguan' : 'harian',
+          frequency: l.frequency === 'mingguan' || l.frequency === 'bulanan' ? l.frequency : 'harian',
           dueDates,
           paid: Number(l.paid) || 0,
           paidByMeToday: Number(l.paid_by_me_today) || 0,
+          principal: Number(l.principal) || 0,
+          adminFee: Number(l.admin_fee) || 0,
+          adminMode: l.admin_mode === 'terpisah' ? 'terpisah' : 'potong',
+          disbursedOn: String(l.disbursed_on ?? ''),
+          savings: Number(l.savings) || 0,
+          savingsPolicy: l.savings_policy === 'lunas' || l.savings_policy === 'akhir' || l.savings_policy === 'bebas' ? l.savings_policy : null,
+          savingsUsed: Number(l.savings_used) || 0,
+          discount: Number(l.discount) || 0,
         } as TagihanLoan;
       }),
+      payments: (r.payments ?? []).map((p) => ({
+        id: String(p.id),
+        loanId: String(p.ref_id ?? ''),
+        date: String(p.date ?? ''),
+        amount: Number(p.amount) || 0,
+        accountId: null,
+        createdAt: String(p.created_at ?? ''),
+        byName: p.by_name ? String(p.by_name) : null,
+        fromSavings: Boolean(p.from_savings),
+      })),
     };
   },
   async terima(shopId: string, loanId: string, input: { requestId: string; amount: number }) {
@@ -136,12 +155,21 @@ export type TagihanLoan = {
   installment: number;
   total: number;
   count: number;
-  frequency: 'harian' | 'mingguan';
+  frequency: 'harian' | 'mingguan' | 'bulanan';
   dueDates: string[];
   paid: number;
   paidByMeToday: number;
+  // Untuk Kartu Pinjaman (3.45) — tanpa alamat/KTP/jaminan.
+  principal: number;
+  adminFee: number;
+  adminMode: 'potong' | 'terpisah';
+  disbursedOn: string;
+  savings: number;
+  savingsPolicy: 'bebas' | 'lunas' | 'akhir' | null;
+  savingsUsed: number;
+  discount: number;
 };
-export type StaffTagihan = { today: string; kasName: string | null; loans: TagihanLoan[] };
+export type StaffTagihan = { today: string; kasName: string | null; loans: TagihanLoan[]; payments: LoanPayment[] };
 
 // Stok usaha untuk akun tim: lihat, tambah bahan, pakai/masuk/hitung fisik (tanpa harga beli).
 export const staffStockService = {
