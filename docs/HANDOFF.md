@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.1 geser jadwal lebih cepat — run #236; siap: 3.45.2)
+Terakhir diperbarui: 2026-11-18 (live: 3.45.2 koreksi jadwal + versi tanpa pinjaman)
 
 ## Siapa sedang kerja
 
@@ -18,18 +18,20 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — CHANGELOG tanpa pinjaman (SIAP, belum deploy; ikut membawa kode 3.45.2).** Permintaan Bos: fitur
+- **2026-11-18 — CHANGELOG tanpa pinjaman LIVE (d9cfce9, bersama kode 3.45.2; halaman versi 0 kata "pinjam").** Permintaan Bos: fitur
   simpan pinjam itu untuk dirinya sendiri, bukan produk Leosiqra → catatan versi yang khusus pinjaman DIHAPUS dari
   CHANGELOG (3.34.0–3.38.0, 3.41.2, 3.44.0, 3.45.0, 3.45.1), versi campuran dibersihkan (3.39.0 logo, 3.40.0 kas &
   kartu staf, 3.41.0 PWA Tim, 3.44.1 kartu staf), 3.45.2 jadi "Perbaikan kecil". Mulai sekarang JANGAN menulis fitur
-  pinjaman di CHANGELOG. Fitur & kodenya TIDAK dihapus. Belum diputuskan: sembunyikan jenis "Simpan pinjam" dari user
-  lain? hapus GitHub Release/tag versi itu? Menunggu "gas".
+  pinjaman di CHANGELOG. Fitur & kodenya TIDAK dihapus. Keputusan Bos: fitur TETAP terbuka untuk semua user;
+  GitHub Release/tag versi pinjaman BOLEH dihapus — belum terlaksana (perlu izin aksi hapus; rencana: input
+  `hapus_versi` di sync-releases.yml lalu jalankan dengan 3.34.0 3.35.0 3.36.0 3.37.0 3.38.0 3.41.2 3.44.0 3.45.0 3.45.1,
+  perbarui_catatan=ya untuk membersihkan 3.39.0/3.40.0/3.41.0/3.44.1/3.45.2).
 
-- **2026-11-18 — 3.45.2 SIAP (tanpa SQL): koreksi jadwal.** Keluhan Bos (Juli Agustina): jadwal mulai 18 padahal bayar
+- **2026-11-18 — 3.45.2 LIVE (tanpa SQL): koreksi jadwal.** Keluhan Bos (Juli Agustina): jadwal mulai 18 padahal bayar
   sejak 17. Jadwal kini boleh `>= disbursed_on` (create & PUT jadwal); PUT jadwal `all:true` boleh mengubah tanggal yang
   sudah tertutup angsuran (uang tak berubah). GeserForm: centang "Ubah juga jadwal yang sudah dibayar". LoanForm:
   angsuran pertama min = tanggal cair. Dites wrangler lokal. Data produksi TIDAK dicek (tidak ada akses D1 dari sesi).
-  Menunggu "gas".
+  Smoke live bersih.
 
 - **2026-11-18 — 3.45.1 LIVE (run #236, 97f8958, tanpa SQL): geser jadwal ke tanggal lebih awal.** GeserForm: batas minimum tidak lagi
   hari ini, cukup > tanggal pinjaman & > angsuran terakhir yang sudah tertutup (server memang sudah mengizinkan);
