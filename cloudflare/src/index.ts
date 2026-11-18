@@ -11150,6 +11150,12 @@ async function handleShopLoans(request: Request, env: Env, ownerId: string, shop
     }
 
     if (res === "peminjam") {
+      // Arsip = keputusan pemilik (foto & KTP ikut dihapus). Petugas tidak boleh membuka/mengubahnya lagi:
+      // PUT ubah me-reset archived_at, PUT foto/KTP mengunggah ulang data pribadi ke anggota terarsip.
+      if (actor && sub && request.method === "PUT") {
+        const a = await env.DB.prepare("SELECT archived_at FROM shop_borrowers WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(sub, ownerId, shop.id).first<{ archived_at: string | null }>();
+        if (a?.archived_at) return json({ error: "Peminjam ini sudah diarsip pemilik usaha." }, { status: 403 });
+      }
       if (!sub && request.method === "POST") {
         if (!(await isProUser(env, ownerId))) return json({ error: "Usaha pinjaman khusus PRO." }, { status: 403 });
         const raw = await parseJson<Record<string, unknown>>(request);
