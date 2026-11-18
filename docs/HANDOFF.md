@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-16 (live: 3.41.2 pinjaman tanpa admin — run #231; siap: 3.42.0 harga investasi)
+Terakhir diperbarui: 2026-11-18 (live: 3.42.0 harga investasi — run #232)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-16 — 3.42.0 SIAP (tanpa SQL): nilai investasi ikut harga pasar.** Keluhan Bos: emas Antam tidak update.
+- **2026-11-18 — 3.42.0 LIVE (run #232, 3870aa5, tanpa SQL): nilai investasi ikut harga pasar.** Keluhan Bos: emas Antam tidak update.
   Akar: TIDAK ada mekanisme update nilai sama sekali (emas manual, saham/kripto hanya saat simpan). Worker:
   `refreshInvestmentValues()` — posisi `Beli/Pembelian` aktif non-deposito; emas (unit gram + kategori/nama emas) =
   `$.goldBuyback` user (metadata_json) atau PAXG×kurs/31,1035; saham = `fetchStockPrice`; kripto = CoinGecko
@@ -27,7 +27,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   posisi mengembalikan modal, bukan nilai pasar). Endpoint `POST …/investments/refresh-prices {force}` (3 jam / force
   10 mnt), `PUT …/investments/gold-buyback {price|null}`. Cron 03:00 UTC `refreshAllInvestmentValues` (maks 300
   user). UI `src/components/investasi/NilaiOtomatis.tsx` di web Investasiku & app /app/investments. Dites lokal
-  (emas, BBCA, BTC, AAPL USD; saldo & total users tak berubah; buyback; 401). Menunggu "gas". Berikutnya: redesain
+  (emas, BBCA, BTC, AAPL USD; saldo & total users tak berubah; buyback; 401). Smoke live bersih; cron 10:00 WIB belum terbukti di produksi. Berikutnya: redesain
   form input (Tambah transaksi & Tambah investasi) — ACC Bos.
 
 - **2026-11-16 — 3.41.2 LIVE (run #231, 79ef88f, tanpa SQL): Pinjaman tanpa admin.** LoanForm: segmen ke-3 `tanpa` → kirim
