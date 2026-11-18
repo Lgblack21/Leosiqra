@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — Kas simpan pinjam: Admin/Simpanan nama+nominal + "Uang kas kita" (branch claude/pinjaman-keuangan-terpisah-20261118, BELUM deploy, tanpa SQL, TANPA catatan rilis/bump).**
+- **2026-11-18 — Kas simpan pinjam: Admin/Simpanan nama+nominal + "Uang kas kita" LIVE run #239 3f8b476 (tanpa SQL, TANPA catatan rilis/bump, versi tetap 3.45.2).**
   Permintaan Bos: filter Admin & Simpanan cukup nama + nominal (admin hijau), total admin + cicilan = "Uang kas kita".
   `uangPinjaman()`/`RincianUang` di BerandaUsaha: admin = pinjam_admin + fees 'admin' pinjam_cair (pinjaman lama tanpa fees → seluruh
   `fee` = admin); simpanan = simpanan_masuk (+), tarik/pakai (−). Kartu hijau "Uang kas kita · periode" (admin + cicilan; simpanan
