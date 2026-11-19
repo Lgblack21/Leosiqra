@@ -2088,7 +2088,27 @@ async function handlePromoStats(request: Request, env: Env) {
   } catch {
     signupSources30d = null;
   }
+  // Agregat konversi 30 hari (tanpa PII): user yang pembayaran paketnya DISETUJUI vs masih MENUNGGU.
+  // Top up koin (package_json.kind = 'coin') tidak dihitung. null = query gagal (skema berbeda).
+  let upgrades30d: { paid: number; pending: number } | null = null;
+  try {
+    const up = await env.DB.prepare(
+      `SELECT
+         COUNT(DISTINCT CASE WHEN p.status = 'DISETUJUI' AND p.approved_at >= ? THEN p.user_id END) AS paid,
+         COUNT(DISTINCT CASE WHEN p.status = 'MENUNGGU' THEN p.user_id END) AS pending
+         FROM payments p JOIN users u ON u.id = p.user_id
+        WHERE u.role = 'user' AND lower(u.email) <> ?
+          AND COALESCE(CASE WHEN json_valid(p.package_json) THEN json_extract(p.package_json, '$.kind') END, '') <> 'coin'
+          AND p.created_at >= ?`
+    )
+      .bind(iso(now - 30 * 86400000), PROMO_DEMO_EMAIL, iso(now - 60 * 86400000))
+      .first<{ paid: number | null; pending: number | null }>();
+    upgrades30d = { paid: up?.paid ?? 0, pending: up?.pending ?? 0 };
+  } catch {
+    upgrades30d = null;
+  }
   return json({
+    upgrades30d,
     members: {
       total: row?.total ?? 0,
       new1d: row?.new1d ?? 0,

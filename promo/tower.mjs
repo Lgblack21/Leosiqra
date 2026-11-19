@@ -49,6 +49,8 @@ export const buildMetrik = (history, queue, stats) => {
     members: stats?.members ?? null,
     // Sumber pendaftaran 30 hari (agregat, tanpa PII). null = migrasi 0008 belum diterapkan.
     signupSources30d: stats?.signupSources30d ?? null,
+    // Upgrade paket berbayar 30 hari (agregat): paid = disetujui, pending = menunggu. null = Worker lama / query gagal.
+    upgrades30d: stats?.upgrades30d ?? null,
     lastVideo: history.at(-1) ? { hook: history.at(-1).hook, date: history.at(-1).date, rating: history.at(-1).rating ?? null } : null,
   };
 };
