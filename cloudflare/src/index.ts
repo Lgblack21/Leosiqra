@@ -11225,8 +11225,10 @@ const SAVINGS_SQL = `((SELECT COALESCE(SUM(s.amount), 0) FROM shop_entries s JOI
   - (SELECT COALESCE(SUM(t.amount), 0) FROM shop_entries t WHERE t.owner_id = ? AND t.type IN ('simpanan_tarik', 'simpanan_pakai') AND t.ref_id = ?))`;
 // Bagian simpanan yang DIKUNCI: simpanan dari pinjaman yang masih aktif dengan peruntukan "lunas" (dikembalikan setelah
 // lunas) atau "akhir" (dipakai bayar cicilan terakhir), dikurangi yang sudah dipakai bayar cicilan pinjaman itu.
+// Dijepit minimal 0 (MAX(0, …)): simpanan yang dipakai bayar cicilan pinjaman ber-peruntukan "bebas" atau melebihi bagian
+// yang dikunci TIDAK boleh membuat kunci negatif — kunci negatif menaikkan batas tarik di atas saldo (saldo − (−x)).
 // Bind: owner, borrower, owner, borrower.
-const SAVINGS_LOCKED_SQL = `((SELECT COALESCE(SUM(s.amount), 0) FROM shop_entries s JOIN shop_loans sl ON sl.id = s.ref_id AND sl.owner_id = s.owner_id
+const SAVINGS_LOCKED_SQL = `MAX(0, (SELECT COALESCE(SUM(s.amount), 0) FROM shop_entries s JOIN shop_loans sl ON sl.id = s.ref_id AND sl.owner_id = s.owner_id
      WHERE s.owner_id = ? AND s.type = 'simpanan_masuk' AND sl.borrower_id = ? AND sl.status = 'aktif'
        AND COALESCE(json_extract(s.payload_json, '$.policy'), 'bebas') <> 'bebas')
   - (SELECT COALESCE(SUM(p.amount), 0) FROM shop_entries p JOIN shop_loans pl ON pl.id = json_extract(p.payload_json, '$.loanId') AND pl.owner_id = p.owner_id
