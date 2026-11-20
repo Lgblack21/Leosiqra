@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.46.0 LIVE (deploy 2026-11-20, tanpa SQL): Sesuaikan saldo rekening.**
+- **2026-11-18 — 3.46.0 LIVE (run #240, e21a6d5, 2026-11-20, tanpa SQL): Sesuaikan saldo rekening.**
   `POST /api/member/accounts/:id/adjust {actual, expected, note, request_id}` (handleAdjustAccountToActual): baris transaksi
   type 'transfer', category 'Penyesuaian saldo', sub_category 'Penyesuaian Masuk/Keluar', target NULL, payload {adjustRef, before, after}
   → netral di semua laporan (sama dengan transfer), dibalik otomatis saat dihapus (side regex di buildReversalStatements; findTransferPair
