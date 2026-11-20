@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-18 (live: 3.45.2 + uang dipisah per jenis; 3.46.0 sesuaikan saldo siap, belum deploy)
+Terakhir diperbarui: 2026-11-18 (live: 3.46.0; 3.46.0 sesuaikan saldo LIVE)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-18 — 3.46.0 SIAP (branch claude/rekening-adjustment-20261118, BELUM deploy, tanpa SQL): Sesuaikan saldo rekening.**
+- **2026-11-18 — 3.46.0 LIVE (deploy 2026-11-20, tanpa SQL): Sesuaikan saldo rekening.**
   `POST /api/member/accounts/:id/adjust {actual, expected, note, request_id}` (handleAdjustAccountToActual): baris transaksi
   type 'transfer', category 'Penyesuaian saldo', sub_category 'Penyesuaian Masuk/Keluar', target NULL, payload {adjustRef, before, after}
   → netral di semua laporan (sama dengan transfer), dibalik otomatis saat dihapus (side regex di buildReversalStatements; findTransferPair
